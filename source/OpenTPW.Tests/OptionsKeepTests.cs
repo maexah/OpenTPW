@@ -180,8 +180,8 @@ public class OptionsKeepTests
 
 	/// <summary>
 	/// <b>RESTART GAME is asked over a lost opentpw.cfg</b> (Q999): the card is in Config.tcf, which was written, so it arrives at the next start
-	/// and the player is asked. The box carries the lost write's words (Q986's concern: the scene's own box waits while this one is up and the
-	/// tick leaves the game): Alexah's, that the card is saved and some other settings are not. Nothing is left to tell afterwards.
+	/// and the player is asked. The box carries the lost write's title, SOME OPTIONS NOT SAVED, alone (Q938; Q986's concern: the scene's own box
+	/// waits while this one is up and the tick leaves the game). Nothing is left to tell afterwards.
 	/// </summary>
 	/// <remarks><b>Mutations:</b> <c>Keep</c> passing <c>!SaveTrouble.LostAWrite</c> as the card kept (Q986's rule): no box; <c>RestartText</c> without the failure: the box lacks the words; <c>TakeFailure</c> not letting the failure go: it is told twice; <c>cardSaved</c> not passed: the generic words.</remarks>
 	[TestMethod]

@@ -8,9 +8,10 @@ using System.Runtime.CompilerServices;
 namespace OpenTPW.Tests;
 
 /// <summary>
-/// <see cref="Level"/>'s hand-over of a waiting save-folder notice to the front window (Q982, Q984, Q922), driven the way a frame
-/// drives it: the notice is given at the start, the level's frame asks to open its box, and it is counted told in
-/// opentpw.cfg only once the box is open. The rest of the notices' tests call the pieces; this one goes through the level.
+/// <see cref="Level"/>'s hand-over of a waiting save-folder notice to the front window (Q982, Q984, Q922): the notice is given at
+/// the start, <c>Level.TellSaveTrouble</c> (called by reflection on a bare level; the call site in <c>Level.Update</c> is not covered)
+/// asks to open its box, and it is counted told in opentpw.cfg only once the box is open. The rest of the notices' tests call the
+/// pieces; this one goes through the level's method.
 /// </summary>
 [TestClass]
 [DoNotParallelize]
@@ -82,15 +83,16 @@ public class LevelSaveTroubleTests
 	private string Cfg() => File.Exists( Path.Join( game, "opentpw.cfg" ) ) ? File.ReadAllText( Path.Join( game, "opentpw.cfg" ) ) : "";
 
 	/// <summary>
-	/// <b>The start's notice is counted told once the frame has opened its box, and not before</b>: held while F2 hides the
-	/// interface and while another box is up (nothing is opened, nothing is written), then a frame with the front window free opens
+	/// <b>The start's notice is counted told once the level's step has opened its box, and not before</b>: held while F2 hides the
+	/// interface, while the stack is covered and while another box is up (nothing is opened, nothing is written), then a step with the front window free opens
 	/// the box with the notice's words and writes <c>told kept</c>, and the next start has no box.
 	/// </summary>
 	/// <remarks>
 	/// <b>Mutations:</b> the <c>SaveHome.Told</c> call dropped from <c>Level.TellSaveTrouble</c> (opentpw.cfg is never written: the
-	/// box comes at every start); the call moved before the box is opened or made on every frame whatever the window (a hidden
-	/// or covered frame counts it told unseen); the hidden test dropped (the box opens under F2); the modal test dropped (a second box
-	/// over the first).
+	/// box comes at every start); the call made on every frame whatever the window (a hidden or covered frame counts it told unseen);
+	/// the hidden test dropped (the box opens under F2); the covered test dropped; the modal test dropped (a second box over the
+	/// first). The order of the two statements inside the <c>if</c> (told before the box is opened) cannot be seen here: the
+	/// mutant survives, as <c>SaveHome.Told</c> swallows a failed write.
 	/// </remarks>
 	[TestMethod]
 	public void AStartsNoticeIsCountedToldOnlyOnceTheFramesBoxIsOpen()
@@ -109,6 +111,14 @@ public class LevelSaveTroubleTests
 		Assert.IsTrue( SaveTrouble.Pending, "the notice waits for the interface" );
 		Assert.IsFalse( Cfg().Contains( "told" ), "an unopened notice is not counted told" );
 		UI.RootPanel.Hidden = false;
+
+		// The stack is covered: the same.
+		stack.Cover( true );
+		TheFrame( level );
+		Assert.AreEqual( 0, stack.Windows.Count, "no box under the cover" );
+		Assert.IsTrue( SaveTrouble.Pending, "the notice waits for the cover to come off" );
+		Assert.IsFalse( Cfg().Contains( "told" ), "an unopened notice is not counted told under the cover" );
+		stack.Cover( false );
 
 		// Another question is up: the notice does not land over it.
 		stack.Open( new UI.MessageBox( stack, "Another question?", null ) );
@@ -135,8 +145,9 @@ public class LevelSaveTroubleTests
 	}
 
 	/// <summary>
-	/// <b>A text that carries no notice name opens its box and writes nothing</b>: a failed write's or a kept copy's box (no name) is not a
-	/// told notice, so opentpw.cfg gains no <c>told</c> line from it.
+	/// <b>A box that carries no notice name opens and writes nothing</b>: a copy kept before a write and a failed write open their
+	/// boxes (the two real boxes without a name), and a notice slot given no name does too; none is a told notice, so opentpw.cfg
+	/// gains no <c>told</c> line from any of them.
 	/// </summary>
 	/// <remarks><b>Mutation:</b> <c>SaveHome.Told</c> called with a made-up name when the notice has none.</remarks>
 	[TestMethod]
@@ -145,10 +156,24 @@ public class LevelSaveTroubleTests
 		var stack = new UI.WindowStack();
 		var level = ALevel( stack );
 
+		SaveTrouble.BackedUp( "OPTIONS" );
+		TheFrame( level );
+		Assert.AreEqual( 1, stack.Windows.OfType<UI.MessageBox>().Count(), "the backup's box opened" );
+		StringAssert.Contains( TextOf( stack.Windows.OfType<UI.MessageBox>().Single().Root ), "OPTIONS FILE BACKED UP" );
+		Assert.IsFalse( Cfg().Contains( "told" ), "a backup is not counted told" );
+		stack.Close( stack.Windows.OfType<UI.MessageBox>().Single() );
+
+		SaveTrouble.Failed( "OPTIONS", new IOException( "full" ) );
+		SaveTrouble.Asked();
+		TheFrame( level );
+		Assert.AreEqual( 1, stack.Windows.OfType<UI.MessageBox>().Count(), "the failure's box opened" );
+		StringAssert.Contains( TextOf( stack.Windows.OfType<UI.MessageBox>().Single().Root ), "OPTIONS NOT SAVED" );
+		Assert.IsFalse( Cfg().Contains( "told" ), "a failure is not counted told" );
+		stack.Close( stack.Windows.OfType<UI.MessageBox>().Single() );
+
 		SaveTrouble.Tell( "SOMETHING\n\nA sentence.", null );
 		TheFrame( level );
-
-		Assert.AreEqual( 1, stack.Windows.OfType<UI.MessageBox>().Count(), "the box opened" );
+		Assert.AreEqual( 1, stack.Windows.OfType<UI.MessageBox>().Count(), "the nameless notice's box opened" );
 		Assert.IsFalse( Cfg().Contains( "told" ), "and no notice was counted told" );
 	}
 }

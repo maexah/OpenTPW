@@ -250,24 +250,42 @@ target, not set (the 30-degree file: the point (300.01, 200.01) at the first pol
 **A zoom outside 70 to 130 in the file** (Q880, for Q934; read from the listing and the private Ghidra copy, nothing run). The
 reader takes it as written: `FUN_0042cec0` reads four bytes into `0x007909ec` (the push at `0x0042cee3`) and tests only the
 read's own answer. The bound is the camera update's, on the next pass: `ParkCamera_Update` (`0x0042b1c0`, called from state
-10's pass at `0x0054fa9e`) ends its movement with the clamp `0x0042c621`..`0x0042c6a1` (`park-engine.md`, "A hidden wide zoom"),
+10's pass at `0x0054fa9e`, and by a virtual method at `0x005d8cb0`, below) ends its movement with the clamp `0x0042c621`..`0x0042c6a1` (`park-engine.md`, "A hidden wide zoom"),
 which with bit `0x80` of `[0x00790aac]` set makes a zoom under 70 70 and one over 130 130 (40 and 300 with the hidden bit
 `0x200`). That bit is up on every route a file is read by. Entering a park, state 9 calls `FUN_00457a90` (`0x0054eca4`),
-whose first call is the camera's reset `FUN_0042a990` (`0x00457aac`: zoom 110, the word `([0x00790aac] & 0x200) | 0x80`,
+whose third call is the camera's reset `FUN_0042a990` (`0x00457aac`: zoom 110, the word `([0x00790aac] & 0x200) | 0x80`,
 `0x0042aa64`..`0x0042aa75`), before the file's load (`0x0054f12b`). A Load row, a quickload, Restart Park and `Refresh.INTS`
 call no reset (none of the twelve teardown calls below is one), and the bit stays from the entry: no writer of
 `[0x00790aac]` clears it. The update skips itself only while `gui_CameraFlags` holds `0x80` (`0x0042b1ea`, `jne 0x0042ccef`),
-and the reader noughts those flags (`0x0042d04c`), so the first update after any load clamps the zoom before the frame is
-drawn. Two details of that update:
-- **NaN is made 70.** The test against 70 is `fcomp`, `fnstsw`, `test ah, 1` (`0x0042c66b`..`0x0042c676`); an unordered
-  compare sets C0, so a NaN reads as under 70. An infinity is made 130 or 70 by its sign. (The reader takes a NaN as it
-  takes any word; the other five values were not followed.)
-- **One read comes before the clamp**: the scroll's `fsqrt` of the zoom (`0x0042bc2a`..`0x0042bc30`), inside the scroll
+and the reader noughts those flags (`0x0042d04c`), so the first update after any load clamps the zoom before it makes its
+camera matrices (`0x0042c742`). Where the park is drawn against that call was not traced, and a state 10 pass may run
+without the update (`0x0054f8e0`..`0x0054f8f0` skip its block). The virtual method's own call (`0x005d8ce6`) follows
+`0x005d8de0`, which sets bit `0x80` of `gui_CameraFlags` (`0x0042afd0`, called at `0x005d8de9`), so that call skips at
+`0x0042b1f4` and never reaches the clamp; whether a load can land while that method runs was not traced. Details of that update:
+- **NaN is made 70** (40 with the hidden bit `0x200`, whose compare is `fcomp [0x0074c9d8]` at `0x0042c631`). The test against
+  70 is `fcomp`, `fnstsw`, `test ah, 1` (`0x0042c66b`..`0x0042c676`); an unordered compare sets C0, so a NaN reads as under 70.
+  That is the x87's masked response: `fcomp` raises the invalid-operation exception for any NaN operand, and a signalling
+  NaN pattern in the file would raise it at the load `fld` (`0x0042c626`) too. The control word was not read in the running
+  game; the precision helpers (`0x00591220`, `0x00591240`, `0x00591250`) change bits 8 and 9 only, but a generic
+  control-word object (`0x0062f9a0`, written from `0x005f9fd9` and `0x005fa0f1`) was not followed. An infinity is made 130 or
+  70 by its sign. (The reader takes a NaN as it takes any word; the other five values were not followed.)
+- **Reads of the zoom come before the clamp, in the same update**: the zoom keys' step (`0x0042b4f1`, `0x0042b50c`: the zoom
+  less `dt` times -0.05 or +0.05, bits `0x40` and `0x20` of `[0x00790aac]`, in the branch `0x0042b471` that a load's noughted
+  flags take), which leaves a NaN a NaN and an infinity infinite; bit `0x100`'s reset (`0x0042b528`), which overwrites the
+  zoom with 110; and the scroll's `fsqrt` of the zoom (`0x0042bc2a`..`0x0042bc30`), inside the scroll
   step, which runs only while a scroll is asked that pass (bit 4 of `[0x00790aac]`, the pointer at an edge, a held scroll
   key, or a test of `gui_CameraFlags`' bit `0x800` in a free-look mode: `uVar16`, `bVar4`, `bVar3`, `uVar13` in Ghidra's
   decompile). With a negative zoom and a scroll asked on that pass, the root is not a number (the x87's invalid exception
   masked, which was not read from the game) and the two scroll speeds (`0x0042bc90`, `0x0042bc96`) take it; what they do
-  after was not traced (six other instructions write each of them).
+  after was not traced into the point step for every case (six other instructions write each of them). One pass further
+  is traced: a NaN speed meets the stop test (`0x0042bd69`..`0x0042bda6`: `fabs`, `fcomp [0x0074c988]` = 1e-4, `test ah, 1`),
+  where an unordered compare reads as under it, so with both speeds NaN all three are zeroed before the point step
+  (`0x0042c5ed`); only with the point beyond a park edge is one speed replaced by a finite value, and if that one is over
+  1e-4 the other NaN reaches the point (`0x0042c5f5`..`0x0042c61b`). A huge finite zoom takes the speeds
+  `sqrt( zoom ) * 0.02 *` the asked direction on that pass, unbounded, then halved. So a clamp applied when the file is
+  taken differs from the original in this one place: one pass, only with a scroll asked as the load lands. The build's
+  clamp at load says so at its site.
+  Outside the update, the wheel (`0x0042a91d`) and the saver (`0x0042cdc9`) also read the zoom.
 
 **Action ids.** The action recorder's ids, and the names `FUN_004041d0` gives them, are `park-engine.md`, "There is no
 drag".

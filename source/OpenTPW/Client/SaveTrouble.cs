@@ -148,8 +148,8 @@ internal static class SaveTrouble
 	/// <summary>
 	/// Everything the player has yet to be told of a save but the start's notice, in one text for a box that is already up and has to
 	/// carry it (the Options tick's RESTART GAME, Q998, Q999): a modal box holds the scene's own from opening until the game has been
-	/// left, and the lobby's tick quits, so a backup or a failure left waiting would go untold. Null where nothing waits. Each part is its
-	/// title alone, one line (Q938, Alexah's, 2026-11-03): with their bodies the three parts overflow the box's text rectangle at 1024 x 768
+	/// left, and the lobby's tick quits, so a backup or a failure left waiting would go untold. Null where nothing waits. Each copy, and a lost options write, is its
+	/// title alone, one line (a PLAYER or PARK failure keeps its sentence) (Q938, Alexah's, 2026-11-03): with their bodies the three parts overflow the box's text rectangle at 1024 x 768
 	/// and below, where text is never drawn smaller than the original's (<see cref="UI.UiText.SizeIn"/>). A copy or a failure told on its
 	/// own keeps its full words (<see cref="Take()"/>).
 	/// </summary>
