@@ -2594,7 +2594,7 @@ public class Level
 	}
 
 	/// <summary>
-	/// A deviation (Q982, Q984): opens the message box for a write to the save folder that failed, or for a notice of the save
+	/// A deviation (Q982, Q984): opens the message box for a write to the save folder that failed, for a copy kept before a write, or for a notice of the save
 	/// folders (<see cref="SaveTrouble"/>), once the front window has nothing modal up and nothing covers it, so it never
 	/// lands over another question. Held while F2 hides the interface: the box pauses the park and cannot be seen or
 	/// clicked there, so it waits, pending, for the frame after the interface is back.

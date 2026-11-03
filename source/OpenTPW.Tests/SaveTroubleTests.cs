@@ -245,7 +245,7 @@ public class SaveTroubleTests
 
 		var text = SaveTrouble.Take( out var name );
 
-		Assert.AreEqual( "PROGRESS FILE BACKED UP\n\nThe game didn't read all of your old progress, so it kept a copy before saving new progress.", text );
+		Assert.AreEqual( "PROGRESS FILE BACKED UP\n\nThe game didn't read all of your old progress, so it kept a copy before writing over it.", text );
 		Assert.IsNull( name, "not a start notice: nothing to count in opentpw.cfg" );
 		Assert.IsFalse( text!.Contains( root ) || text.Contains( "opentpw-backup" ) || text.Contains( '/' ) || text.Contains( '\\' ), "no folder or file path in the box" );
 		Assert.IsFalse( SaveTrouble.Pending );
@@ -281,7 +281,7 @@ public class SaveTroubleTests
 
 		Assert.IsTrue( File.Exists( Path.Combine( root, "save", "Config.tcf.opentpw-backup" ) ) );
 		Assert.IsTrue( File.Exists( Path.Combine( root, "save", "opentpw.cfg.opentpw-backup" ) ) );
-		Assert.AreEqual( "OPTIONS FILE BACKED UP\n\nThe game didn't read all of your old options, so it kept a copy before saving new ones.", SaveTrouble.Take() );
+		Assert.AreEqual( "OPTIONS FILE BACKED UP\n\nThe game didn't read all of your old options, so it kept a copy before writing over it.", SaveTrouble.Take() );
 		Assert.IsNull( SaveTrouble.Take(), "two files, one kind: one box" );
 	}
 

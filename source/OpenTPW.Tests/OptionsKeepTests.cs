@@ -149,9 +149,18 @@ public class OptionsKeepTests
 	private static string TextOf( UI.UiControl control )
 		=> control.Text ?? control.Children.Select( TextOf ).FirstOrDefault( text => text != null ) ?? "";
 
-	private UI.WindowStack TickWithTheCardChangedAndAFileBlocked( string? blocked, out string[] boxes )
+	private UI.WindowStack TickWithTheCardChangedAndAFileBlocked( string? blocked, out string[] boxes, bool oddConfig = false )
 	{
 		while ( SaveTrouble.Take() != null ) { }
+
+		// A Config.tcf with two bytes more than this game writes is not read whole, so the tick copies it aside first (Q998).
+		if ( oddConfig )
+		{
+			using var memory = new MemoryStream();
+			new ConfigFile().Write( memory );
+			File.WriteAllBytes( Path.Combine( root, "Config.tcf" ), memory.ToArray().Concat( new byte[] { 0xA5, 0x5A } ).ToArray() );
+			SaveFolder.LoadConfig();
+		}
 
 		GameOptions.Current = new GameOptions { SecondaryVideoCard = false };
 		var stack = new UI.WindowStack();
@@ -172,9 +181,9 @@ public class OptionsKeepTests
 	/// <summary>
 	/// <b>RESTART GAME is asked over a lost opentpw.cfg</b> (Q999): the card is in Config.tcf, which was written, so it arrives at the next start
 	/// and the player is asked. The box carries the lost write's words (Q986's concern: the scene's own box waits while this one is up and the
-	/// tick leaves the game), and nothing is left to tell afterwards.
+	/// tick leaves the game): Alexah's, that the card is saved and some other settings are not. Nothing is left to tell afterwards.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> <c>Keep</c> passing <c>!SaveTrouble.LostAWrite</c> as the card kept (Q986's rule): no box; <c>RestartText</c> without the failure: the box lacks OPTIONS NOT SAVED; <c>TakeFailure</c> not letting the failure go: it is told twice.</remarks>
+	/// <remarks><b>Mutations:</b> <c>Keep</c> passing <c>!SaveTrouble.LostAWrite</c> as the card kept (Q986's rule): no box; <c>RestartText</c> without the failure: the box lacks the words; <c>TakeFailure</c> not letting the failure go: it is told twice; <c>cardSaved</c> not passed: the generic words.</remarks>
 	[TestMethod]
 	public void TheTickAsksToRestartOverALostOpentpwCfgAndTellsItInTheBox()
 	{
@@ -182,17 +191,53 @@ public class OptionsKeepTests
 
 		Assert.AreEqual( 1, boxes.Length, "RESTART GAME is asked" );
 		StringAssert.StartsWith( boxes[0], Localization.Get( UIStrings.RestartGame ) );
-		StringAssert.Contains( boxes[0], "OPTIONS NOT SAVED" );
+		StringAssert.EndsWith( boxes[0], "SOME OPTIONS NOT SAVED\n\nYour video card is saved, but some other settings could not be." );
+		Assert.IsFalse( boxes[0].Contains( "cannot be written" ), "no folder word: the card was written to it" );
 		Assert.IsTrue( stack.Windows.OfType<UI.OptionsScreen>().Any(), "the screen stays open under the box" );
 		Assert.IsFalse( SaveTrouble.Pending, "the box took the failure, so no second box follows" );
 		Assert.AreEqual( 1, BitConverter.ToInt32( File.ReadAllBytes( Path.Combine( root, "Config.tcf" ) ), 16 ), "the card was kept in Config.tcf" );
 	}
 
 	/// <summary>
-	/// <b>RESTART GAME is not asked over a lost Config.tcf</b> (Q999, the reverse, as it stood): the card was not kept, so there is nothing to
-	/// restart for; the screen closes and the lost write is told by the scene as it always was.
+	/// <b>RESTART GAME carries a copy made at the same tick</b> (Q998, Q999): an odd Config.tcf is copied aside by the tick and opentpw.cfg is lost.
+	/// The box carries both, the copy's words first, so nothing waits behind it and nothing goes untold when the lobby's tick quits (Q986).
 	/// </summary>
-	/// <remarks><b>Mutation:</b> <c>Keep</c> passing nothing but <c>NeedsRestart</c>: the box opens over a card that was not written.</remarks>
+	/// <remarks><b>Mutation:</b> <c>RestartText</c> taking <c>SaveTrouble.Take()</c> (one text) or the failure alone: the box has the copy's words alone, or lacks them, and something is left waiting.</remarks>
+	[TestMethod]
+	public void TheRestartBoxCarriesACopyMadeAtTheTickAndTheLostWriteTogether()
+	{
+		var stack = TickWithTheCardChangedAndAFileBlocked( "opentpw.cfg", out var boxes, oddConfig: true );
+
+		Assert.AreEqual( 1, boxes.Length, "RESTART GAME is asked" );
+		StringAssert.StartsWith( boxes[0], Localization.Get( UIStrings.RestartGame ) );
+		StringAssert.Contains( boxes[0], "OPTIONS FILE BACKED UP" );
+		StringAssert.Contains( boxes[0], "SOME OPTIONS NOT SAVED" );
+		Assert.IsTrue( boxes[0].IndexOf( "BACKED UP", StringComparison.Ordinal ) < boxes[0].IndexOf( "NOT SAVED", StringComparison.Ordinal ), "the copy first, then the loss" );
+		Assert.IsFalse( SaveTrouble.Pending, "nothing waits behind the box" );
+		Assert.IsTrue( File.Exists( Path.Combine( root, "Config.tcf.opentpw-backup" ) ), "the copy was made" );
+		Assert.IsTrue( stack.Windows.OfType<UI.OptionsScreen>().Any() );
+	}
+
+	/// <summary><b>A copy alone at the tick</b> (Q998): the box carries it after the game's own words, and nothing waits.</summary>
+	/// <remarks><b>Mutation:</b> <c>TakeForARestartBox</c> without the backups: the box is the game's own words and the copy waits behind it.</remarks>
+	[TestMethod]
+	public void TheRestartBoxCarriesACopyMadeAtTheTick()
+	{
+		TickWithTheCardChangedAndAFileBlocked( null, out var boxes, oddConfig: true );
+
+		Assert.AreEqual( 1, boxes.Length );
+		StringAssert.StartsWith( boxes[0], Localization.Get( UIStrings.RestartGame ) );
+		StringAssert.Contains( boxes[0], "OPTIONS FILE BACKED UP" );
+		Assert.IsFalse( boxes[0].Contains( "NOT SAVED" ) );
+		Assert.IsFalse( SaveTrouble.Pending );
+	}
+
+	/// <summary>
+	/// <b>RESTART GAME is not asked over a lost Config.tcf</b> (Q999, the reverse, as it stood): the card was not kept, so there is nothing to
+	/// restart for; the screen closes and the lost write is told by the scene as it always was. The card is put back, so no later write of
+	/// Config.tcf (a second tick, Select New Player, the game's close) keeps it unasked.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> <c>Keep</c> passing nothing but <c>NeedsRestart</c>: the box opens over a card that was not written; the put-back taken out of <c>Keep</c>: the card stays chosen in memory.</remarks>
 	[TestMethod]
 	public void TheTickDoesNotAskToRestartOverALostConfigTcf()
 	{
@@ -200,11 +245,12 @@ public class OptionsKeepTests
 
 		Assert.AreEqual( 0, boxes.Length, "no RESTART GAME" );
 		Assert.IsFalse( stack.Windows.OfType<UI.OptionsScreen>().Any(), "the tick closed the screen" );
+		Assert.IsFalse( GameOptions.Current.SecondaryVideoCard, "the card that was not kept is put back" );
 		Assert.IsTrue( SaveTrouble.Pending, "the failure waits for the scene" );
 		StringAssert.StartsWith( SaveTrouble.Take(), "OPTIONS NOT SAVED" );
 	}
 
-	/// <summary><b>The control</b> (Q999): both files written, the box is the game's own words alone and nothing waits.</summary>
+	/// <summary>The control (Q999): both files written, the box is the game's own words alone and nothing waits.</summary>
 	/// <remarks><b>Mutation:</b> <c>RestartText</c> always adding a paragraph: the words differ.</remarks>
 	[TestMethod]
 	public void TheTickAsksToRestartInTheGamesOwnWordsWhereBothFilesWereWritten()
@@ -214,5 +260,6 @@ public class OptionsKeepTests
 		CollectionAssert.AreEqual( new[] { Localization.Get( UIStrings.RestartGame ) }, boxes );
 		Assert.IsFalse( SaveTrouble.Pending );
 		Assert.IsTrue( stack.Windows.OfType<UI.OptionsScreen>().Any() );
+		Assert.IsTrue( GameOptions.Current.SecondaryVideoCard, "the card kept stays" );
 	}
 }

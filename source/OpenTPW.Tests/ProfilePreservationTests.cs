@@ -393,7 +393,7 @@ public class ProfilePreservationTests
 		CollectionAssert.AreEqual( new byte[] { 5, 5, 5 }, File.ReadAllBytes( path + ".opentpw-backup3" ) );
 	}
 
-	/// <remarks><b>Mutation:</b> the copy wrapped in a catch that goes on (<c>try { BackUp( path ); } catch { }</c> in <c>SaveConfig</c>): the file is replaced with no copy, and nothing is told.</remarks>
+	/// <remarks><b>Mutations:</b> the copy wrapped in a catch that goes on (<c>try { BackUp( path ); } catch { }</c> in <c>SaveConfig</c>): the file is replaced with no copy, and nothing is told; <c>SaveTrouble.BackedUp( what )</c> moved above the <c>WriteAllBytes( backup, bytes )</c> in <c>SaveFolder.BackUp</c>: a box says a copy was kept when none was.</remarks>
 	[TestMethod]
 	public void AConfigThatCannotBeCopiedIsNotWrittenOverAndIsTold()
 	{
@@ -408,6 +408,10 @@ public class ProfilePreservationTests
 
 			CollectionAssert.AreEqual( new byte[] { 1 }, File.ReadAllBytes( path ), "it could not be copied, so it was not written over" );
 			Assert.IsTrue( SaveTrouble.LostAWrite, "and the player is told" );
+
+			SaveTrouble.Asked();
+			Assert.AreEqual( "OPTIONS NOT SAVED\n\nThe save folder cannot be written.", SaveTrouble.Take(), "the failure alone: no BACKED UP box claims a copy that was not made" );
+			Assert.IsFalse( SaveTrouble.Pending );
 		}
 		finally
 		{

@@ -34,7 +34,7 @@ internal static class SaveTrouble
 	private static string? _noticeName;
 	private static readonly List<string> _backedUp = [];
 
-	/// <summary>Whether a failure or a notice waits to be told.</summary>
+	/// <summary>Whether a failure, a notice or a backup waits to be told.</summary>
 	internal static bool Pending => _what != null || _notice != null || _backedUp.Count > 0;
 
 	/// <summary>Whether a failed write waits to be told (not the start's notice): what was just written was lost.</summary>
@@ -89,8 +89,9 @@ internal static class SaveTrouble
 	internal static void NewVisit() => _told = false;
 
 	/// <summary>
-	/// What to say, or null where nothing waits or the game's own failure was told already this visit. Either
-	/// way the failure waiting is let go.
+	/// What to say, or null where nothing waits or the game's own failure was told already this visit. One text a call: the
+	/// start's notice, then the backups, then the failure, so a failure waits behind a notice or a backup; a call that reaches
+	/// the failure lets it go either way.
 	/// </summary>
 	internal static string? Take() => Take( out _ );
 
@@ -118,10 +119,10 @@ internal static class SaveTrouble
 	}
 
 	/// <summary>
-	/// The failure waiting alone, as <see cref="Take()"/> gives it after the notices: for a box that is already up and has to carry it
-	/// (the Options tick's RESTART GAME, Q999), since a modal box holds the scene's own from opening until the game has been left.
+	/// The failure waiting, as <see cref="Take()"/> gives it after the notices. With <paramref name="cardSaved"/> (the Options tick's
+	/// RESTART GAME, Q999: Config.tcf, which holds the card, was written, so only the other options were lost) the words say so.
 	/// </summary>
-	internal static string? TakeFailure()
+	private static string? TakeFailure( bool cardSaved = false )
 	{
 		if ( _what is not { } what )
 			return null;
@@ -138,14 +139,32 @@ internal static class SaveTrouble
 
 		_told = true;
 
-		return $"{what} NOT SAVED\n\nThe save folder cannot be written.";
+		return cardSaved && what == "OPTIONS"
+			? "SOME OPTIONS NOT SAVED\n\nYour video card is saved, but some other settings could not be."
+			: $"{what} NOT SAVED\n\nThe save folder cannot be written.";
+	}
+
+	/// <summary>
+	/// Everything the player has yet to be told of a save but the start's notice, in one text for a box that is already up and has to
+	/// carry it (the Options tick's RESTART GAME, Q998, Q999): a modal box holds the scene's own from opening until the game has been
+	/// left, and the lobby's tick quits, so a backup or a failure left waiting would go untold. Null where nothing waits.
+	/// </summary>
+	internal static string? TakeForARestartBox()
+	{
+		var texts = _backedUp.Select( BackedUpText ).ToList();
+		_backedUp.Clear();
+
+		if ( TakeFailure( cardSaved: true ) is { } lost )
+			texts.Add( lost );
+
+		return texts.Count == 0 ? null : string.Join( "\n\n", texts );
 	}
 
 	/// <summary>What the player is told of a copy kept: short, plain, no path (the log names it).</summary>
 	private static string BackedUpText( string what )
 		=> what == "PLAYER"
-			? "PROGRESS FILE BACKED UP\n\nThe game didn't read all of your old progress, so it kept a copy before saving new progress."
-			: "OPTIONS FILE BACKED UP\n\nThe game didn't read all of your old options, so it kept a copy before saving new ones.";
+			? "PROGRESS FILE BACKED UP\n\nThe game didn't read all of your old progress, so it kept a copy before writing over it."
+			: "OPTIONS FILE BACKED UP\n\nThe game didn't read all of your old options, so it kept a copy before writing over it.";
 
 	/// <summary>Quit Game's question, with a line more where nothing can be saved.</summary>
 	internal static string QuitQuestion( string question )

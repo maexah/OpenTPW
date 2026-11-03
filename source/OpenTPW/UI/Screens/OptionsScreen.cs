@@ -342,7 +342,7 @@ internal sealed class OptionsScreen : UiWindow
 		// 0x004237d4 raises the restart level for a changed video card, and at that level 0x004237f0 shows RESTART GAME
 		// (UITEXT 403) in place of closing: the options above are already kept, so the cross leaves them kept and the
 		// screen open (0x00424c10 only clears the level), and the tick leaves the game (RestartGame). Not where Config.tcf
-		// could not be written, as the card is not kept then (AsksToRestart).
+		// could not be written, as the card is not kept then (AsksToRestart): it is put back, so no later write of Config.tcf keeps it unasked.
 		if ( AsksToRestart( _before, Options, cardKept ) )
 		{
 			Log.Info( $"Options: kept; the video card is now {(Options.SecondaryVideoCard ? "Secondary" : "Primary")}, drawn on from the next start, so RESTART GAME is asked" );
@@ -350,7 +350,15 @@ internal sealed class OptionsScreen : UiWindow
 			return;
 		}
 
-		Log.Info( "Options: kept" );
+		if ( NeedsRestart( _before, Options ) && !cardKept )
+		{
+			Options.SecondaryVideoCard = _before.SecondaryVideoCard;
+			ShowVideoCard();
+			Log.Info( "Options: kept, but Config.tcf was not written, so the video card is put back" );
+		}
+		else
+			Log.Info( "Options: kept" );
+
 		Stack.Close( this );
 	}
 
@@ -375,19 +383,20 @@ internal sealed class OptionsScreen : UiWindow
 
 	/// <summary>
 	/// Whether the tick shows RESTART GAME: <see cref="NeedsRestart"/>, where Config.tcf, which holds the video card, was written
-	/// (<see cref="SaveFolder.SaveConfig"/>); where it was not, the card is not kept and there is nothing to restart for. A fault in opentpw.cfg
+	/// (<see cref="SaveFolder.SaveConfig"/>); where it was not, the card is not kept (the tick puts it back) and there is nothing to restart for. A fault in opentpw.cfg
 	/// alone does not stop it (Q999): the card is kept and arrives at the next start, and the box tells the fault too (<see cref="RestartText"/>).
 	/// </summary>
 	internal static bool AsksToRestart( GameOptions before, GameOptions now, bool cardKept ) => NeedsRestart( before, now ) && cardKept;
 
 	/// <summary>
-	/// The words of RESTART GAME's box: the game's own, and after them the write that was lost, if one was (a deviation, Q986, Q999). The box
-	/// holds the scene's own box back until it is answered and its tick leaves the game, so a lost write would otherwise go untold.
+	/// The words of RESTART GAME's box: the game's own, and after them a copy that was kept and the write that was lost, if there were
+	/// any (a deviation, Q986, Q998, Q999). The box would otherwise hold the scene's own box back until it was answered, and its tick
+	/// would leave the game with them untold.
 	/// </summary>
 	private static string RestartText()
 	{
 		var restart = Localization.Get( UIStrings.RestartGame );
-		return SaveTrouble.TakeFailure() is { } lost ? $"{restart}\n\n{lost}" : restart;
+		return SaveTrouble.TakeForARestartBox() is { } lost ? $"{restart}\n\n{lost}" : restart;
 	}
 
 	/// <summary>Puts the options' display into effect through <paramref name="apply"/> (none where there is no window) if <see cref="DisplayToApply"/> says so, and remembers it for the cross.</summary>

@@ -4197,7 +4197,7 @@ be written) throws before anything is written over it, and `SaveTrouble` tells t
 The copy is told on screen (Q998, Alexah's, 2026-11-02): a message box, in capitals and one short sentence, with no folder or file path
 (the log's `was not read whole by this game, so it is copied to ...` line names the copy), `OPTIONS FILE BACKED UP` for Config.tcf and
 opentpw.cfg and `PROGRESS FILE BACKED UP` for gms.dat (`SaveTrouble.BackedUp`). The original has no such box. A copy made as the window
-closes is told in the log only (Q903).
+closes is told in the log only (Q903). A copy made at the Options tick that asks RESTART GAME is carried in that box (`SaveTrouble.TakeForARestartBox`), so the lobby's tick, which quits, leaves nothing untold.
 
 A folder with no gms.dat at all is a player nobody has saved yet (`SaveFolder.ScanPlayers`): there is nothing to copy, and the first
 save makes the file, as the original's writer does.
