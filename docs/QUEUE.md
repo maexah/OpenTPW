@@ -147,8 +147,7 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   ticked as Q918; the other lists' scrollbars are Q919.
   **Split (Q921, run 18, lane A):** the timing is done and ticked as Q921, same way in both games (`saves.md`, "Load Park timed in both games"): a Load Park from inside a park
   takes **1.9 to 2.6 s** in ours (off-screen and on the desk's GPU; a loading screen for all but the first 0.15 s; Restart Park 1.8 to 2.0 s) and **0.14 to 0.17 s** in the original (no loading
-  screen; Restart Park 0.10 to 0.14 s), on the shipped stock park's file. Ours spends 1.2 s of its 2.0 s on `audio`. No build was made. **Needs Alexah (2026-11-02):** on these numbers, A (keep the
-  rebuild, said at the site), B (build in place) or C (keep the rebuild, cut the time: the audio read once a theme, or no loading bar)? (`saves.md`, "What Alexah needs to decide".)
+  screen; Restart Park 0.10 to 0.14 s), on the shipped stock park's file. Ours spends 1.2 s of its 2.0 s on `audio`. No build was made. **Alexah (2026-11-02):** C: keep the rebuild and cut the time first (the audio read once a theme, or no loading bar); in place can still follow. (`saves.md`, "What Alexah needs to decide".)
 
 - [ ] **Q920. The lobby's swing over empty water after a pick, against the original.** Noted on Q950's desk3 run (`handoff/run-2026-10-31-wk/log.md`, 20:42 UTC, a7): the lobby camera swung over empty water after a pick; the original was not filmed from that start, so it is not known to be a fault. Film both games from that start (`record.sh`, `attractcam.py`) and compare; bring it to Alexah only if they differ.
 
