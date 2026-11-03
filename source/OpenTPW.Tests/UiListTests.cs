@@ -227,19 +227,108 @@ public class UiListTests
 		list.Remove( 107 );
 		Assert.AreEqual( 113, list.Selected, "index 6 taken as a slot and the top row 5 added: index 11" );
 		Assert.AreEqual( 113, told[^1], "and told (0x401)" );
+	}
 
-		var last = list.Rows[^1].Id;
+	/// <summary>
+	/// <b>A selected row removed from a scrolled list, as the original's hire list did it</b> (Q936,
+	/// <c>q936/orig</c>; the original showed 12 rows, this list 10): the index goes to <c>FUN_0066525c</c> as a slot and
+	/// the top row is added to it, a slot at or past the visible rows leaves the INDEX as it was (the list's
+	/// <c>+0x48 &amp; 0x100</c> is clear), nothing posted and the sprite where it stood.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> the index kept where the removed row stood (the row after it chosen); the top row not added;
+	/// the selection dropped past the window; the sprite moved or hidden; a post for the unmoved index; the last row's
+	/// index pulled back to a row.
+	/// </remarks>
+	[TestMethod]
+	public void ASelectedRowRemovedFromAScrolledListIsReplacedByTheOriginalsRule()
+	{
+		// Run A in the original: top 3, slot 2 (index 5): the new selection is index 5 + 3 = 8, the highlight on slot 5.
+		var list = ListOf( Enumerable.Range( 1, 18 ).ToArray() );
+		var told = new System.Collections.Generic.List<int>();
 
+		list.SelectionChanged = told.Add;
+		list.Scroll( 3 );
+		Press( list, 2 );
+		Assert.AreEqual( 105, list.Selected, "top 3 and slot 2: index 5" );
+
+		list.Remove( 105 );
+		Assert.AreEqual( 17, list.Rows.Count );
+		Assert.AreEqual( 3, list.ScrollTop );
+		Assert.AreEqual( 109, list.Selected, "index 8, not index 5 (106) and not 6" );
+		Assert.AreEqual( 5, list.HighlightSlot, "the sprite at the slot 8 less the top 3" );
+		Assert.AreEqual( 109, told[^1], "and told" );
+
+		// Run B2: top 3 of 20 rows, slot 9 (index 12, at the visible count 10): the index stands, the successor is
+		// highlighted, the sprite stays on slot 9 and nothing is posted.
+		list = ListOf( Enumerable.Range( 1, 20 ).ToArray() );
+		told.Clear();
+		list.SelectionChanged = told.Add;
+		list.Scroll( 3 );
+		Press( list, 9 );
+		Assert.AreEqual( 112, list.Selected, "top 3 and slot 9: index 12" );
+
+		var unimplemented = Unimplemented.Summary.Sum( entry => entry.Times );
+
+		list.Remove( 112 );
+		Assert.AreEqual( 19, list.Rows.Count );
+		Assert.AreEqual( 3, list.ScrollTop );
+		Assert.AreEqual( 113, list.Selected, "index 12 still, now the removed row's successor" );
+		Assert.AreEqual( 9, list.HighlightSlot, "the sprite stays on slot 9" );
+		Assert.AreEqual( 1, told.Count, "nothing posted for the unmoved index (the one press)" );
+		Assert.AreEqual( unimplemented, Unimplemented.Summary.Sum( entry => entry.Times ), "and nothing counted: the branch is decoded" );
+
+		// The edge itself: index 9 is under the visible count 10 and goes to 9 + 3 = 12, index 10 is not and stands.
+		list = ListOf( Enumerable.Range( 1, 20 ).ToArray() );
+		list.Scroll( 3 );
+		Press( list, 6 );
+		Assert.AreEqual( 109, list.Selected, "top 3 and slot 6: index 9" );
+		list.Remove( 109 );
+		Assert.AreEqual( 113, list.Selected, "index 9 is a slot under the window: 9 + 3 = 12, the row of id 113 once 109 has gone" );
+
+		list = ListOf( Enumerable.Range( 1, 20 ).ToArray() );
+		list.Scroll( 3 );
+		Press( list, 7 );
+		Assert.AreEqual( 110, list.Selected, "top 3 and slot 7: index 10" );
+		list.Remove( 110 );
+		Assert.AreEqual( 111, list.Selected, "index 10 is not under the window: it stands, on the successor" );
+
+		// Run C: the last row selected at the foot (index 19 of 20, slot 9 at top 10); removed, its index less one is
+		// still at the visible count, so the index stands as the count: no row is selected, the sprite stays.
+		list = ListOf( Enumerable.Range( 1, 20 ).ToArray() );
+		told.Clear();
+		list.SelectionChanged = told.Add;
 		list.Scroll( 10 );
-		Press( list, list.Rows.Count - 1 - list.ScrollTop );
-		Assert.AreEqual( last, list.Selected, "the last row" );
+		Press( list, 9 );
+		Assert.AreEqual( 119, list.Selected, "the last row" );
 
-		var counted = Times( "LIST_RESELECT_PAST_THE_WINDOW" );
+		list.Remove( 119 );
+		Assert.AreEqual( 19, list.Rows.Count );
+		Assert.AreEqual( 9, list.ScrollTop, "the foot's clamp" );
+		Assert.AreEqual( -1, list.Selected, "index 19 is one past the last row: no row" );
+		Assert.AreEqual( 9, list.HighlightSlot, "the sprite still drawn on slot 9" );
+		Assert.AreEqual( 1, told.Count, "nothing posted (the one press)" );
+	}
 
-		list.Remove( last );
-		Assert.AreEqual( -1, list.Selected, "one less than the last is past the window: dropped" );
-		Assert.AreEqual( -1, told[^1], "and told of none" );
-		Assert.AreEqual( counted + 1, Times( "LIST_RESELECT_PAST_THE_WINDOW" ), "and counted" );
+	/// <summary>The last row removed from a list that is not scrolled is replaced by the one before it, as the original's.</summary>
+	[TestMethod]
+	public void TheLastSelectedRowRemovedSelectsTheOneBeforeItWhenItFits()
+	{
+		var list = ListOf( 1, 2, 3, 4 );
+
+		Press( list, 3 );
+		Assert.AreEqual( 103, list.Selected );
+
+		list.Remove( 103 );
+		Assert.AreEqual( 102, list.Selected, "index 2 handed on as a slot, top 0" );
+		Assert.AreEqual( 2, list.HighlightSlot );
+
+		list.Remove( 102 );
+		list.Remove( 101 );
+		Assert.AreEqual( 100, list.Selected, "down to one row" );
+		list.Remove( 100 );
+		Assert.AreEqual( -1, list.Selected, "and none" );
+		Assert.AreEqual( -1, list.HighlightSlot );
 	}
 
 	/// <summary>A two-column list as the hire screen's: the name text, the wage a number.</summary>

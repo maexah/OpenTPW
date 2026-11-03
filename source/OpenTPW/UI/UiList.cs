@@ -198,7 +198,7 @@ internal sealed class UiList : UiControl
 	private int _highlightSlot = -1;
 
 	/// <summary>The screen slot the highlight stands on, -1 for none; a scroll leaves it where it is.</summary>
-	internal int HighlightSlot => Selected < 0 ? -1 : _highlightSlot;
+	internal int HighlightSlot => _selected < 0 ? -1 : _highlightSlot;
 
 	/// <summary>A row was chosen - the original's message <c>0x400</c>. Handed the row's id.</summary>
 	internal Action<int>? Activated { get; set; }
@@ -555,11 +555,13 @@ internal sealed class UiList : UiControl
 	/// </summary>
 	/// <remarks>
 	/// <b>The selection is not shifted</b>, and nothing is told when a row above it moves, as the original sends nothing
-	/// then. Only when the removed row was the selected one is another chosen, and
-	/// by visible SLOT: its index, or one less if it was the last, is handed to <c>FUN_0066525c</c>, which adds the
-	/// top row to it. An index past the window takes the list's <c>+0x48 &amp; 0x100</c> branch, which is not decoded
-	/// for this list: counted, and the selection dropped. A reselection that moves the index raises
-	/// <see cref="SelectionChanged"/>, the original's <c>0x401</c>, handed -1 for none.
+	/// then. Only when the removed row was the selected one is another chosen: its INDEX (one less if it was the last
+	/// row) is handed to <c>FUN_0066525c</c> as if it were a visible slot, and that adds the top row to it
+	/// (<c>docs/exe/hud.md</c>, "Removing the selected row"). So in a scrolled list it lands the top row's count of rows
+	/// further down than a slot would, and an index at or past the visible rows (<c>+0x172</c>) leaves the selection as
+	/// it was, the list's <c>+0x48 &amp; 0x100</c> being clear: the same index, now the removed row's successor, nothing
+	/// posted. A reselection that moves the index raises <see cref="SelectionChanged"/>, the original's <c>0x401</c>,
+	/// handed -1 for none.
 	/// </remarks>
 	internal int Remove( int id )
 	{
@@ -585,12 +587,11 @@ internal sealed class UiList : UiControl
 				_selected = slot + _scrollTop;
 				_highlightSlot = slot;
 			}
-			else
-			{
-				Unimplemented.Report( "LIST_RESELECT_PAST_THE_WINDOW" );
-				_selected = -1;
-				_highlightSlot = -1;
-			}
+
+			// Otherwise FUN_0066525c returns at once: the index and the sprite stand, and the index may be the count.
+
+			Log.Info( $"List 0x{Id:x}: the selected row at {was} was removed (top row {_scrollTop}, {_rows.Count} rows left), "
+				+ $"selected index now {_selected} on slot {_highlightSlot}" );
 
 			// FUN_0066525c sends 0x401 when the index moves, to nothing included.
 			if ( _selected != was )
@@ -813,7 +814,8 @@ internal sealed class UiList : UiControl
 	internal string ScrollCensus()
 		=> $"top row {_scrollTop} of {_rows.Count} rows, {VisibleRows} visible"
 			+ (_bar == null ? ", no scrollbar" : $", scrollbar {(_bar.Visible ? "shown" : "hidden")} value {_bar.Value} in ({_bar.Minimum}, {_bar.Maximum})"
-				+ $" page {_bar.Page}, thumb {_bar.Thumb?.Rect.Top} to {_bar.Thumb?.Rect.Bottom}");
+				+ $" page {_bar.Page}, thumb {_bar.Thumb?.Rect.Top} to {_bar.Thumb?.Rect.Bottom}")
+			+ $", selected index {_selected} (row {Selected}), sprite on slot {_highlightSlot}";
 
 	/// <summary>
 	/// <c>FUN_00664495</c> with the bar, the count, the visible rows and the window's top: shown and ranged to <c>count - visible</c> where the list is
@@ -1037,7 +1039,7 @@ internal sealed class UiList : UiControl
 		base.OnDraw();
 
 		// The sprite shows while a row is selected, on the slot it was placed at, whichever row is under it now.
-		if ( Selected < 0 || _highlightSlot < 0 )
+		if ( _selected < 0 || _highlightSlot < 0 )
 			return;
 
 		var top = RowArea.Top + (_highlightSlot * RowHeight);

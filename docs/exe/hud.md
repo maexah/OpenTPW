@@ -979,9 +979,19 @@ Three edges a copy must match, found by the skeptic:
 - **With count ≤ visible rows the slider is hidden and never repositioned** (`0x006644d2`), so a view scrolled one
   row down that loses a guest down to thirteen stays one row down, row 0 unseen and the last slot blank, until the
   wheel clamps it (`0x1000d`).
-- **Removing the selected row selects by visible slot, not by index**: `FUN_006647cb` passes the absolute index (the
-  same, or one less if it was the last row) to `FUN_0066525c`, which adds the top row to it. At top 0 that is the
-  next row; scrolled down, it lands further down the list.
+- **Removing the selected row hands its index to a function that takes a visible slot**: `FUN_006647cb` passes the
+  absolute index (the same, or one less if it was the last row) to `FUN_0066525c`, which adds the top row to it. At
+  top 0 that is the next row; scrolled down, it lands the top row's count of rows further down the list; and an index
+  at or past the visible rows leaves the selection as it was (below). **Measured in the original** (Q936, the hire
+  list's janitors tab under Proton, 12 rows visible, flags `0x291`, the selected candidate taken out of the pool
+  by poking its lifetime to nought, so the next sweep dropped it, the list read from memory and photographed; `q936/orig`): top 3, the
+  pointer on slot 2 (index 5): the selection went to index 8 (5 + 3), the highlight to slot 5, the old row's
+  preview replaced by the new one's; top 3, index 12 (at the visible count): the index stayed 12 (now the removed
+  row's successor), the highlight stayed on its slot and **nothing was posted** (the wage and skill preview kept the
+  removed candidate's); the last row (index 19 of 20, slot 11 at the foot): the index stayed 19 with 19 rows left,
+  so no row was selected by index, and the highlight sprite stayed on slot 11, over the new last row. The list's
+  other callers (`FUN_0049c970`, `FUN_00493c10`, `FUN_004b4f90`, `FUN_004bebf2`, `FUN_004becf2`, `FUN_004be970`)
+  were not each run: they reach the same function.
 - **The selection is not shifted** by an insert or removal above it, so the highlight moves onto a different guest.
 
 The sort is remembered between openings: message `0x406` stores (column + 1), negated when descending, in
@@ -998,9 +1008,10 @@ Read first-hand for the build (Q200b, 2026-09-30):
   pick for the hire, all-items and all-staff lists ("The first row is picked as a list fills") and counts it for the others
   (`LIST_FIRST_ROW_SELECTED`, `docs/QUEUE.md` Q232).
 - **`FUN_0066525c( slot )`** selects `slot + top` when `slot < visible` and `slot < count`; otherwise, with
-  `list+0x48 & 0x100` clear, it returns and the old index stands, and with it set it selects nothing. This list's
-  flags are `0x291`, the bit clear ("A right click on a list"); OpenTPW still counts that branch
-  (`LIST_RESELECT_PAST_THE_WINDOW`) and drops the selection (`docs/QUEUE.md` Q232).
+  `list+0x48 & 0x100` clear, it returns and the old index stands (the sprite too), and with it set it selects nothing.
+  The visitors and the hire lists' flags are `0x291`, the bit clear ("A right click on a list"; the hire list's read
+  live, Q936). OpenTPW's `UiList.Remove` leaves the index standing, as measured; the bit-set branch is not built, as no
+  list that removes a row carries it.
 
 **OpenTPW keeps it current as the original does** (Q200b): `ParkVisitorsScreen` fills the list once, rewrites each row
 in place on the two-second timer, and adds and removes a row on `ParkPeople`'s `GuestArrived` and `GuestLeaving`;

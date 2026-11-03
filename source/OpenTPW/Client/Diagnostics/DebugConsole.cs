@@ -1919,6 +1919,13 @@ public static class DebugConsole
 
 				break;
 
+			// `expire <candidate>` takes a candidate out of the pool now, as a time-out does: the hire list loses that row.
+			case "expire":
+				Reply( Level.Current?.StaffPool is { } expiring && parts.Length > 1 && expiring.Expire( (int)Argument( 1 ) )
+					? $"expire: candidate {(int)Argument( 1 )} is gone"
+					: "expire: expire <candidate id> (see `candidates`), a park loaded" );
+				break;
+
 			// The hand: what the buy screen puts an item into, and what a click on the ground would
 			// take out of it. Carrying costs nothing - the money is taken when the thing goes up.
 			// `carry <item> <thing>` takes a track add-on for the ride that thing is, as the ride window's Buy Upgrades row does.

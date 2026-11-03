@@ -748,6 +748,28 @@ public sealed class ParkStaffPool
 	public static int MostInPark( ParkBalance? balance, int kind )
 		=> balance?.Int( $"StaffPoolInfo.Max{BalanceNames[kind]}InPark", 15 ) ?? 15;
 
+	/// <summary>
+	/// Takes a candidate out of the pool at once and tells the hire list, as the sweep's time-out does
+	/// (<see cref="Sweep"/>), without waiting for a sweep (which would top the pool up in the same turn): the debug
+	/// console's <c>expire</c>, the measuring instrument for a hire list losing a chosen row.
+	/// </summary>
+	internal bool Expire( int id )
+	{
+		var at = _candidates.FindIndex( person => person.Id == id );
+
+		if ( at < 0 )
+			return false;
+
+		var person = _candidates[at];
+
+		_candidates.RemoveAt( at );
+		Left?.Invoke( person.Id );
+
+		Log.Info( $"Staff pool: {person.Name}, candidate {person.Id}, expired by the console" );
+
+		return true;
+	}
+
 	/// <summary>The pool as lines, for the debug console.</summary>
 	public IEnumerable<string> Census()
 	{
