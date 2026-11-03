@@ -72,16 +72,57 @@ public class ParkSavedCameraTests
 		Assert.AreEqual( 1f, MathF.Sign( 1f / ParkOrbitCameraMode.Yaw ), "and to +0, as the writer's yaw of nought is" );
 	}
 
-	/// <summary><b>A view with a number that is not finite leaves the camera where it is.</b></summary>
-	/// <remarks><b>Mutations:</b> the check dropped, which sets a NaN yaw.</remarks>
+	/// <summary>
+	/// <b>A view whose rotation or point is not finite leaves the camera where it is</b>, the zoom it held and its point alike (the zoom is
+	/// not one of these: <see cref="AZoomOutsideTheRangeIsHeldToIt"/>).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the check dropped, which sets a NaN yaw; the check left to the rotation alone (a NaN point is taken).</remarks>
 	[TestMethod]
-	public void AViewThatIsNotFiniteIsRefused()
+	[DataRow( 90f, float.PositiveInfinity, 1f, 1f )]
+	[DataRow( 90f, float.NaN, 1f, 1f )]
+	[DataRow( 90f, 0f, float.NaN, 1f )]
+	[DataRow( 90f, 0f, 1f, float.NegativeInfinity )]
+	public void AViewThatIsNotFiniteIsRefused( float zoom, float rotation, float x, float z )
 	{
 		ParkOrbitCameraMode.TakeSaved( new( 90f, 0f, 300f, 200f ), quarterTurns: true );
-		ParkOrbitCameraMode.TakeSaved( new( float.NaN, 0f, 1f, 1f ), quarterTurns: true );
-		ParkOrbitCameraMode.TakeSaved( new( 90f, float.PositiveInfinity, 1f, 1f ), quarterTurns: true );
+		ParkOrbitCameraMode.TakeSaved( new( zoom, rotation, x, z ), quarterTurns: true );
 
 		Assert.AreEqual( 90f, ParkOrbitCameraMode.Zoom );
 		Assert.AreEqual( new Vector3( 300f, 200f, 0f ), ParkOrbitCameraMode.PointOfInterest );
+	}
+
+	/// <summary>
+	/// <b>A zoom outside 70 to 130 is held to it</b>, the rest of the view taken as written (the original's reader takes it as written and its next
+	/// camera update holds it, <c>docs/exe/saves.md</c>, "A zoom outside 70 to 130 in the file"): a negative zoom is 70, so the pan's
+	/// <c>sqrt( zoom )</c> stays a number; a huge one 130; a NaN 70; an infinity 130 or 70 by its sign; one inside, the ends included, as written.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> the zoom taken as written; the clamp's ends swapped or either left off (the -5 and the 1e9 rows); a NaN left to <c>Clamp</c>,
+	/// which keeps it; a NaN refused (the camera would stay at 90); the clamp applied to the point as well.
+	/// </remarks>
+	[TestMethod]
+	[DataRow( -5f, 70f )]
+	[DataRow( 0f, 70f )]
+	[DataRow( 69.9f, 70f )]
+	[DataRow( 70f, 70f )]
+	[DataRow( 100f, 100f )]
+	[DataRow( 130f, 130f )]
+	[DataRow( 130.1f, 130f )]
+	[DataRow( 1e9f, 130f )]
+	[DataRow( float.MaxValue, 130f )]
+	[DataRow( float.NegativeInfinity, 70f )]
+	[DataRow( float.PositiveInfinity, 130f )]
+	[DataRow( float.NaN, 70f )]
+	public void AZoomOutsideTheRangeIsHeldToIt( float written, float taken )
+	{
+		ParkOrbitCameraMode.TakeSaved( new( 90f, 0f, 300f, 200f ), quarterTurns: true );
+		ParkOrbitCameraMode.TakeSaved( new( written, 0.5f, 312.5f, 88.25f ), quarterTurns: true );
+
+		Assert.AreEqual( taken, ParkOrbitCameraMode.Zoom, $"{written}" );
+		Assert.AreEqual( new Vector3( 312.5f, 88.25f, 0f ), ParkOrbitCameraMode.PointOfInterest, "the point is the file's" );
+		Assert.AreEqual( 0f, ParkOrbitCameraMode.Yaw, "and the yaw too" );
+
+		var pan = ParkOrbitCameraMode.PanTarget( 1f, 0f, ParkOrbitCameraMode.Yaw, ParkOrbitCameraMode.Zoom );
+		Assert.IsTrue( float.IsFinite( pan.X ) && float.IsFinite( pan.Y ), "a held key's pan from the taken zoom is a number" );
 	}
 }

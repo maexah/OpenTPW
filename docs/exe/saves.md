@@ -287,6 +287,17 @@ without the update (`0x0054f8e0`..`0x0054f8f0` skip its block). The virtual meth
   clamp at load says so at its site.
   Outside the update, the wheel (`0x0042a91d`) and the saver (`0x0042cdc9`) also read the zoom.
 
+**Measured in the original, and built** (Q934, 2026-11-03, `q934-a9/`; Proton on the private display). Six files, the stock park saved by this game with the console's `camera` at zoom -5, 1e9, NaN,
++infinity, -infinity and 100, each loaded in the running original from its Load Park list with `campoi.py` polling the zoom `0x007909ec` every 0.03 s from half a second before the click. Every
+file settled on the clamp: -5 on 70.00, 1e9 on 130.00, NaN on 70.00, +infinity on 130.00, -infinity on 70.00 and 100 on 100.00 (373 to 399 polls each), the park drawn as a park. The reader's own
+value was caught twice, as the decode said it would be: one poll of 1000000000.00 for the 1e9 file and one of -inf for the -infinity file, each between the previous park's zoom and the clamped one;
+the other three passes fell between two polls. The camera does not hold the written zoom for more than a pass, so no file reaches a draw with it. **OpenTPW:** `ParkOrbitCameraMode.TakeSaved`
+holds the taken zoom to `MinZoom`..`MaxZoom` (`float.NaN` made `MinZoom` on its own, since `Clamp` keeps a NaN) and warns `the park file's zoom X is outside 70..130, so it is taken as Y`; it
+no longer refuses a file for its zoom (a NaN or infinite zoom was refused with the rest of the view). This game's log and `camera` reply read 70.00, 130.00, 70.00, 130.00, 70.00 and 100.00 for the
+six files, as the original settled. The one place the two differ is the pass the decode named: with a scroll asked as the load lands, the original's scroll step reads the written zoom
+(`sqrt( zoom )`) before its clamp, once; not built, and not measured. The same files in main's build before: -5.00 and 1000000000.00 taken as written (the eye through the ground, `q934-a9/before-2/load-ZNEG.png`),
+and the NaN and both infinities refused with the camera left at 110.
+
 **Action ids.** The action recorder's ids, and the names `FUN_004041d0` gives them, are `park-engine.md`, "There is no
 drag".
 
@@ -1259,7 +1270,7 @@ over the copy, never the one held.
   closing, as the original's does whatever its save answered; a deviation (Q982) is the message box that says so
   ("OpenTPW's save folder that cannot be written"). Where the folder holds the name in two cases, which
   only a file copied in can make, the one in the typed case is written, the one the question named.
-- **The load reads the camera module** (Q918): a park loaded or entered here opens on its file's zoom, point and rotation (negated into the yaw, and rounded to a quarter turn with the Rotation option on 90 degrees), the yaw set at once where the original eases its drawn rotation onto the rounded one (Q23). **A second deviation:** a file whose camera holds a number that is not finite (NaN or an infinity) is refused with a warning and the camera stays where it is (`ParkOrbitCameraMode.TakeSaved`); the original checks no number and would be left with nothing to draw.
+- **The load reads the camera module** (Q918): a park loaded or entered here opens on its file's zoom, point and rotation (negated into the yaw, and rounded to a quarter turn with the Rotation option on 90 degrees), the yaw set at once where the original eases its drawn rotation onto the rounded one (Q23). **A second deviation:** a file whose camera holds a rotation or a point that is not finite (NaN or an infinity) is refused with a warning and the camera stays where it is (`ParkOrbitCameraMode.TakeSaved`); the original checks no number and would be left with nothing to draw. **A third (Q934):** a zoom outside 70 to 130 is held to that range at the load (a NaN made 70) with a warning, where the original holds it on the next update ("A zoom outside 70 to 130 in the file", below).
 
 **Measured (Q241f, `q241f/`).** Lost Kingdom entered by a player holding `easymode.TPWI` alone (755, 87987, no
 visitors), stepped under `pause` to `mGameTick` 1000, the camera at `camera 480 280 90 90`, then `savepark Q241f`:

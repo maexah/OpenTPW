@@ -2617,7 +2617,7 @@ keeps to its parent's third of a window wider than 4:3 only inside the parent's 
 size they were drawn and hit at the window's edge, `q918/run1/1-list.png`). Every other list has it since Q919 ("The other lists' bars", below). The highlight is drawn on the slot it was last placed at (`UiList.HighlightSlot`: set by every selection,
 the same index too, and by the first-row pick and the removal's reselect; a scroll leaves it), so it slides over the rows under it and stays while its row is out of the window, as the original's.
 The wheel over an arrow is taken (`WindowStack.WheelTaken`) and moves nothing, so the park behind the screen does not zoom. **A deviation, said at the site:** `ParkOrbitCameraMode.TakeSaved`
-refuses a file whose camera holds a number that is not finite (NaN or an infinity) and leaves the camera as it is; the original checks no number (`docs/exe/saves.md`, "The load reads the camera module").
+refuses a file whose camera holds a rotation or a point that is not finite (NaN or an infinity) and leaves the camera as it is; the original checks no number (`docs/exe/saves.md`, "The load reads the camera module"). A zoom outside 70 to 130 is not refused: it is held to the range, a NaN made 70, as the original's next update does (Q934, `saves.md`, "A zoom outside 70 to 130 in the file").
 
 #### The other lists' bars (Q919)
 

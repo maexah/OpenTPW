@@ -419,27 +419,37 @@ public sealed class ParkOrbitCameraMode : CameraMode
 
 	/// <summary>
 	/// Puts the camera where a park file's camera module says it stood (<c>FUN_0042cec0</c>, read as the load's modules
-	/// are, <c>docs/exe/saves.md</c>, "Loading the modules", Camera): the zoom and the point as written, and the yaw the
-	/// file's rotation negated, rounded to a quarter turn first where the Rotation option is 90 degrees. A view with a
-	/// number in it that is not finite leaves the camera where it is.
+	/// are, <c>docs/exe/saves.md</c>, "Loading the modules", Camera): the zoom held to <see cref="MinZoom"/> to
+	/// <see cref="MaxZoom"/> (a NaN zoom is <see cref="MinZoom"/>), the point as written, and the yaw the file's rotation
+	/// negated, rounded to a quarter turn first where the Rotation option is 90 degrees. A view whose rotation or point is
+	/// not finite leaves the camera where it is.
 	/// </summary>
 	/// <remarks>
-	/// <b>Two deviations, said here.</b> The original keeps the file's own rotation as the drawn one and eases it onto the
+	/// <b>Three deviations, said here.</b> The original keeps the file's own rotation as the drawn one and eases it onto the
 	/// rounded target (<c>0x007909e0</c> against <c>0x00790a38</c>), where the yaw here is set at once, as every turn
-	/// here is (Q23); and it checks no number, where a file that holds NaN or an infinity would leave this camera with
-	/// nothing to draw.
+	/// here is (Q23); it checks no rotation or point, where a file that holds NaN or an infinity in one would leave this
+	/// camera with nothing to draw; and its reader takes the zoom as written and the camera's next update holds it to 70..130
+	/// before it makes its matrices (a NaN is made 70; <c>docs/exe/saves.md</c>, "A zoom outside 70 to 130 in the file"),
+	/// where the hold here is at the load, which differs for one pass only, with a scroll asked as the load lands (the
+	/// original's scroll speed is <c>sqrt( zoom )</c> times 0.02 on the unheld zoom).
 	/// </remarks>
 	internal static void TakeSaved( ParkCameraModule.View view, bool quarterTurns )
 	{
-		if ( !float.IsFinite( view.Zoom ) || !float.IsFinite( view.YRotation ) || !float.IsFinite( view.PointX ) || !float.IsFinite( view.PointZ ) )
+		if ( !float.IsFinite( view.YRotation ) || !float.IsFinite( view.PointX ) || !float.IsFinite( view.PointZ ) )
 		{
-			Log.Warning( $"Camera: the park file's camera ({view}) holds a number that is not finite, so the camera stays where it is" );
+			Log.Warning( $"Camera: the park file's camera ({view}) holds a rotation or a point that is not finite, so the camera stays where it is" );
 			return;
 		}
 
 		var rotation = quarterTurns ? RoundedToAQuarter( view.YRotation ) : view.YRotation;
 
-		Zoom = view.Zoom;
+		// `Clamp` keeps a NaN, so a NaN is made the floor on its own, as the original's compare makes it 70.
+		var zoom = float.IsNaN( view.Zoom ) ? MinZoom : view.Zoom.Clamp( MinZoom, MaxZoom );
+
+		if ( zoom != view.Zoom )
+			Log.Warning( $"Camera: the park file's zoom {view.Zoom} is outside {MinZoom}..{MaxZoom}, so it is taken as {zoom}" );
+
+		Zoom = zoom;
 
 		// 0f - rotation, not -rotation: a rotation of nought gives +0, as the writer's `0f - Yaw` does (Level.WritePark).
 		Yaw = 0f - rotation;
