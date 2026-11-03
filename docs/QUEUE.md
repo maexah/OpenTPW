@@ -103,8 +103,7 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   original's saves went to Windows' VirtualStore (`%LOCALAPPDATA%\VirtualStore\Program Files (x86)\SimTheme
   Park\save`) when `Program Files (x86)` was not writable, and whether OpenTPW should read them there. Not tested: the
   PC tried has a third-party `PermissionFix.exe` (Everyone full control), so the original wrote straight to `save\`.
-  **Needs Alexah (2026-10-31):** should OpenTPW read a player's saves from the VirtualStore when `save\` has none? (It
-  would need a PC where the original's saves were made without the fix to look at first.) Q984 left it open: a `save\`
+  **Alexah (2026-11-02):** read nothing from the VirtualStore and keep the notice; look at this again only if a player meets it. Q984 left it open: a `save\`
   that holds players but cannot be written is read by nothing, and nothing is copied out of it to the player's folder
   (whether to copy or read them is this item's); the game says so once each start on screen.
 - [ ] **Q903. A save lost as the window closes is told in the log only.** The window's own close with a park up writes
@@ -134,8 +133,7 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   chooses the save folder afresh (`SaveHome.Choose`). After weeks in the player's data folder (`%AppData%\OpenTPW\save`), one
   "Run as administrator", or `PermissionFix.exe` (the fix Q902 names), makes the game's own `save\` writable: `Choose` keeps it,
   the player slots read empty and the log says only `Saves: the game's own save folder`, so it looks like lost saves. Nothing is
-  deleted. The notice exists for the other direction alone (`SAVES GO IN`). Alexah's call, next to Q902 (copy, read both, or
-  say so): the small fix is a notice on the kept path when the player's folder holds players (`SaveHome.HoldsPlayers`). A test
+  deleted. The notice exists for the other direction alone (`SAVES GO IN`). **Alexah (2026-11-02):** say so, no copying and no second folder read: a notice on the kept path when the player's folder holds players (`SaveHome.HoldsPlayers`). A test
   next to `AFolderThatCanBeWrittenIsKeptAndTheProbeLeavesNothing`.
 
 - [ ] **Q247. A loaded park is built again behind the loading screen.** Left by
@@ -143,10 +141,12 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   screen and no change of scene (`FUN_00414d40`: twelve teardown calls, the modules, `FUN_00415140`), where
   `ParkLoadScreen.Load` asks `Game.RequestParkLoad` for the whole scene again; Restart Park is the same
   (`ParkFrontEnd.RestartPark`). The teardown is decoded (Q854; `saves.md`, "The in-place load, call by call", whose last
-  paragraph sets out the choice). Alexah decides whether the park is rebuilt in place. Confirm: a load timed in both games the same
+  paragraph sets out the choice). **Alexah (2026-11-02):** time a load in both games first and bring the two numbers; whether the park is rebuilt in place is decided on them. Confirm: a load timed in both games the same
   way (the original's "1.3 s" is a poll bound, not a timing).
   **Split (Q918, run 18, lane A):** the list's scrollbar and the saved camera on a load, which did not wait on that choice, are done and
   ticked as Q918; the other lists' scrollbars are Q919.
+
+- [ ] **Q920. The lobby's swing over empty water after a pick, against the original.** Noted on Q950's desk3 run (`handoff/run-2026-10-31-wk/log.md`, 20:42 UTC, a7): the lobby camera swung over empty water after a pick; the original was not filmed from that start, so it is not known to be a fault. Film both games from that start (`record.sh`, `attractcam.py`) and compare; bring it to Alexah only if they differ.
 
 - [ ] **Q912. The failed-start box's long line is cut off at both ends on a 1024 px display.** Found by the Q978 desk run (`desk4/s4/noui/shot.png`, a start with `ui.shader` missing): `StartFailure`'s SDL message box holds the exception's line unwrapped, so on a 1024-pixel display its head and tail are off the screen (the left of "OpenTPW could not start." and the right of the shader line read "ould not start." and "...beside th"). Build: wrap each reason line to the box's width in `StartFailure.Compose`, the log keeping the lines whole; confirm with the same missing-shader start at 1024 x 768, the whole text on screen. A deviation of ours (the original has no such box, `StartFailure`'s own comment).
 - [ ] **Q913. What Q910 and Q911 left unseen.** What `Worn.RSE`'s and `EventMap.RSE`'s effects look and sound like after a load in both games (the six companions are started and run; only the TV Sim's torches were seen and compared, and the engine's voice and the original's mixer were measured, not heard); a Hot Pot sold after a load and saved, on screen (the unit test `ASoldRidesSoundChildGoesWithIt` is the only proof); the bought TV Sim's ride window opening it (the stock-park scene poked `VAR_RIDECLOSED`: the door click left `canload` 0); the original drawing a TV Sim bought by ours in the stock park (its script list holds it; the frames at the cameras tried show grass, the control's file too); a bought kart's or water ride's companion written (by reading since Q911, never run); a bought Hot Pot's engine after a load in both games (its ride never ran, so neither game was measured; `b-final/` holds no `Engine.mp2`); effect 31's start at height -4 (`started effect 31 ... at (64,-4,264)` in `q911/final/console.log`) against the original's; Volcano closed and saved (it shares the code and was not run); and a load and a save on Windows.
@@ -168,12 +168,6 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
     `0x00590fb0` tests both together and answers only when `[0x008bd524] == 1`. Whether this explains Q968's seams is not
     shown. The loop bit (`0x0042fd57`) is read under the definition's `[ebx+0x10]`. The pylon's ground node is already in
     `park-engine.md` (bottom node `0x00432f2f` to `0x00469940`); "four ground vertices on every PC pylon" is unproven.
-- [ ] **Q909. The lobby's sky colour snaps in the original at a change of nearest island; ours fades it (Q950's item 3, left).** The original's
-  attract pass copies the nearest island's `+0x64..+0x6c` to the render camera's `+0x50..+0x58` every frame (`docs/exe/lobby.md`, "Attract"),
-  so the sky and fog colour change in one frame when the nearest island changes; `LobbyWeather` fades it over `SkyRate` (about 1 s, a deviation
-  unmarked at Alexah's word). Alexah's 2026-10-31 decision named the sound and the camera, not this. Ask whether it goes back to the original's
-  snap; if so, take the fade out of the attract path (with somebody playing it stays: the globe's change of island is a different pass) and film
-  the first second after a change in both games (`record.sh`, `attractcam.py` prints the render camera's colour beside the nearest island).
 
 - [ ] **Q917. The Crazy Ape's OnAMesh clips and its other heads, and a fitted turn for them (from Q916).** Q916 compared three of the Ape's heads (Head02, Head07, Head13) in
   its clip `l` (role 3), the OnAFace branch, and found no difference above about 0.05 (the census rounds to 0.1). Not compared: the OnAMesh branch (roles 4, 5, 6 and `m1` to
@@ -806,8 +800,7 @@ filed the items that cite it.
     reads `0x7f` through `0x0057ff79` and `0x27f` through `0x0054f47f` (not run; whether the `0x100` view flag is set in a
     park frame is not read). Unproven: that the machine "the original" means ran class 2; the fork's "and any later runtime"; whether a HAL
     driver writes the word. **Alexah's call:** every `0x27f` we measured is a Proton fact, so the pinned 53-bit choices
-    (`ride-operation.md` shop cost, `park-engine.md` conform) are faithful to Proton, not to DX6.1 on a DP2 driver. Which
-    precision to match is a decision, not a fact.
+    (`ride-operation.md` shop cost, `park-engine.md` conform) are faithful to Proton, not to DX6.1 on a DP2 driver. **Alexah (2026-11-02):** keep matching Proton's 53-bit; no code change.
 - [ ] **Q222. The original's guests come up empty-handed, and ours do not. Measure first.** Found by Q107's
   comparison with the original (`ride-operation.md`, "Q107"). The same stock Lost Kingdom park left alone for 240 s:
   the original's chooser named nothing 112 times and a thing 72 times (Jungle Spray 27, Drinks Shop 18, Belly Bounce
@@ -2403,13 +2396,12 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   and no line carried it). Since Q216 a Config.tcf or gms.dat this game did not read whole is copied beside itself (`.opentpw-backup`) and then
   written over, and only `console.log` says so. It matters most for a good gms.dat that would not open at the read: its whole bytes go to the
   backup, a blank stand-in becomes the live file, and the player sees only lost progress. The overwrite itself is Alexah's decision and is
-  tested on purpose; whether to say it on screen, and in what words, is Alexah's call (a message box in the game's style, as `SaveTrouble`'s
-  are, or a decision that none is wanted, said at the site).
+  tested on purpose; **Alexah (2026-11-02):** say it on screen, in a message box in the game's style as `SaveTrouble`'s are, naming the backup that was kept.
 - [ ] **Q999. The Options tick over a lost opentpw.cfg alone: RESTART GAME is not asked.** From the week-end audit 2026-10-31 (the outside lead 2,
   `OptionsScreen.cs`, `Keep`; `SaveTrouble.LostAWrite`). The video card lives in Config.tcf (`GameOptions.cs:157`, `:175`), not opentpw.cfg. Where
   Config.tcf is written and opentpw.cfg is not (a per-file fault: on Windows a read-only or locked opentpw.cfg, or a scanner's hold on the `.tmp`),
   `LostAWrite` suppresses RESTART GAME, so the card arrives at the next start unasked, with OPTIONS NOT SAVED shown; the original asks
-  (`docs/exe/ui.md`, "The video card row"). Said at the site. Alexah's call: words only (as now), or about fifteen lines of behaviour (`SaveConfig`
+  (`docs/exe/ui.md`, "The video card row"). Said at the site. **Alexah (2026-11-02):** the behaviour, so RESTART GAME is asked: about fifteen lines (`SaveConfig`
   returns whether it wrote, `AsksToRestart` takes that alone, the RESTART box carries `SaveTrouble.Take()`'s text; box room unchecked). The naive
   fix brings back what Q986 removed (RESTART held over OPTIONS NOT SAVED, and the lobby's tick quitting with it untold). Test seam: make
   `opentpw.cfg.tmp` a directory. The reverse (Config.tcf failing, opentpw.cfg written) is right as it stands. Also Q216's refused Config.tcf

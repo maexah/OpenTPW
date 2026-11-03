@@ -11931,6 +11931,10 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   **Done 2026-11-02** (run 18, lane A, `alexah/881-other-lists-scrollbars`): the bar is built on all five screens (the items screen's three list shapes) at each stream's own rectangles (`hud.md`, "The other lists' bars"),
   `LIST_SCROLLBAR_NOT_BUILT` counts a list that scrolls with none; seen on the desk by real clicks on the visitors, hire, all-staff and all-items lists (`q919/run1`, 20 of 20 predictions) and the visitors and hire
   lists driven in the original (`q919/orig`: the same tops by the same rules); the buy list cannot be made to scroll (its longest tab is 10 rows of 11), so its hidden bar is what was seen.
+- [x] **Q909. The lobby's sky colour snaps in the original at a change of nearest island; ours fades it (Q950's item 3, left).** The original's
+  attract pass copies the nearest island's `+0x64..+0x6c` to the render camera's `+0x50..+0x58` every frame (`docs/exe/lobby.md`, "Attract"),
+  so the sky and fog colour change in one frame when the nearest island changes; `LobbyWeather` fades it over `SkyRate` (about 1 s, a deviation
+  unmarked at Alexah's word). Alexah's 2026-10-31 decision named the sound and the camera, not this. **Alexah (2026-11-02):** keep our fade.
 
 ## B. Docs and comments
 
