@@ -207,20 +207,21 @@ public class GpuChoiceTests
 	}
 
 	/// <summary>
-	/// <b>RESTART GAME is not asked where the options were not written</b> (Q986): the box would hold the screen modal over
-	/// OPTIONS NOT SAVED, which the tick would then leave the game with untold (the card may have been kept all the same, in Config.tcf).
+	/// <b>RESTART GAME is asked wherever the card was kept</b> (Q999; Q986 had it suppressed for either file lost): the card lives in
+	/// Config.tcf, so only a Config.tcf that was not written leaves nothing to restart for. The whole tick, over each file lost, is
+	/// <c>OptionsKeepTests</c>.
 	/// </summary>
-	/// <remarks><b>Mutation:</b> a rule that ignores the lost write, or one that never asks, fails a step.</remarks>
+	/// <remarks><b>Mutation:</b> a rule that ignores the write, one that never asks, or one that asks for any change, fails a step.</remarks>
 	[TestMethod]
-	public void RestartGameIsNotAskedWhereAnOptionsFileWasNotWritten()
+	public void RestartGameIsAskedWhereTheCardWasKept()
 	{
 		var before = new GameOptions { SecondaryVideoCard = false };
 		var now = before.Copy();
 		now.SecondaryVideoCard = true;
 
-		Assert.IsTrue( UI.OptionsScreen.AsksToRestart( before, now, optionsLost: false ), "a changed card, written: asked" );
-		Assert.IsFalse( UI.OptionsScreen.AsksToRestart( before, now, optionsLost: true ), "a changed card, a write lost: told as OPTIONS NOT SAVED instead" );
-		Assert.IsFalse( UI.OptionsScreen.AsksToRestart( before, before.Copy(), optionsLost: false ), "no change: not asked" );
+		Assert.IsTrue( UI.OptionsScreen.AsksToRestart( before, now, cardKept: true ), "a changed card, Config.tcf written: asked" );
+		Assert.IsFalse( UI.OptionsScreen.AsksToRestart( before, now, cardKept: false ), "a changed card, Config.tcf not written: nothing was kept to restart for" );
+		Assert.IsFalse( UI.OptionsScreen.AsksToRestart( before, before.Copy(), cardKept: true ), "no change: not asked" );
 	}
 
 	/// <summary>

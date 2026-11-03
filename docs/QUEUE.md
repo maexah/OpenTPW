@@ -2400,15 +2400,6 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   where the original's passes over the builder's object, whose life is not read. Another: a leftover `*.TPWS.tmp` is not taken for a park here
   (Q997's S-D2 fix), but the original's own `.TPW*` search would take it, the folder being shared, and nothing deletes it.
   Build or close each with a note.
-- [ ] **Q999. The Options tick over a lost opentpw.cfg alone: RESTART GAME is not asked.** From the week-end audit 2026-10-31 (the outside lead 2,
-  `OptionsScreen.cs`, `Keep`; `SaveTrouble.LostAWrite`). The video card lives in Config.tcf (`GameOptions.cs:157`, `:175`), not opentpw.cfg. Where
-  Config.tcf is written and opentpw.cfg is not (a per-file fault: on Windows a read-only or locked opentpw.cfg, or a scanner's hold on the `.tmp`),
-  `LostAWrite` suppresses RESTART GAME, so the card arrives at the next start unasked, with OPTIONS NOT SAVED shown; the original asks
-  (`docs/exe/ui.md`, "The video card row"). Said at the site. **Alexah (2026-11-02):** the behaviour, so RESTART GAME is asked: about fifteen lines (`SaveConfig`
-  returns whether it wrote, `AsksToRestart` takes that alone, the RESTART box carries `SaveTrouble.Take()`'s text; box room unchecked). The naive
-  fix brings back what Q986 removed (RESTART held over OPTIONS NOT SAVED, and the lobby's tick quitting with it untold). Test seam: make
-  `opentpw.cfg.tmp` a directory. The reverse (Config.tcf failing, opentpw.cfg written) is right as it stands. Also Q216's refused Config.tcf
-  (`InvalidDataException`) never sets `LostAWrite`, so RESTART GAME is asked with the card not written; Q216's back-up-then-overwrite removed that refusal.
 
 ## B. Docs and comments
 

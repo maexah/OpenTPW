@@ -103,7 +103,8 @@ internal static class SaveFolder
 	}
 
 	/// <summary>Writes the machine's options to save\Config.tcf - the options screen's tick (0x004237f0), and a player being saved (0x00424820).</summary>
-	public static void SaveConfig()
+	/// <returns>Whether the file was written: the video card lives in it, so the tick asks RESTART GAME only if it was (<see cref="UI.OptionsScreen.AsksToRestart"/>, Q999).</returns>
+	public static bool SaveConfig()
 	{
 		var path = ConfigName;
 
@@ -123,11 +124,13 @@ internal static class SaveFolder
 			SaveFileSystem.WriteAllBytes( path, memory.ToArray() );
 			_unreadConfig = null;
 			Log.Info( $"Saves: wrote the options to {path}" );
+			return true;
 		}
 		catch ( Exception e )
 		{
 			Log.Warning( $"Saves: the options could not be written to {path} - {e.Message}" );
 			SaveTrouble.Failed( "OPTIONS", e );
+			return false;
 		}
 	}
 

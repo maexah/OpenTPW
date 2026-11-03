@@ -114,6 +114,15 @@ internal static class SaveTrouble
 			return BackedUpText( kept );
 		}
 
+		return TakeFailure();
+	}
+
+	/// <summary>
+	/// The failure waiting alone, as <see cref="Take()"/> gives it after the notices: for a box that is already up and has to carry it
+	/// (the Options tick's RESTART GAME, Q999), since a modal box holds the scene's own from opening until the game has been left.
+	/// </summary>
+	internal static string? TakeFailure()
+	{
 		if ( _what is not { } what )
 			return null;
 

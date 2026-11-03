@@ -40,6 +40,7 @@ public class OptionsKeepTests
 		SaveFileSystemOrNull = oldSaves;
 		GameOptions.Current = oldOptions;
 		oldOptions.ApplySound();
+		while ( SaveTrouble.Take() != null ) { }
 		Directory.Delete( root, true );
 	}
 
@@ -143,5 +144,75 @@ public class OptionsKeepTests
 		GameOptions.Current.DisplayMode = DisplayMode.Windowed;
 		screen.Keep( apply );
 		CollectionAssert.AreEqual( new[] { (DisplayMode.BorderlessFullScreen, shown), (DisplayMode.Windowed, shown) }, applied, "the second tick puts the window back to the opening display" );
+	}
+
+	private static string TextOf( UI.UiControl control )
+		=> control.Text ?? control.Children.Select( TextOf ).FirstOrDefault( text => text != null ) ?? "";
+
+	private UI.WindowStack TickWithTheCardChangedAndAFileBlocked( string? blocked, out string[] boxes )
+	{
+		while ( SaveTrouble.Take() != null ) { }
+
+		GameOptions.Current = new GameOptions { SecondaryVideoCard = false };
+		var stack = new UI.WindowStack();
+		UI.OptionsScreen.Open( stack, () => { } );
+		var screen = stack.Windows.OfType<UI.OptionsScreen>().Single();
+
+		GameOptions.Current.SecondaryVideoCard = true;
+
+		// A directory where the write's copy goes (BaseFileSystem.TemporarySuffix) fails that one file and no other.
+		if ( blocked != null )
+			Directory.CreateDirectory( Path.Combine( root, blocked + BaseFileSystem.TemporarySuffix ) );
+
+		screen.Keep( null );
+		boxes = stack.Windows.OfType<UI.MessageBox>().Select( box => TextOf( box.Root ) ).ToArray();
+		return stack;
+	}
+
+	/// <summary>
+	/// <b>RESTART GAME is asked over a lost opentpw.cfg</b> (Q999): the card is in Config.tcf, which was written, so it arrives at the next start
+	/// and the player is asked. The box carries the lost write's words (Q986's concern: the scene's own box waits while this one is up and the
+	/// tick leaves the game), and nothing is left to tell afterwards.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> <c>Keep</c> passing <c>!SaveTrouble.LostAWrite</c> as the card kept (Q986's rule): no box; <c>RestartText</c> without the failure: the box lacks OPTIONS NOT SAVED; <c>TakeFailure</c> not letting the failure go: it is told twice.</remarks>
+	[TestMethod]
+	public void TheTickAsksToRestartOverALostOpentpwCfgAndTellsItInTheBox()
+	{
+		var stack = TickWithTheCardChangedAndAFileBlocked( "opentpw.cfg", out var boxes );
+
+		Assert.AreEqual( 1, boxes.Length, "RESTART GAME is asked" );
+		StringAssert.StartsWith( boxes[0], Localization.Get( UIStrings.RestartGame ) );
+		StringAssert.Contains( boxes[0], "OPTIONS NOT SAVED" );
+		Assert.IsTrue( stack.Windows.OfType<UI.OptionsScreen>().Any(), "the screen stays open under the box" );
+		Assert.IsFalse( SaveTrouble.Pending, "the box took the failure, so no second box follows" );
+		Assert.AreEqual( 1, BitConverter.ToInt32( File.ReadAllBytes( Path.Combine( root, "Config.tcf" ) ), 16 ), "the card was kept in Config.tcf" );
+	}
+
+	/// <summary>
+	/// <b>RESTART GAME is not asked over a lost Config.tcf</b> (Q999, the reverse, as it stood): the card was not kept, so there is nothing to
+	/// restart for; the screen closes and the lost write is told by the scene as it always was.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> <c>Keep</c> passing nothing but <c>NeedsRestart</c>: the box opens over a card that was not written.</remarks>
+	[TestMethod]
+	public void TheTickDoesNotAskToRestartOverALostConfigTcf()
+	{
+		var stack = TickWithTheCardChangedAndAFileBlocked( "Config.tcf", out var boxes );
+
+		Assert.AreEqual( 0, boxes.Length, "no RESTART GAME" );
+		Assert.IsFalse( stack.Windows.OfType<UI.OptionsScreen>().Any(), "the tick closed the screen" );
+		Assert.IsTrue( SaveTrouble.Pending, "the failure waits for the scene" );
+		StringAssert.StartsWith( SaveTrouble.Take(), "OPTIONS NOT SAVED" );
+	}
+
+	/// <summary><b>The control</b> (Q999): both files written, the box is the game's own words alone and nothing waits.</summary>
+	/// <remarks><b>Mutation:</b> <c>RestartText</c> always adding a paragraph: the words differ.</remarks>
+	[TestMethod]
+	public void TheTickAsksToRestartInTheGamesOwnWordsWhereBothFilesWereWritten()
+	{
+		var stack = TickWithTheCardChangedAndAFileBlocked( null, out var boxes );
+
+		CollectionAssert.AreEqual( new[] { Localization.Get( UIStrings.RestartGame ) }, boxes );
+		Assert.IsFalse( SaveTrouble.Pending );
+		Assert.IsTrue( stack.Windows.OfType<UI.OptionsScreen>().Any() );
 	}
 }

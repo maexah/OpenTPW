@@ -11957,6 +11957,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   written over, and only `console.log` says so. It matters most for a good gms.dat that would not open at the read: its whole bytes go to the
   backup, a blank stand-in becomes the live file, and the player sees only lost progress. The overwrite itself is Alexah's decision and is
   tested on purpose; **Alexah (2026-11-02):** say it on screen, in a message box in the game's style as `SaveTrouble`'s are, naming the backup that was kept.
+- [x] **Q999. The Options tick over a lost opentpw.cfg alone: RESTART GAME is not asked.** From the week-end audit 2026-10-31 (the outside lead 2,
+  `OptionsScreen.cs`, `Keep`; `SaveTrouble.LostAWrite`). The video card lives in Config.tcf (`GameOptions.cs:157`, `:175`), not opentpw.cfg. Where
+  Config.tcf is written and opentpw.cfg is not (a per-file fault: on Windows a read-only or locked opentpw.cfg, or a scanner's hold on the `.tmp`),
+  `LostAWrite` suppresses RESTART GAME, so the card arrives at the next start unasked, with OPTIONS NOT SAVED shown; the original asks
+  (`docs/exe/ui.md`, "The video card row"). Said at the site. **Alexah (2026-11-02):** the behaviour, so RESTART GAME is asked: about fifteen lines (`SaveConfig`
+  returns whether it wrote, `AsksToRestart` takes that alone, the RESTART box carries `SaveTrouble.Take()`'s text; box room unchecked). The naive
+  fix brings back what Q986 removed (RESTART held over OPTIONS NOT SAVED, and the lobby's tick quitting with it untold). Test seam: make
+  `opentpw.cfg.tmp` a directory. The reverse (Config.tcf failing, opentpw.cfg written) is right as it stands. Also Q216's refused Config.tcf
+  (`InvalidDataException`) never sets `LostAWrite`, so RESTART GAME is asked with the card not written; Q216's back-up-then-overwrite removed that refusal.
+  Built (2026-11-02): `SaveConfig` returns whether Config.tcf was written and `AsksToRestart` takes that alone; the RESTART box carries `SaveTrouble.TakeFailure()`'s words after the game's own (six lines, seen in the box); a Config.tcf that fails to write for any reason returns false, so a refused one (Q216's, since removed) would ask nothing.
 
 ## B. Docs and comments
 

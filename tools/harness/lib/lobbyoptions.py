@@ -1,10 +1,10 @@
-"""lobbyoptions.py WORKDIR CASE FOLDER [gpu=LINE] [vc=N] [dispN] [clickN] [backN] [locksave] [tick] [box=tick|cross] [exit=cross] [ENV=VAL ...]: one start of the build on a private game
+"""lobbyoptions.py WORKDIR CASE FOLDER [gpu=LINE] [vc=N] [dispN] [clickN] [backN] [locksave] [lock=FILE] [tick] [box=tick|cross] [exit=cross] [ENV=VAL ...]: one start of the build on a private game
 folder (made on first use under WORKDIR/game-FOLDER, kept between cases that name the same FOLDER, so a saved Config.tcf carries
 to the next start), the lobby, the Options screen opened from the lobby menu, screenshots (lobby, options, click1..N), optionally
 N clicks on the Video Card row and the tick, then the log's Graphics card / GPU / Options lines. box=tick|cross answers the RESTART GAME box the tick raises after a card change (Q985): cross ticks again and shows the box again, tick waits for the game to end. gpu=LINE sets opentpw.cfg's gpu
 line ("-" removes it); dispN clicks the Display row's arrow N times before the card's clicks (Windowed, FullScreen, Borderless in turn; the row is checked in the log and
 the screenshots); locksave makes the private save/ folder read-only once the Options screen is open (restored at the end), so the start found it writable and the tick's writes fail
-as a folder that cannot be written does (Q982, Q986; a read-only file is no use, the save replaces it); exit=cross
+as a folder that cannot be written does (Q982, Q986; a read-only file is no use, the save replaces it); lock=FILE (opentpw.cfg or Config.tcf) makes `FILE.tmp` a directory once the Options screen is open, so that one file's write fails and the other's goes through (Q999; removed at the end); exit=cross
 presses the Options screen's own cross after the RESTART GAME box's cross (Q986); backN clicks the Display row's arrow N more times after the box's cross and before the second tick, so the second tick sets the display back (Q987; needs dispN); and the opentpw.cfg display line and the window's size are printed before and after; vc=N sets Config.tcf's video card field (byte 16; byte 12 is graphics quality). Output in WORKDIR/runs/CASE.
 BIN names the build's folder (default this repo's Debug build). Run with the harness Python (Xlib), on the desktop display, or with OFFSCREEN_DISPLAY=:79 in the environment on a private Xvfb drawn by lavapipe (Q987; lane B).
 Q983: TOOLING.md, the table row `lib/lobbyoptions.py`."""
@@ -14,12 +14,13 @@ REPO = os.path.dirname(os.path.dirname(os.path.dirname(LIB)))
 os.environ["OPENTPW_NO_MESSAGE_BOX"] = "1"
 import gamefolder
 HERE = os.path.abspath(os.path.expanduser(sys.argv[1])); CASE, FOLDER = sys.argv[2], sys.argv[3]
-GPU = VC = None; CLICKS = 0; BACK = 0; TICK = False; BOX = None; DISP = 0; LOCKSAVE = False; EXIT = None
+GPU = VC = LOCKFILE = None; CLICKS = 0; BACK = 0; TICK = False; BOX = None; DISP = 0; LOCKSAVE = False; EXIT = None
 for kv in sys.argv[4:]:
     if kv.startswith("gpu="): GPU = kv[4:]
     elif kv.startswith("vc="): VC = int(kv[3:])
     elif kv.startswith("disp"): DISP = int(kv[4:] or 1)
     elif kv == "locksave": LOCKSAVE = True
+    elif kv.startswith("lock="): LOCKFILE = kv[5:]
     elif kv.startswith("exit="): EXIT = kv[5:]
     elif kv.startswith("back"): BACK = int(kv[4:] or 1)
     elif kv.startswith("click"): CLICKS = int(kv[5:] or 1)
@@ -80,6 +81,7 @@ try:
     move(x + w_ / 2, y + h / 2, "Options"); button(1, "Options"); time.sleep(1.5)
     shot("options", 0.5)
     if LOCKSAVE: os.chmod(os.path.join(PRIVATE, "save"), 0o555); print("  save/ made read-only")
+    if LOCKFILE: os.makedirs(os.path.join(PRIVATE, "save", LOCKFILE + ".tmp"), exist_ok=True); print(f"  save/{LOCKFILE}.tmp made a directory")
     l = ask("control 1d4d3", "control"); print("  ", l)
     m = re.search(r"at \((-?\d+),(-?\d+)\) size \((\d+),(\d+)\)", l)
     x, y, w_, h = [int(v) for v in m.groups()]
@@ -131,5 +133,6 @@ finally:
     finish()
     if _xvfb: _xvfb.terminate()
     if LOCKSAVE: os.chmod(os.path.join(PRIVATE, "save"), 0o755)
+    if LOCKFILE: shutil.rmtree(os.path.join(PRIVATE, "save", LOCKFILE + ".tmp"), ignore_errors=True)
 for l in open(os.path.join(OUT, "run.log"), errors="replace"):
     if re.search(r"Graphics card|GPU:|opentpw.cfg|Options:|Display:|video card|Saves: wrote|NOT SAVED|Save trouble|Message box|quitting|Front end", l): print("LOG>", l.rstrip())
