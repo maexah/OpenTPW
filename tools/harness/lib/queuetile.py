@@ -4,13 +4,14 @@
     $OPENTPW_EMU_PYTHON -u queuetile.py            # the report: the rows, seven cells, the model per index, index 8
     from queuetile import Rules
     r = Rules()
-    r.tile( 0x11, 0x10, { 0x01, 0x10 } )           # (set, index, angle) of a type 3 cell, mask 0x11, flow 0x10,
+    r.tile( 0x11, 0x10, { 0x01, 0x10 }, flags=0 )  # (set, index, angle) of a type 3 cell, mask 0x11, flow 0x10,
                                                    # its north and south neighbours paths linked back: (2, 8, 0)
     r.model( 9 )                                   # 'gk_trckQ.md2': the model FUN_005229e0 makes for that index
 
 `tile` runs `FUN_00535dd0` (the tile rule) on one cell at (60,60) of a zeroed world: each neighbour the mask names is
 laid as a path (type 1) when its bit is in `paths`, else as a queue (type 3), with the opposite bit set, so a path
-link is mutual; every track record is zero, so no link is refused. `model` runs `FUN_005229e0( x, y, 2, index, angle,
+link is mutual; every track record is zero, so no link is refused unless `flags` is given: it is written to the byte at
+`[0x008023a0] + id x 0x28 + 0x10ffd8 + 0xe` of every cell laid (id = y*128 + x + 1), the flags nibble a played park can put there. `model` runs `FUN_005229e0( x, y, 2, index, angle,
 0 )` with `FUN_00463060` answering the handle it is given, after the queue and kart loaders (`FUN_00522900`,
 `TrackKit_LoadKartPieces`) filled their tables with `RideSystem_RegisterType` answering its name argument, so a
 handle is its model's name (0: none). `docs/exe/park-engine.md`, "An index past the queue table". Stubbed in the
@@ -69,12 +70,18 @@ class Rules:
 		self.x.write( c + 0x08, struct.pack( '<i', typ ) )
 		self.x.write( c + 0x0c, bytes( [ mask, direction ] ) )
 
-	def tile( self, mask, direction, paths, typ=3 ):
+	def _flag( self, cx, cy, flags ):
+		record, = struct.unpack( '<I', self.x.read( 0x008023a0, 4 ) )
+		self.x.write( record + ( cy * 128 + cx + 1 ) * 0x28 + 0x10ffd8 + 0xe, bytes( [ flags ] ) )
+
+	def tile( self, mask, direction, paths, typ=3, flags=0 ):
 		self.x.write( self.world, b'\0' * WORLD_SIZE )
 		self._lay( X, Y, typ, mask, direction )
+		self._flag( X, Y, flags )
 		for b, ( dx, dy ) in STEP.items():
 			if mask & b:
 				self._lay( X + dx, Y + dy, 1 if b in paths else 3, OPPOSITE[ b ], 0 )
+				self._flag( X + dx, Y + dy, flags )
 		out = self.x.alloc( 4 )
 		r = self.x.call( 0x00535dd0, out, ecx=self._cell( X, Y ) )
 		angle, = struct.unpack( '<i', self.x.read( out, 4 ) )

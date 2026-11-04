@@ -536,17 +536,24 @@ filed the items that cite it.
     (depth + 1) in screen units and branch odds of 9 in 512; the midpoint step is `0x0057e4b0` (its offset is not
     perpendicular: it uses |mid|², and its cross term is × 0.0), the branch heading `0x0057e810`, the colour pulse
     `0x0057ee30`, whose grey can pass 255 and wrap to near black. `Lightning.cs` draws one quad 9 wide.
-- [ ] **Q859. A queue piece whose index is 8 or more draws what the original draws (decoded in Q895).** From Q154. A queue cell's
+- [ ] **Q859. A queue piece whose index is 8 or more draws what the original draws (decoded in Q895; the build waits on the confirm below).** From Q154. A queue cell's
   tile index is `2` for a straight and `3` for a corner, `+1` on the four bumped corner pairs, `+3` per mutual path link, and the
   table of queue models holds eight; the original's index runs on into the kart kit's table (`park-engine.md`, "An index past the
   queue table"): at 9 it draws `gk_trckQ`, at 10 `gk_trckS`, at 11 `gk_trckB`, at 14 `gk_trckX`, with the row's end-cap mask and
   the queue's angle; at 8 it draws no model over the ground's filler, and a park saved with an 8 faults its load. OpenTPW drops
   links until the index fits (`ParkPathBuilding.Retile`, counted `QUEUE_TILE_INDEX_OUTSIDE_TABLE`; its comment still says
   undecoded). Build: from 9 on draw the kart row's model (`rides/gokarts.wad`) with its mask; at 8 the ground alone, as the
-  original; and never write an 8 into a park file, which the original could not load (rule 11: say at the site what is written
-  instead). First confirm in the original (lane A): lay a queue to a path, lay a path over the queue cell before its end
+  original; and never write an 8 into a park file, which the original's load faults on: write the cell as `Retile` draws it today,
+  index 5, the end piece (a straight is the only shape that reaches 8, `2 + 3 + 3`; one link dropped), with the end piece's
+  record, count it, and say at the writer that the original writes the 8 and cannot load it (rule 11). A file of the
+  original's holding an 8 loads here and draws the ground alone (a fix: the original faults). Save: a cell at 9, 10, 11 or 14
+  is written with the model record the original's `FUN_005229e0` makes for it: the kart row's type (item 17100 + index - 8, as
+  `TrackKit_LoadKartPieces` registers it; inferred, since `FUN_005229e0` passes only the handle), flags `0x33a`, the one-cell
+  footprint `0x00816d68`, 360 less the angle, the row's mask; its bytes are read from the file the original saves in the
+  confirm (`parkfile.py`), not made up. `SAVE_PARK_QUEUE_CELL_MODEL` stops counting those cells. Load: the rebuild claims that
+  record by its handle, flags, cell and angle (`FUN_005366e0` -> `FUN_00463ab0`). First confirm in the original (lane A): lay a queue to a path, lay a path over the queue cell before its end
   (the route `park-engine.md` reads, not run), and photograph the end cell as a straight (8) and as a corner (9): where the kart
-  piece stands against the cell is not established; then Save and Load it (predicted: the 8 faults). `tools/harness/lib/queuetile.py`
+  piece stands against the cell is not established (`FUN_005229e0` lays it on the queue cell itself with the one-cell footprint, `0x00522a0d`..`0x00522a15`, where a kart track lays its piece one cell on with the 2 x 2 footprint `0x008179f8`: the photograph settles where the model's own origin puts it); then Save and Load each through the in-park Load list (`FUN_0049e880` -> `FUN_005ac650`) (predicted, read not run: the 8 faults at `0x00463b18` and the game ends through the C runtime's filter; the 9 loads and claims its `gk_trckQ` record, unexamined). `tools/harness/lib/queuetile.py`
   gives the original's index for any mask. Also counted, never reached: `QUEUE_TILE_TRACK_PARENT_UNNAMED` (a type 12 or 17 queue
   record naming no parent reads the record `0x6cde` records past the world's base, the last `0x28` bytes of map cell (127,127)'s
   record: decodable; a unit test covers the counted branch). The gate's refusing branch is covered by unit tests and mutants only.
@@ -563,6 +570,7 @@ filed the items that cite it.
   prove it by putting the cause back (`VERIFYING.md`, the flaky-test rule).
   Piece Q866 (ticked) ran sixteen suites (ten plain, six with the generators a lost scratch patch seeded; not every generator in the product: `ParkAudioScripts.cs:38`, `ParkAudio`, `ParkCarSounds`, `Advisor`, `LobbyAudio`, `LobbyFlyer` stood unseeded) and stored the loop; what is left is the failure itself, still unnamed. Untested: the real-clock zone under a
   machine load heavier than three suites at once. Next failure anywhere: `tools/harness/lib/suiteloop.sh OUTDIR [N]` keeps every run's output, so its file names the test.
+  **One of the one-offs is named (2026-11-04):** `ScriptSoundTests.AHeldParksHeldChainMakesItsChildrenUnheardAndNoneBurstsOnResume` failed once in a full suite at `b6531222` (line 1672, "not before the newest child's time", 2 samples where 1), and passed 60 of 60 runs of `ScriptSoundTests` alone and the next full suite; the output is `~/.cache/tpw-harnesses/q942/named-2026-11-04/`. The gap is drawn from `ParkAudioScripts`' unseeded `_scriptRandom`; it is not seeded or changed yet (that is this item's own build).
 - [ ] **Q860. A queue cell's counter is written and read as the original's (decoded in Q896).** From Q153. The 1 a corner
   holds is the queue tool's re-stamp: each click's run starts on its anchor, already queue, and the stamp `FUN_005346d0` adds 1
   (`0x005346f5`), so the placer's node and every clicked cell (each corner, and a straight clicked part way) hold 1; the walk

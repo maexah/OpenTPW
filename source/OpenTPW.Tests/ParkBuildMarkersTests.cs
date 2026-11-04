@@ -61,6 +61,8 @@ public class ParkBuildMarkersTests
 		Assert.AreEqual( 4, ParkBuildMarkers.VertexCount( 1, 0 ) );
 		Assert.AreEqual( 4, ParkBuildMarkers.VertexCount( 0, 1 ) );
 		Assert.AreEqual( 28, ParkBuildMarkers.VertexCount( 3, 4 ) );
+		Assert.AreEqual( 6, ParkBuildMarkers.ElementCount( 0, 1 ), "six indices to a wall too" );
+		Assert.AreEqual( 42, ParkBuildMarkers.ElementCount( 3, 4 ) );
 	}
 
 	/// <summary>
@@ -276,5 +278,55 @@ public class ParkBuildMarkersTests
 		Assert.IsTrue( ParkBuildMarkers.RipplesShade( null ), "the lobby has no park light" );
 		Assert.IsTrue( ParkBuildMarkers.RipplesShade( new ParkLight( ambient, travels ) ) );
 		Assert.IsFalse( ParkBuildMarkers.RipplesShade( new ParkLight( ambient, travels, Lit: false ) ) );
+	}
+
+	/// <summary>
+	/// <b>The mesh's CPU half lays what Build sizes it from</b>: a blue square on the hill at (73,66) records over its lift of
+	/// 40 (Recorded), and the vertex array holds four corners to it, to every wall under it and to the stranded cell added after
+	/// them (VertexCount, counted after the stranded squares), the index list six to each (ElementCount) (Q892).
+	/// </summary>
+	/// <remarks><b>Mutation:</b> at the call sites in <c>Lay</c>: <c>_strip = Recorded( lifts )</c> with every lift 0 reads
+	/// <c>^0</c>; <c>VertexCount( _strip.Count, 0 )</c> or the count taken before the stranded AddRange, or the elements
+	/// counted without the walls, break the lengths.</remarks>
+	[TestMethod]
+	public void TheMeshesCpuHalfSizesItsArraysFromTheSquaresAndWallsItLaid()
+	{
+		var data = GameData.Required();
+		FileSystem = data;
+
+		using var stream = new System.IO.MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
+		var state = new ParkState( new ParkWorld( new SaveReader( stream ).ReadFile() ) );
+		HeightfieldFile field;
+
+		using ( var terrain = data.OpenRead( "levels/jungle/terrain/base.MD2" ) )
+			field = new HeightfieldFile( terrain );
+
+		var stateProperty = typeof( ParkState ).GetProperty( nameof( ParkState.Current ) )!;
+		var before = ParkState.Current;
+		var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+		var markers = (ParkBuildMarkers)System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject( typeof( ParkBuildMarkers ) );
+
+		try
+		{
+			stateProperty.SetValue( null, state );
+
+			Assert.IsTrue( markers.Lay(
+				[new ParkPathBuilding.QueueSquare( 73, 66, ParkPathBuilding.MarkerBlue )], [], [], [(10, 10)], field ) );
+		}
+		finally
+		{
+			stateProperty.SetValue( null, before );
+		}
+
+		var walls = ((System.Collections.IEnumerable)typeof( ParkBuildMarkers ).GetField( "_walls", flags )!.GetValue( markers )!)
+			.Cast<object>().Count();
+		var vertices = (Vertex[])typeof( ParkBuildMarkers ).GetField( "_vertices", flags )!.GetValue( markers )!;
+		var elements = (uint[])typeof( ParkBuildMarkers ).GetField( "_elements", flags )!.GetValue( markers )!;
+
+		Assert.IsTrue( walls > 0, "the hill has walls under its square" );
+		StringAssert.Contains( markers.Census(), "73,66,0^40", "recorded over its own lift" );
+		Assert.AreEqual( 4 * (2 + walls), vertices.Length, "the square, the stranded cell and each wall" );
+		Assert.AreEqual( 6 * (2 + walls), elements.Length, "six indices to each" );
+		Assert.AreEqual( (uint)vertices.Length - 1, elements.Max(), "the indices reach the last corner" );
 	}
 }

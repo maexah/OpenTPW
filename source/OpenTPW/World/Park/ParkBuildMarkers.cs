@@ -143,6 +143,8 @@ public sealed class ParkBuildMarkers : ModelEntity
 	/// </summary>
 	private bool _redShown = true;
 
+	private uint[] _elements = [];
+
 	private float _blinkFrames;
 
 	/// <summary>How many frames a red square shows for, and how many it is gone for (<c>0x0053c7b1</c>..<c>0x0053c7f6</c>).</summary>
@@ -417,6 +419,24 @@ public sealed class ParkBuildMarkers : ModelEntity
 		if ( strip.Count + carried.Count + patrol.Count + stranded.Count == 0 || ParkGround.Current?.Heightfield is not { } field )
 			return;
 
+		if ( !Lay( strip, carried, patrol, stranded, field ) )
+			return;
+
+		// Both faces drawn, where the original culls (render-states.md, "Which draws the test covers"; Q613).
+		var material = new Material<ObjectUniformBuffer>( "content/shaders/test.shader", MaterialFlags.DisableCulling );
+		material.Set( "Color", _textures );
+
+		TranslucentModel = new Model( _vertices, _elements, material );
+		TranslucentModel.EnableFrequentUpdates( _vertices );
+	}
+
+	/// <summary>
+	/// The mesh's CPU half: the strip, the walls and the vertex array laid at the wave's height; answers whether anything
+	/// was laid, with the index list over them. <see cref="Build"/> calls it before the GPU tail.
+	/// </summary>
+	internal bool Lay( List<ParkPathBuilding.QueueSquare> strip, List<ParkBuilding.CarrySquare> carried,
+		List<ParkPathBuilding.QueueSquare> patrol, List<(int X, int Y)> stranded, HeightfieldFile field )
+	{
 		if ( RipplesShade( Level.Current?.ParkLight ) )
 			Unimplemented.Report( "MARKER_RIPPLE_SHADING" );
 
@@ -476,28 +496,23 @@ public sealed class ParkBuildMarkers : ModelEntity
 		_vertices = new Vertex[VertexCount( _strip.Count, _walls.Count )];
 
 		if ( Fill( field ) == 0 )
-			return;
+			return false;
 
-		var elements = new uint[(_strip.Count + _walls.Count) * 6];
+		_elements = new uint[ElementCount( _strip.Count, _walls.Count )];
 		var element = 0;
 
 		for ( var corner = 0u; corner < _vertices.Length; corner += 4 )
 		{
-			elements[element++] = corner;
-			elements[element++] = corner + 1;
-			elements[element++] = corner + 2;
+			_elements[element++] = corner;
+			_elements[element++] = corner + 1;
+			_elements[element++] = corner + 2;
 
-			elements[element++] = corner;
-			elements[element++] = corner + 2;
-			elements[element++] = corner + 3;
+			_elements[element++] = corner;
+			_elements[element++] = corner + 2;
+			_elements[element++] = corner + 3;
 		}
 
-		// Both faces drawn, where the original culls (render-states.md, "Which draws the test covers"; Q613).
-		var material = new Material<ObjectUniformBuffer>( "content/shaders/test.shader", MaterialFlags.DisableCulling );
-		material.Set( "Color", _textures );
-
-		TranslucentModel = new Model( _vertices, elements, material );
-		TranslucentModel.EnableFrequentUpdates( _vertices );
+		return true;
 	}
 
 	/// <summary>The squares as the mesh holds them: each at its record, <see cref="RecordHeight"/> of the lift under it.</summary>
@@ -508,6 +523,9 @@ public sealed class ParkBuildMarkers : ModelEntity
 
 	/// <summary>Four corners to every square and wall.</summary>
 	internal static int VertexCount( int squares, int walls ) => (squares + walls) * 4;
+
+	/// <summary>Six indices to every square and wall: two triangles over its four corners.</summary>
+	internal static int ElementCount( int squares, int walls ) => (squares + walls) * 6;
 
 	/// <summary>Lays the four corners of every square and wall at the wave's current height; answers how many were laid.</summary>
 	private int Fill( HeightfieldFile field )

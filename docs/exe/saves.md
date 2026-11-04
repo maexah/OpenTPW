@@ -2023,7 +2023,7 @@ is given a record in an empty slot (`ParkThingStates.QueuePieceRecord`) and name
 - **A handle that names no queue piece's record is not freed**: a cell whose `mMeshInstance` names an object's
   model, or a slot past the table, is written naming none and the slot is left.
 - **Still counted** (`SAVE_PARK_QUEUE_CELL_MODEL`): a cell on a tile outside the eight pieces, which draws
-  nothing here (the original draws a kart track piece from 9 on, nothing at 8, and faults loading a park that holds an 8:
+  nothing here (the original draws a kart track piece from 9 on, nothing at 8, and faults loading a park that holds an 8 (read, not run):
   `park-engine.md`, "An index past the queue table") (`QUEUE_TILE_INDEX_OUTSIDE_TABLE`), and every changed queue cell of a park written with
   its things as the file's.
 

@@ -10,7 +10,8 @@
 What "leaf" means here (docs/TOOLING.md, "The executable's own routines under unicorn"): no Windows import, no thread,
 no object built at run time unless the caller builds it in `alloc`'d memory. The C runtime is in the image, so
 `__ftol` works. A routine that sets an exception frame (`mov eax,fs:0`) needs `Exe( tib=True )`: FS then names a
-zeroed page through a small GDT (SS, DS and ES flat), and page 0 stays unmapped, so a null read still faults. The x87 control word is 0x027F (53-bit, the Windows default) unless `fpcw` says otherwise.
+zeroed page through a small GDT (SS, DS and ES flat), and page 0 stays unmapped, so a null read still faults.
+The x87 control word is 0x027F (53-bit, the Windows default) unless `fpcw` says otherwise.
 `call` returns EAX as an unsigned int; `signed( v )` turns it into a signed one. `reads( fn )` lists the addresses
 outside the stack a call read, to see which globals it touched.
 

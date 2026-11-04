@@ -59,27 +59,21 @@ public class ParkStaffCellListTests
 
 	/// <summary>
 	/// A member who walks one cell is relinked into it in the turn that takes them across, and not before: the guard
-	/// set walking from his saved (39,28) to the middle of (40,28) heads (39,28) until a turn leaves him standing in
-	/// (40,28), and on that very turn (40,28) names him and (39,28) does not. He is walking on that turn (the walk
-	/// tick relinks him as he crosses, <c>FUN_004fa2a0</c> calling <c>FUN_0050b6a0</c>). The turn is
-	/// <see cref="StaffBehaviour.Step"/> itself, stamped with where he stood first as the sweep does
-	/// (<see cref="PeepNavigator.StampPrevious"/>), and no member is put on a cell by hand.
+	/// set walking from his saved (39,28) to the middle of (40,28) is on (39,28)'s list, at its head, until a turn leaves
+	/// him standing in (40,28), and on that very turn (40,28) names him and (39,28) does not. The walk tick relinks
+	/// whatever state is walking (<c>FUN_004fa2a0</c> calling <c>FUN_0050b6a0</c>, from ten state handlers), so each
+	/// walking state is run. The turn is <see cref="StaffBehaviour.Step"/> itself, stamped with where he stood first as
+	/// the sweep does (<see cref="PeepNavigator.StampPrevious"/>), and no member is put on a cell by hand.
 	/// </summary>
 	[TestMethod]
-	public void AMemberWalkingOneCellIsRelinkedOnTheTurnThatCrossesIt()
+	[DataRow( StaffActivity.Walking )]
+	[DataRow( StaffActivity.GoingToRest )]
+	[DataRow( StaffActivity.GoingOnStrike )]
+	[DataRow( StaffActivity.GoingToLoo )]
+	public void AMemberWalkingOneCellIsRelinkedOnTheTurnThatCrossesIt( StaffActivity activity )
 	{
-		var world = Park();
-		var state = new ParkState( world );
-		var saved = world.People.Single( person => person.ThingId == Guard );
-		var member = new Staff( saved.ThingId, saved.Model, saved.Staff!.Value with { State = (int)StaffActivity.Walking }, saved.Navigator );
-		var blocked = new CellEdge( state.Record, ParkPeople.WalkingMode ).Blocked;
-
-		Assert.AreEqual( (39, 28), member.Navigator.Position.Cell );
-		Assert.IsTrue( member.Navigator.NavigateTo( new FixedVector( PeepNavigator.WaypointCentre( 40 ), PeepNavigator.WaypointCentre( 28 ) ),
-			blocked, addCurrent: false ), "(40,28) is one cell on from where the file has him" );
-
-		var walk = new PeepWalk( member.Navigator, blocked );
-		var behaviour = new StaffBehaviour( new ParkBalance( "jungle", easyMode: true ), null, state );
+		var target = PeepNavigator.WaypointCentre( 40 );
+		var (state, member, walk, behaviour) = AGuardSetWalkingTo( activity, target );
 		var crossed = 0;
 
 		for ( int turn = 1; turn <= 60 && crossed == 0; ++turn )
@@ -91,15 +85,69 @@ public class ParkStaffCellListTests
 
 			Assert.AreEqual( cell, state.CellOf( Guard ), $"turn {turn}: the list has him where he stands" );
 
-			if ( cell != (39, 28) )
+			if ( cell == (39, 28) )
+				Assert.AreEqual( Guard, state.CellAt( 39, 28 ).Occupant, $"turn {turn}: (39,28) still heads with him" );
+			else
 				crossed = turn;
 		}
 
 		Assert.AreNotEqual( 0, crossed, "he crossed into the next cell within sixty turns" );
 		Assert.AreEqual( (40, 28), walk.Position.Cell );
-		Assert.AreEqual( StaffActivity.Walking, member.Activity, "the crossing turn was a walking turn, not an arrival's decide" );
+		Assert.AreEqual( target, member.Navigator.Target.X, "the walk is still the one set: the crossing was not an arrival's decide" );
+		Assert.IsTrue( walk.HasRoute, "with its route not finished" );
 		Assert.AreNotEqual( Guard, state.CellAt( 39, 28 ).Occupant, "(39,28) no longer names him" );
 		Assert.AreEqual( Guard, state.CellAt( 40, 28 ).Occupant, "(40,28) does" );
+	}
+
+	/// <summary>
+	/// The turn that crosses into the cell and ends the walk there relinks too: the target is a little way inside (40,28),
+	/// within the walk's arrival range of the first step across its border, so the turn that brings him over is the one that
+	/// arrives, and his decide sets a fresh walk.
+	/// </summary>
+	[TestMethod]
+	public void TheWalksLastStepRelinksAsItCrossesAndArrives()
+	{
+		var target = 40 * PeepNavigator.One + 8000;
+		var (state, member, walk, behaviour) = AGuardSetWalkingTo( StaffActivity.Walking, target );
+		var crossed = 0;
+
+		for ( int turn = 1; turn <= 60 && crossed == 0; ++turn )
+		{
+			var heading = member.Navigator.Target.X;
+
+			member.Navigator.StampPrevious();
+			behaviour.Step( member, walk, playing: null, tick: 1000 + turn );
+
+			if ( walk.Position.Cell != (39, 28) )
+			{
+				crossed = turn;
+
+				Assert.AreEqual( target, heading, "he was still heading for the cell's point as the turn began" );
+			}
+		}
+
+		Assert.AreNotEqual( 0, crossed, "he crossed into the next cell within sixty turns" );
+		Assert.AreNotEqual( target, member.Navigator.Target.X, "the crossing turn was the arrival: the guard decided on a new walk" );
+		Assert.AreEqual( (40, 28), walk.Position.Cell );
+		Assert.AreEqual( (40, 28), state.CellOf( Guard ), "the list has him where he stands" );
+		Assert.AreNotEqual( Guard, state.CellAt( 39, 28 ).Occupant, "(39,28) no longer names him" );
+		Assert.AreEqual( Guard, state.CellAt( 40, 28 ).Occupant, "(40,28) does" );
+	}
+
+	private (ParkState State, Staff Member, PeepWalk Walk, StaffBehaviour Behaviour) AGuardSetWalkingTo( StaffActivity activity, int targetX )
+	{
+		var world = Park();
+		var state = new ParkState( world );
+		var saved = world.People.Single( person => person.ThingId == Guard );
+		var member = new Staff( saved.ThingId, saved.Model, saved.Staff!.Value with { State = (int)activity }, saved.Navigator );
+		var blocked = new CellEdge( state.Record, ParkPeople.WalkingMode ).Blocked;
+
+		Assert.AreEqual( (39, 28), member.Navigator.Position.Cell );
+		Assert.AreEqual( Guard, state.CellAt( 39, 28 ).Occupant, "the file has him heading his cell" );
+		Assert.IsTrue( member.Navigator.NavigateTo( new FixedVector( targetX, PeepNavigator.WaypointCentre( 28 ) ),
+			blocked, addCurrent: false ), "(40,28) is one cell on from where the file has him" );
+
+		return (state, member, new PeepWalk( member.Navigator, blocked ), new StaffBehaviour( new ParkBalance( "jungle", easyMode: true ), null, state ));
 	}
 
 	/// <summary>

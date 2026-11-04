@@ -121,7 +121,7 @@ public class CameraLensTests
 
 	/// <summary>
 	/// The game keeps lobby.txt inside <c>lobby.wad</c>; an archive without it hands the reader no stream, and the reader draws
-	/// the values the shipped file has (70, 20, 100), as it does for a file it cannot find. A stand-in archive holds nothing.
+	/// the values the shipped file has (70, 20, 100), as it does when the archive has no such file. A stand-in archive holds nothing.
 	/// </summary>
 	[TestMethod]
 	public void AnArchiveWithoutLobbyTxtLeavesTheShippedValues()

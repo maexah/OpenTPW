@@ -1823,8 +1823,9 @@ public static class ParkPathBuilding
 		// The BUMP is OpenTPW's, not the original's. The original's track test (PathLinks) asks the
 		// queue cell's own record once for all its links, so the flags refuse both links or neither and it
 		// cannot keep a straight with two mutual path links inside the table: that cell reaches 2 + 3 + 3 = 8 there as
-		// well. What the original draws at an index the table does not hold is not decoded (very probably a kart's
-		// model, since the rows run on into the next table; Q859). Dropping links until the index is one
+		// well. The original reads on into the kart kit's table (docs/exe/park-engine.md, "An index past the queue
+		// table"): at 8 it draws no model and its load of a park holding one faults; at 9, 10, 11 and 14 a kart track
+		// piece (Q859 builds that). Dropping links until the index is one
 		// the table holds keeps the game's own art and the end piece the cell is asking for; the
 		// alternative is the hole. The shipped park cannot arbitrate: its one end piece at (49,22) has
 		// a single path link, so no cell in it ever reaches this.
