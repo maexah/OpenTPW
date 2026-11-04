@@ -690,9 +690,8 @@ filed the items that cite it.
   `ArchiveDamageTests.EveryInstalledWadEntryStillDecodes` prints its hash and count without asserting either. Write
   each test, put its bug back, see it fail (`AGENTS.md` rule 6). No game run.
   From the run review (2026-10-17): more callers whose tests stop at the helper (the first, `ParkBuildMarkers`' strip
-  `Over` and vertex count, was Q892; the second, `CameraLensTests`' lobby angle, Q893).
-  `ParkStaffCellListTests` (Q446) demands a relink from a member in the Held state, where the original relinks only in
-  its walk tick and a placement: drive a one-cell walk in Walking instead, so a relink inside `Walked` passes.
+  `Over` and vertex count, was Q892; the second, `CameraLensTests`' lobby angle, Q893; the third, `ParkStaffCellListTests`'
+  relink, Q894).
   `Level.cs`'s hand-over of the gadget's locator to the level (Q444) is reached by no test (`ParkLocatorTests` sets
   `level.Locator` by hand); build the test level through `ParkFrontEnd`, or add its deletion to Q444's mutations as
   caught by the game alone. `ParkStaffWindowTests`' refused-sound test (Q442) reaches the path and queue refusals beside a

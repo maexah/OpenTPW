@@ -58,30 +58,48 @@ public class ParkStaffCellListTests
 	}
 
 	/// <summary>
-	/// A member's turn ends by relinking them into the cell they stand on: the guard moved from his saved (39,28) to
-	/// (40,28) heads (40,28) after one turn, and (39,28) no longer names him. The state is one that moves nobody, so
-	/// only the turn's end can have relinked him.
+	/// A member who walks one cell is relinked into it in the turn that takes them across, and not before: the guard
+	/// set walking from his saved (39,28) to the middle of (40,28) heads (39,28) until a turn leaves him standing in
+	/// (40,28), and on that very turn (40,28) names him and (39,28) does not. He is walking on that turn (the walk
+	/// tick relinks him as he crosses, <c>FUN_004fa2a0</c> calling <c>FUN_0050b6a0</c>). The turn is
+	/// <see cref="StaffBehaviour.Step"/> itself, stamped with where he stood first as the sweep does
+	/// (<see cref="PeepNavigator.StampPrevious"/>), and no member is put on a cell by hand.
 	/// </summary>
 	[TestMethod]
-	public void AMembersTurnRelinksThemIntoTheCellTheyStandOn()
+	public void AMemberWalkingOneCellIsRelinkedOnTheTurnThatCrossesIt()
 	{
 		var world = Park();
 		var state = new ParkState( world );
 		var saved = world.People.Single( person => person.ThingId == Guard );
-		var member = new Staff( saved.ThingId, saved.Model, saved.Staff!.Value with { State = (int)StaffActivity.Held }, saved.Navigator );
+		var member = new Staff( saved.ThingId, saved.Model, saved.Staff!.Value with { State = (int)StaffActivity.Walking }, saved.Navigator );
+		var blocked = new CellEdge( state.Record, ParkPeople.WalkingMode ).Blocked;
 
 		Assert.AreEqual( (39, 28), member.Navigator.Position.Cell );
-		Assert.AreEqual( Guard, state.CellAt( 39, 28 ).Occupant, "the file has him heading his cell" );
+		Assert.IsTrue( member.Navigator.NavigateTo( new FixedVector( PeepNavigator.WaypointCentre( 40 ), PeepNavigator.WaypointCentre( 28 ) ),
+			blocked, addCurrent: false ), "(40,28) is one cell on from where the file has him" );
 
-		member.Navigator.Position = new FixedVector( PeepNavigator.WaypointCentre( 40 ), PeepNavigator.WaypointCentre( 28 ) );
+		var walk = new PeepWalk( member.Navigator, blocked );
+		var behaviour = new StaffBehaviour( new ParkBalance( "jungle", easyMode: true ), null, state );
+		var crossed = 0;
 
-		var walk = new PeepWalk( member.Navigator, new CellEdge( state.Record, ParkPeople.WalkingMode ).Blocked );
+		for ( int turn = 1; turn <= 60 && crossed == 0; ++turn )
+		{
+			member.Navigator.StampPrevious();
+			behaviour.Step( member, walk, playing: null, tick: 1000 + turn );
 
-		new StaffBehaviour( new ParkBalance( "jungle", easyMode: true ), null, state ).Step( member, walk, playing: null, tick: 1000 );
+			var cell = walk.Position.Cell;
 
+			Assert.AreEqual( cell, state.CellOf( Guard ), $"turn {turn}: the list has him where he stands" );
+
+			if ( cell != (39, 28) )
+				crossed = turn;
+		}
+
+		Assert.AreNotEqual( 0, crossed, "he crossed into the next cell within sixty turns" );
+		Assert.AreEqual( (40, 28), walk.Position.Cell );
+		Assert.AreEqual( StaffActivity.Walking, member.Activity, "the crossing turn was a walking turn, not an arrival's decide" );
 		Assert.AreNotEqual( Guard, state.CellAt( 39, 28 ).Occupant, "(39,28) no longer names him" );
 		Assert.AreEqual( Guard, state.CellAt( 40, 28 ).Occupant, "(40,28) does" );
-		Assert.AreEqual( (40, 28), state.CellOf( Guard ) );
 	}
 
 	/// <summary>

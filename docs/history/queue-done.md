@@ -12015,6 +12015,14 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   Five bugs put back in `ReadSettings()` itself (`q893/mutations.py`, `mutate.py`): all fail a test. No game run (Q211 says so). **Done 2026-11-04.**
 - [x] **Q884. Q949's decode: where the original's live cell word loses `0x800`.** Done 2026-11-04 (run 20, lane A, `alexah/885-footprint-stamp-clears-0x800`).
   The footprint stamp, `Model_MakeAndStampFootprint` (`FUN_00463060`), writes a stamped cell's whole word, `(word & 0x6) | mirror and turn | 0x281` (`0x0046352a`), so `0x800` goes; a path (`Terrain_SetCellTile`'s path arm) keeps it; a cell retiled to ground takes it back from the private copy, which `Terrain_CopyHeightfield` made after the flag was set (`park-engine.md`, "The footprint stamp clears `0x800`"). Measured in the original on Alexah's New Save (`q949/orig/run1`, frame `g-32.png`): 437 live cells carry the stamp's `0x200`, none of them `0x800`, and the 16 that lose it are all among them; by map type, all of 3, 9 and 10 and 278 of 355 of type 4. Predictions D1 and D2 held (`q949/PREDICTION.txt`). The stamp in play, the path in play and the restore were read, not run.
+- [x] **Q894. The staff relink, tested in a walk rather than in the Held state.** From Q211 (Q446).
+  `ParkStaffCellListTests.AMembersTurnRelinksThemIntoTheCellTheyStandOn` set the guard `Held`, moved his navigator by
+  hand and asked for a relink, which the original makes only in its walk tick (`FUN_004fa2a0`) and a placement. The test
+  is now `AMemberWalkingOneCellIsRelinkedOnTheTurnThatCrossesIt`: the guard Walking, routed one cell from (39,28) to
+  (40,28), each turn `StaffBehaviour.Step` itself with `StampPrevious` first as the sweep does, and on the turn that
+  leaves him in (40,28) the cell's list names him and (39,28)'s does not. Six bugs put back in `Step`'s own relink
+  (`q894/mutations.py`, `mutate.py`): all fail the test; a relink moved into `Walked` (the original's shape) passes it and
+  fails the old Held test (`q894/p5-relink-in-walked.log`). No game run (Q211 says so). **Done 2026-11-04.**
 
 ## B. Docs and comments
 
