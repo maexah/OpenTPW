@@ -33,7 +33,8 @@ for i in range(1, n):
 	if a and (slot == i or (slot is None and rd(a + 0xac) == 0 and not rd(a + 0xc4) & 0x1000000)): s = a; slot = i; break
 assert s, 'no sprite to hold'
 kind, flags = rd(s + 0xac), rd(s + 0xc4)
-print(f'holding slot {slot} kind {kind} flags {flags:x}', flush=True)
+# The held height is said up front, so a run that compares heights cannot miss that it was not held (Q948's review).
+print(f'holding slot {slot} kind {kind} flags {flags:x}', f'setoff {setoff}' if setoff is not None else 'setoff none: +0x8c NOT held', flush=True)
 for x, z in pts:
 	fx, fz = struct.unpack('<f', struct.pack('<f', x))[0], struct.unpack('<f', struct.pack('<f', z))[0]
 	t0 = time.time(); got = None
@@ -49,10 +50,10 @@ for x, z in pts:
 	else: print(f'miss x {x} z {z}', flush=True)
 if stay:
 	fx, fz = struct.unpack('<f', struct.pack('<f', stay[0]))[0], struct.unpack('<f', struct.pack('<f', stay[1]))[0]
-	t0 = time.time(); seen = n = 0; y = None
+	t0 = time.time(); seen = n = 0; y = off = None
 	while time.time() - t0 < stay[2]:
 		wr(s + 0x88, '<f', fx); wr(s + 0x90, '<f', fz); n += 1
 		if setoff is not None: wr(s + 0x8c, '<f', setoff)
 		dx, y2, dz = rd(s + 0xe4, '<3f')
-		if dx == fx and dz == fz: seen += 1; y = y2 - rd(s + 0x8c, '<f')
-	print(f'stay x {fx:.5f} z {fz:.5f}: {n} writes, the draw stood there at {seen} reads, y - off {y}', flush=True)
+		if dx == fx and dz == fz: seen += 1; off = rd(s + 0x8c, '<f'); y = y2 - off
+	print(f'stay x {fx:.5f} z {fz:.5f}: {n} writes, the draw stood there at {seen} reads, y - off {y}, off {off}', flush=True)
