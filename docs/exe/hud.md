@@ -2503,7 +2503,7 @@ control's own record of the buttons pressed on it: the base proc sets a button's
 release (`FUN_0065f6d1`, `0x0065f871`, `0x0065f9e1`), and the button class and the slider's thumb keep theirs the
 same way. So a list follows the pointer only while no button pressed on it is down. OpenTPW: `UiList.PointerMoved`,
 told by the stack whether a press that landed on the list is still held; whether the original's bit outlives a
-release let go off the control is not decoded. What sends `0x10003` is not traced. `0x10001`, the pointer coming onto
+release let go off the control is not decoded. `FUN_006588ef` sends `0x10003` with the point to the hover when it is unchanged (`0x006589d9`), and to the capture when there is one (`0x0065893f`); on a hover change it sends `0x10002` and `0x10001`. It is called from the window proc (`0x0046b679`) and from `UI_RunPass` (`0x0048a69c`), which calls it only when the pointer's position differs from the last (`0x0048a647`..`0x0048a669`), so nothing re-sends the move at rest. `0x10001`, the pointer coming onto
 the control, carries the point too, and the hit test `FUN_006589f9` sends it as the interface changes as well as on a
 move, so a list built under a resting pointer selects the row under it ("What moves the highlight after the fill's
 pick", Q871); here `WindowStack` hands a list the point only on a frame the pointer moved.
@@ -3250,10 +3250,19 @@ rewrite touches it. So after the add's pick these move it:
   button `0x3738`, `[0x007c2658]`), the all-staff list (`FUN_00496620`'s second, from `0x004b5de6` and `0x004b5173`),
   the four all-items builders, and the buy list from the message bar's buttons 9 to `0xc` (`FUN_0048e0f0`). The
   visitors, all-staff and all-items ones are built; the buy list's is counted (`TAG_BAR_BUY_ITEM_ROW`).
+  `FUN_00665739` has 17 call sites, 13 outside the list class (`0x4812b2`, `0x4812fa`, `0x481317`, `0x49364e`,
+  `0x494386`, `0x494d9b`, `0x494ffd`, `0x49521a`, `0x496896`, `0x4a7940`, `0x4acd3c`, `0x4ad1dd`, `0x4beb4e`, the last
+  the online visit's). `FUN_00481100`'s three (`0x4812b2`, `0x4812fa`, `0x481317`) are not identified: it runs every UI
+  pass on the object `[0x007b4e38]` (`UI_RunPass`, `0x0048a6c4`) and, when that object's byte `+0xc` is set, refills
+  a list from a vector of 16-byte entries and selects the stored index `+0x16c` or 0; whether Lost Kingdom reaches
+  it is not read.
 - **The pointer at rest where a list appears.** `FUN_006589f9` hit-tests the last pointer position whenever the
-  interface changes (a control built visible `0x0065bff4`, destroyed, shown or hidden, linked, given a new rect, the
-  capture or the focus let go; "The lobby's keys act on the release", `lobby.md`), and a control newly under the
-  pointer is queued `0x10001` carrying the point (`x << 16 | y`). The list's proc answers `0x10001` as it does the move
+  interface changes (a control destroyed, shown or hidden, linked, given a new rect, the capture or the focus let go;
+  "The lobby's keys act on the release", `lobby.md`), and a control newly under the
+  pointer is queued `0x10001` carrying the point (`x << 16 | y`). A new list is not the hit at its own construction
+  (it is linked after the refresh, `0x0065e490`; `lobby.md`): the fill finds it. The add's `FUN_00664495`
+  (`0x0066442c`) hides the list's scroll bar, shown by its constructor (`0x00662704`), and that change re-runs the
+  hit test (`0x0065da61`), now with the list linked. The list's proc answers `0x10001` as it does the move
   `0x10003` (`FUN_00665c35`: both go to `FUN_006656a0`), so under flag `0x80` a list built under a pointer resting on
   its rows selects the row under it. The message is queued as the tree is built and taken at the next pump, after the
   opener's fill, so it lands after the add's pick. A point outside the row area (`+0x138`: the strip under the rows,
@@ -3262,7 +3271,7 @@ rewrite touches it. So after the add's pick these move it:
   `[0x00faa578]` the table, `[0x00faa57c]` the list) on its message `0x15`, which every control is queued as it is
   built (`0x0065bffd`), and on `0x1a`, which a control is sent on becoming the last pressed (`0x0065dd4b`). The table
   `0x0077c4b8` holds End `0x2300`, Home `0x2400`, Up `0x2600` and Down `0x2800`, each with no modifier, and the key pop
-  (`FUN_006698e6`, `0x006699e5`) hands such a key, down, repeat or up, to that list while it is visible, before the
+  (`FUN_006698e6`, the call at `0x006699eb`) hands such a key, down, repeat or up, to that list while it is visible, before the
   focus. Its key down `0x1000a` goes to `FUN_00665b51`: Home `FUN_00665739( 0 )`, End the last row, Up the selected
   index less one and Down plus one, each scrolled into view. Up on index 0 selects nothing, and Down with nothing
   selected selects index 0. The list's destroy lets the accelerator go (`0x0065c325`). The visitors, all-staff,

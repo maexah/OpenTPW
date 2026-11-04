@@ -2141,7 +2141,8 @@ its `+0x22` while `[0x0081b4cc]` is set (the fresh walk, below) and the record's
 of every anchor in 42 park files of the original's: Alexah's eight Full Simulation files (the fresh jungle, fantasy and
 Hallowe'en parks and their played saves, the jungle ones with land bought, 163 anchors), the reference install's stock
 park restart (143) and 33 fresh Lost Kingdom parks made under Proton, a straight's 22 and 25 taken as its 2.
-**A fresh park's boundary** (`FUN_005323f0`, `Boundary_LayFresh`, with `[0x0081b4cc]` set): the walk replays `Hoardings.sam`'s clicks from
+**A fresh park's boundary** (`FUN_005323f0`, `Boundary_LayFresh`, with `[0x0081b4cc]` set): the walk replays `Hoardings.sam`'s clicks (unless the detail word `[0x0079d86c]` has `0x400`, which no stock setting gives, when six
+fixed clicks round a small loop are made instead, `0x00532490`) from
 entrance B three on, `[0x007639f0]`, round to entrance A four back, `[0x007639f8]`, the gate's two ends. Each anchor's
 `mDirection` is the way the walk leaves it (the last, the way it came); its mask names the anchors two cells away; a
 straight over water or hidden ground carries flag 1 (row 11, `ho_fos4`). The model slots keep the walk's order (slot 3,

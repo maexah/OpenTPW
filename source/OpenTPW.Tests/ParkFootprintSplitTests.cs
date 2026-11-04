@@ -785,7 +785,11 @@ public class ParkFootprintSplitTests
 	/// New Save's 163 hoardings and 31 kart cells carry no <c>0x200</c> (<c>docs/exe/park-engine.md</c>, "The track kit's, the
 	/// hoardings' and the coaster's cells stamp nothing").
 	/// </summary>
-	/// <remarks><b>Mutation:</b> <c>FloorMeshOf</c> reading the header's <c>0x1</c> in place of <c>0x8</c> fails here.</remarks>
+	/// <remarks>
+	/// A data guard: it reads the pieces' files and <c>FloorMeshOf</c>, not the kits' or hoardings' placement
+	/// (<see cref="TheKitsAndTheHoardingsPlacementStampsNoCell"/> drives that). <b>Mutation:</b> <c>FloorMeshOf</c> ignoring the
+	/// header's <c>0x8</c> fails here.
+	/// </remarks>
 	[TestMethod]
 	public void TheKitsAndTheHoardingsModelsHaveNoProceduralBaseAndTheQueuesDo()
 	{
@@ -830,6 +834,70 @@ public class ParkFootprintSplitTests
 
 		foreach ( var name in queuePieces.Distinct() )
 			Assert.AreNotEqual( 0u, new ModelFile( $"levels/jungle/queue/{name}.MD2" ).HeaderFlags & 0x8, $"queue piece {name}: a procedural base, so it stamps" );
+	}
+
+	/// <summary>
+	/// <b>Standing the track kits' pieces and a fresh park's boundary hoardings stamps no cell</b>, as the original's stamp writes
+	/// none for them (<c>docs/exe/park-engine.md</c>, "The track kit's, the hoardings' and the coaster's cells stamp nothing"):
+	/// with a ground that has a tile size, so a stamp would hold a cell, both are stood and no cell of the map is held. A test has
+	/// no renderer, so each piece's model is not made; the placement up to the model (its stand and transform) does run.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutation:</b> <c>ground.StampSplit( piece.CellX, piece.CellY )</c> added to <c>ParkBoundaryHoarding.Place</c> and to
+	/// <c>ParkTrackPieces.Make</c> before the model is made fails both halves. A stamp added after the model is made
+	/// would not be reached here, since a test cannot make one.
+	/// </remarks>
+	[TestMethod]
+	public void TheKitsAndTheHoardingsPlacementStampsNoCell()
+	{
+		Log ??= new();
+
+		var field = Landscape();
+		var ground = GroundOf( field, 8 );
+		var current = ParkGround.Current;
+		SetCurrent( ground );
+
+		using var stream = new MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
+		var world = new ParkWorld( new SaveReader( stream ).ReadFile() );
+		var cells = (ParkWorld.MapCell[])typeof( ParkWorld ).GetField( "_cells", Any )!.GetValue( world )!;
+		var laid = 0;
+
+		foreach ( var (anchor, y) in new[] { (ParkTrackPieces.KartAnchor, 40), (ParkTrackPieces.WaterAnchor, 44) } )
+		{
+			for ( var row = 1; row < 25; ++row )
+			{
+				if ( ParkTrackPieces.ModelOf( anchor, row ) == null )
+					continue;
+
+				cells[(y * ParkWorld.MapSize) + 10 + row] = cells[(y * ParkWorld.MapSize) + 10 + row] with { TrackType = anchor, TrackTileIndex = row, TrackTileAngle = 0 };
+				++laid;
+			}
+		}
+
+		var catalogue = new ParkItemCatalogue( "jungle", data );
+		var fresh = new FreshPark( "jungle", new ParkBalance( "jungle", easyMode: false ), catalogue, data );
+		ParkTrackPieces? kits = null;
+		ParkBoundaryHoarding? wall = null;
+
+		try
+		{
+			kits = new ParkTrackPieces( "jungle", world );
+			wall = new ParkBoundaryHoarding( "jungle", fresh, catalogue );
+
+			Assert.IsTrue( laid >= 10, $"{laid} kit pieces laid" );
+			Assert.AreEqual( laid, Enumerable.Range( 0, ParkWorld.MapSize * ParkWorld.MapSize )
+				.Count( at => ParkTrackPieces.PieceAt( at % ParkWorld.MapSize, at / ParkWorld.MapSize, cells[at] ) != null ), "each one names a piece" );
+			Assert.AreEqual( 107, ParkBoundaryHoarding.AnchorsOf( fresh ), "the fresh park's boundary is stood" );
+
+			var held = Enumerable.Range( 0, field.CellsX * field.CellsY ).Count( at => ground.IsStamped( at % field.CellsX, at / field.CellsX ) );
+			Assert.AreEqual( 0, held, "no piece of either stamped a cell" );
+		}
+		finally
+		{
+			kits?.Delete();
+			wall?.Delete();
+			SetCurrent( current );
+		}
 	}
 
 	private static (int X, int Y) FirstBentAfter( HeightfieldFile field, (int X, int Y) after )

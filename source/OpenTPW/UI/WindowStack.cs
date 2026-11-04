@@ -481,8 +481,8 @@ internal sealed class WindowStack : Panel
 
 		_glint.Update();
 
-		// The original's move message 0x10001, which goes to the control under the pointer. Sent only on a frame the
-		// pointer moved, so what a list rewrites under a pointer at rest is not chosen until it moves. The control is
+		// Stands for the original's pointer messages to the control under it (0x10001 as the hover changes, 0x10003 for a move
+		// within it). Sent only on a frame the pointer moved, so what a list rewrites under a pointer at rest is not chosen until it moves. The control is
 		// told whether a button pressed on it is still down, the original's own record of that (control +0x11c),
 		// known here for a press that landed on it; whether theirs outlives a release let go elsewhere is not decoded.
 		if ( hit != null && Input.Mouse.Delta != Vector2.Zero )
