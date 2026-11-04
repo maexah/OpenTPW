@@ -198,12 +198,13 @@ public class ParkMapOffsetCellsTests
 	/// <summary>
 	/// <b>A click anchors a map-offset item as the original's placer does</b>: the picture centred on the pointer, the anchor the
 	/// picture's cell plus the turned offset (<c>0x00529f74..0x00529fa7</c>). The pointer on (71,25) anchors the Huge Hollow Rock at
-	/// (69,24) turned 0 (Q888's run of the original: 0 is measured); 90, 180 and 270 are from the decode alone (the same angle
-	/// goes to <c>FUN_004d9cc0</c>), Q889 (1) asks for a turned rock in the original. The rock's cells are the model's 5 x 5 at
-	/// every angle, centred on the pointer, and the carried squares are those cells.
+	/// (69,24) turned 0 (Q888's run of the original), (70,27) turned 90, (73,26) turned 180 and (72,23) turned 270 (Q842's runs of the
+	/// original: the thing's own cell and angle in the saved park). The rock's cells are the model's 5 x 5 centred on the pointer at
+	/// every angle less the two empty corners the original typed (the same saved parks), and the carried squares are those cells.
 	/// </summary>
-	/// <remarks><b>Mutation:</b> <c>CarriedAnchorUnder</c> answering the picture's origin (69,23) moves the anchor a row north
-	/// and the cells to rows 22..26.</remarks>
+	/// <remarks><b>Mutations:</b> <c>CarriedAnchorUnder</c> answering the picture's origin (69,23) moves the anchor a row north
+	/// and the cells to rows 22..26; <c>CoveredCells</c> not turning the picture's empty corners puts them at (69,23) and (73,27)
+	/// whatever the angle.</remarks>
 	[TestMethod]
 	public void AClickedRockIsAnchoredAsTheOriginalsAndCoversTheCellsRoundThePointer()
 	{
@@ -215,6 +216,10 @@ public class ParkMapOffsetCellsTests
 		var carried = typeof( ParkBuilding ).GetMethod( "CarriedAnchorUnder", BindingFlags.NonPublic | BindingFlags.Static )!;
 		var turn = typeof( ParkBuilding ).GetProperty( nameof( ParkBuilding.CarryingAngle ) )!;
 		var expected = new Dictionary<int, (int, int)> { [0] = (69, 24), [90] = (70, 27), [180] = (73, 26), [270] = (72, 23) };
+		var emptyCorners = new Dictionary<int, (int, int)[]>
+		{
+			[0] = [(69, 23), (73, 27)], [90] = [(73, 23), (69, 27)], [180] = [(69, 23), (73, 27)], [270] = [(73, 23), (69, 27)],
+		};
 
 		try
 		{
@@ -229,6 +234,10 @@ public class ParkMapOffsetCellsTests
 
 				Assert.AreEqual( (69, 23, 73, 27), (cells.Min( c => c.X ), cells.Min( c => c.Y ), cells.Max( c => c.X ), cells.Max( c => c.Y )),
 					$"turned {angle}: the model's 5 x 5 centred on the pointer" );
+				Assert.AreEqual( 23, cells.Count, $"turned {angle}: 25 less two corners" );
+				CollectionAssert.AreEquivalent( emptyCorners[angle],
+					Enumerable.Range( 69, 5 ).SelectMany( cx => Enumerable.Range( 23, 5 ).Select( cy => (cx, cy) ) ).Where( c => !cells.Contains( c ) ).ToList(),
+					$"turned {angle}: the corners the original left untyped" );
 				Assert.IsTrue( cells.ToHashSet().SetEquals( ParkBuilding.CarrySquares( state, rock, x, y, angle ).Select( s => (s.X, s.Y) ) ),
 					$"turned {angle}: the carried squares are the covered cells" );
 			}
