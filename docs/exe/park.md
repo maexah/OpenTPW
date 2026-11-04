@@ -2156,7 +2156,7 @@ and each later click runs `Track_RunPass` (`FUN_0053aac0`, every second cell fro
 ends) six times, with the ops 0x19, 0x80, 0x82, 0x85, 0x86 and 0x81 (`0x00525b06`..`0x00525bc1`). In
 `Track_CellOp` (`FUN_005370e0`, switch at `0x0053811f`): 0x19 stamps the cell type 25 (`FUN_00538fc0`; a cell already
 25 only counts the overlap, `+0x20`); 0x80 (`FUN_00539220`) links the anchor to the one before it, both ways, by the
-pass's step (the tables at `0x007cdba0`..`0x007cdbd4` are the four unit steps), so during the walk an anchor's mask
+pass's step (the four unit steps are `0x007cdba0` (0,-1), `0x007cdba8` (0,+1), `0x007cdbc8` (+1,0) and `0x007cdbd0` (-1,0); the other four of the eight at `0x007cdba0`..`0x007cdbdc` are diagonals, `park-engine.md`, `ride-operation.md`), so during the walk an anchor's mask
 (`+0x22`) holds the walk's links alone; 0x82 (`FUN_00539670`) sets its direction to the pass's step; 0x85 sets flag 1
 on a straight over water or hidden ground; 0x81 (`0x00538181`) retiles it (`Track_RetileCell`, `0x005387d5`), the one
 arm that does. The chooser draws on every retile of a straight with flags `& 0xf` clear, whether its variant is added or
@@ -2204,8 +2204,8 @@ model, on its cell moved by its angle, at the record's angle (360 less the turn)
 **OpenTPW builds it** from the records (`ParkBoundaryHoarding`); a park made fresh chooses each anchor's piece once, in
 the walk's order, with the chooser above (`FreshParkBoundary`, `ParkBoundaryHoarding.PieceFor`, `PieceOf`; Q656), its
 straights drawing the fresh park's generator, as often as the original's laying does (above; this game's fresh park's
-file fits after 88 draws too, `q872/run-p7.txt`); `FRESH_BOUNDARY_LAYING_DRAWS` still counts the laying until Q680
-takes it out. Measured: the stock park's wall right of the gate and along row 13 in both games at the
+file fits after 88 draws too, `q872/run-p7.txt`, and three more of this game's, `q680/run-p3*.txt`); nothing of the laying is counted as missing
+(Q680 took `FRESH_BOUNDARY_LAYING_DRAWS` out). Measured: the stock park's wall right of the gate and along row 13 in both games at the
 same cameras (Q620, `q620/overlay-gate-final.png`); a fresh park's in both games (Q656).
 
 **Alexah's Full Simulation jungle drew none until Q810, and why (Q811, `q806/`, every prediction in its `PREDICTION.txt`, 7 of 7 held).**

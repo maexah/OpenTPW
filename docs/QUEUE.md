@@ -972,12 +972,6 @@ filed the items that cite it.
   From Q375 (`hud.md`, "The miscellaneous tab: a row an object, and each tab's sort"): the pick is built for the
   four all-items lists too (their handler has no `0x401` arm); the all-staff and visitors lists still count it.
 
-- [ ] **Q680. A fresh park's laying counts a gap it does not have (from Q656).** Decoded in Q872 (`park.md`, "How
-  often the laying draws"): the original draws once a drawing straight, in the walk's order, which `FreshParkBoundary`
-  already does, so `FRESH_BOUNDARY_LAYING_DRAWS` (`FreshParkBoundary.cs`) counts nothing missing. Take the count and
-  its comment out, and add a test that a fresh Lost Kingdom park made from a given seed starts on that seed stepped 88
-  times (`FreshPark.RandomSeed`). Confirm: a fresh park's `unimplemented` without the line, and `wallseed.py` on its
-  `restart.INTS` fitting after 88.
 - [ ] **Q754. The lobby's build label letters one pixel right of the original's.** From the Q752 review (finding 2).
   GAME8.bf4's 'v' has left 0, and the original's "v 2.0" has its ink at 751 to 772 of the 800 x 600 picture
   (`q752/orig-a`), so its pen stands at 751, 1.3 px left of its box's 752.3 (1926 x 800 / 2048). Ours rounds the placed

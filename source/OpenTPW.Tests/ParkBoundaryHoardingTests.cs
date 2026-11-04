@@ -244,6 +244,28 @@ public class ParkBoundaryHoardingTests
 		Assert.AreEqual( 1360261985, fresh.RandomSeed );
 	}
 
+	/// <summary>
+	/// A fresh Lost Kingdom park starts on the seed it was given stepped 88 times, the original's one draw for each of its 88
+	/// drawing straights (<c>docs/exe/park.md</c>, "How often the laying draws"; Q872 read it in 96 of the original's own
+	/// files, each fitting its seed stepped back 88): not 87 or 89, not two for a straight, not one more for a corner.
+	/// </summary>
+	[TestMethod]
+	[DataRow( 0u )]
+	[DataRow( 1u )]
+	[DataRow( 0xdeadbeefu )]
+	public void AFreshParkStartsOnItsSeedSteppedEightyEightTimes( uint seed )
+	{
+		var data = GameData.Required();
+		FileSystem = data;
+		var fresh = new FreshPark( "jungle", new ParkBalance( "jungle", easyMode: false ), new ParkItemCatalogue( "jungle", data ), data, seed: seed );
+
+		var stepped = seed;
+		for ( var draw = 0; draw < 88; ++draw )
+			ParkGenerator.Draw( ref stepped );
+
+		Assert.AreEqual( unchecked((int)stepped), fresh.RandomSeed );
+	}
+
 	/// <summary>A piece's record is its row's named item on the anchor moved by the turn, at 360 less it.</summary>
 	[TestMethod]
 	[DataRow( 2, 90, "ho_fos1", 2, 52, 17, 270 )]

@@ -105,9 +105,9 @@ internal static class FreshParkBoundary
 			throw new InvalidDataException( "The initial hoarding has fewer than two anchors" );
 
 		// The anchors are chosen once each, in the walk's order, the order the original's model slots keep and the one its
-		// straights' variants follow. How often its laying chooses an anchor before that, so how far it moves the
-		// generator, is not read.
-		Unimplemented.Report( "FRESH_BOUNDARY_LAYING_DRAWS" );
+		// straights' variants follow. The original's laying draws the generator once for each drawing straight, at its last
+		// retile, in that order, and nowhere else (docs/exe/park.md, "How often the laying draws"), so the seed leaves
+		// here stepped once for each.
 
 		var pieces = new List<ParkBoundaryHoarding.Anchor>( walk.Count );
 		for ( var at = 0; at < walk.Count; ++at )

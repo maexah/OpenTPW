@@ -12411,3 +12411,9 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `mRandomSeed` stepped back exactly 88 draws (`tools/harness/lib/wallseed.py`); two draws a straight, one more a
   corner or the walk reversed fit none. This game's fresh park (`q872/run1`, off-screen): 107 pieces on 107 anchors,
   its file fits after 88 too. Q680 keeps the build.
+- [x] **Q680. A fresh park's laying counts a gap it does not have (from Q656).** Decoded in Q872 (`park.md`, "How
+  often the laying draws"): the original draws once a drawing straight, in the walk's order, which `FreshParkBoundary`
+  already does, so `FRESH_BOUNDARY_LAYING_DRAWS` (`FreshParkBoundary.cs`) counts nothing missing. Take the count and
+  its comment out, and add a test that a fresh Lost Kingdom park made from a given seed starts on that seed stepped 88
+  times (`FreshPark.RandomSeed`). Confirm: a fresh park's `unimplemented` without the line, and `wallseed.py` on its
+  `restart.INTS` fitting after 88.
