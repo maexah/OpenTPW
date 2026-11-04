@@ -849,8 +849,21 @@ mechanic's `+0x88`/`+0x90` to (505, 585), where the sprite's drawn height `+0xe8
 (effect `0xa2`, the mechanic walking, category 5) read the sprite at (505.000, 0.000, 585.000) and hand `Sound_PlayEffect` the ints (505, 0, 585): the height is the sprite's own
 `+0x8c`, exactly nought, and not the ground's 20. The cut is `_ftol`'s, toward nought: in the unfiltered run a guest at the Spray's till (sprite height 0.983895) hands 0. With the
 person object's `+0x28` set (the test at `0x004fa087` is the person's; the sprite's own `+0x28` is a float, 0x4198c9e8 on a guest at the Kiosk) 20 sounds in 150 s were all guests at the
-Spray's or the Kiosk's till (heights 0.983895 and 0.0, both handed as 0): none was seated on a ride's seat, so a rider's height, the point less the ground, is not measured (Q1005).
+Spray's or the Kiosk's till (heights 0.983895 and 0.0, both handed as 0): none was seated on a ride's seat, so a rider's height is read by a sale instead (the next paragraph).
 Ours, same cells (`q856/ours1/`, this build, off-screen): 48 staff voices on the plateau, all z 0.0, the ground there 20.0000. Both games sound a walker at nought, so nothing was built.
+
+**A seated rider's put-off, in the original** (Q1005, 2026-11-04, `q1005/`; `tools/harness/original/riderputoff.sh`; `personsound.sh putoff`). A sale puts every rider in raw state `0x10` off in one
+frame, and clears the person's `+0x28` first (`0x004fb3df`) before kids `0x80` goes through `Person_PlaySound` (`0x004fb3f5`), so `personsound.sh riders` cannot see it: the put-off is read by its
+effect. Two rides, each sold from its window in the original (a park file ours saved with the riders aboard, loaded with `loadfile.sh`). **The Crazy Ape** (Q917's park, four aboard,
+`q1005/orig/b-brk.log`): four put-offs, every one the sprite at (0.000, 0.000, 0.000) and the ints (0, 0, 0): the ride keeps no rider's sprite, the eviction makes one with no place
+(`park-engine.md`, "Selling and the people on it"), and the sound is at the world's origin, which is ours' `PutOffSound.Origin` arm. **The Bouncy Dino** (thing 13, the window's "Belly Bounce"), a rider on a
+bounce node: the first frame `FUN_004fa030` meets a person with `+0x28` set and a sprite above 1.5 holds the game, the confirm's click is queued, and the next frame is the sale's. Run h: the sprite
+(522.576, 19.174019, 248.386) made the ints (522, 19, 248); run k (the final build's file): (522.428, 10.928638, 248.157) made (522, 10, 248). So a seated rider is sounded at the sprite's own `+0x8c`
+cut toward nought, as a walker is, and that height is the seat's, above nought. The drawn height `+0xe8` read the same as `+0x8c` in each, the ground there 0.0 (ours' console: 0.0000 at the seats' cells (52,24),
+(52,25)), so "the point less the ground" is NOT told from "the point" on flat ground (Q1007). The seat is not still: 200 frames of one rider (handle 16, `l-brk.log`, ticks 1338 to 1364) ran `+0x8c` from 8.49 to 24.0.
+**Ours** (`q1005/ours-final.out`, `ours-final2/`, the build of this branch, md5 `f5196a14`; the stock park off-screen, the same ride and sale): `ParkPeople.SeatOn` takes the node's PLACED point
+(`ParkObjects.TryNodeOn`, "placed, not loaded": the rest pose), so each seat's z is one number, 10.3, 9.5 and 11.9 for the three riders and the same over 16 ticks, and the three put-off lines read exactly
+those, ground 0.0 taken off. They differ: ours does not follow the bounce (Q1006). Not the same instant, riders or frames in the two games; the comparison is the rule, not the number.
 
 | Address | Original name | What it is | Evidence |
 |---|---|---|---|

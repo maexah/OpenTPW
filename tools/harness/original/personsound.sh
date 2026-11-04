@@ -6,6 +6,7 @@
 #   SPE eff E ints X H Z                                            (what the mixer is handed: floats cut toward nought by _ftol)
 # MODE plateau  only a sprite whose z is over ZMIN (default 500: the stock park's plateau row, cells (40..64, 58), ground 20.0)
 #      riders   only a person whose +0x28 is set (a rider a ride holds, by the decode; the sprite's own +0x28 is a float, not that flag); 'all' every person (a hit holds the game for ~ms: use HITS)
+#      putoff   only kids effect 0x80 (a guest put off: a sale of a ride clears the rider's +0x28 BEFORE it sounds, 0x004fb3df, so `riders` cannot see it: Q1005)
 # HITS counts the PS and SPE lines together (default 60); SECS default 150. Output on stdout; run it beside the game (brk.sh's rules).
 set -euo pipefail
 H="$(cd "$(dirname "$0")" && pwd)"; M="${1:-plateau}"; ZMIN="${ZMIN:-500}"
@@ -14,10 +15,11 @@ RET='*(int*)$esp == 0x4faa52'
 case "$M" in
 plateau) PS="*(float*)($S + 0x90) > $ZMIN"; SPE="*(int*)(\$esp + 24) > $ZMIN";;
 riders)  PS="*(unsigned*)(\$ecx + 0x28) != 0"; SPE='!$_isvoid($rf) && $rf == 1';;
+putoff)  PS="*(int*)(\$esp + 8) == 0x80"; SPE='!$_isvoid($rf) && $rf == 1';;
 all)     PS="1"; SPE="1";;
-*) echo "usage: personsound.sh plateau|riders|all [HITS] [SECS]" >&2; exit 2;;
+*) echo "usage: personsound.sh plateau|riders|putoff|all [HITS] [SECS]" >&2; exit 2;;
 esac
-BRK_COND="(\$pc == 0x4faa00 && $PS) || (\$pc == 0x51bfc0 && $RET && $SPE)" BRK_PRINT='if $pc == 0x4faa00
+BRK_INIT='set $rf = 0' BRK_COND="(\$pc == 0x4faa00 && $PS) || (\$pc == 0x51bfc0 && $RET && $SPE)" BRK_PRINT='if $pc == 0x4faa00
 set $rf = 1
 set $id = *(int*)($ecx+0xc)
 set $s = *(unsigned*)(*(unsigned*)0x7b49f0 + 4*$id)

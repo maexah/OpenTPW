@@ -9,6 +9,8 @@
 #     SECS  give up after this long (default 60);  WORDS  stack words scanned (default 400)
 #     BRK_COND='*(int*)($esp+12) == 0xd0'  a gdb condition on every address: a hit counts only when it holds
 #           (at a routine's first byte $esp+4 is its first argument; Sound_PlayEffect's effect is $esp+12; Q567)
+#     BRK_INIT='set $rf = 0'  gdb lines run once before the breakpoints are set (a convenience variable a condition reads: a void one makes the
+#           condition an error, and an erroring condition STOPS: Q1005)
 #     BRK_PRINT='printf "fctrl %x st0 %.17g st1 %.17g\n", $fctrl, (double)$st0, (double)$st1'  one more gdb line a hit
 #           (the x87's control word and stack at a compare: is the product rounded to a float before it?)
 # The game is held while gdb attaches (about a second) and for some ms a hit; it runs on after the detach.
@@ -21,6 +23,7 @@ set confirm off
 set print thread-events off
 handle SIGUSR1 SIGUSR2 SIGSEGV SIGPIPE SIGALRM SIGCHLD SIGIO SIGQUIT nostop noprint pass
 set \$n = 0
+${BRK_INIT:-}
 $(for a in ${A//,/ }; do echo "hbreak *$a"; done)
 $(if [ -n "${BRK_COND:-}" ]; then n=$(echo ${A//,/ } | wc -w); for i in $(seq 1 $n); do echo "condition $i ${BRK_COND}"; done; fi)
 commands $(n=$(echo ${A//,/ } | wc -w); [ "$n" = 1 ] && echo 1 || echo 1-$n)
