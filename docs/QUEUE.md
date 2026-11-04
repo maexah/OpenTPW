@@ -616,14 +616,12 @@ filed the items that cite it.
   there (jungle `Gates` 4000). The Easymode Belly Bounce was saved looping at 1.1, and OpenTPW's second trigger at its
   word 43 (`park.md`, "Where OpenTPW's animation state parts from the engine's", difference 4) replaces it at 1.0. With a divisor other than 1, a clip under 300 ms or no model makes
   `WAITANIM`'s qword sum wrap `+0xa0` (`park.md`, "`WAITANIM` is NOT `TRIGANIM` with a wait").
-- [ ] **Q156. The staff screen's two happiness meters fill upward. Decode first.** Found by the 2026-09-26 staleness
-  audit. `UiMeter` fills every meter from the bottom, a choice its remarks justify by the gadget's gauge housing being
-  taller than wide (59 by 224); the staff screen's two `happygrad.wct` meters are 376 by 45 (`ParkStaffScreen`,
-  `0x32d` and `0x32c`). What paints a meter is the two sub-objects `FUN_0066d885` hands the value to (`+0x98`,
-  `+0x9c`, their vtable `+0xc`), untraced. Trace their geometry, write it to `hud.md`, and fill each meter the
-  original's way. Confirm: the staff screen at a known happiness, photographed. Note (Q244): `UiMeter` is now the
-  gadget's gauge alone and its fill direction is read (`hud.md`, "The happiness gauge's two quads"); the remark cited
-  above is gone.
+- [ ] **Q156. The staff screen's two happiness meters fill upward (decoded in Q898).** Found by the 2026-09-26 staleness
+  audit. Nothing is left to build: the original paints each meter with its stat-bar skin alone and fills it from the left
+  (`hud.md`, "What paints the all-staff meters"), and this game has drawn them so since Q369 (`ParkStaffScreen.Meter`, a
+  `UiStatBar` in `happygrad.wct` inset 8). The confirm asked for, the staff screen at a known happiness photographed, is
+  Q369's (`q369/run-fix2/1-handymen.png` on the desk, `q369/orig/b-1-handymen.png` in the original, both on `q369/skill.TPWS`), made
+  before this decode. The maintainer closes it on those frames, or names a fresh photograph.
 - [ ] **Q861. An entering guest turned back at the gate (`ENTERING_GATE_GUARD`).** From Q157, which counts it. `FUN_004ffb20`'s first two tests
   (`0x004ffb2b`..`0x004ffb42`: `mParkClosed` set, or the gate's status not 1) send the guest to a ticket booth and put them in state 2
   (`HeadingForGate`) in place of the walk through the gate; `PeepBehaviour`'s `Entering` arm counts it (`!GateWillAdmit`) and walks on. The

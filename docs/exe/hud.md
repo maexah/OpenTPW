@@ -21,8 +21,8 @@ The stream argument is **16-bit opcodes compiled into the executable**, not a fi
 | `FUN_0065fc38` | — | Reader: four shorts (a rect) | Operand reader |
 | `FUN_0065fcc5` | — | Reader: two shorts | Operand reader |
 | `FUN_0065dd7b` | — | `( this, type, flags, id, x0, y0, x1, y1 )` constructs the control; **type** selects the class (1 = panel, 2 = button, 3 = slider, and ten more up to 0xd) | Disassembly |
-| `FUN_00659c42` / `FUN_0065d070` | — | Look up a mesh by hash / set it on the control | op 1 |
-| `FUN_0065d1c8` | — | Sets a skin | op 2 |
+| `FUN_00659c42` / `FUN_0065d070` | — | Look up a mesh by hash / set it on the control's `+0x98`, at its depth, over its rectangle `+0x8` | op 1 |
+| `FUN_0065d1c8` | — | Sets a skin at `+0x9c`, at the depth and one, over `+0x2c` ("What paints the all-staff meters") | op 2 |
 | `FUN_00661830` | — | Stores the UIHELPTEXT row at control `+0x90` | op 0x11 |
 | `FUN_00661850` | — | Stores a second id at control `+0x94` | op 0x12 |
 
@@ -3905,6 +3905,30 @@ kind K, row <thing> <name>: <status> <wage> <skill bar> <happiness bar>`, and th
 numbers and filled its meters from the bottom. The headings are framed (Q370, "The list headings' frames"); the
 status's words are Q379's (below); the list's sort is Q381's ("The all-staff list's sort", below).
 
+**What paints the all-staff meters** (Q898, Q156's decode). A meter's setter `FUN_0066d885` (vtable `0x00705c28`, slot
+`+0x1c`) does nothing and answers 0 when the value is the one it holds; otherwise it stores it held to 0..`0x400` at
+`+0x140` and hands it, flag 8, to the object at `+0x98` and then to the one at `+0x9c`, each skipped when null. The two
+slots are every control's painters, filled by twin setters: `FUN_0065d070` puts the stream's op 1 mesh at `+0x98`, at
+the control's depth `+0xe0` over its rectangle `+0x8`; `FUN_0065d1c8` puts a skin (op 2, or a caller's) at `+0x9c`, at
+the depth and one, over `+0x2c`, the rectangle `FUN_00485e30` insets (the meter's constructor `FUN_0066d750` copies
+`+0x8` into it, and the base `FUN_0065bcad` zeroes both slots, `0x0065bece`, `0x0065bedb`). The stream gives `0x32c`
+and `0x32d` no op 1 and no op 2 (`uistream.py 0x750e10`), and the opener calls `FUN_0065d070` nowhere, so `+0x98` stays
+null and the meter paints its skin alone: the stat bar `FUN_00477ff0( "happygrad.wct" )` (vtable `0x006feeb8`, `+0xc` =
+`0x00478400`), whose message 8 writes v = value / 1024 x 100 into the **x** of vertices 1, 2, 4 and 5 and u = v / 100,
+never into y ("The stat bars' skin", above). So the original fills both meters from the left, which is how this game
+draws them since Q369. (When `FUN_0065d1c8` replaces a skin whose release `FUN_006616b0` answers -1, it deletes the object at `+0x98`, not
+the old skin, `0x0065d205`; the meters take one skin into a null slot, so it is not reached here.)
+Read in the disassembly and checked in the private Ghidra copy (`q898/gd/`, its decompiles agree, `FUN_00496620`'s
+calls to `FUN_0065d1c8` at `0x004969a4` and `0x00496a60` and none to `FUN_0065d070`); there `0x00478400` is defined as
+`StatBar_OnMessage`, which the real project does not yet have.
+Run under unicorn, the original's own setter and handler on a made-up meter (`q898/emu.py`, `q898/emu1/run.log`), E1 to
+E5 held: at 512 the four x floats 50, the y floats 100, 0, 100, 0, u 0.5 and v 1.0, 0.5, 0.5, 0, the rest untouched; the
+same 512 again answers 0 and leaves the buffers alone; 2000 is held to 1024 (100) and -5 to 0; a second skin at `+0x98`
+takes the same 25 at 256. This game on `q369/skill.TPWS` (`q898/run1`, off-screen, the build of `990dc2b4`): `meters
+881/896`, the kind meter split at 0.859 and the all meter at 0.876, its top and bottom rows alike (0.876, 0.876); the
+original's frame is Q369's (`q369/orig/b-1-handymen.png`), not taken again: read now, its all meter's top and bottom rows
+split alike too (0.851, 0.851).
+
 #### The all-staff list's sort
 
 Read 2026-10-15 (Q381). The opener `FUN_00496620` sets the five columns' types (`FUN_006636b2`, `0x004966a9` to
@@ -4003,7 +4027,7 @@ searching file stems never finds it; see the resolution table above for the meth
 
 #### How a list's cells are aligned
 
-Read 2026-10-15 (Q383). `FUN_0065c428( across, down )` posts `0xc00` to the control's text (`+0x98`) and skin (`+0x9c`)
+Read 2026-10-15 (Q383). `FUN_0065c428( across, down )` posts `0xc00` to the control's mesh (`+0x98`) and skin (`+0x9c`)
 with the two bytes at the message's `+4` and `+5`. A label's skin (vtable `0x006ff320`; the label `FUN_0048f6a0`, the
 number painter `FUN_0048fde0` and the money cell `FUN_00490250` alike) takes it in its slot `+0xc`, `FUN_0048fc40`:
 flag `0x400` stores the across byte at `+0xd8`, `0x800` the down byte at `+0xd9`. Each constructor writes 0 and 1 there,
