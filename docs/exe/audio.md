@@ -835,9 +835,11 @@ the person's x and y and the height nought; no site of those is a held rider, an
 is drawn at the node, which already holds the height the original's draw adds the ground back to. Deviation: the original truncates all three coordinates to
 whole units (`_ftol`, `0x004faa27`..`0x004faa3b`); ours keeps the float. Seen here, off-screen (`q847/`): the five staff put down on the
 stock park's 20.0 plateau (cells (40..64, 58)) voice at z 20.0 and then the ground's height as they walk off before (49 voices, 3.5
-to 20.0), at z 0.0 after (40 and 51 voices, all 0.0). Not seen: the original's own sound on raised ground (the second float of
-`Sound_PlayEffect`'s place at `0x0051bfc0`, Q856), a guest's put-off, yawn or till on raised ground in ours (the stock park's guests
-walk on flat ground, 0 there). A saved offset on a walker is one the original overwrites, so the run that wrote 5.0 on the staff only shows
+to 20.0), at z 0.0 after (40 and 51 voices, all 0.0). A guest on the same plateau (Q1020, `q1020/`; the console's `admit 40 58` makes one at (405, 585)): the
+yawns of guests whose id divides by 16 read z 0.0 (94 readings); a queuer whose id divides by 8, pinned to (405, 585), put off by the sale of their ride, reads
+(405.0, 585.0, 0.0); a shop moved onto the plateau (`move 16 42 58`) has its till at (425.0, 585.0, 0.0), the ground 20.0000 at each. The till is at the
+put-down's place (Q873), so a guest pinned while riding a ride off the plateau is put down at that ride's exit and sounds there (z 0.0 too). Not seen: the original's own sound on raised ground (the second float of
+`Sound_PlayEffect`'s place at `0x0051bfc0`, Q856). A saved offset on a walker is one the original overwrites, so the run that wrote 5.0 on the staff only shows
 ours' old rule.
 
 | Address | Original name | What it is | Evidence |

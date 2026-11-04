@@ -189,15 +189,13 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   `q940/PREDICTION.txt`), choose `ParkGuestSprites.HeadOnRide`'s picture by it and photograph the heads on the desktop against the original at the same pauses. The Ape needs nothing
   (Q940). Second piece of Q940 (the `jm_leaf` first key in Mumbo's `m`, `e` and `s`, frame 14, `0x00471c56`): still open here, measure the key, then build the skip in `NodePoser.Pose`.
 
-- [ ] **Q856. A person's sound's height against the original's, and a guest's on raised ground.** (From Q847.) Q847 built the sound from the decode
+- [ ] **Q856. A person's sound's height against the original's.** (From Q847; its second piece, a guest's on raised ground in ours, is Q1020, done.) Q847 built the sound from the decode
   (`FUN_004754e0`, `0x00475513`..`0x00475533`): nought for anyone the walk places (`FUN_004fa030` writes the sprite's `+0x8c` nought each frame,
   `0x004f9ffd`, `0x004fa0b3`), a seat's and a walk's put-off at the point less the ground. Seen in ours
-  only: staff on a raised plateau at z 0.0. Left: (1) the original with a person on a raised flat cell (the stock park's 20.0 plateau, cells
+  on a raised plateau at z 0.0: staff (Q847) and a guest's yawn, put-off and till (Q1020). Left: (1) the original with a person on a raised flat cell (the stock park's 20.0 plateau, cells
   (40..64, 58); `putstaff` has no twin there, so a guest or a staff member placed by `spritehold.py`'s write of `+0x88`/`+0x90`):
   `brk.sh` on `Sound_PlayEffect`'s place form (`0x0051bfc0`, called from `Person_PlaySound` at `0x004faa4d`) for the effect and read the place's height
-  against the sprite's `+0x8c`, nought for a walker, not the ground's; and a rider's, which the decode says is the point less the ground. (2) A guest's
-  put-off, yawn and till on raised ground in ours (the stock park's guests walk on flat ground, where the two builds agree); the code is the
-  staff's (`Heard`), the tests are `HeardIn`'s.
+  against the sprite's `+0x8c`, nought for a walker, not the ground's; and a rider's, which the decode says is the point less the ground.
 - [ ] **Q946. A person's first step from the entry and from the exit, and the stand point's consumer.** From Q945; its exit-point piece is Q873 (done). Left: (1) the board step routes a guest to the stand point (`FUN_004dedf0( 0 )`, then `FUN_004fa5f0`, state 13, `ride-operation.md`, "The boarding chain, end to end"); ours sends them at the entry cell (`PeepBehaviour.SendTo`) and nothing reads `ParkItemCatalogue.Item.StandPointBytes`, which is built and pinned and unused; build the target from it once (2) is measured. (2) Measure a rider's first step from the entry and from the exit in both games (the first sprite place after the put-down and after the board, polled in the original under Proton, `puffpoll.py`'s sprite table; the same in ours): the original's side needs the original running. (3) The Spray and the Kiosk's till (Q611) is read at the put-down's place, which is now the item's point, not the cell's middle: Q611's numbers ((525, 305) at the Spray, (435, 305) at the Kiosk in ours) have moved with it, re-take them before building Q611.
 - [ ] **Q1040. The x87 precision word at the exit point's byte (`FUN_004dedf0`).** From the run 21 review of Q873 (group A). Read the control word live in the running original
   at `0x004df0ae` (`watch.sh`/gdb under Proton, `p $fctrl`, bits 8-9). `ParkRidePoint.Bytes` keeps 1 - f in doubles for the
