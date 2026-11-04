@@ -337,7 +337,7 @@ public sealed class ParkQueues : Entity
 	/// <summary>The textures the pieces' floors were blended into, let go of with the pieces.</summary>
 	private readonly List<Texture> _blended = [];
 
-	/// <summary>The cells the pieces' footprint stamp took the split flag off (<see cref="ParkGround.StampSplit"/>), given back with them.</summary>
+	/// <summary>The cells the pieces' footprint stamp took the split flag off (<see cref="ParkGround.StampSplit"/>), given back when the queues are unloaded, or by a rebuild where the cell is ground again (<see cref="GiveBackGround"/>).</summary>
 	private readonly List<(int X, int Y)> _stamped = [];
 
 	/// <summary>The pieces' cells blended into the ground's tiles (<see cref="BlendFloor"/>).</summary>

@@ -402,8 +402,7 @@ public class ParkFootprintSplitTests
 	/// over the flagged queue cell (31,18) of the New Save left it without <c>0x800</c>, the path arm copying nothing back). A cell that
 	/// is still a piece is stamped again by the rebuild and is not the give-back's to touch.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> the give-back ignoring the cell's type (a path cell given its flag back); keeping every cell (a ground cell not given back);
-	/// not skipping the cells still stamped.</remarks>
+	/// <remarks><b>Mutations:</b> the give-back ignoring the cell's type (a path cell given its flag back); keeping every cell (a ground cell not given back).</remarks>
 	[TestMethod]
 	public void ARebuildKeepsTheStampOfAQueueCellLaidOverWithPathAndGivesBackGround()
 	{
