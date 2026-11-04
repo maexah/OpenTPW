@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 """research.py <in> <out> <item> [0] - writes <out>, a copy of park file <in> with catalogue item <item> marked researched
 (or, with a last argument 0, not researched): byte +0x10 of its 32-byte record set to 1 (or 0), in the table of the inflated BILZ block (at 0x60d) that begins with the ten
-item ids of IDS (the jungle files'; no theme is checked), and the block's two sizes rewritten. Prints the record.
+item ids of one of the IDS lists (the stock jungle files' and Alexah's played New Save's, whose table runs in the
+original's own project order; no theme is checked), and the block's two sizes rewritten. Prints the record.
 Stops on an assert where the block, the table or the item (among the table's first 150 records) is not found exactly
 once. <in> is only read: give a different <out>, never the reference file."""
 import sys, struct, zlib
-IDS = [1100,1140,1150,1108,1180,1101,1109,100,1102,1113]; item = int(sys.argv[3])
+IDS_LISTS = [[1100,1140,1150,1108,1180,1101,1109,100,1102,1113], [1100,1140,1185,1190,1150,1106,1108,1180,1101,1109]]; item = int(sys.argv[3])
 data = open(sys.argv[1], 'rb').read()
 assert data[0x60d:0x611] == b'BILZ'
 size, block = struct.unpack_from('<II', data, 0x611)
 payload = bytearray(zlib.decompress(data[0x629:])); assert len(payload) == size
-hits = [p for p in range(0, len(payload) - 320) if all(struct.unpack_from('<H', payload, p + 32 * i)[0] == v for i, v in enumerate(IDS))]
+hits = [p for IDS in IDS_LISTS for p in range(0, len(payload) - 320) if all(struct.unpack_from('<H', payload, p + 32 * i)[0] == v for i, v in enumerate(IDS))]
 assert len(hits) == 1, hits
 recs = [hits[0] + 32 * k for k in range(150) if struct.unpack_from('<H', payload, hits[0] + 32 * k)[0] == item]
 assert len(recs) == 1, recs

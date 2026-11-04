@@ -249,6 +249,38 @@ public class ParkMapOffsetCellsTests
 	}
 
 	/// <summary>
+	/// <b>The Large Rock Pillar (1422) as the original's own purchase typed it</b> (Q843, <c>q843/orig/run2/</c>: bought from its buy
+	/// row with the pointer on (71,25)): anchored at (69,23), the pointer less (2,2); 14 cells, the 4 x 4 (69..72, 23..26) less its
+	/// two bottom corners (69,26) and (72,26), owned by the anchor's cell id (3014); the stamp holds the ring of ten of them (the
+	/// interior 2 x 2 is not stamped), as ours does on the same cells.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> <c>CarriedAnchorUnder</c> centring a 4 x 4 one cell east or south moves the anchor;
+	/// <c>CoveredCells</c> leaving the empty corners at the top (or typing the whole 4 x 4) fails the corner and count checks.</remarks>
+	[TestMethod]
+	public void AClickedLargeRockPillarIsAnchoredAndTypedAsTheOriginalsOwnPurchase()
+	{
+		var (world, catalogue) = Park();
+		var state = new ParkState( world );
+
+		Assert.IsTrue( catalogue.TryGet( 1422, out var pillar ) );
+
+		var carried = typeof( ParkBuilding ).GetMethod( "CarriedAnchorUnder", BindingFlags.NonPublic | BindingFlags.Static )!;
+		var (x, y) = ((int X, int Y))carried.Invoke( null, [state, pillar, 71, 25, null] )!;
+
+		Assert.AreEqual( (69, 23), (x, y), "the pointer on (71,25) anchors it at (69,23)" );
+
+		var cells = ParkObjects.CoveredCells( pillar, x, y, 0 ).ToHashSet();
+		var whole = Enumerable.Range( 69, 4 ).SelectMany( cx => Enumerable.Range( 23, 4 ).Select( cy => (cx, cy) ) ).ToHashSet();
+		var typed = new HashSet<(int, int)>( whole );
+
+		typed.ExceptWith( [(69, 26), (72, 26)] );
+
+		Assert.AreEqual( 14, cells.Count, "4 x 4 less two corners" );
+		Assert.IsTrue( typed.SetEquals( cells ), "the 14 cells the original typed: the bottom corners left at 0" );
+		Assert.IsTrue( cells.SetEquals( ParkBuilding.CarrySquares( state, pillar, x, y, 0 ).Select( s => (s.X, s.Y) ) ), "the carried squares are the covered cells" );
+	}
+
+	/// <summary>
 	/// <b>The voice is stored at the model's cells</b>: what <see cref="ParkObjects"/> keeps for a placed rock is the model's
 	/// rectangle (69..73, 23..27), not the anchor's, and the voice sounds at its middle.
 	/// </summary>
