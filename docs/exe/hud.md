@@ -2682,8 +2682,8 @@ value plus the notch; its class is not named). So over a park screen's body the 
 slider under the pointer scrolls. Beside the screen the park layer is hovered, and `Park_MouseMessageProc` hands every
 message to the camera's `FUN_0042a760` (`0x0048845c`) with no test of the open screen: its flag `[0x0074fc2c]` is set at
 entry and cleared only on the right press with RMB cancel (`0x00488354`). So a notch over the park beside an open screen
-zooms by 10, as with none. (Two other procedures hand every message to the camera: first person's layer `FUN_00488a00`
-and the full-screen view's cover, `0x004a287d`.)
+zooms by 10, as with none. (Three other procedures hand every message to the camera: first person's layer `FUN_00488a00`
+(`0x00488b6a`), the full-screen view's cover (`0x004a287d`) and one at `0x004bd5cc`, not read.)
 
 **OpenTPW today** (measured off-screen on the lane B build of `1d5be3de`, `q870/run1`, the stock park, `camera 475 175
 100` before each): a notch down over the bare park 110; two over the buy screen's stats panel (control `0x1ed`, at

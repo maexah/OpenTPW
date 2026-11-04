@@ -4,14 +4,15 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Numerics;
+using System.Reflection;
 
 namespace OpenTPW.Tests;
 
 /// <summary>
 /// <b>An item with a map offset (the Huge Hollow Rock, the Dino Karts Tunnel) is marked, refused, carried and sounded on the cells its
 /// model covers</b>, the anchor staying the cells' owner (Q744). The original's purchase of the rock typed 23 cells, the model's 5 x 5 at
-/// the row above the anchor less the picture's two empty corners (Q888, <c>q888/orig/run1/</c>), and the saved parks hold exactly the
-/// picture's non-empty cells as type 4 for every rock, tunnel and item 1426 in 861 distinct files (Q744's census, <c>q744/census2.txt</c>).
+/// the row above the anchor less the picture's two empty corners (Q888, <c>q888/orig/run1/</c>), and in the saved parks each rock, tunnel and item 1426 owns as
+/// many type 4 cells as the picture's non-empty ones, all inside the model's rectangle, in 861 distinct files (Q744's census, <c>q744/census2.txt</c>).
 /// </summary>
 [TestClass]
 public class ParkMapOffsetCellsTests
@@ -195,9 +196,100 @@ public class ParkMapOffsetCellsTests
 	}
 
 	/// <summary>
+	/// <b>A click anchors a map-offset item as the original's placer does</b>: the picture centred on the pointer, the anchor the
+	/// picture's cell plus the turned offset (<c>0x00529f74..0x00529fa7</c>). The pointer on (71,25) anchors the Huge Hollow Rock at
+	/// (69,24) turned 0 (Q888's run of the original: 0 is measured); 90, 180 and 270 are from the decode alone (the same angle
+	/// goes to <c>FUN_004d9cc0</c>), Q889 (1) asks for a turned rock in the original. The rock's cells are the model's 5 x 5 at
+	/// every angle, centred on the pointer, and the carried squares are those cells.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> <c>CarriedAnchorUnder</c> answering the picture's origin (69,23) moves the anchor a row north
+	/// and the cells to rows 22..26.</remarks>
+	[TestMethod]
+	public void AClickedRockIsAnchoredAsTheOriginalsAndCoversTheCellsRoundThePointer()
+	{
+		var (world, catalogue) = Park();
+		var state = new ParkState( world );
+
+		Assert.IsTrue( catalogue.TryGet( Rock, out var rock ) );
+
+		var carried = typeof( ParkBuilding ).GetMethod( "CarriedAnchorUnder", BindingFlags.NonPublic | BindingFlags.Static )!;
+		var turn = typeof( ParkBuilding ).GetProperty( nameof( ParkBuilding.CarryingAngle ) )!;
+		var expected = new Dictionary<int, (int, int)> { [0] = (69, 24), [90] = (70, 27), [180] = (73, 26), [270] = (72, 23) };
+
+		try
+		{
+			foreach ( var (angle, anchor) in expected )
+			{
+				turn.SetValue( null, angle );
+				var (x, y) = ((int X, int Y))carried.Invoke( null, [state, rock, 71, 25, null] )!;
+
+				Assert.AreEqual( anchor, (x, y), $"turned {angle}" );
+
+				var cells = ParkObjects.CoveredCells( rock, x, y, angle ).ToList();
+
+				Assert.AreEqual( (69, 23, 73, 27), (cells.Min( c => c.X ), cells.Min( c => c.Y ), cells.Max( c => c.X ), cells.Max( c => c.Y )),
+					$"turned {angle}: the model's 5 x 5 centred on the pointer" );
+				Assert.IsTrue( cells.ToHashSet().SetEquals( ParkBuilding.CarrySquares( state, rock, x, y, angle ).Select( s => (s.X, s.Y) ) ),
+					$"turned {angle}: the carried squares are the covered cells" );
+			}
+		}
+		finally
+		{
+			turn.SetValue( null, 0 );
+		}
+	}
+
+	/// <summary>
+	/// <b>The voice is stored at the model's cells</b>: what <see cref="ParkObjects"/> keeps for a placed rock is the model's
+	/// rectangle (69..73, 23..27), not the anchor's, and the voice sounds at its middle.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> <c>StandPlaced</c> storing <see cref="ParkObjects.FootprintAt"/> of the anchor stores rows 24..28.</remarks>
+	[TestMethod]
+	public void APlacedRocksStoredVoiceBoxIsTheModelsCells()
+	{
+		var (world, catalogue) = Park();
+		var state = new ParkState( world );
+
+		Assert.IsTrue( catalogue.TryGet( Rock, out var rock ) );
+
+		var placed = ParkBuilding.Constructed( rock, 4000, 69, 24, 0, 0, 0, ParkWorld.BuiltWhen.At( state.CalendarNow ) );
+		var objects = new ParkObjects( Theme, null, null );
+
+		objects.StandPlaced( placed, rock, null!, RideAnimations.None(), null, [], 0, [], 0, () => default );
+
+		Assert.AreEqual( (69, 23, 73, 27), objects.StoredFootprint( 4000 ) );
+		Assert.AreEqual( new Vector3( 715f, 255f, 0f ), ParkObjects.BoxMiddle( objects.StoredFootprint( 4000 )!.Value, 0f ) );
+	}
+
+	/// <summary>
+	/// <b>A rock bought before Q744 is sold clean</b>: that purchase typed the anchor's rectangle (rows 24..28), owned by the
+	/// anchor; the sale clears those cells too, and a cell of another owner stays.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> <c>Sell</c> unstamping the covered cells alone leaves (69,28) typed 4.</remarks>
+	[TestMethod]
+	public void ASaleClearsTheRectangleAnEarlierBuildStamped()
+	{
+		var (world, catalogue) = Park();
+		var state = new ParkState( world );
+
+		Assert.IsTrue( catalogue.TryGet( Rock, out var rock ) );
+
+		var (x, y) = FreeAnchor( state, rock );
+		var thingId = state.NextThingId();
+		var placed = ParkBuilding.Constructed( rock, thingId, x, y, 0, 0, 0, ParkWorld.BuiltWhen.At( state.CalendarNow ) );
+
+		state.AddObject( placed );
+		ParkBuilding.Stamp( state, ParkObjects.FootprintAt( rock, x, y, 0 ), x, y );
+
+		Assert.AreEqual( CellEdge.Footprint, state.Record( x, y + 4 ).Type, "the old build's last row is marked" );
+		StringAssert.StartsWith( ParkBuilding.Sell( state, world, catalogue, null, null, thingId ), "sell: 'Huge Hollow Rock'" );
+		Assert.AreEqual( 0, ParkObjects.CellsOf( (x - 1, y - 2, x + 6, y + 6) ).Count( cell => state.Record( cell.X, cell.Y ).Type == CellEdge.Footprint ) );
+	}
+
+	/// <summary>
 	/// <b>The tunnel turned a quarter marks the rotated model cells</b>: its picture's 12 less 2 empty, anchored at (17,21) turned 90, all
-	/// inside the rectangle (16..19, 19..21) the saved park holds (Q744's census: item 1501, 34 things, every one owning exactly its
-	/// picture's non-empty cells).
+	/// inside the rectangle (16..19, 19..21) the saved park holds (Q744's census: item 1501, 34 things, every one owning as many cells as its
+	/// picture's non-empty ones).
 	/// </summary>
 	[TestMethod]
 	public void ATurnedTunnelMarksTheRotatedModelsCells()

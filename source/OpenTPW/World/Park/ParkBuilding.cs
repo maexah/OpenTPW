@@ -129,11 +129,11 @@ public static class ParkBuilding
 
 		// The placer stamps each picture cell by its own kind, mapping the track kinds 0x0b, 0x10 and 0x17
 		// to the body's 4 - so those three and the body are what Stamp's single type reproduces. The empty
-		// cell '.' is stamped as body here too, and a 0x17 cell's neighbour is given type 0x15 in the
-		// original; neither is built.
+		// cell is passed by (CoveredCells), as the placer's case 0; a 0x17 cell's neighbour is
+		// given type 0x15 in the original, not built.
 		foreach ( var kind in item.CellKinds ?? [] )
 		{
-			if ( kind is not (0x04 or 0x0b or 0x10 or ItemDescriptionFile.EntranceKind or ItemDescriptionFile.ExitKind) )
+			if ( kind is not (0x00 or 0x04 or 0x0b or 0x10 or ItemDescriptionFile.EntranceKind or ItemDescriptionFile.ExitKind) )
 				Unimplemented.Report( $"SHAPE_KIND_{kind}_PLACEMENT" );
 		}
 
@@ -177,9 +177,11 @@ public static class ParkBuilding
 		{
 			Stamp( state, ParkObjects.CoveredCells( item, cellX, cellY, angle ), cellX, cellY );
 
-			// No tile pass follows the stamp: the placer retiles only the cells its picture marks (type 4 gives tile 8, which gives
-			// nothing back), and the tile that gives a ground cell its word back (set 0, tile 55) is reached by the load's walk
-			// over every cell, a sale's reset and a link pass on a neighbour, not by a purchase (docs/exe/park-engine.md, "A purchase runs no tile pass over the table's cells", Q890).
+			// No tile pass follows the stamp: after it a purchase retiles none of its table cells to (set 0, tile 55): the placer
+			// retiles the cells its picture marks (type 4 gives tile 8, which gives nothing back) and the entrance's path cell and
+			// path neighbours. That tile is reached by the load's walk over every cell, a sale's reset, and the teardown of a
+			// lower-priority thing under the marked cells (op 0x87 before the construct, 0x00528d2c; ours tears none down, Q449);
+			// a link pass on a neighbour retiles types 1, 3, 9 and 10 only, never ground (docs/exe/park-engine.md, "A purchase runs no tile pass over the table's cells", Q890).
 		}
 
 		// And onto its anchor cell's own list, which is the ONE cell the save puts a placed thing on -
@@ -558,6 +560,11 @@ public static class ParkBuilding
 		state.DeleteThing( thingId );
 
 		Unstamp( state, covered, placed.CellX, placed.CellY, thingId );
+
+		// A deviation: a rock bought here before Q744 typed the anchor's whole rectangle (FootprintAt), which the original's
+		// demolisher never clears (it sweeps the picture only). A park saved then holds those cells, owned by this thing, so
+		// they are cleared too; the owner check leaves another thing's alone.
+		Unstamp( state, ParkObjects.FootprintAt( item, placed.CellX, placed.CellY, placed.Angle ), placed.CellX, placed.CellY, thingId );
 
 		// The destructor's "object removed" message (0x004dd150): a rider is put off where they are, a
 		// queuer is put out of the queue, and staff resting in it or heading there to rest give it up. It
@@ -1169,8 +1176,8 @@ public static class ParkBuilding
 	/// </para>
 	/// <para>
 	/// <b>A cell of the rectangle the thing does not own is left alone.</b> That is the shape's empty
-	/// <c>.</c> cells, which the demolisher skips, for a thing the save placed. <see cref="Stamp"/> owns
-	/// them for a thing bought here, so for that one they are cleared too (<c>SHAPE_KIND_0_PLACEMENT</c>).
+	/// <c>.</c> cells, which the demolisher skips, for a thing the save placed. A purchase
+	/// marks the same cells as the save (<c>CoveredCells</c>), so the empty cells are no one's either way.
 	/// </para>
 	/// <para>
 	/// <b>Two deviations, both because the placement verdict is unbuilt</b> (<c>PLACEMENT_TERRAIN_RULE</c>),
@@ -1456,9 +1463,9 @@ public static class ParkBuilding
 	}
 
 	/// <summary>
-	/// The anchor the thing in the hand takes with the pointer on (x, y), <see cref="AnchorUnder"/>'s, but for a track add-on
-	/// the preview's snap first (<see cref="ParkTrackAddOn.Snap"/>), which may turn the hand as the original's preview turns
-	/// <c>[0x0081d7a4]</c>, and the anchor its picture's cell gives (<see cref="ParkTrackAddOn.AnchorFor"/>).
+	/// The anchor the thing in the hand takes with the pointer on (x, y): <see cref="AnchorUnder"/>'s picture cell moved by
+	/// the turned map offset (<see cref="ParkTrackAddOn.AnchorFor"/>), for every item; for a track add-on the preview's snap
+	/// first (<see cref="ParkTrackAddOn.Snap"/>), which may turn the hand as the original's preview turns <c>[0x0081d7a4]</c>.
 	/// </summary>
 	/// <param name="previewCell">The preview's cell, <c>[0x008186a4]</c>: the pointer's, or an add-on's snapped one.</param>
 	private static (int X, int Y) CarriedAnchorUnder( ParkState state, ParkItemCatalogue.Item item, int pointerX, int pointerY,
@@ -1467,7 +1474,13 @@ public static class ParkBuilding
 		previewCell = (pointerX, pointerY);
 
 		if ( !ParkTrackAddOn.Is( item ) )
-			return AnchorUnder( item, pointerX, pointerY, CarryingAngle );
+		{
+			// The placer centres the picture on the pointer and anchors the thing at the picture's cell plus its turned map
+			// offset, every item alike (0x00529f74..0x00529fa7, FUN_004d9cc0).
+			var picture = AnchorUnder( item, pointerX, pointerY, CarryingAngle );
+
+			return ParkTrackAddOn.AnchorFor( item, picture.X, picture.Y, CarryingAngle );
+		}
 
 		var angle = CarryingAngle;
 		var (preview, anchor) = ParkTrackAddOn.Under( state, item,
@@ -1494,8 +1507,8 @@ public static class ParkBuilding
 	/// depth back from it (<c>0x00528b24</c>, <c>0x00528b26</c>, whole cells, so a three-wide picture one column back), and
 	/// turns it about the middle of a five-by-five box (<c>(5 − w) / 2</c>, <c>(5 − d) / 2</c>, from <c>0x00528b2a</c>; the
 	/// sweep's own cells per angle, <c>0x00528f62</c>..). Its flag for the uncentred reading, <c>DAT_0081af7c</c>, is only
-	/// ever cleared (<c>0x0052f074</c>). This answers the anchor whose picture, turned by <see cref="RotateDelta"/>, covers
-	/// the same cells. docs/exe/park-engine.md, "While a thing is carried".
+	/// ever cleared (<c>0x0052f074</c>). This answers the picture's origin, the cell the model stands on; the anchor is
+	/// <see cref="ParkTrackAddOn.AnchorFor"/> of it. docs/exe/park-engine.md, "While a thing is carried".
 	/// </summary>
 	internal static (int X, int Y) AnchorUnder( ParkItemCatalogue.Item item, int x, int y, int angle )
 	{

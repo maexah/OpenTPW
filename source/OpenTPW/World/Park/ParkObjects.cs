@@ -464,16 +464,9 @@ public sealed class ParkObjects : Entity
 			model.SetTransform( origin, turn );
 
 			_models.Add( model );
-			_standing[placed.ThingId] = new Standing( model, animations, placed.CatalogueId, sign )
-			{
-				Footprint = SoundBoxOf( item, placed ),
-				Blended = blended,
-				FloorCells = floorCells,
-				Stamped = stamped,
-				Conformed = conformed,
-				Measure = () => ProceduralConform.Measure( model.Source, item.Shape, origin.GetSystemVector3(), turn,
-					ParkGround.Current?.Heightfield )
-			};
+			StandPlaced( placed, item, model, animations, sign, blended, floorCells, stamped, conformed,
+				() => ProceduralConform.Measure( model.Source, item.Shape, origin.GetSystemVector3(), turn,
+					ParkGround.Current?.Heightfield ) );
 
 			// The original gates on the base vertices FUN_00469a80 counts (0x0046a838) and reads the mesh with the
 			// most of them (0x0046a82c). The node count and the first mesh stand in for both: the same mesh in
@@ -497,15 +490,38 @@ public sealed class ParkObjects : Entity
 			// from completely separate things - this from the item's own footprint carried through its
 			// turn, and the save's from the cells it marks as built on - so when they agree the placement
 			// is right for a reason rather than by eye.
+			var voice = _standing[placed.ThingId].Footprint ?? covered;
+
 			Log.Info( $"{ThemeName}: '{item.Name}' anchored at ({placed.CellX},{placed.CellY}) turned " +
 				$"{placed.Angle} covers ({covered.Left},{covered.Top})..({covered.Right},{covered.Bottom}), its voice at the middle " +
-				$"({BoxMiddle( covered, 0f ).X:F0},{BoxMiddle( covered, 0f ).Y:F0})" );
+				$"({BoxMiddle( voice, 0f ).X:F0},{BoxMiddle( voice, 0f ).Y:F0})" );
 		}
 		catch ( Exception e )
 		{
 			Log.Warning( $"{ThemeName}: '{item.Name}' would not load, so it is missing from ({placed.CellX},{placed.CellY}) - {e.Message}" );
 		}
 	}
+
+	/// <summary>
+	/// Records a placed item's model as standing, its voice box the model's cells (<see cref="SoundBoxOf"/>). <see cref="Place"/>'s
+	/// last step, apart so a test can read what it stored (<see cref="StoredFootprint"/>).
+	/// </summary>
+	internal void StandPlaced( ParkWorld.CatalogueObject placed, ParkItemCatalogue.Item item, LobbyModel model, RideAnimations animations,
+		IReadOnlyDictionary<string, Texture>? sign, List<Texture> blended, int floorCells, List<(int X, int Y)> stamped, int conformed,
+		Func<ProceduralConform.Measurement> measure )
+		=> _standing[placed.ThingId] = new Standing( model, animations, placed.CatalogueId, sign )
+		{
+			Footprint = SoundBoxOf( item, placed ),
+			Blended = blended,
+			FloorCells = floorCells,
+			Stamped = stamped,
+			Conformed = conformed,
+			Measure = measure
+		};
+
+	/// <summary>The cell rectangle the voice of a standing thing is sounded at the middle of, or null.</summary>
+	internal (int Left, int Top, int Right, int Bottom)? StoredFootprint( int thingId )
+		=> _standing.TryGetValue( thingId, out var standing ) ? standing.Footprint : null;
 
 	/// <summary>
 	/// A placed thing's model stood on the ground as the original makes it (flag <c>0x8</c>, <c>0x00463329</c>): the floor's rim vertices
@@ -561,8 +577,8 @@ public sealed class ParkObjects : Entity
 	/// The cells a placed item marks as built on, owned by its anchor: its picture's cells that are not empty, swept from the
 	/// cell its model stands on (<see cref="ModelCell"/>) with each column and row turned by the angle, as the placer sweeps them
 	/// (<c>0x0052916c</c>'s case 0 passes an empty one by). That is the rectangle <see cref="FloorFootprint"/> less the picture's
-	/// empty cells, and the rectangle itself for an item with no picture, in a rectangle's own order (row by row from the top left). The saved parks hold exactly these as map type 4 (the
-	/// rock, the tunnel and item 1426 less their two empty cells each, 101 things in 861 files, <c>docs/exe/park-engine.md</c>).
+	/// empty cells, and the rectangle itself for an item with no picture, in a rectangle's own order (row by row from the top left). In the saved parks each rock, tunnel and item 1426 owns
+	/// as many map type 4 cells as the picture's non-empty ones, all inside the model's rectangle (101 things in 861 files, <c>docs/exe/park-engine.md</c>).
 	/// </summary>
 	public static IEnumerable<(int X, int Y)> CoveredCells( ParkItemCatalogue.Item item, int cellX, int cellY, int angle )
 	{

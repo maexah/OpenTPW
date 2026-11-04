@@ -1011,10 +1011,12 @@ is kept too. All 86 allow one copy in the slots.
 copies it onto itself) and returns 1. The thing, the second word and the line (`+0x08`, -1 for "choose one") are the
 first raise's. Forced skips the gate's test 3 alone (`FUN_0059abc0`, `0x0059acb3` and `0x0059ad17`: the said byte and
 the cuts), so he says a line he has said once again. The Tutorial option off still refuses it (test 1), and so does the
-same line still waiting in a slot (test 4, one copy). Once in a slot it ranks at 1000 with the rest.
+same line still waiting in a slot (test 4, one copy). Tests 2 and 5 also run and never refuse a category-1 message
+(`MinTimeSameMessage` 0, `FUN_0059c390`, `0x0059c3ee`; selection mode 2, `0x0059adbe`). Once in a slot it ranks at 1000 with the rest.
 
-**What forgets it.** The withdrawal of the kept id clears `+0x16e4` ("The withdrawal", above). Each park screen's
-handler withdraws its own line on its close (message `0x14`) before passing the message to `FUN_00488ba0`:
+**What forgets it.** The withdrawal of the kept id clears `+0x16e4` ("The withdrawal", above). Eleven of the thirteen park
+screens' handlers withdraw their own line on the close (message `0x14`) before passing the message to `FUN_00488ba0`;
+the staff costs screen's and `FUN_004b7b00`'s withdraw none:
 
 | Screen (its opener) | Handler | Withdraws |
 |---|---|---|
@@ -1035,7 +1037,9 @@ handler withdraws its own line on its close (message `0x14`) before passing the 
 So F1 over an open screen has him say that screen's line again, unless a later category-1 raise (the buy screen's own
 `0xc9` and `0xce`, a tag opened) took its place; after the close, F1 says nothing, unless the kept line was another id,
 which the close leaves standing. The kept record is written and read with the advisor thing ("The slots in a park file",
-below), so it lasts across a save. Not read: whether the object windows' own handlers withdraw a line, and whether a
+below), so it lasts across a save. The object windows' handlers withdraw their own lines on the close too (`FUN_00497640`: `0x12b`, `0xd5`; the handler with
+its `0x14` arm at `0x004af6b2`: `0x129`, `0xcf`), and some 40 other sites withdraw category-1 lines (`0x00486b40`'s and
+`FUN_0059aa70`'s callers). Not read: whether a
 slot is emptied when its line starts (which decides whether F1 during the line is refused by test 4).
 
 **OpenTPW** keeps no record (the table above, "The kept message"), and nothing reads F1 in a park: `InputButton.Help`

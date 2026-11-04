@@ -604,7 +604,7 @@ public class ParkFootprintSplitTests
 			Assert.IsTrue( marked.All( cell => state.Record( cell.X, cell.Y ).ParentId == MapStep.CellId( at.X, at.Y ) ), "owned by the anchor" );
 			Assert.IsTrue( Enumerable.Range( at.X + 1, 4 ).All( x => marked.Contains( (x, at.Y - 1) ) ), "the row above the anchor is typed" );
 			Assert.IsFalse( marked.Any( cell => cell.Y == at.Y + 4 ), "and the anchor rectangle's last row is not" );
-			Assert.IsFalse( marked.Contains( (at.X, at.Y - 2) ), "the extra cell is ground in the map" );
+			Assert.IsTrue( state.Record( at.X, at.Y - 2 ).Type is <= 0 or 5, "the extra cell is ground in the map" );
 			Assert.AreEqual( 24, objects.StampedCells, "no tile pass follows the purchase: the ground cell stamped beside the rock stays stamped" );
 		}
 		finally

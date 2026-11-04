@@ -123,7 +123,7 @@ public static class ParkTrackAddOn
 	}
 
 	/// <summary>
-	/// The anchor (the thing's own cell) of an add-on whose picture starts at a cell: that cell moved by the item's map offset
+	/// The anchor (the thing's own cell) of a thing whose picture starts at a cell: that cell moved by the item's map offset
 	/// turned by the angle, the inverse of <see cref="ParkBuilding.TopLeftFor"/>, as the placer constructs the object there
 	/// (<c>FUN_004d9cc0</c> at <c>0x00529f9d</c>). Alexah's played Tunnel: picture (16,21) at 90, anchor (17,21).
 	/// </summary>
