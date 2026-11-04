@@ -24,12 +24,15 @@ public class CheckDocsPathsTests
 		("source/OpenTPW/Client/GameDir.cs", "namespace OpenTPW;\npublic class GameDir { public void Find() { } }\npublic struct ParkState { public int CellAt( int x, int y ) => 0; public void Reset() { } }\npublic enum Mode { Wet, Dry }\npublic interface IThing { void Poke(); }\npublic record Sample( int Value );\n"u8.ToArray()),
 		("source/OpenTPW/Foo.cs", "class Foo { void Go() { Run( Widget ); } }\n"u8.ToArray()),
 		("source/OpenTPW/Bad.cs", [.. new byte[] { 0xFF, 0xFE, 0x0A }, .. "class AfterBad { }\n"u8.ToArray()]),
+		("source/OpenTPW/App.config", "<configuration><add key=\"OnlyInConfig\" /></configuration>\n"u8.ToArray()),
+		("source/OpenTPW/OpenTPW.csproj", "<Project><Description>OnlyInProj</Description></Project>\n"u8.ToArray()),
+		("source/OpenTPW/notes.txt", "OnlyInNotes\n"u8.ToArray()),
 		("source/OpenTPW.Files/Formats.cs", "class Formats { }\n"u8.ToArray()),
 		("source/OpenTPW.sln", "x"u8.ToArray()),
 		("tools/run.sh", "x"u8.ToArray()),
 		("tools/Outside.cs", "class Outside { }\n"u8.ToArray()),
 		("docs/other.md", "x"u8.ToArray()),
-		("docs/guide.md", "# Where things are\n## `Foo` Bar!\n### A \u2014 b (Q&A)\n#### Snake case\n###### Six\n####### Seven\n#NoSpace\n##### Re-use it\n## Trailing \n"u8.ToArray()),
+		("docs/guide.md", "# Where things are\n## `Foo` Bar!\n### A \u2014 b (Q&A)\n#### Snake case\n###### Six\n####### Seven\n#NoSpace\n##### Re-use it\n## Trailing \n## snake_name\n## Same\n## Same\n## Same\n```sh\n# InTick\n```\n~~~\n```\n# InTilde\n~~~\n````md\n```\n# InFour\n```\n````\n## After fences\n## Closed ##\n## C# ##\n## Not# closed\n## Sharp # mid\nText # Fake\n"u8.ToArray()),
 		(".gitignore", "ignored/\n"u8.ToArray()),
 		("ignored/hidden.cs", "class Hidden { }\n"u8.ToArray()),
 	];
@@ -159,7 +162,7 @@ public class CheckDocsPathsTests
 		CollectionAssert.AreEqual( new[] { Header( 1, 1 ), Problem( "README.md", 2, "OpenTPW.Nope", NoType ) }, lines );
 	}
 
-	/// <remarks><b>Mutation:</b> <c>type_exists</c> without the word boundary (<c>ParkStat</c>, <c>ParkState.Cell</c>), without the declaration test of the head (<c>Ghost.CellAt</c>), with a keyword missing from the declaration list (one row of each kind: class, struct, enum, interface, record), or matching a declaration's prefix (<c>Game.Find</c> for <c>GameDir</c>); the single-name path dropping <c>\b</c> or the lower-case test; the call form not cut at its bracket.</remarks>
+	/// <remarks><b>Mutation:</b> <c>type_exists</c> without the word boundary (<c>ParkStat</c>, <c>ParkState.Cell</c>), without the declaration test of the head (<c>Ghost.CellAt</c>), with a keyword missing from the declaration list (one row of each kind: class, struct, enum, interface, record), or matching a declaration's prefix (<c>Game.Find</c> for <c>GameDir</c>); the single-name path dropping <c>\b</c> or the lower-case test; the call form not cut at its bracket, or its spaces sending it to the word check before it is cut (`ParkState.Gone( 1 )`); the source-file suffixes of <c>Index</c> losing <c>.config</c> or <c>.csproj</c>, or gaining <c>.txt</c>, or no longer limited to <c>source/</c>.</remarks>
 	[TestMethod]
 	[DataRow( "ParkState", true )]
 	[DataRow( "ParkStat", false )]
@@ -180,11 +183,18 @@ public class CheckDocsPathsTests
 	[DataRow( "ParkState.CellAt(1,2)", true )]
 	[DataRow( "ParkState.Gone(1,2)", false )]
 	[DataRow( "Ghost.CellAt(1)", false )]
+	[DataRow( "ParkState.CellAt( 1, 2 )", true )]
+	[DataRow( "ParkState.CellAt()", true )]
+	[DataRow( "ParkState.Gone( 1 )", false )]
+	[DataRow( "Ghost.CellAt( 1 )", false )]
+	[DataRow( "OnlyInConfig", true )]
+	[DataRow( "OnlyInProj", true )]
+	[DataRow( "OnlyInNotes", false )]
 	public void ATypeMustBeDeclaredAndItsMemberUsedInTheSource( string name, bool found )
 	{
 		var (exit, lines) = Check( ["README.md"], ("README.md", [$"`{name}`"]) );
 
-		var shown = name.Contains( '(' ) ? name[..name.IndexOf( '(' )] : name;
+		var shown = name.Contains( '(' ) ? name[..name.IndexOf( '(' )].TrimEnd() : name;
 		Assert.AreEqual( found ? 0 : 1, exit, string.Join( "\n", lines ) );
 		CollectionAssert.AreEqual( found ? new[] { Header( 1, 0 ) } : new[] { Header( 1, 1 ), Problem( "README.md", 1, shown, NoType ) }, lines );
 	}
@@ -283,7 +293,7 @@ public class CheckDocsPathsTests
 		}, lines );
 	}
 
-	/// <remarks><b>Mutation:</b> <c>slug()</c> collapsing spaces (<c>a-b-qa</c>), keeping backticks, punctuation or <c>&amp;</c>, not lower-casing; the heading pattern taking seven hashes or no space after them or missing the sixth level.</remarks>
+	/// <remarks><b>Mutation:</b> <c>slug()</c> collapsing spaces (<c>a-b-qa</c>), keeping backticks, punctuation or <c>&amp;</c>, not lower-casing, dropping <c>_</c>; the heading pattern taking seven hashes or no space after them or missing the sixth level; a repeated heading not numbered (<c>-1</c>, <c>-2</c>) or numbered from 0; a heading inside a backtick, tilde or longer fence counted; a closing run of hashes (<c>## Closed ##</c>) kept, or a run of hashes inside the heading cut (<c>Sharp # mid</c>); a heading found after text on its line.</remarks>
 	[TestMethod]
 	[DataRow( "where-things-are", true )]
 	[DataRow( "foo-bar", true )]
@@ -298,12 +308,156 @@ public class CheckDocsPathsTests
 	[DataRow( "seven", false )]
 	[DataRow( "nospace", false )]
 	[DataRow( "Where-things-are", false )]
+	[DataRow( "snake_name", true )]
+	[DataRow( "snakename", false )]
+	[DataRow( "same", true )]
+	[DataRow( "same-1", true )]
+	[DataRow( "same-2", true )]
+	[DataRow( "same-3", false )]
+	[DataRow( "intick", false )]
+	[DataRow( "intilde", false )]
+	[DataRow( "infour", false )]
+	[DataRow( "after-fences", true )]
+	[DataRow( "closed", true )]
+	[DataRow( "closed-", false )]
+	[DataRow( "c", true )]
+	[DataRow( "not-closed", true )]
+	[DataRow( "sharp--mid", true )]
+	[DataRow( "fake", false )]
 	public void AnAnchorIsGitHubsSlugOfAHeadingOfTheLinkedPage( string anchor, bool found )
 	{
 		var (exit, lines) = Check( ["README.md"], ("README.md", [$"[x](docs/guide.md#{anchor})"]) );
 
 		Assert.AreEqual( found ? 0 : 1, exit, string.Join( "\n", lines ) );
 		CollectionAssert.AreEqual( found ? new[] { Header( 1, 0 ) } : new[] { Header( 1, 1 ), Problem( "README.md", 1, "docs/guide.md#" + anchor, NoLinkHeading ) }, lines );
+	}
+
+	/// <remarks><b>Mutation:</b> a fence closed by the other mark (<c>~~~</c> by backticks and the reverse), by a shorter run, or by a line with text after it; <c>~~~</c> not opening a fence, or two marks opening one; a backtick fence opened by a line whose info string holds a backtick (<c>```x```</c> is inline code); a fence's own line read as prose (a tilde fence's info string may hold backticks).</remarks>
+	[TestMethod]
+	public void AFenceIsClosedByTheSameMarkAtLeastAsLongAndNothingElse()
+	{
+		var (exit, lines) = Check( ["README.md"], ("README.md",
+		[
+			"~~~sh `tools/gone0.sh`",
+			"ls tools/gone1.sh",
+			"```",
+			"ls tools/gone2.sh",
+			"~~~",
+			"`tools/gone3.sh`",
+			"````md",
+			"```",
+			"ls tools/gone4.sh",
+			"```",
+			"ls tools/gone5.sh",
+			"````",
+			"`ParkStat`",
+			"```ParkStatB```",
+			"`ParkStatC`",
+			"```",
+			"``` text",
+			"ls tools/gone6.sh",
+			"```",
+			"`tools/gone7.sh`",
+			"``",
+			"`ParkStatD`",
+			"~~",
+			"`ParkStatE`",
+		]) );
+
+		Assert.AreEqual( 1, exit, string.Join( "\n", lines ) );
+		CollectionAssert.AreEqual( new[]
+		{
+			Header( 1, 12 ),
+			Problem( "README.md", 2, "tools/gone1.sh", NoFile ),
+			Problem( "README.md", 4, "tools/gone2.sh", NoFile ),
+			Problem( "README.md", 6, "tools/gone3.sh", NoFile ),
+			Problem( "README.md", 9, "tools/gone4.sh", NoFile ),
+			Problem( "README.md", 11, "tools/gone5.sh", NoFile ),
+			Problem( "README.md", 13, "ParkStat", NoType ),
+			Problem( "README.md", 14, "ParkStatB", NoType ),
+			Problem( "README.md", 15, "ParkStatC", NoType ),
+			Problem( "README.md", 18, "tools/gone6.sh", NoFile ),
+			Problem( "README.md", 20, "tools/gone7.sh", NoFile ),
+			Problem( "README.md", 22, "ParkStatD", NoType ),
+			Problem( "README.md", 24, "ParkStatE", NoType ),
+		}, lines );
+	}
+
+	/// <remarks><b>Mutation:</b> a link's title (<c>"t"</c>, <c>'t'</c> or <c>(t)</c>, one holding a bracket) or a space before its closing bracket or after its opening one making the link unread.</remarks>
+	[TestMethod]
+	public void ALinkWithATitleOrASpaceBeforeItsBracketIsReadUpToItsTarget()
+	{
+		var (exit, lines) = Check( ["README.md"], ("README.md",
+		[
+			"[ok](docs/guide.md \"The guide\") [ok](docs/guide.md 't') [ok](docs/guide.md (t)) [ok](docs/guide.md  )",
+			"[bad](docs/missing.md \"t\") [bad](docs/missing2.md 't') [bad](docs/missing3.md (t)) [bad](docs/missing4.md ) [bad]( docs/missing6.md)",
+			"[ok](docs/guide.md#six \"t\") [bad](docs/guide.md#nope \"t\") [bad](docs/missing5.md \"a) b\")",
+		]) );
+
+		Assert.AreEqual( 1, exit, string.Join( "\n", lines ) );
+		CollectionAssert.AreEqual( new[]
+		{
+			Header( 1, 7 ),
+			Problem( "README.md", 2, "docs/missing.md", NoLinkFile ),
+			Problem( "README.md", 2, "docs/missing2.md", NoLinkFile ),
+			Problem( "README.md", 2, "docs/missing3.md", NoLinkFile ),
+			Problem( "README.md", 2, "docs/missing4.md", NoLinkFile ),
+			Problem( "README.md", 2, "docs/missing6.md", NoLinkFile ),
+			Problem( "README.md", 3, "docs/guide.md#nope", NoLinkHeading ),
+			Problem( "README.md", 3, "docs/missing5.md", NoLinkFile ),
+		}, lines );
+	}
+
+	/// <remarks><b>Mutation:</b> any one file type of <c>PATH_TYPES</c> removed (a missing <c>Gone.toml</c> then passes, in backticks and in a fence); the type of a fenced word cut at its first dot (<c>a.b.sh</c>), or taken from a file with no dot (<c>tools/md</c> is a file with no type); a name padded inside its backticks not stripped.</remarks>
+	[TestMethod]
+	[DataRow( "md", true )]
+	[DataRow( "py", true )]
+	[DataRow( "cs", true )]
+	[DataRow( "sh", true )]
+	[DataRow( "yml", true )]
+	[DataRow( "yaml", true )]
+	[DataRow( "csproj", true )]
+	[DataRow( "sln", true )]
+	[DataRow( "json", true )]
+	[DataRow( "txt", true )]
+	[DataRow( "shader", true )]
+	[DataRow( "props", true )]
+	[DataRow( "config", true )]
+	[DataRow( "toml", true )]
+	[DataRow( "wad", false )]
+	[DataRow( "bin", false )]
+	public void EveryFileTypeOfTheListMakesAMissingNameAPath( string type, bool listed )
+	{
+		var (exit, lines) = Check( ["README.md"], ("README.md", [$"`Gone.{type}`", "```", $"ls tools/gone.{type}", "```"]) );
+
+		Assert.AreEqual( listed ? 1 : 0, exit, string.Join( "\n", lines ) );
+		CollectionAssert.AreEqual( listed
+			? new[] { Header( 1, 2 ), Problem( "README.md", 1, $"Gone.{type}", NoFile ), Problem( "README.md", 3, $"tools/gone.{type}", NoFile ) }
+			: new[] { Header( 1, 0 ) }, lines );
+	}
+
+	/// <remarks><b>Mutation:</b> see <see cref="EveryFileTypeOfTheListMakesAMissingNameAPath"/>.</remarks>
+	[TestMethod]
+	public void AFencedWordsTypeIsAfterItsLastDotAndAFileWithNoDotHasNone()
+	{
+		var (exit, lines) = Check( ["README.md"], ("README.md",
+		[
+			"```",
+			"ls tools/a.b.sh",
+			"ls tools/x.d/md tools/md",
+			"ls tools/x.d/gone.sh",
+			"```",
+			"`  ParkStat ` `  ParkState `",
+		]) );
+
+		Assert.AreEqual( 1, exit, string.Join( "\n", lines ) );
+		CollectionAssert.AreEqual( new[]
+		{
+			Header( 1, 3 ),
+			Problem( "README.md", 2, "tools/a.b.sh", NoFile ),
+			Problem( "README.md", 4, "tools/x.d/gone.sh", NoFile ),
+			Problem( "README.md", 6, "ParkStat", NoType ),
+		}, lines );
 	}
 
 	/// <remarks><b>Mutation:</b> a link read from the repository's root and not the page's own folder; <c>..</c> not folded.</remarks>

@@ -4,14 +4,18 @@
     check_docs_paths.py [file.md ...]     the three pages, or the files named
 
 Looks at the text between backticks (each path-like word of a command, and of a fenced block too) and at markdown link
-targets. A dot-name with no slash (`.gitattributes`) is skipped: it cannot be told from a file type (`.wad`). A name that looks like a path (it has a slash, or
-ends in a file type the repository holds) must match a tracked file or folder: whole, or as the tail of a path (so
-`Client/GameDir.cs` is found under source/OpenTPW/). A name that looks like a type (`ParkState`, `ParkState.CellAt`)
-must be declared as a class, struct, enum, interface or record in source/ (and a member after the dot must appear
-there). A link to another page of the repository must reach a file, and its `#anchor` a heading. The game's own
-folders (`data/`, `save/`), placeholders (`<kind>`, `*`) and web addresses are not checked. Prints each name it could
-not find with the file and line, and exits 1 if there is any. The maintainer's Saturday audit runs it
-(docs/WORKFLOW.md, "Hooks"). Python 3.8 or newer, nothing to install; run it from anywhere in the repository."""
+targets (a title after the target is allowed). A fenced block is CommonMark's: three or more backticks or tildes, closed
+by the same mark at least as long with nothing after it; it is found at any indent (a list item's fence sits deeper). A
+dot-name with no slash (`.gitattributes`) is skipped: it cannot be told from a file type (`.wad`). A name that looks
+like a path (it has a slash, or ends in a file type the repository holds) must match a tracked file or folder: whole, or
+as the tail of a path (so `Client/GameDir.cs` is found under source/OpenTPW/). A name that looks like a type
+(`ParkState`, `ParkState.CellAt`) must be declared as a class, struct, enum, interface or record in source/ (and a
+member after the dot must appear there); a call (`ParkState.CellAt( x, y )`) is checked as its name. A link to another
+page of the repository must reach a file, and its `#anchor` a heading outside a fence, by GitHub's slug (a repeated
+heading's is numbered -1, -2...). The game's own folders (`data/`, `save/`), placeholders (`<kind>`, `*`) and web
+addresses are not checked. Prints each name it could not find with the file and line, and exits 1 if there is any. The
+maintainer's Saturday audit runs it (docs/WORKFLOW.md, "Hooks"). Python 3.8 or newer, nothing to install; run it from
+anywhere in the repository."""
 import os, re, subprocess, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -27,6 +31,10 @@ NOT_OURS = {
 GAME_FOLDERS = ("data/", "save/", "Data/", "Save/")
 # Named on purpose though git ignores them, and the project's own GitHub names.
 NOT_TRACKED_ON_PURPOSE = ("content/ReferenceScreenshots/", "maexah/")
+# A link's target, then an optional title ("t", 't' or (t)) and spaces before the closing bracket.
+LINK = re.compile(r"\]\(\s*([^)\s]+)(?:\s+(?:\"[^\"]*\"|'[^']*'|\([^)]*\)))?\s*\)")
+# A fence's mark (three or more backticks or tildes) and what follows it on the line.
+FENCE = re.compile(r"(`{3,}|~{3,})(.*)$")
 PATH_TYPES = {"md", "py", "cs", "sh", "yml", "yaml", "csproj", "sln", "json", "txt", "shader", "props", "config", "toml"}
 
 
@@ -36,10 +44,32 @@ def tracked():
 
 
 def slug(heading):
-    """GitHub's anchor for a heading."""
-    text = re.sub(r"[`*_]", "", heading.strip().lower())
-    text = re.sub(r"[^\w\- ]", "", text)
+    """GitHub's anchor for a heading: lower case, every character but a letter, digit, "_", "-" or space dropped, and
+    each space a "-". Markup is not rendered first, so `_word_` keeps its underscores where GitHub's would not."""
+    text = re.sub(r"[^\w\- ]", "", heading.strip().lower())
     return text.replace(" ", "-")
+
+
+def fenced(lines):
+    """Each line with its number and whether it is inside a fenced block: True inside, False outside, None for a
+    fence's own line. A backtick fence's info string holds no backtick (```x``` is inline code)."""
+    fence = None
+    for no, line in enumerate(lines, 1):
+        m = FENCE.match(line.strip())
+        if fence is None and m and not (m.group(1)[0] == "`" and "`" in m.group(2)):
+            fence = m.group(1)
+            yield no, line, None
+        elif fence is not None and m and m.group(1)[0] == fence[0] and len(m.group(1)) >= len(fence) and not m.group(2).strip():
+            fence = None
+            yield no, line, None
+        else:
+            yield no, line, fence is not None
+
+
+def file_type(name):
+    """The type after the last dot of a path's file name; "" when the file name has no dot."""
+    file = name.rsplit("/", 1)[-1]
+    return file.rsplit(".", 1)[1] if "." in file else ""
 
 
 class Index:
@@ -71,11 +101,23 @@ class Index:
 
 
 def headings(path):
+    """The anchors of a page's headings, as GitHub numbers a repeated one: the second `same` is `same-1`. A closing run
+    of hashes after a space (`## Closed ##`) is not part of the heading."""
     try:
         text = open(os.path.join(REPO, path), encoding="utf-8").read()
     except OSError:
         return set()
-    return {slug(m.group(1)) for m in re.finditer(r"^#{1,6}\s+(.*)$", text, re.M)}
+    seen = {}
+    for _, line, inside in fenced(text.split("\n")):
+        m = re.match(r"#{1,6}\s+(.*)$", line) if inside is False else None
+        if not m:
+            continue
+        base = name = slug(re.sub(r"(^|\s)#+\s*$", "", m.group(1)))
+        while name in seen:
+            seen[base] += 1
+            name = f"{base}-{seen[base]}"
+        seen[name] = 0
+    return set(seen)
 
 
 def words_in(page, no, text, index):
@@ -87,7 +129,7 @@ def words_in(page, no, text, index):
                 or word in NOT_OURS or word.startswith(GAME_FOLDERS + NOT_TRACKED_ON_PURPOSE)
                 or word.startswith(("./", "../")) or "/" not in word or "//" in word):
             continue
-        if word.rsplit("/", 1)[-1].rsplit(".", 1)[-1] in PATH_TYPES or word.endswith("/"):
+        if file_type(word) in PATH_TYPES or word.endswith("/"):
             if not index.path_exists(word):
                 problems.append((page, no, word, "no such file or folder"))
     return problems
@@ -95,15 +137,13 @@ def words_in(page, no, text, index):
 
 def check(page, index):
     problems = []
-    in_fence = False
-    for no, line in enumerate(open(os.path.join(REPO, page), encoding="utf-8"), 1):
-        if line.lstrip().startswith("```"):
-            in_fence = not in_fence
+    for no, line, inside in fenced(open(os.path.join(REPO, page), encoding="utf-8").read().split("\n")):
+        if inside is None:
             continue
-        if in_fence:
+        if inside:
             problems += words_in(page, no, line, index)
             continue
-        for m in re.finditer(r"\]\(([^)\s]+)\)", line):
+        for m in LINK.finditer(line):
             target = m.group(1)
             if target.startswith(("http://", "https://", "mailto:")):
                 continue
@@ -115,12 +155,12 @@ def check(page, index):
                 problems.append((page, no, target, "link to a heading that is not there"))
         for m in re.finditer(r"`([^`]+)`", line):
             name = m.group(1).strip()
-            if " " in name:
-                problems += words_in(page, no, name, index)
-                continue
             call = re.fullmatch(r"([A-Z][A-Za-z0-9]+\.[A-Za-z0-9]+)\(.*\)", name)
             if call:
                 name = call.group(1)
+            if " " in name:
+                problems += words_in(page, no, name, index)
+                continue
             if name in NOT_OURS or "<" in name or "*" in name or "$" in name or "=" in name:
                 continue
             if name.startswith(("/", "~", "%", "-", "http", "git ", "dotnet ", "C:")) or name.startswith(GAME_FOLDERS + NOT_TRACKED_ON_PURPOSE):
@@ -129,8 +169,7 @@ def check(page, index):
                 continue
             if re.fullmatch(r"OpenTPW(\.[A-Za-z]+)+", name) and ("source/" + name) in index.dirs:
                 continue
-            ext = name.rsplit(".", 1)[1] if "." in name.rsplit("/", 1)[-1] else ""
-            if "/" in name or ext in PATH_TYPES:
+            if "/" in name or file_type(name) in PATH_TYPES:
                 if not index.path_exists(name):
                     problems.append((page, no, name, "no such file or folder"))
             elif re.fullmatch(r"[A-Z][A-Za-z0-9]+(\.[A-Z][A-Za-z0-9]+)?", name) and re.search(r"[a-z]", name):

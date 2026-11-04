@@ -215,15 +215,17 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   new ones are tagged "Good first" in their queue items when chosen, and making them GitHub issues is Alexah's.
   (2) "A place to ask questions" is issues titled "Question: ..." for now; GitHub Discussions are Alexah's to switch
   on. (3) A test for `tools/check_docs_paths.py`: done by Q877 (`CheckDocsPathsTests`); the checker's gaps it found are Q878.
-- [ ] **Q878. What Q877's test found in `tools/check_docs_paths.py`.** Measured in a scratch repository with the unchanged
-  script, never yet fixed: (1) a backticked call in the project's own style, `ParkState.Gone( 1 )`, is not checked
-  (the `" " in name` branch sends it to the word check, which skips a name with no slash; `ParkState.Gone(1)` is flagged),
-  so a page naming a member that is gone in this form passes; (2) a heading with an underscore (`# snake_name`) gets the
-  slug `snakename`, so the link `#snake_name` is flagged and `#snakename` accepted (GitHub's slug keeps `_`, read in its
-  rules and not measured on GitHub); (3) GitHub's duplicate-heading anchor `#same-1` is flagged as missing, and a heading
-  inside a fenced block (`# only in a fence`) counts as an anchor, which GitHub does not. Fix each in the script with a
-  case in `CheckDocsPathsTests` that fails first (the tests already hold the values that must not move), and change nothing
-  else; the three pages must still print 0 not found.
+- [ ] **Q879. Where `tools/check_docs_paths.py` still reads markdown differently from GitHub.** From Q878 (run 21, lane B);
+  none is on the three pages today. (1) A heading's markup is not rendered before its slug: `## _word_` keeps its `_`
+  (GitHub renders `<em>word</em>`, `q878/github-render.html`), and a link or inline HTML in a heading keeps characters
+  of its target. (2) Setext headings (a line over `===` or `---`) are no anchors. (3) A heading indented one to three
+  spaces is not found, and a fence indented four or more is still read as a fence (CommonMark's indented code; kept for
+  list items). (4) A link target in `<...>`, one with brackets inside, and reference links (`[x][r]` with `[r]: a.md`)
+  are not read. (5) Not measured: GitHub's own ids (the render API gives none), so the `_`, the `-1` numbering and its
+  meeting a heading already named `same-1` (the checker numbers as github-slugger does, read and not run), and a letter
+  with a combining mark (Python's `\w` drops the mark). Measure (5) first, on a page of ours as GitHub shows it; fix each
+  with a row that fails first. Also: the `"git "` and `"dotnet "` entries of `check()`'s skip are dead by CODE (a name with
+  a space never reaches them).
 
 - [ ] **Q857. A park made fresh's file, off Lost Kingdom.** Split from Q803 (run 17, lane B); waits, Lost Kingdom first. **The other three themes' files**
   (`FRESH_PARK_FILE_OTHER_THEME`: the flyers' values, the music's and the land's voices and its emitter, the generator's seed, the ride system's counts). The advisor's slot
