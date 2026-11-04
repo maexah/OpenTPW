@@ -406,7 +406,7 @@ public sealed class ParkRideOperation
 		// An object that declares no exit has nowhere to put them, which is every unplaced one - its
 		// mExitPos is the sentinel that unpacks to the corner of the map.
 		if ( ride.ExitPos != 0 && walkFor?.Invoke( leaving ) is { } walk )
-			PutDownAtTheExit( peep, walk, ride, park );
+			PutDownAtTheExit( peep, walk, ride, ItemOf( ride, catalogue ), park );
 
 		SettleUp( peep, ride, catalogue, random );
 
@@ -443,11 +443,10 @@ public sealed class ParkRideOperation
 	/// undone on the guest's next turn.
 	/// </para>
 	/// <para>
-	/// <b>The sub-cell part of the exit point is not reproduced.</b> <c>FUN_004dedf0</c> builds a
-	/// fixed-point position whose low byte comes from the item's own <c>.sam</c> - the descriptor's
-	/// <c>+0xdc</c> and <c>+0xe0</c>, which it validates with "Dodgy X exit point in SAM file" - and
-	/// nothing here reads those. The cell's centre is used instead, which puts a guest in the right cell
-	/// and up to half a cell from the exact spot.
+	/// <b>The point inside the exit cell is the item's own.</b> <c>FUN_004dedf0</c> builds a fixed-point
+	/// position whose low byte comes from the item's <c>.sam</c> (<c>UsageInfo.ExitCellAppearPosX</c> and <c>Y</c>,
+	/// the descriptor's <c>+0xdc</c> and <c>+0xe0</c>) turned by the thing's angle: <see cref="ParkRidePoint.Bytes"/>.
+	/// The Belly Bounce's 0.5 and 0.5 put a guest at 127/256 of the cell, not the middle.
 	/// </para>
 	/// <para>
 	/// <b>Without a park there is no direction to read</b>, so the guest is put down and left: the cell's
@@ -468,12 +467,16 @@ public sealed class ParkRideOperation
 	/// pictures").
 	/// </para>
 	/// </summary>
-	private static void PutDownAtTheExit( Peep peep, PeepWalk walk, ParkWorld.CatalogueObject ride,
-		IParkInitialState? park )
+	internal static void PutDownAtTheExit( Peep peep, PeepWalk walk, ParkWorld.CatalogueObject ride,
+		ParkItemCatalogue.Item? item, IParkInitialState? park )
 	{
+		// A caller with no catalogue names no item, so no point to read: the cell's middle, the Rides.sam default
+		// (a deviation, for the tests that ask about the state change rather than the geography).
+		var (subX, subY) = item is { } known ? known.ExitPointBytes( ride.Angle ) : ((byte)128, (byte)128);
+
 		peep.Navigator.Position = new FixedVector(
-			PeepNavigator.WaypointCentre( ride.ExitCellX ),
-			PeepNavigator.WaypointCentre( ride.ExitCellY ) );
+			ParkRidePoint.Fixed( ride.ExitCellX, subX ),
+			ParkRidePoint.Fixed( ride.ExitCellY, subY ) );
 
 		// A teleport carries its previous position with it, or the drawing would slide the guest all the
 		// way from the queue to the exit over the next quarter of a second. The original does exactly this
@@ -1315,7 +1318,7 @@ public sealed class ParkRideOperation
 		// Kids 208 at the guest (Person_PlaySound, 0x004fe1be..0x004fe1cb): after the deposit, before the cash comes off.
 		// DEVIATION: the original sounds it at the person's model, which ExitRide's teleport (0x004fa930) does not move,
 		// so it is where the guest was last drawn ((525, 300) at the Spray). Ours is the walker, which PutDownAtTheExit
-		// has just set to the exit cell's centre ((525, 305)); docs/exe/audio.md, "A guest who pays sounds kids 208".
+		// has just set to the item's point in the exit cell; docs/exe/audio.md, "A guest who pays sounds kids 208".
 		if ( TillPlace( peep ) is { } at )
 			Till( at );
 

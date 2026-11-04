@@ -813,8 +813,10 @@ the deviation is said at `ParkRideOperation.Charge`.** Both games read the guest
 the same thing. The original reads the person's model (`0x004754e0` on `[ecx+0xc]`), which ExitRide's teleport
 (`0x004fa930`) does not move: it writes the walker and the cell words and never `[esi+0xc]`. So the original sounds
 where the guest was last drawn: (525, 300) at the Spray, (434 or 435, 303 or 304) at the Kiosk, varying by guest. Ours
-reads the walker (`Navigator.Position`) after `PutDownAtTheExit` has set it to the exit cell's centre, so it sounds at
-(525, 305) at the Spray and (435, 305) at the Kiosk: 5 further along y at the Spray, 1 or 2 at the Kiosk. The
+reads the walker (`Navigator.Position`) after `PutDownAtTheExit` has set it, which was the exit cell's centre when this was measured
+(q611/run1), so it sounded at (525, 305) at the Spray and (435, 305) at the Kiosk: 5 further along y at the Spray, 1 or 2 at the Kiosk. Since Q873
+`PutDownAtTheExit` sets it to the item's own point in the exit cell (`ride-operation.md`, "Leaving a ride"), so these two ours-side numbers have
+moved and are not re-taken. The
 Spray's (525, 300) is its `.sam` stand point (0.5, 0.1) truncated; the Kiosk's place is not its exit point (the
 default 0.5, 0.5 would put every guest at exactly (435, 305)), so which point the model holds there is not decoded.
 Nor is the original's place whole-unit in ours: it is made an integer (`_ftol`, `0x0067a830`) before `0x0051bfc0`, ours

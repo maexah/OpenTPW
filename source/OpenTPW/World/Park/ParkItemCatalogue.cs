@@ -160,8 +160,19 @@ public sealed class ParkItemCatalogue
 		int FatigueEffect = 0,
 
 		// Whether a guest comes off it and goes onto it in a puff - ItemDescriptionFile.RequiresTeleport. See PersonPuffs.
-		bool RequiresTeleport = false )
+		bool RequiresTeleport = false,
+
+		// Where in its entry cell a guest stands to board and where in its exit cell one is put down, as fractions of the
+		// cell - ItemDescriptionFile.EntryCellStandPosX and ExitCellAppearPosX. See ParkRidePoint.
+		float EntryCellStandPosX = 0f, float EntryCellStandPosY = 0f,
+		float ExitCellAppearPosX = 0f, float ExitCellAppearPosY = 0f )
 	{
+		/// <summary>The byte of a cell a guest is put down at on this item's exit when the thing stands turned <paramref name="angle"/> - <see cref="ParkRidePoint.Bytes"/>.</summary>
+		public (byte X, byte Y) ExitPointBytes( int angle ) => ParkRidePoint.Bytes( ExitCellAppearPosX, ExitCellAppearPosY, angle );
+
+		/// <summary>The same for the stand point at its entry - <c>FUN_004dedf0</c> with a nought <c>which</c>.</summary>
+		public (byte X, byte Y) StandPointBytes( int angle ) => ParkRidePoint.Bytes( EntryCellStandPosX, EntryCellStandPosY, angle );
+
 		/// <summary>A tier's <c>CostOfUpgrade</c>: tier nought's is <see cref="BuildPrice"/>, nought past the third.</summary>
 		public int UpgradeCostAt( int tier ) => tier switch { 0 => BuildPrice, 1 => UpgradeCost1, 2 => UpgradeCost2, _ => 0 };
 
@@ -428,7 +439,9 @@ public sealed class ParkItemCatalogue
 					AddOnUpgradesId: description.AddOnUpgradesId, AddOnUpgradeType: description.AddOnUpgradeType,
 					ShopType: description.ShopType, CreateParticleEffect: description.CreateParticleEffect,
 					OverwritePriority: description.OverwritePriority, FatigueEffect: description.FatigueEffect,
-					RequiresTeleport: description.RequiresTeleport );
+					RequiresTeleport: description.RequiresTeleport,
+					EntryCellStandPosX: description.EntryCellStandPosX, EntryCellStandPosY: description.EntryCellStandPosY,
+					ExitCellAppearPosX: description.ExitCellAppearPosX, ExitCellAppearPosY: description.ExitCellAppearPosY );
 
 			return true;
 		}

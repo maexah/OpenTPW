@@ -198,13 +198,7 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   against the sprite's `+0x8c`, nought for a walker, not the ground's; and a rider's, which the decode says is the point less the ground. (2) A guest's
   put-off, yawn and till on raised ground in ours (the stock park's guests walk on flat ground, where the two builds agree); the code is the
   staff's (`Heard`), the tests are `HeardIn`'s.
-- [ ] **Q946. A person's exit and stand point on a ride, to the byte.** From Q945. The original puts a guest it lets off the Belly Bounce at 52 + 127/256 cells in x and 26 + 127/256 in z (`q900/orig/a-poll.log`:
-  the sprite at (524.961, 0, 264.961) for 37 of 37 puffs, 13 + 19 + 5 across the three polls) and ours on the cell's middle, 128/256 (`ParkRideOperation.PutDownAtTheExit`: "the sub-cell part of the exit point is not reproduced"), so the exit puff's
-  raw words are 3 over the original's. `FUN_004dedf0` (decompiled: a byte from the descriptor's float at `+0xdc`/`+0xe0` for an exit point, `+0xd4`/`+0xd8` for a stand point, by `__ftol`, after the "Dodgy X exit point in SAM file"
-  check) makes it: the multiplier is read: `0x004df123` is `fmul [0x00700578]`, 255.0, truncated by `0x0067a830`, so 0.5 gives `0x7f`. Left: the thing's rotation (`+0x10`, 0, 90, 180 or 270) swaps x and y and takes
-  1.0 minus, `0x004df0ae`..`0x004df11d`, to be applied with it; then apply it to the exit and the stand points of every item that declares them (25 declare an exit uncommented in Lost Kingdom: 11 rides,
-  3 features, 6 shops and 5 sideshows; 103 over the four themes, 52 of them rides). The Belly Bounce's `.sam` lists its own exit (0.5, 0.9) and stand (0.5, 0.1) commented out; the live 0.5 and 0.5 come
-  from `Rides.sam`. Then measure a rider's first step from the entry and from the exit in both games.
+- [ ] **Q946. A person's first step from the entry and from the exit, and the stand point's consumer.** From Q945; its exit-point piece is Q873 (done). Left: (1) the board step routes a guest to the stand point (`FUN_004dedf0( 0 )`, then `FUN_004fa5f0`, state 13, `ride-operation.md`, "The boarding chain, end to end"); ours sends them at the entry cell (`PeepBehaviour.SendTo`) and nothing reads `ParkItemCatalogue.Item.StandPointBytes`, which is built and pinned and unused; build the target from it once (2) is measured. (2) Measure a rider's first step from the entry and from the exit in both games (the first sprite place after the put-down and after the board, polled in the original under Proton, `puffpoll.py`'s sprite table; the same in ours): the original's side needs the original running. (3) The Spray and the Kiosk's till (Q611) is read at the put-down's place, which is now the item's point, not the cell's middle: Q611's numbers ((525, 305) at the Spray, (435, 305) at the Kiosk in ours) have moved with it, re-take them before building Q611.
 - [ ] **Q802. What Q800 left for a person or a machine it did not have.** From Q800 (run 13, lane A). Done by the
   coordinator (2026-10-29): `opentpw.maintainer` set in `~/repos/OpenTPW-laneB`, and the Saturday audit runs
   `python3 tools/check_docs_paths.py`. The Linux quick start is marked "tested on the maintainer's Linux machine only"
@@ -2026,7 +2020,7 @@ filed the items that cite it.
   sounds it at the person's model position (Person_PlaySound 0x004faa00 hands `[ecx+0xc]` to 0x004754e0, which copies
   the model's +0x88/+0x8c/+0x90, made integers by _ftol before 0x0051bfc0), and ExitRide's teleport (0x004fa930) never
   writes `[esi+0xc]`, so the till is where the guest was last drawn. Ours sounds at the walker after PutDownAtTheExit,
-  the exit cell's centre: (525, 305) at the Spray, (435, 305) at the Kiosk, against the original's (525, 300) and
+  the exit cell's centre (until Q873; now the item's point in it, so re-take these): (525, 305) at the Spray, (435, 305) at the Kiosk, against the original's (525, 300) and
   (434-435, 303-304) (q611/run1/run.log; docs/exe/audio.md, "A guest who pays sounds kids 208"; the deviation is said
   at ParkRideOperation.Charge). First decode which point the model holds at the settle-up: the Spray's (525, 300) is
   its .sam stand point (EntryCellStandPos/ExitCellAppearPos 0.5, 0.1 -> (525, 300.98)) truncated, but the Kiosk's

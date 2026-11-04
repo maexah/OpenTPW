@@ -141,11 +141,16 @@ public class ParkTeleportPuffTests
 			.Dismiss( script, bounce, tick: 9, new Random( 1 ), id => id == 7 ? walk : null, catalogue: Catalogue() ), "let off" );
 
 		var (x, height, z) = PersonPuffs.PlaceOn( field, new FixedVector(
-			PeepNavigator.WaypointCentre( bounce.ExitCellX ), PeepNavigator.WaypointCentre( bounce.ExitCellY ) ) );
+			ParkRidePoint.Fixed( bounce.ExitCellX, 127 ), ParkRidePoint.Fixed( bounce.ExitCellY, 127 ) ) );
 		var now = Active();
 
 		Assert.AreEqual( before + 1, now.Count, "a puff" );
 		Assert.AreEqual( (0x13, x >> 4, height >> 4, z >> 4), (now[^1].Effect, now[^1].X, now[^1].Y, now[^1].Z), "on the exit cell" );
+
+		// The original's own words for the same puff: the emitter's raw place (33597, 0, 16957) = (524.953, 0, 264.953) for
+		// 37 of 37 Belly Bounce exit puffs polled in q900/orig/a-poll.log (the guest's sprite at (524.961, 0, 264.961)),
+		// 3 under the cell's middle in x and in z.
+		Assert.AreEqual( (33597, 0, 16957), (now[^1].X, now[^1].Y, now[^1].Z), "the original's raw words" );
 	}
 
 	/// <summary>

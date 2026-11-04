@@ -187,6 +187,30 @@ public sealed partial class ItemDescriptionFile
 	public bool CannotRide => (_cannotRide ?? _category?._cannotRide ?? 0) != 0;
 
 	/// <summary>
+	/// Where inside the entry cell a guest is taken to stand to board - <c>UsageInfo.EntryCellStandPosX</c> and <c>Y</c>,
+	/// the descriptor's floats at <c>+0xd4</c> and <c>+0xd8</c>, a fraction of the cell across and down its unrotated
+	/// picture. <c>FUN_004dedf0</c> turns them into a byte each (<see cref="ExitCellAppearPosX"/> says how). The
+	/// category's show through; <b>nought where neither states them</b>, which the original's loader leaves as the
+	/// descriptor's own start value - the census of every item reads which items that is.
+	/// </summary>
+	public float EntryCellStandPosX => _entryCellStandPosX ?? _category?.EntryCellStandPosX ?? 0f;
+
+	/// <inheritdoc cref="EntryCellStandPosX"/>
+	public float EntryCellStandPosY => _entryCellStandPosY ?? _category?.EntryCellStandPosY ?? 0f;
+
+	/// <summary>
+	/// Where inside the exit cell a guest is put down - <c>UsageInfo.ExitCellAppearPosX</c> and <c>Y</c>, the descriptor's
+	/// floats at <c>+0xdc</c> and <c>+0xe0</c>. <c>FUN_004dedf0</c> checks each lies above 0 and below 1 ("Dodgy X exit
+	/// point in SAM file"; a debug log only) and makes a byte of it, the fraction times 255 truncated; the exit cell's
+	/// fixed-point position is that byte in 256ths of a cell. The category's show through (<c>Rides.sam</c> gives every
+	/// ride 0.5 and 0.5).
+	/// </summary>
+	public float ExitCellAppearPosX => _exitCellAppearPosX ?? _category?.ExitCellAppearPosX ?? 0f;
+
+	/// <inheritdoc cref="ExitCellAppearPosX"/>
+	public float ExitCellAppearPosY => _exitCellAppearPosY ?? _category?.ExitCellAppearPosY ?? 0f;
+
+	/// <summary>
 	/// Whether a guest is teleported onto this and off it - <c>UsageInfo.RequiresTeleport</c>, descriptor <c>+0x100</c>,
 	/// the key between <c>ChillsYouOut</c> (<c>+0xfc</c>) and <c>RideHandlesSprite</c> (<c>+0x104</c>) in the table at
 	/// <c>0x00745980</c>..<c>0x00745bd8</c>. The state setter's cases <c>0xf</c> and <c>0x10</c> send up a puff for a
@@ -687,6 +711,10 @@ public sealed partial class ItemDescriptionFile
 	private int? _mapOffsetY;
 	private int? _cannotRide;
 	private int? _requiresTeleport;
+	private float? _entryCellStandPosX;
+	private float? _entryCellStandPosY;
+	private float? _exitCellAppearPosX;
+	private float? _exitCellAppearPosY;
 	private int? _doHeadProcessing;
 	private int? _excitementLevel;
 	private int? _goldenTicketCost;
@@ -979,6 +1007,22 @@ public sealed partial class ItemDescriptionFile
 
 				case "UsageInfo.CannotRide":
 					_cannotRide = Number( line );
+					break;
+
+				case "UsageInfo.EntryCellStandPosX":
+					_entryCellStandPosX = Real( line );
+					break;
+
+				case "UsageInfo.EntryCellStandPosY":
+					_entryCellStandPosY = Real( line );
+					break;
+
+				case "UsageInfo.ExitCellAppearPosX":
+					_exitCellAppearPosX = Real( line );
+					break;
+
+				case "UsageInfo.ExitCellAppearPosY":
+					_exitCellAppearPosY = Real( line );
 					break;
 
 				case "UsageInfo.RequiresTeleport":
