@@ -766,7 +766,7 @@ public sealed class RideScript
 	/// </summary>
 	public int NotImplemented { get; private set; }
 
-	/// <summary>The milliseconds the latest <c>WAIT</c> armed itself for (its duration over <see cref="DivisorOf"/>, cut), for the <c>scripts</c> census; nought before the first.</summary>
+	/// <summary>The milliseconds the latest <c>WAIT</c> or <c>WAITANIM</c> armed itself for (<see cref="Wait"/>, <see cref="AnimationWait"/>), for the <c>scripts</c> census; nought before the first.</summary>
 	public int LastWait { get; private set; }
 
 	/// <summary>True while the script is sitting on a <c>WAIT</c> or <c>WAITANIM</c> not yet come due.</summary>
@@ -1885,6 +1885,11 @@ public sealed class RideScript
 		{
 			ref var walking = ref _walk[slot];
 
+			// The walk placer divides by the divisor for every slot in use (0x0055823e), and a bouncing rider's sine does (0x00557c03,
+			// RIDER_BOUNCE, which nothing else counts); neither is built (docs/QUEUE.md Q155).
+			if ( walking.State != WalkState.Free && DivisorOf( Speed ) != 1f )
+				Unimplemented.Report( "WALK_RIDER_SPEED_DIVISOR" );
+
 			// A rider carried under an action other than 1, 2 or 4 faces the way the head node points, taken again
 			// at every step; a miss writes nothing, so the facing stays.
 			if ( walking.State == WalkState.Carried && walking.Action is not (1 or 2 or 4)
@@ -2509,7 +2514,11 @@ public sealed class RideScript
 
 			case 8:
 				// The original looks the ride up here and keeps the handle. The caller has already
-				// supplied one, so all that is left is to record that the script asked.
+				// supplied one, so all that is left is to record that the script asked. It also hands the ride the script's
+				// speed word (0x00554aab), which is not built (docs/QUEUE.md Q155).
+				if ( DivisorOf( Speed ) != 1f )
+					Unimplemented.Report( "COAST_RIDE_SPEED" );
+
 				Initialised = true;
 				break;
 
@@ -4089,23 +4098,15 @@ public sealed class RideScript
 	/// <b>The duration is divided by the speed word's divisor, then cut to a whole number.</b> The dispatcher divides
 	/// it (<c>FDIV</c> at <c>0x005537fd</c>) by <see cref="DivisorOf"/> and truncates the quotient (<c>_ftol</c>,
 	/// <c>0x00553801</c>) before adding it to the clock: <c>3000</c> waits <c>3000</c> at a word of 50 and <c>2727</c> at
-	/// 60. <c>WAITANIM</c> reaches this too, with its sum floored first where the engine floors after dividing, and the
-	/// trigger deadlines do not divide (Q155; both are counted, <see cref="WaitAnimationOrderDiffers"/> and
-	/// <see cref="CountUndividedDeadline"/>).
+	/// 60. <c>WAITANIM</c> does its own arithmetic (<see cref="AnimationWait"/>) and shares only the arming
+	/// (<see cref="Arm"/>); the trigger deadlines do not divide (Q155, counted by <see cref="CountUndividedDeadline"/>).
 	/// </para>
 	/// </summary>
 	private void Wait( float now, int duration, int length )
 	{
 		if ( _waitUntil is null )
 		{
-			// The engine sets the deadline and leaves without looking at it, so even a wait that is
-			// already over costs the rest of the turn. Nothing shipped asks for one - every WAIT in the
-			// corpus names a positive duration - but WAITANIM, which shares this field, asks for
-			// exactly that.
-			LastWait = (int)(duration / (double)DivisorOf( Speed ));
-			_waitUntil = now + LastWait;
-			Position -= length;
-			_budget = 0;
+			Arm( now, (int)(duration / (double)DivisorOf( Speed )), length );
 			return;
 		}
 
@@ -4115,6 +4116,19 @@ public sealed class RideScript
 			return;
 		}
 
+		Position -= length;
+		_budget = 0;
+	}
+
+	/// <summary>
+	/// A wait's first visit once its milliseconds are worked out: the deadline, the rewind and the end of the turn. The engine
+	/// sets the deadline and leaves without looking at it, so even a wait that is already over costs the rest of the turn.
+	/// Nothing shipped asks for one - every <c>WAIT</c> in the corpus names a positive duration - but <c>WAITANIM</c> does.
+	/// </summary>
+	private void Arm( float now, int milliseconds, int length )
+	{
+		LastWait = milliseconds;
+		_waitUntil = now + milliseconds;
 		Position -= length;
 		_budget = 0;
 	}
@@ -4488,8 +4502,8 @@ public sealed class RideScript
 			return 0;
 
 		// 1.0, where every triggering handler pushes the script's speed divisor (0x00552952), 0.5 + 0.01 x
-		// the speed word: the same at the speed 50 every script has here, and a deviation for an item with
-		// its own (docs/QUEUE.md Q155), counted as ANIM_TRIGGER_SPEED_RATE. It is the play rate alone; the
+		// the speed word: the divisor 1 at the word 50 a script is made with, and a deviation at any other
+		// word, the Belly Bounce's 60 among them (docs/QUEUE.md Q155), counted as ANIM_TRIGGER_SPEED_RATE. It is the play rate alone; the
 		// length answered does not read it.
 		if ( DivisorOf( Speed ) != 1f )
 			Unimplemented.Report( "ANIM_TRIGGER_SPEED_RATE" );
@@ -4521,15 +4535,22 @@ public sealed class RideScript
 	/// and does a <c>FILD qword</c>, so -300 is read as 4,294,966,996; <c>__ftol</c> converts that
 	/// exactly (it is a <c>FISTP qword</c> that hands back the low dword, so nothing overflows) and
 	/// -300 comes back out - at the divisor 1; at any other the engine divides the qword by the divisor first,
-	/// which lands elsewhere, and this divides the floored sum in <see cref="Wait"/> (counted, docs/QUEUE.md Q155).
-	/// It then compares against the 300 floor <b>unsigned</b>, which a negative
+	/// which lands elsewhere (<see cref="AnimationWait"/>; a deviation there, below). It then compares against the 300 floor <b>unsigned</b>, which a negative
 	/// passes. So the deadline is <c>clock - 300</c> - already past - and the instruction rewinds and
 	/// gives up the turn anyway, because the engine sets the deadline without looking at it. The next
 	/// turn walks straight through.
 	/// </para>
 	///
 	/// <para>
-	/// <b>One deviation, named rather than hidden:</b> the engine holds that deadline as an unsigned
+	/// <b>A deviation (Alexah, 2026-11-04):</b> at a divisor other than 1 the engine's unsigned sum of the clock and that quotient's low
+	/// dword parks the script for days (about 45 at a word of 60, 5.5 at 40: docs/exe/park.md, "<c>WAITANIM</c> is NOT
+	/// <c>TRIGANIM</c> with a wait"), and this costs the one turn it costs at the divisor 1. <c>WAITANIM_SPEED_WRAP</c> counts every negative sum at a divisor other than 1, including
+	/// the cases where nothing differs: the engine's deadline is <c>clock + quotient</c> modulo 2^32 tested unsigned (<c>0x00552a59</c>), so ahead of the clock by
+	/// the quotient or, once the sum passes 2^32 at a large clock, behind it and passed at once.
+	/// </para>
+	///
+	/// <para>
+	/// <b>Another, named rather than hidden:</b> the engine holds that deadline as an unsigned
 	/// dword, so a clock under 300ms would wrap it to something enormous and park the script for about
 	/// 49 days. Nothing can reach that - a ride's scripts do not run in the first three tenths of a
 	/// second of a game - and reproducing it would only turn an unreachable case into a hang.
@@ -4555,49 +4576,38 @@ public sealed class RideScript
 			return;
 		}
 
-		var duration = StartAnimation( now, role, entry, 0 ) - AnimationSlack;
+		var sum = StartAnimation( now, role, entry, 0 ) - AnimationSlack;
 
-		// At a divisor other than 1 the engine divides the sum BEFORE the floor (0x00552acd), where Wait divides the
-		// floored sum (docs/QUEUE.md Q155): a negative sum, a clip under the slack or no model, wraps +0xa0 there
-		// (counted WAITANIM_SPEED_WRAP), and a short positive one waits another number (WAITANIM_SPEED_ORDER).
-		if ( DivisorOf( Speed ) != 1f )
-		{
-			if ( duration < 0 )
-				Unimplemented.Report( "WAITANIM_SPEED_WRAP" );
-			else if ( WaitAnimationOrderDiffers( duration, Speed ) )
-				Unimplemented.Report( "WAITANIM_SPEED_ORDER" );
-		}
+		// DEVIATION (Alexah, 2026-11-04): a negative sum - a clip under 300 ms, or no model - wraps +0xa0 in the engine at a
+		// divisor other than 1 (the quotient's low dword, a wait of days: 0x00552acd), and here it costs the one turn it costs at
+		// the divisor 1. WAITANIM_SPEED_WRAP counts every negative sum at a divisor other than 1 (the engine's wrapped deadline is
+		// ahead of the clock or, past 2^32, behind it and passed at once: 0x00552a59), so it may count where nothing differs.
+		if ( sum < 0 && DivisorOf( Speed ) != 1f )
+			Unimplemented.Report( "WAITANIM_SPEED_WRAP" );
 
-		// The floor its sibling applies SIGNED, this one applies UNSIGNED - so a negative sails straight
-		// past it where TRIGANIM's catches it, and only a genuinely short positive length is raised to the
-		// slack. With no model the length is nought, the subtraction gives -300, and that is what the
-		// deadline gets: already past, so the instruction costs exactly one turn.
-		if ( (uint)duration < (uint)AnimationSlack )
-			duration = AnimationSlack;
-
-		Wait( now, duration, length );
+		Arm( now, AnimationWait( sum, Speed ), length );
 
 		_animationUntil = null;
 		_looping = OneShot;
 	}
 
 	/// <summary>
-	/// Whether the milliseconds <c>WAITANIM</c> arms for differ from the engine's: the engine divides the length-less-300 by the divisor
-	/// and floors the quotient at 300 (<c>0x00552acd</c>..<c>0x00552ae3</c>), where <see cref="WaitOutAnimation"/> floors it and
-	/// <see cref="Wait"/> divides. They agree whenever the quotient is 300 or more; at a word of 60 a sum of 100 waits 300 there and 272 here.
-	/// A negative sum is the wrap, which this does not answer for.
+	/// The milliseconds <c>WAITANIM</c> arms for, from its sum (the clip's length less <see cref="AnimationSlack"/>): the sum is the low
+	/// half of a qword whose high half is nought (<c>0x00552abc</c>..<c>0x00552ac9</c>), divided by the divisor (<c>FDIV</c>
+	/// <c>0x00552acd</c>), cut to its low dword (<c>_ftol</c>, <c>0x00552ad1</c>), and only then floored at 300 with an
+	/// <b>unsigned</b> compare (<c>0x00552ad6</c>): at a word of 60 a 400 ms clip waits 300, a 1000 ms one 636.
+	/// A negative sum (a clip under 300 ms, or no model) is answered as itself - the engine's result at the divisor 1, and a
+	/// DEVIATION at any other, where its low dword is a wait of days (see <see cref="WaitOutAnimation"/>).
 	/// </summary>
-	internal static bool WaitAnimationOrderDiffers( int sum, int speed )
+	internal static int AnimationWait( int sum, int speed )
 	{
-		var divisor = (double)DivisorOf( speed );
-		var engine = (int)(sum / divisor);
+		if ( sum < 0 )
+			return sum;
 
-		if ( (uint)engine < (uint)AnimationSlack )
-			engine = AnimationSlack;
+		var raw = unchecked( (uint)sum );
+		var waited = unchecked( (int)(long)(raw / (double)DivisorOf( speed )) );
 
-		var here = (uint)sum < (uint)AnimationSlack ? AnimationSlack : sum;
-
-		return (int)(here / divisor) != engine;
+		return (uint)waited < (uint)AnimationSlack ? AnimationSlack : waited;
 	}
 
 	/// <summary>

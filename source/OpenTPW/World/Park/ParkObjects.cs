@@ -156,7 +156,7 @@ public sealed class ParkObjects : Entity
 
 		if ( standing.Footprint is { } footprint )
 		{
-			world = BoxMiddle( footprint, origin.Z );
+			world = VoiceMiddle( footprint, standing.Model );
 		}
 		else
 		{
@@ -166,6 +166,14 @@ public sealed class ParkObjects : Entity
 
 		return true;
 	}
+
+	/// <summary>
+	/// Where a thing's voice sounds: the middle of its rectangle (<see cref="BoxMiddle"/>) at the height the model stands at
+	/// (<see cref="LobbyModel.PlacedOrigin"/>), as <c>FUN_00556af0</c> takes it from <c>[[[record+8]+4]+0x78]+0x44</c>
+	/// (docs/exe/ride-operation.md). <see cref="TrySoundPlace"/> and <see cref="Place"/>'s log line both read it.
+	/// </summary>
+	internal static Vector3 VoiceMiddle( (int Left, int Top, int Right, int Bottom) footprint, LobbyModel model )
+		=> BoxMiddle( footprint, model.PlacedOrigin.Z );
 
 	/// <summary>
 	/// The middle of a cell rectangle in world units, as the engine takes it from the thing's box
@@ -492,7 +500,7 @@ public sealed class ParkObjects : Entity
 			// is right for a reason rather than by eye.
 			var voice = _standing[placed.ThingId].Footprint ?? covered;
 
-			var voiceAt = BoxMiddle( voice, model.PlacedOrigin.Z );
+			var voiceAt = VoiceMiddle( voice, model );
 
 			Log.Info( $"{ThemeName}: '{item.Name}' anchored at ({placed.CellX},{placed.CellY}) turned " +
 				$"{placed.Angle} covers ({covered.Left},{covered.Top})..({covered.Right},{covered.Bottom}), its voice at the middle " +

@@ -306,7 +306,6 @@ public class ParkRidesTests
 		Assert.AreEqual( 4, RoleOf( 9 ), "handle 9 passes on the 82nd" );
 	}
 
-	/// <summary>A thing bought after a load is numbered past every saved script, from the saved next handle.</summary>
 	/// <summary>
 	/// A thing bought has its script's speed word pushed from its item's starting speed when that is above nought and the creator's 50
 	/// when it is not (the object constructor, <c>0x004db534</c>; Q155).
@@ -392,6 +391,35 @@ public class ParkRidesTests
 		Assert.AreEqual( 77, rides.Scheduler.Find( rides.ScriptFor( BellyBounceThing ) )!.Speed );
 	}
 
+	/// <summary>
+	/// A kart ride bound through <see cref="ParkRides"/> takes its script's speed word into its track-table record when the placer puts it down
+	/// (<c>BindTrackRide</c>), not the creator's 50: the word is set on the script first, as an item's starting speed or a saved word does.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> <c>BindTrackRide</c> passing 50 to <c>PlaceKart</c> leaves the record at 50 (survivor <c>l6</c> of Q875).</remarks>
+	[TestMethod]
+	[DataRow( 50 )]
+	[DataRow( 77 )]
+	[DataRow( 20 )]
+	public void AKartBoundThroughTheRidesTakesItsScriptsWord( int word )
+	{
+		var world = World();
+		var catalogue = Catalogue();
+		var state = new ParkState( world );
+		var handle = state.TrackRides.Take( -4 );
+		var bounce = world.Objects.Single( thing => thing.CatalogueId == 1100 ) with { TrackRide = handle };
+
+		Assert.IsTrue( catalogue.TryGet( 1100, out var item ) );
+
+		var scheduler = new RideScriptScheduler();
+		var script = new RideScript( new RideScriptFile( data.OpenRead( "levels/jungle/rides/gokarts/GoKarts.RSE" ) ) ) { Speed = word };
+		var bind = typeof( ParkRides ).GetMethod( "BindTrackRide", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static )!;
+
+		bind.Invoke( null, [script, bounce, item, scheduler] );
+
+		Assert.AreEqual( word, state.TrackRides.KartOf( handle )!.Performance, "the kart's performance is the script's word" );
+	}
+
+	/// <summary>A thing bought after a load is numbered past every saved script, from the saved next handle.</summary>
 	[TestMethod]
 	public void AThingBoughtAfterALoadTakesTheSavedNextHandle()
 	{

@@ -9,8 +9,8 @@ namespace OpenTPW.Tests;
 /// The animation triggers read the script's speed divisor (play rate, deadline) and this game does not yet (docs/QUEUE.md Q155): a
 /// trigger at a divisor other than 1 counts as <c>ANIM_TRIGGER_SPEED_RATE</c> (with a model, the rate it hands the channel) and
 /// <c>ANIM_TRIGGER_SPEED_DEADLINE</c> (the <c>WAIT4ANIM</c> deadline of <c>TRIGANIM</c>, <c>TRIGWAITANIM</c> and the <c>_CH</c> one); a
-/// <c>WAITANIM</c> whose length-less-300 is negative counts <c>WAITANIM_SPEED_WRAP</c>, and a positive one that the engine's divide-then-floor
-/// arms for another number than <see cref="RideScript"/>'s floor-then-divide counts <c>WAITANIM_SPEED_ORDER</c>. At the word 50 none count.
+/// <c>WAITANIM</c> whose length-less-300 is negative (a clip under 300 ms or no model) counts <c>WAITANIM_SPEED_WRAP</c>, the one turn it waits here where the
+/// engine's unsigned sum waits days. At the word 50 none count.
 /// </summary>
 [TestClass]
 [DoNotParallelize]
@@ -152,46 +152,59 @@ public class AnimTriggerSpeedCountTests
 	}
 
 	/// <summary>
-	/// The engine floors the quotient (<c>0x00552ad6</c>); here the sum is floored and then divided. A sum of 100 at a word of 60 is 100 / 1.1 = 90,
-	/// floored to 300 there and 300 / 1.1 = 272 here; 320 is 290 there, floored to 300, and 290 here; 330 is 299 over the float divisor 1.1f, floored to 300 there and 299 here; 340 is 309 and 700 is 636 in both.
+	/// <c>WAITANIM</c> divides the sum and then floors the quotient (<c>0x00552acd</c>, <c>0x00552ad6</c>), by the clip's length: at a word of 60 the divisor is 1.1,
+	/// so 400 is 100 / 1.1 = 90, floored to 300 (floor first would wait 272); 630 is 330 / 1.1f = 299.99999, cut to 299 and floored to 300 (floor-first,
+	/// 299 either way); 1000 is 636 and 5000 is 4272 (the Belly Bounce's two clips). At a word of 40 the divisor is 0.9: 400 is 111, floored to 300
+	/// (floor first, 333); at a word of 20 (divisor 0.7) a 550 ms clip is 250 / 0.7 = 357, above the floor, where floor-first waits 428. A negative sum is its own answer: -300 at any word (the deviation at all but 50).
 	/// </summary>
+	/// <remarks><b>Mutation:</b> the floor before the divide (the order Q875 had) gives 272, 299 and 333 for the first, second and fifth rows.</remarks>
 	[TestMethod]
-	[DataRow( 60, 100, true )]
-	[DataRow( 60, 0, true )]
-	[DataRow( 60, 320, true )]
-	[DataRow( 60, 330, true )]
-	[DataRow( 60, 340, false )]
-	[DataRow( 60, 700, false )]
-	[DataRow( 50, 100, false )]
-	[DataRow( 20, 100, true )]
-	[DataRow( 20, 200, true )]
-	[DataRow( 20, 700, false )]
-	[DataRow( 20, 1000, false )]
-	public void TheEnginesDivideThenFloorDiffersFromFloorThenDivideBelowTheFloorsQuotient( int speed, int sum, bool differs )
-		=> Assert.AreEqual( differs, RideScript.WaitAnimationOrderDiffers( sum, speed ), $"word {speed}, sum {sum}" );
+	[DataRow( 60, 400, 300 )]
+	[DataRow( 60, 630, 300 )]
+	[DataRow( 60, 631, 300 )]
+	[DataRow( 60, 1000, 636 )]
+	[DataRow( 60, 5000, 4272 )]
+	[DataRow( 40, 400, 300 )]
+	[DataRow( 50, 400, 300 )]
+	[DataRow( 50, 1000, 700 )]
+	[DataRow( 20, 550, 357 )]
+	[DataRow( 50, 0, -300 )]
+	[DataRow( 60, 0, -300 )]
+	[DataRow( 40, 0, -300 )]
+	[DataRow( 60, 100, -200 )]
+	public void AnAnimationWaitDividesTheSumAndThenFloorsIt( int speed, int length, int waits )
+		=> Assert.AreEqual( waits, RideScript.AnimationWait( length - 300, speed ), $"word {speed}, clip {length} ms" );
 
-	/// <summary>The same through the instruction: a model-less sum is -300 (the wrap, counted alone), and at the word 50 nothing counts.</summary>
+	/// <summary>The same through the instruction: a model-less sum is -300, which is the wrap counted alone, and costs the one turn; at the word 50 nothing counts.</summary>
 	[TestMethod]
-	public void AModelessAnimationWaitCountsTheWrapAndNotTheOrder()
+	public void AModelessAnimationWaitCountsTheWrapAndWaitsOneTurn()
 	{
 		Trigger( Opcode.WAITANIM, 60, 0, 0 );
 
 		Assert.AreEqual( 1, Times( "WAITANIM_SPEED_WRAP" ) );
-		Assert.AreEqual( 0, Times( "WAITANIM_SPEED_ORDER" ) );
+
+		var script = new RideScript( Build( 1, Word( Opcode.WAITANIM ), 0, 0, Word( Opcode.END ) ) ) { Speed = 60 };
+
+		script.Turn( 1000f );
+		Assert.AreEqual( -300, script.LastWait );
+		Assert.IsTrue( script.Waiting, "the instruction gives up the turn" );
+		script.Turn( 1031f );
+		Assert.IsFalse( script.Waiting, "one turn, not the days the engine's unsigned sum waits" );
 
 		Unimplemented.Forget();
 	}
 
 	/// <summary>
-	/// A real short clip: the Lights' role 5 is 333 ms, so <c>WAITANIM</c>'s sum is 33, which the engine divides to 30 at a word of 60 and floors to 300
-	/// where this floors first and waits 272 (counted); the 1x1 east scenery's role 0 is 666 ms, a sum of 366 that both arms for 332 (not counted).
+	/// A real short clip: the Lights' role 5 is 333 ms, so <c>WAITANIM</c>'s sum is 33, which divides to 30 and is floored to 300 at any word
+	/// (floor first, 272 at 60); the 1x1 east scenery's role 0 is 666 ms, a sum of 366 that waits 332 at 60 and 366 at 50. Nothing counts: no negative sum.
 	/// </summary>
 	[TestMethod]
-	[DataRow( "features", "lights", 5, 60, 1 )]
-	[DataRow( "features", "lights", 5, 50, 0 )]
-	[DataRow( "features", "lights", 5, 20, 1 )]
-	[DataRow( "features", "1x1east", 0, 60, 0 )]
-	public void AShortClipsAnimationWaitCountsTheOrderAndALongOneDoesNot( string kind, string stem, int role, int speed, int counted )
+	[DataRow( "features", "lights", 5, 60, 300 )]
+	[DataRow( "features", "lights", 5, 50, 300 )]
+	[DataRow( "features", "lights", 5, 20, 300 )]
+	[DataRow( "features", "1x1east", 0, 60, 332 )]
+	[DataRow( "features", "1x1east", 0, 50, 366 )]
+	public void AShortClipsAnimationWaitIsFlooredAfterTheDivide( string kind, string stem, int role, int speed, int waits )
 	{
 		FileSystem = GameData.Required();
 
@@ -205,8 +218,39 @@ public class AnimTriggerSpeedCountTests
 
 		script.Turn( 1000f );
 
-		Assert.AreEqual( counted, Times( "WAITANIM_SPEED_ORDER" ), $"{stem} role {role} at a word of {speed}" );
+		Assert.AreEqual( waits, script.LastWait, $"{stem} role {role} at a word of {speed}" );
 		Assert.AreEqual( 0, Times( "WAITANIM_SPEED_WRAP" ), "a clip of 300 ms or more has no wrap" );
+
+		Unimplemented.Forget();
+	}
+
+	/// <summary>
+	/// The scheduler's visit and <c>COAST</c>'s initialise hand a script's speed word to a ride (<c>0x005517e1</c>, <c>0x00554aab</c>) and, after a turn of a
+	/// script with a model, to its channels (<c>0x00551789</c>); none is built, so each counts at a divisor other than 1 and not at 50.
+	/// </summary>
+	[TestMethod]
+	[DataRow( 50, 0, 0 )]
+	[DataRow( 60, 2, 1 )]
+	public void TheSchedulersAndCoastsReadsOfTheSpeedWordCountAtADivisorOtherThanOne( int speed, int coast, int channel )
+	{
+		FileSystem = GameData.Required();
+
+		Unimplemented.Forget();
+
+		var script = new RideScript( Build( 1, Word( Opcode.COAST ), 8, 0, Word( Opcode.WAIT ), 1000, Word( Opcode.END ) ) )
+		{
+			Speed = speed,
+			Ride = new RideState(),
+			Animations = RideAnimations.Load( "levels/jungle/features/gates", "gates", FileSystem )
+		};
+
+		var scheduler = new RideScriptScheduler();
+
+		scheduler.Add( 1, script );
+		scheduler.Advance( 1000f );
+
+		Assert.AreEqual( coast, Times( "COAST_RIDE_SPEED" ), "the initialise and the visit" );
+		Assert.AreEqual( channel, Times( "SCHEDULER_CHANNEL_SPEED" ) );
 
 		Unimplemented.Forget();
 	}

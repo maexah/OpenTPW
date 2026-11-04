@@ -590,11 +590,10 @@ filed the items that cite it.
 - [ ] **Q155. The other readers of the speed word, and the play rate (decoded in Q897; Q875 built the word and its first readers).**
   Found by the 2026-09-26 staleness audit. Q875 keeps the word per script and reads it in `WAIT`, the three scream readings, the
   bumper ride's performance and the wear (`park.md`, "What a loaded script holds"). What reads the word and does not yet here:
-  the animation triggers (below; Q876 counts them), the scheduler's channel speed (`+0xe4`, below), the `TOUR` record's `+0x50` (`0x005517c0`, `FUN_0055d9b0`),
-  `COAST`'s ride (`0x005517e1` and `INITIALISE`'s `0x00554aab`, `FUN_0043b2b0`), the bounce riders' sine (`0x00557c03`, `ride-operation.md`,
-  "The bounce riders' height") and the walk placer's divisor (`0x0055823e`); check each against the files before building it. With a divisor
-  of 1.1 a `WAITANIM` of a clip under 300 ms waits for weeks (`park.md`, "`WAITANIM` is NOT `TRIGANIM` with a wait"): look for one in `Bouncy`
-  first. Confirm: the Belly Bounce's clips at their rate in the running game against the original's.
+  the animation triggers (below; Q876 counts them), the scheduler's channel speed (`+0xe4`, below; `SCHEDULER_CHANNEL_SPEED`), the `TOUR` record's `+0x50` (`0x005517c0`, `FUN_0055d9b0`; `TOUR` is itself unbuilt and counted),
+  `COAST`'s ride (`0x005517e1` and `INITIALISE`'s `0x00554aab`, `FUN_0043b2b0`; `COAST_RIDE_SPEED`), the bounce riders' sine (`0x00557c03`, `ride-operation.md`,
+  "The bounce riders' height") and the walk placer's divisor (`0x0055823e`) (both `WALK_RIDER_SPEED_DIVISOR`); check each against the files before building it. With a divisor
+  of 1.1 a `WAITANIM` of a clip under 300 ms waits for weeks in the original, and waits one turn here by Alexah's decision (2026-11-04; counted `WAITANIM_SPEED_WRAP`; `park.md`, "`WAITANIM` is NOT `TRIGANIM` with a wait"). Confirm: the Belly Bounce's clips at their rate in the running game against the original's.
   From Q166: every trigger hands the divisor (`[ESP+0x14]`, 0.5 + 0.01 × speed, `0x00551cdc`) to the channel as its
   play rate - `TRIGANIM` `0x00552952`, `WAITANIM` `0x00552a9f`, `LOOPANIM` `0x00552be4`, `TRIGWAITANIM` `0x00552d2f`,
   `TRIGANIM_CH` `0x00553190`, `WAITANIM_CH` `0x00553325`, `LOOPANIM_CH` `0x00553465`, `TRIGWAITANIM_CH` `0x00553624` -
@@ -602,10 +601,11 @@ filed the items that cite it.
   `0x00552acd`, `TRIGWAITANIM` `0x00552d94`, `TRIGANIM_CH` `0x005531ee` and `TRIGWAITANIM_CH` `0x00553682` divide by
   it, and Q876 counts them where they are reached at a divisor other than 1 (`ANIM_TRIGGER_SPEED_RATE` at every start with a model,
   `ANIM_TRIGGER_SPEED_DEADLINE` at `TRIGANIM`, `TRIGWAITANIM` and `TRIGANIM_CH`; the ride window's `RIDE_SPEED_SCALES_WAITS` count went with
-  Q875's `WAIT`). `WAITANIM` reaches `Wait` and so is divided, but floors first where the original divides first (`fdiv`
-  `0x00552acd`, `_ftol`, unsigned compare with 300 at `0x00552ad6`): at word 60 a 400 ms clip waits 300 there and 272 here, a 1000 ms clip
-  636 in both, and a clip under 300 ms waits for weeks there (`WAITANIM_SPEED_ORDER`, `WAITANIM_SPEED_WRAP`, counted by Q876; build the
-  original's order with the rate, with a test at word 60). The unbuilt
+  Q875's `WAIT`). `WAITANIM` is built in the original's order (`RideScript.AnimationWait`: `fdiv`
+  `0x00552acd`, `_ftol`, unsigned compare with 300 at `0x00552ad6`; at word 60 a 400 ms clip waits 300, a 1000 ms clip 636), with the
+  deadline's play rate still to build; a clip under 300 ms waits one turn here where the original waits days (Alexah's decision, 2026-11-04;
+  `WAITANIM_SPEED_WRAP`, counted by Q876). The speed push of an upgrade's completion (`0x004dfabc`, when the new tier's `InitSpeed` is above nought)
+  is counted `RIDE_UPGRADE_COMPLETION` and unbuilt: build it with that item or here. The scheduler's channel speed and `COAST`'s ride are counted (`SCHEDULER_CHANNEL_SPEED`, `COAST_RIDE_SPEED`); the channel speed also reaches a loop already playing when the ride window changes the word, which the original replays at the new divisor and this at its old speed; whether a Lost Kingdom coaster reaches `COAST` here is unchecked. The unbuilt
   `TRIGANIMSPEED` passes its rate / 1000 × the divisor (`0x00552f6e`), and its deadline, the length × 1000 / its rate,
   does not divide by it. The length a trigger answers does not depend on it (`FUN_00472f60`,
   `0x0047323e`..`0x00473258`).
@@ -3600,3 +3600,5 @@ state machine.
   sky is newly seen because the fix's first frame looks at the sky where the control's looked at the sea; its cause is not traced (the sky's or
   weather's first update). Give the panel the island before the first `Update` when a player is current (the lobby build setting `CurrentIsland`
   from `IslandIndex`), and find which pass sets the sky's tint.
+
+- [ ] **Q845. Another theme's gates and lights are written as placed objects (from the Q887 review, finding 2).** `Level.cs` (about line 950) passes the fixed cell only when `ParkFixedItems.IsGatesOrLights` (`ParkFixedItems.cs`, ids 1601 and 1603 only), so hallow's gates and lights (2601, 2603) are saved as ordinary placed objects with `PlacedObjectFlags` `0x32f` (`ParkThingStates.Made.cs`); the 2026-10-31 hallow saves under `~/Games/TPWorld/save/users/2FullSim Test/hallow/` hold three such records. The original's own files carry these items as `0x361`, and `saves.md` (about 1149) records that the original drew no gate for such a record (`q783/orig/l2`). Key the fixed items by theme (fantasy's 4600 to 4603 too), deferred by scope until a theme other than Lost Kingdom is taken up; confirm by saving a hallow park and reading the records' word.

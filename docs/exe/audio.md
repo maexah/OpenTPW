@@ -314,8 +314,7 @@ own or else a draw between them ("A voice's two controllers", below); 100 for a 
 - **A scream's parameter 6 is no volume.** It is slot 0 of the voice's controllers, the held chain's zone
   parameter, and a set of it applies a volume only on a match past slot 0 (`0x006bbb80`). All 32 variations of
   the kids' screams, effects 71 to 90, hold the bytes 47 and 47 and name no controller on the volume, so a
-  scream is 47 whatever its script's level: `round( 47 x 0.75 )` is 35. OpenTPW's parameter for the Belly Bounce,
-  `(20 + 50) / 2`, is also 35, a coincidence of the two numbers; the original's is 40, at its speed word 60 (Q897; by the decode, the original's memory not read).
+  scream is 47 whatever its script's level: `round( 47 x 0.75 )` is 35. OpenTPW's parameter for the Belly Bounce was `(20 + 50) / 2`, also 35, before Q875, a coincidence of the two numbers; the original's and now ours is 40, at its speed word 60 (Q897; by the decode, the original's memory not read).
 
 **Held in the running original** (predicted first, `q267/PREDICTION.txt`, 2 of 2). Its mixer's log of 150 s of the
 shipped park holds twelve pairs of a 3D channel's far end and volume, and each is `round( v x 0.75 )`, a half to

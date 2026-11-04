@@ -297,6 +297,24 @@ public class RideScriptWalkTests
 		return new RideScriptFile( new MemoryStream( memory.ToArray() ) );
 	}
 
+	/// <summary>The walk placer's and the bounce sine's reads of the speed word are not built (<c>0x0055823e</c>, <c>0x00557c03</c>): a rider in a slot of a script at a divisor other than 1 counts.</summary>
+	[TestMethod]
+	[DataRow( 50, 0 )]
+	[DataRow( 60, 1 )]
+	public void ARiderInASlotAtADivisorOtherThanOneCountsThePlacersRead( int speed, int counted )
+	{
+		Unimplemented.Forget();
+
+		var script = new RideScript( Build( walkSlots: 2, Word( Opcode.WALKON ), Rider, 1, 1, 1, 1, 1, 1, Word( Opcode.END ) ) ) { Speed = speed };
+
+		script.Turn( 0f );
+		script.StepTheWalks( 10f );
+
+		Assert.AreEqual( counted, Unimplemented.Summary.FirstOrDefault( entry => entry.What == "WALK_RIDER_SPEED_DIVISOR" ).Times );
+
+		Unimplemented.Forget();
+	}
+
 	/// <summary>
 	/// <b>Walked on, walked off, and collected - the half the shipped script reaches only with a model.</b>
 	///

@@ -360,6 +360,11 @@ public sealed class RideScriptScheduler
 			{
 				++TurnsGiven;
 				entry.Script.Turn( now );
+
+				// After a turn of a script with a model the engine writes (0.5 + 0.01 x speed) x +0xe4 / 1000 into every
+				// channel's queued speed (0x00551748, 0x00551789); a channel here keeps the speed it was queued at (docs/QUEUE.md Q155).
+				if ( entry.Script.Animations is not null && RideScript.DivisorOf( entry.Script.Speed ) != 1f )
+					Unimplemented.Report( "SCHEDULER_CHANNEL_SPEED" );
 			}
 
 			// Due a turn or not, the visit pushes the script's speed word on: into its thing's bumper ride (0x00551844; a thing
@@ -367,6 +372,10 @@ public sealed class RideScriptScheduler
 			// the store to address 0xc0, which is not built).
 			if ( _entries.Contains( entry ) )
 			{
+				// A script holding a COAST ride has its speed pushed into the ride at the same visit (0x005517e1); not built (docs/QUEUE.md Q155).
+				if ( entry.Script.Ride is not null && RideScript.DivisorOf( entry.Script.Speed ) != 1f )
+					Unimplemented.Report( "COAST_RIDE_SPEED" );
+
 				if ( entry.Script.TrackRide != 0 )
 					entry.Script.Bumpers?.PushSpeedWord( entry.Script.TrackRide, entry.Script.Speed );
 

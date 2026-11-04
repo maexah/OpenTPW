@@ -12441,7 +12441,7 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   into the thing's bumper ride at every visit (`ParkBumperCars.PushSpeedWord`, `0x00551844`), which replaces the once-bound
   `ParkRides.BindTrackRide` word, so a speed the window or an upgrade writes now reaches the cars, a loaded one starts at the file's;
   the wear takes it (`FUN_0055a330`). The save writer writes the live word over the file's (`WrittenScript.Speed`). The ride window
-  no longer counts `RIDE_SPEED_SCALES_WAITS`. Drawn nothing differently except the Belly Bounce's own WAIT, now 9% shorter, and its
+  no longer counts `RIDE_SPEED_SCALES_WAITS`. Drawn nothing differently except the Belly Bounce's own WAIT, now 9% shorter, its WAITANIM 10 hold (6367 to 5787) and its
   scream parameter 40 where it was 35. Evidence: `q155-b16/` (`PREDICTION.txt`, `run3/` the final binary: Belly Bounce `word 60`, the
   other 13 scripts 50, 15 scream starts at `speed 60 parameter 40`, `lastwait 454` there and 500 at a word of 50, a bought Hot Pot
   `performance 60` then 80 and back for the word written, and `mutate1.log`/`mutate2.log`). Not confirmed: the ride window's own slider (the

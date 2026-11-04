@@ -47,15 +47,15 @@ public class ParkScreamTests
 	/// <summary>
 	/// <b>The volume is averaged with the script's SPEED, which is the surprise in this decode.</b> The
 	/// engine computes <c>(operand + speed) / 2</c> and holds it to nought through a hundred, where the
-	/// speed is the word at <c>+0xc0</c> its loader sets to 50 and no opcode ever writes.
+	/// speed is the word at <c>+0xc0</c>: the loader sets it to 50, no opcode writes it, and the ride window, the saved file, an item's starting speed and a parent script's child copy do (Q155, Q875).
 	/// </summary>
 	[TestMethod]
 	public void TheVolumeIsTheLevelAveragedWithTheScriptSpeed()
 	{
-		Assert.AreEqual( 50, ParkAudio.ScriptSpeed, "the speed the loader sets, and nothing changes" );
+		Assert.AreEqual( 50, ParkAudio.ScriptSpeed, "the speed word a script made here starts with" );
 
 		// Bouncy's own instruction is STARTSCREAM VAR_TEMP, 20 - so this is the real park's number.
-		Assert.AreEqual( 35, ParkAudio.ScreamVolume( 20 ), "(20 + 50) / 2, which is what the Belly Bounce asks for" );
+		Assert.AreEqual( 35, ParkAudio.ScreamVolume( 20 ), "(20 + 50) / 2 at the word 50; the shipped Belly Bounce holds 60 and asks 40 (ParkScriptSpeedWordTests)" );
 
 		Assert.AreEqual( 50, ParkAudio.ScreamVolume( 50 ), "a level equal to the speed leaves it alone" );
 		Assert.AreEqual( 100, ParkAudio.ScreamVolume( 150 ), "and it is held at a hundred" );
@@ -129,7 +129,7 @@ public class ParkScreamTests
 	/// oversight.</b> The step is <c>(level + speed) / 50</c> with <see cref="ParkAudio.ScriptSpeed"/> at 50, so a
 	/// step of nought needs a level below nought - and a level below nought is exactly what sends the handler
 	/// down the band-only branch instead. So <c>0x4b</c>, <c>0x4f</c>, <c>0x53</c> and <c>0x57</c> are
-	/// **dead by arithmetic** here for every script. The original's arithmetic does not close them: a placed
+	/// **dead by arithmetic** at the word 50, and reached by a word under 50 (the slider goes to 1). The word is not always 50 (Q875): a placed
 	/// thing's script takes its item's operating speed when one is set (<c>docs/exe/park.md</c>, "The clock,
 	/// the speed word, and WAIT"), and a speed under 50 reaches column nought.
 	/// </summary>

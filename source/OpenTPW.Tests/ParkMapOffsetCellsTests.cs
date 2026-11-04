@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace OpenTPW.Tests;
 
@@ -359,11 +360,11 @@ public class ParkMapOffsetCellsTests
 	/// <c>original/modelboxes.py</c> on the running original after a real purchase): the rock, pointer on (71,25), turned 0 and turned 90
 	/// (anchors (69,24) and (70,27)), read (69,23)..(73,27), middle (715,255) both; the Large Rock Pillar, pointer on (76,26), anchored
 	/// at (74,24), read (74,24)..(77,27), middle (760,260). The pillar's own place at its other anchor (69,23) is the same model
-	/// shifted five cells.
+	/// shifted five cells east and one south.
 	/// </summary>
 	/// <remarks><b>Mutation:</b> <c>SoundBoxOf</c> answering the anchor's footprint (<see cref="ParkObjects.FootprintAt"/>) moves the rock's
-	/// middle a row south and the pillar's keeps (it has no map offset), so the rock cases fail it; the pillar's width and depth, read as
-	/// 5 x 5 or 3 x 3, fail the pillar's.</remarks>
+	/// middle a row south and the pillar's keeps (it has no map offset), so the rock cases fail it. These rows pin the rectangle and its
+	/// middle at a height the test gives; the height is pinned by <see cref="AThingsVoiceSoundsAtTheHeightItsModelStandsAt"/>.</remarks>
 	[TestMethod]
 	public void ABoughtRockAndPillarSoundAtTheMiddleOfTheRectangleTheOriginalReads()
 	{
@@ -389,6 +390,41 @@ public class ParkMapOffsetCellsTests
 
 			Assert.AreEqual( box, objects.StoredFootprint( 4000 ), $"{item.Name} at ({x},{y}) turned {angle}: the model's rectangle" );
 			Assert.AreEqual( middle, ParkObjects.BoxMiddle( objects.StoredFootprint( 4000 )!.Value, 0f ), $"{item.Name} at ({x},{y}) turned {angle}: its middle" );
+		}
+	}
+
+	/// <summary>
+	/// <b>The voice sounds at the height the model stands at</b> (Q844, <c>q844/orig/run1/</c>: the original's height of the thing it placed
+	/// is -8.5, and of the stock Huge Hollow Rock -4.5): <see cref="ParkObjects.TrySoundPlace"/> and <see cref="ParkObjects.VoiceMiddle"/> (the <c>Place</c> log line's
+	/// middle) answer the rectangle's middle with the model's <c>PlacedOrigin.Z</c>, not nought.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> <c>VoiceMiddle</c> answering <c>BoxMiddle( footprint, 0f )</c> gives 0 where the test stands the model at -8.5
+	/// and -4.5.</remarks>
+	[TestMethod]
+	public void AThingsVoiceSoundsAtTheHeightItsModelStandsAt()
+	{
+		var (world, catalogue) = Park();
+		var state = new ParkState( world );
+
+		Assert.IsTrue( catalogue.TryGet( Rock, out var rock ) );
+
+		var origin = typeof( LobbyModel ).GetField( "_placedOrigin", BindingFlags.NonPublic | BindingFlags.Instance )!;
+
+		foreach ( var height in new[] { -8.5f, -4.5f } )
+		{
+			// A model with only the position the voice reads: the GPU-side parts are not built.
+			var model = (LobbyModel)RuntimeHelpers.GetUninitializedObject( typeof( LobbyModel ) );
+
+			origin.SetValue( model, new Vector3( 715f, 255f, height ) );
+
+			var placed = ParkBuilding.Constructed( rock, 4000, 69, 24, 0, 0, 0, ParkWorld.BuiltWhen.At( state.CalendarNow ) );
+			var objects = new ParkObjects( Theme, null, null );
+
+			objects.StandPlaced( placed, rock, model, RideAnimations.None(), null, [], 0, [], 0, () => default );
+
+			Assert.IsTrue( objects.TrySoundPlace( 4000, out var at ) );
+			Assert.AreEqual( new Vector3( 715f, 255f, height ), at, $"the voice at the model's height {height}" );
+			Assert.AreEqual( new Vector3( 715f, 255f, height ), ParkObjects.VoiceMiddle( objects.StoredFootprint( 4000 )!.Value, model ), "the Place line's middle" );
 		}
 	}
 
