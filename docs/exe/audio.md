@@ -838,9 +838,19 @@ stock park's 20.0 plateau (cells (40..64, 58)) voice at z 20.0 and then the grou
 to 20.0), at z 0.0 after (40 and 51 voices, all 0.0). A guest on the same plateau (Q1020, `q1020/`; the console's `admit 40 58` makes one at (405, 585)): the
 yawns of guests whose id divides by 16 read z 0.0 (62 yawns: 8 in `run1-partial/`, 54 in `run2/`; the first at (405.0, 585.0, 0.0), where the ground reads 20.0000, the rest where the guests had walked, on the plateau and down its slopes, two on the flat ground by the gate); a queuer whose id divides by 8, pinned to (405, 585), put off by the sale of their ride, reads
 (405.0, 585.0, 0.0); a shop moved onto the plateau (`move 16 42 58`) has its till at (425.0, 585.0, 0.0), the ground 20.0000 at each. The till is at the
-put-down's place (Q873), so a guest pinned while riding a ride off the plateau is put down at that ride's exit and sounds there (z 0.0 too). Not seen: the original's own sound on raised ground (the second float of
-`Sound_PlayEffect`'s place at `0x0051bfc0`, Q856). A saved offset on a walker is one the original overwrites, so the run that wrote 5.0 on the staff only shows
+put-down's place (Q873), so a guest pinned while riding a ride off the plateau is put down at that ride's exit and sounds there (z 0.0 too). A saved offset on a walker is one the original overwrites, so the run that wrote 5.0 on the staff only shows
 ours' old rule.
+
+**The original on the plateau, measured** (Q856, 2026-11-04, `q856/`; the stock park `q325/stock.TPWS` in the original under Proton; `tools/harness/original/personsound.sh`
+breaks on `Person_PlaySound` and on `Sound_PlayEffect` when its return is `0x004faa52`, reading the sprite at the first and the three ints at the second, which are x at
+`[esp+16]`, height at `[esp+20]` and z at `[esp+24]`). A staff member taken up by the window's PICK UP stays carried after a click on the plateau's cell (50,58) or on the flat cell (50,55)
+(he follows the pointer: `+0x8c` 25.000, drawn at 45.0 = 25 and the ground's 20, no sound in 150 s), so the person is placed the item's way: `holder.py` writes a walking
+mechanic's `+0x88`/`+0x90` to (505, 585), where the sprite's drawn height `+0xe8` reads 20.000. In two runs of 100 s (f, i) all 41 of its sounds
+(effect `0xa2`, the mechanic walking, category 5) read the sprite at (505.000, 0.000, 585.000) and hand `Sound_PlayEffect` the ints (505, 0, 585): the height is the sprite's own
+`+0x8c`, exactly nought, and not the ground's 20. The cut is `_ftol`'s, toward nought: in the unfiltered run a guest at the Spray's till (sprite height 0.983895) hands 0. With the
+person object's `+0x28` set (the test at `0x004fa087` is the person's; the sprite's own `+0x28` is a float, 0x4198c9e8 on a guest at the Kiosk) 20 sounds in 150 s were all guests at the
+Spray's or the Kiosk's till (heights 0.983895 and 0.0, both handed as 0): none was seated on a ride's seat, so a rider's height, the point less the ground, is not measured (Q1005).
+Ours, same cells (`q856/ours1/`, this build, off-screen): 48 staff voices on the plateau, all z 0.0, the ground there 20.0000. Both games sound a walker at nought, so nothing was built.
 
 | Address | Original name | What it is | Evidence |
 |---|---|---|---|
