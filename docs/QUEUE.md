@@ -590,7 +590,7 @@ filed the items that cite it.
 - [ ] **Q155. The other readers of the speed word, and the play rate (decoded in Q897; Q875 built the word and its first readers).**
   Found by the 2026-09-26 staleness audit. Q875 keeps the word per script and reads it in `WAIT`, the three scream readings, the
   bumper ride's performance and the wear (`park.md`, "What a loaded script holds"). What reads the word and does not yet here:
-  the animation triggers (below), the scheduler's channel speed (`+0xe4`, below), the `TOUR` record's `+0x50` (`0x005517c0`, `FUN_0055d9b0`),
+  the animation triggers (below; Q876 counts them), the scheduler's channel speed (`+0xe4`, below), the `TOUR` record's `+0x50` (`0x005517c0`, `FUN_0055d9b0`),
   `COAST`'s ride (`0x005517e1` and `INITIALISE`'s `0x00554aab`, `FUN_0043b2b0`), the bounce riders' sine (`0x00557c03`, `ride-operation.md`,
   "The bounce riders' height") and the walk placer's divisor (`0x0055823e`); check each against the files before building it. With a divisor
   of 1.1 a `WAITANIM` of a clip under 300 ms waits for weeks (`park.md`, "`WAITANIM` is NOT `TRIGANIM` with a wait"): look for one in `Bouncy`
@@ -600,7 +600,12 @@ filed the items that cite it.
   `TRIGANIM_CH` `0x00553190`, `WAITANIM_CH` `0x00553325`, `LOOPANIM_CH` `0x00553465`, `TRIGWAITANIM_CH` `0x00553624` -
   where `StartAnimation` passes 1.0 (said at the site); the deadlines of `TRIGANIM` `0x005529ac`, `WAITANIM`
   `0x00552acd`, `TRIGWAITANIM` `0x00552d94`, `TRIGANIM_CH` `0x005531ee` and `TRIGWAITANIM_CH` `0x00553682` divide by
-  it, and none of these divisions is counted (the ride window's `RIDE_SPEED_SCALES_WAITS` count went with Q875's `WAIT`). The unbuilt
+  it, and Q876 counts them where they are reached at a divisor other than 1 (`ANIM_TRIGGER_SPEED_RATE` at every start with a model,
+  `ANIM_TRIGGER_SPEED_DEADLINE` at `TRIGANIM`, `TRIGWAITANIM` and `TRIGANIM_CH`; the ride window's `RIDE_SPEED_SCALES_WAITS` count went with
+  Q875's `WAIT`). `WAITANIM` reaches `Wait` and so is divided, but floors first where the original divides first (`fdiv`
+  `0x00552acd`, `_ftol`, unsigned compare with 300 at `0x00552ad6`): at word 60 a 400 ms clip waits 300 there and 272 here, a 1000 ms clip
+  636 in both, and a clip under 300 ms waits for weeks there (`WAITANIM_SPEED_ORDER`, `WAITANIM_SPEED_WRAP`, counted by Q876; build the
+  original's order with the rate, with a test at word 60). The unbuilt
   `TRIGANIMSPEED` passes its rate / 1000 × the divisor (`0x00552f6e`), and its deadline, the length × 1000 / its rate,
   does not divide by it. The length a trigger answers does not depend on it (`FUN_00472f60`,
   `0x0047323e`..`0x00473258`).
