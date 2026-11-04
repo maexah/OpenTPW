@@ -2655,7 +2655,7 @@ with no screen open a notch over the park moves the zoom by 10 (110, 120, 130 at
 box and the map** open, three notches each way at Load Park's frame, bezel, exit cross, title, the park below and right of it and the gadget; two notches down (and three up at the map's middle) at Save Park's frame, cross and the park below, the menu beside its rows, over a row and outside it, four places of the Options screen, three of the Restart Park box (its edge, middle, the park below) and three of the map, left the zoom exactly where it was
 (the map's picture did not change either, `q930/o2-map.png` against `o2-map-after.png`; no `mapview.py` read of its `Z` was kept, and the item's `orig.sh` sent `wheel.sh`'s output to `/dev/null`, so a failed gdb attach would have read as "unchanged": the Load Park rows that did scroll, and the zoom that moved 110 to 120 after them, are what show the message arrives); the cross closed Load Park with the zoom as it opened, and a notch over the park moved it by 10 again.
 The Options screen's pointer was near the screen's edge, so the point of interest crept under the edge scroll, which has nothing to do with the wheel. Not measured: the other message boxes, the lobby's
-dialogs, and the park screens that are not modal (`docs/QUEUE.md` Q231 keeps those).
+dialogs, and the park screens that are not modal (decoded below, "The wheel over a park screen"; built in `docs/QUEUE.md` Q231).
 
 **OpenTPW** (Q930): `WindowStack.OnUpdate` takes the wheel (`WheelTaken`) whenever a modal window is up (`ModalUp`), wherever the pointer is, so the park behind it does not zoom; a list or a slider under the
 pointer still scrolls by it first. Before this, the wheel over the frame, the exit cross or the bare park round a modal screen moved `ParkOrbitCameraMode.Zoom` by 5 a notch (Load Park, Save Park and the game
@@ -2663,6 +2663,29 @@ menu measured), Cancel left it moved and a Save wrote it. Ours: the window stack
 box (of the message boxes), Load Park, Save Park, the game menu, the options screen and the map; the new player dialog is the lobby's, which has no park camera. A notch over a modal screen's body does nothing else here, as the measured original's does nothing else.
 
 **The step, in both games** (Q937, 2026-11-03, `q937/`). `FUN_0042a760`'s wheel branch (`0x0042a91d`..`0x0042a948`) loads the zoom `[0x007909ec]`, tests the notch's sign (`test esi,esi`, `jge` at `0x0042a925`) and takes `[0x006fdd5c]` (-10.0) from it for a negative notch or `[0x006fdd7c]` (+10.0) for the rest: a step of 10 by the sign of each message, with no clamp (the update holds 70..130, `0x0042c621`; the window procedure posts the delta over 120, truncated, `0x0046bbcc`..`0x0046bbdd`, so a message under 120 either way posts 0 and zooms in 10, and one of 240 is one step). **Measured** (the stock park, `wheel.sh` and `camera.py`, pointer over the bare park): 110, then a notch toward the player 120, two more 130, one more 130, five away 80, two more 70, one more 70. **OpenTPW:** `ParkOrbitCameraMode.ZoomAfterWheel` steps `WheelZoomStep` = 10 a notch (it was 5, so the same notches gave 115, 120, 125, 100, 90, 85) and holds 70..130; the same notches from 110 now give the original's numbers (`q937/after-1`). **A deviation, said at the site:** a frame's notches are summed here where the original takes one message at a time, so a whole notch is the same; a fraction (a touchpad's) moves it by that fraction of 10, where the original zooms in 10 for any message under a notch, and a message of several notches is one step there, several here.
+
+#### The wheel over a park screen (Q870)
+
+**Decoded** for `docs/QUEUE.md` Q231 in the private Ghidra copy (`q870/dump*/`); the original was not run for it. The
+notch goes to one control, the capture or the hovered one (`FUN_00658bcb`, above), and over a park screen's rectangle
+that is the screen's root or one of its controls (the root takes the pointer anywhere on its rectangle, "Whose a right
+press is"), never the park layer. Every park screen's handler (the thirteen of `advisor-park.md`, "F1: the kept tutorial
+line said again", and the object windows' `FUN_0048d200`) tests no `0x1000d` and passes it to `FUN_00488ba0`, which has
+no case for it and hands it to the control's class procedure (`+0x118`, `0x00488c56`); the base `FUN_0065f6d1` answers
+`0x10002`..`0x10007` only. The classes found taking it move a value and none passes it to a parent: the list
+(`FUN_00665c35`, its scrollbar's value less the notch), the slider (`Slider_Callback`, `0x0066ba6d`), the slider's thumb
+(`SliderThumb_Callback`, the value of `FUN_0065d55a`'s control less the notch) and the class of `FUN_0066aa61` (its
+value plus the notch; its class is not named). So over a park screen's body the camera does not zoom, and a list or
+slider under the pointer scrolls. Beside the screen the park layer is hovered, and `Park_MouseMessageProc` hands every
+message to the camera's `FUN_0042a760` (`0x0048845c`) with no test of the open screen: its flag `[0x0074fc2c]` is set at
+entry and cleared only on the right press with RMB cancel (`0x00488354`). So a notch over the park beside an open screen
+zooms by 10, as with none. (Two other procedures hand every message to the camera: first person's layer `FUN_00488a00`
+and the full-screen view's cover, `0x004a287d`.)
+
+**OpenTPW today** (measured off-screen on the lane B build of `1d5be3de`, `q870/run1`, the stock park, `camera 475 175
+100` before each): a notch down over the bare park 110; two over the buy screen's stats panel (control `0x1ed`, at
+(281,291) size (334,132) of 1280 x 720) **120** (`q870-3-after-wheel-on-body.png`), where the original's would stay 100;
+one over the park right of the screen 110, as the original's. Built in Q231.
 
 ### Both trees, walked to a balanced op 5
 

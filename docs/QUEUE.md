@@ -896,14 +896,19 @@ filed the items that cite it.
   From Q133b: the original's handyman, put down two cells from a dirty toilet, read `0xa` on the tick after the
   put-down and the toilet's stamp was written again a tick later (1389, then 1390: `q133b/orig/a.log`), so the
   second decide runs for him too; from `0xa` the idle between stamps nought, and he does not stand eleven.
-- [ ] **Q231. Under an open park screen: F1, the wheel and the release. Decode first.** Found by Q115
-  (`park-engine.md`, "A park screen is open"). The screens' key handler answers a plain F1 let go by calling
-  `FUN_005194d0` on the world and `FUN_0059ab50` on what it answers (`0x00488bfb`), not traced; nothing here reads F1 in
-  a park. Where the wheel's message goes with the pointer over a screen's body is not decoded: here the wheel zooms
-  the camera wherever the pointer is, unless a list or a slider takes it (over a MODAL screen it is taken since Q930; the park screens, which are not modal, are this item's). And an armed tool's click beside a screen is
-  taken on the press here, where the original skips the press and commits on the release (`Level.KeptFromThePark`),
-  which is `RunBuildMode`'s standing difference. Decode the two, count each where it is reached, then build. Confirm:
-  F1 and the wheel over the buy screen beside the original's, read from memory.
+- [ ] **Q231. Under an open park screen: F1, the wheel and the release.** Found by Q115 (`park-engine.md`, "A park
+  screen is open"); decoded in Q870. Build: (1) F1 let go with no modifier says the kept tutorial line again, screen
+  or no screen: keep the last category-1 raise beside the slots (also when the gate refuses it), forget it when its id
+  is withdrawn, and on F1 post it forced at `ContextHelpScore` (`advisor-park.md`, "F1: the kept tutorial line said
+  again"); here only the buy screen's `0xbc`, the hire screen's `0xbd`, the tag's `0x11c` and the polled `0xb9` and
+  `0x11a` are built, so F1 has those to repeat, and the kept record goes into the advisor's park-file record
+  (`+0x16d0`, "The slots in a park file"). (2) The wheel over a park screen's rectangle is taken (`WindowStack`), a
+  list or slider under it still scrolling; beside it the park still zooms (`hud.md`, "The wheel over a park screen").
+  (3) An armed tool's click beside a screen is taken on the press here, where the original skips the press and
+  commits on the release (`park-engine.md`, "A park screen is open", the pointer; `Level.KeptFromThePark`), which is
+  `RunBuildMode`'s standing difference.
+  Confirm: F1 and the wheel over the buy screen beside the original's, read from memory (the kept record at the
+  advisor's `+0x16d0`, its slots, `[0x007909ec]` for the zoom), predicted first; a frame of each.
 - [ ] **Q232. A list opens with no row selected, where the original's opens with one highlighted. Decode first.**
   Found by Q117 (`hud.md`, "A right click on a list"). The original's add selects the first row as a list fills
   (`FUN_0066525c( 0 )` in `FUN_0066403b`), and its visitors list opened with a row highlighted every time: the first

@@ -12065,6 +12065,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   file's second `mLitterScript` is the stink bomb's particle handle (FileFormats `saves.md`). Measured on 89 park files the
   original wrote: 72 littered cells, each sprite kind 11 at the reseed's place (`q899/littercheck.txt`). This game off-screen
   on one of them (`q899/run1`, `run2`): no litter drawn, the errand and the drop counted, litter left at 90.
+- [x] **Q870. Q231's decode: F1 and the wheel under an open park screen.** Done 2026-11-04 (run 20, lane B). Read in
+  the private Ghidra copy (`q870/dump*/`). F1 let go, no modifier, has the advisor say his kept tutorial line again:
+  `Advisor_Post` keeps every category-1 raise (86 messages) at `+0x16d0` before the gate, and `FUN_0059ab50` posts it
+  forced at `HelpMessage.ContextHelpScore` (1000), past the said-once and cut tests, not past the Tutorial option or a
+  copy still waiting; the screens' handler does it with a screen open (`0x00488bfb`) and the `game` table's row 13
+  (`0x0040c800`, in no Ghidra function) without one; each screen withdraws its own line on its close, which forgets it
+  (`advisor-park.md`, "F1: the kept tutorial line said again"). The wheel over a park screen's body goes to the
+  screen's controls, which drop it unless a list or slider takes it, so the camera does not zoom; beside the screen the
+  park layer zooms with no screen test (`hud.md`, "The wheel over a park screen"). This game off-screen (`q870/run1`):
+  two notches over the buy screen's stats panel zoomed 100 to 120, F1 posted nothing over the screen or after it.
 
 ## B. Docs and comments
 

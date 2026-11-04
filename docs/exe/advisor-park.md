@@ -14,7 +14,8 @@ The park advisor is a THING like the weather, ticking on the same beat. It hears
 | `FUN_0059a550` | — | The tick: picks the highest-scoring slot and says it | Compiled member names `mLastActionStarted`, `mMessagePlaying` |
 | `FUN_0059abc0` | — | The accept gate; can drop a raise outright | Called by `FUN_0059a940` before a slot is taken |
 | `FUN_0059aa70` | — | Withdraw: clears every slot with a matching id | Calls `Advisor_StopSpeaking()` and bumps a counter if that id is speaking now |
-| `FUN_0059c500` | — | Routes some responses to a separate sticky slot at `+0x16d0` | |
+| `FUN_0059c500` | — | A message's category (its metadata row's `+0x08`); `FUN_0059a940` keeps every category-1 raise at `+0x16d0` | "F1: the kept tutorial line said again" |
+| `FUN_0059ab50` | — | F1: raises the kept record again, forced, at `HelpMessage.ContextHelpScore` | the same |
 | `FUN_005194d0` | — | Fetches the advisor THING; indexes a THING table at `DAT_007cfb90`, stride 5 dwords | Asserts "Thing has been allocated in Thing..."; the decompiler hides the call because the result is passed in ECX by `__fastcall` |
 
 Concrete message ids seen in the dispatch (the values are **advisor message ids**, the metadata rows' ids, stored at the record's `+0xc`; they are not response ids): message `8` → advisor message `0x102`, row 258 `RideCondemned` (responses 498-500); message `0x0e` sub 0/1/2 → advisor messages `0x7d`/`0x7e`/`0x7f`, rows 125-127 (responses 302, 304, 306; `0x0059b393`, `0x0059b315`, `0x0059b297`); message `0x11` (research) categories 0-4 → advisor messages `0x5d`, `0x5f`, `0x60`, `0x61`, `0x5e`, rows 93-97 (`Research*Researched`). Fork watch 2026-10-16, `verify-advisor.md`, "Our committed docs found wrong" 3.
@@ -939,7 +940,7 @@ been cut off saying it three times (the table under "The accept gate").
 
 **The withdrawal, `FUN_0059aa70( id )`.** (1) Where the advisor's byte `+0x16e4` is set, the message's category is
 1 and `+0x16dc` is the id, the byte is cleared: the kept message at `+0x16d0`, which `FUN_0059ab50` raises again,
-forced, at `HelpMessage.ContextHelpScore` (its one caller `FUN_00488ba0`). The byte is the kept record's own `mValid`: a raise of a message `FUN_0059c500` answers 1 for copies the whole record there before the gate is asked (`FUN_0059a940`). (2) Every
+forced, at `HelpMessage.ContextHelpScore` (on F1: "F1: the kept tutorial line said again", below). The byte is the kept record's own `mValid`: a raise of a message `FUN_0059c500` answers 1 for copies the whole record there before the gate is asked (`FUN_0059a940`). (2) Every
 occupied slot whose message is the id is emptied. (3) The message being said is `+0x16ec` while the clock
 (`FUN_00402d80`) is under `+0xd8 + +0xdc`, the last line's start and its length and second, and `0x160`
 otherwise; where that is the id: `Advisor_StopSpeaking`, the message's said byte `+0xe8` cleared, its `+0xec` one
@@ -978,10 +979,69 @@ attempt. Main's build named message 284 nowhere and counted `TAG_MESSAGE_BAR_ADV
 | | The original | OpenTPW |
 |---|---|---|
 | The said byte and the cuts | the advisor thing's records, in the park file | the same, for the built messages ("The records in a park file") |
-| The kept message (`+0x16d0`, `FUN_0059ab50`) | forgotten by a withdrawal of its id | kept by nothing here |
+| The kept message (`+0x16d0`, `FUN_0059ab50`) | forgotten by a withdrawal of its id; said again on F1 (Q870) | kept by nothing here; F1 read by nothing |
 | The Tutorial option | read at each post | the same; the console's `tutorial on|off` sets it in memory |
 | The cut | `Advisor_StopSpeaking` | the same call (`Advisor.StopSpeaking`), with its cry where his voice had started |
 | The other 39 screens' lines (`0xbc` to `0xd5`, `0x11d` to `0x135`) | posted as each opens | the buy screen's `0xbc` and the hire screen's `0xbd` are ("The buy screen's own line", "The hire screen's own line"); the other 37 are not posted |
+
+## F1: the kept tutorial line said again (Q870)
+
+Decoded for `docs/QUEUE.md` Q231 in the private Ghidra copy (`q870/dump*/`) and the disassembly; the original was not
+run for it.
+
+**Two callers, one call.** A plain F1 let go (key `0x70`, no modifier) calls `FUN_005194d0` on the world
+(`[0x007cf83c]`) and `FUN_0059ab50` on the advisor it answers, from two places. With no park screen open the park
+layer's key-up (`Park_MouseMessageProc`) runs the `camera` table and then the `game` table (`0x00488947`), whose row 13
+is key `0x70`, modifier 0, handler `0x0040c800` (`lib/bindtables.py`): those two calls and `return 1`, in no Ghidra
+function, so Ghidra's references miss it. With a screen open the `game` table is off and the screens' handler
+`FUN_00488ba0` makes the same two calls itself (`0x00488bfb`) and returns; every park screen and the nine object windows
+(through `FUN_0048d200`) pass their keys to it. So F1 does one thing in a park, screen or no screen.
+
+**The kept record.** `Advisor_Post` (`FUN_0059a940`) asks `FUN_0059c500` for the message's category (its metadata row's
+`+0x08`; 10 for a row not found and for `0x15f` and `0x160`), and for category 1 copies the whole record to the
+advisor's `+0x16d0` **before the gate** (`0x0059a983`..`0x0059a995`): a raise the gate refuses (said once, cut off three
+times, the Tutorial option off, a copy already waiting) is kept all the same. Its `mValid` (`+0x16e4`) is the record's
+own `+0x14`. 86 messages are category 1 (`lib/advisorrow.py`): `0xb8` to `0xd6`, `0x10a`, `0x119` to `0x135` and `0x142`
+to `0x15a`. Three are polled (`0xb9`, `0x119`, `0x11a`); a polled winner is posted by the same call ("The poll"), so it
+is kept too. All 86 allow one copy in the slots.
+
+**`FUN_0059ab50`.** With `+0x16e4` clear it returns 0 and does nothing. Otherwise it writes the record's score
+(`+0x16e0`) as `HelpMessage.ContextHelpScore` (`DAT_00fb386c`, 1000 in the shipped `Advisor.sam`), sets its
+`mScoreOverridden` (`+0x16e6`) and its forced byte `mOverrideOnlyOnce` (`+0x16e5`), posts it (`Advisor_Post`, which
+copies it onto itself) and returns 1. The thing, the second word and the line (`+0x08`, -1 for "choose one") are the
+first raise's. Forced skips the gate's test 3 alone (`FUN_0059abc0`, `0x0059acb3` and `0x0059ad17`: the said byte and
+the cuts), so he says a line he has said once again. The Tutorial option off still refuses it (test 1), and so does the
+same line still waiting in a slot (test 4, one copy). Once in a slot it ranks at 1000 with the rest.
+
+**What forgets it.** The withdrawal of the kept id clears `+0x16e4` ("The withdrawal", above). Each park screen's
+handler withdraws its own line on its close (message `0x14`) before passing the message to `FUN_00488ba0`:
+
+| Screen (its opener) | Handler | Withdraws |
+|---|---|---|
+| buy (`FUN_004acc70`) | `BuyScreen_OnMessage` | `0xbc` |
+| hire (`FUN_0049bdd0`) | `FUN_0049b650` | `0xbd` |
+| all items (`FUN_00495aa0`) | `FUN_00495290` | `0xbf` |
+| loans (`FUN_0049fb30`) | `FUN_0049f4e0` | `0xc3` |
+| finances (`FUN_0049ac60`) | `FUN_0049a0b0` | `0xc5` |
+| park status (`FUN_004a52a0`) | `FUN_004a4830` | `0xc7` |
+| research (`ResearchScreen_Open`) | `ResearchScreen_OnMessage` | `0xc8` |
+| all staff (`FUN_00496620`) | `FUN_00495da0` | `0x11d` |
+| visitors (`FUN_00493530`) | `FUN_00493230` | `0x11e` |
+| entry price (`FUN_00498d80`) | `FUN_00498c60` | `0x12f` |
+| `FUN_004a8c00`'s screen | `FUN_004a7d70` | `0x133` |
+| staff costs (`FUN_004b2750`) | `FUN_004b24b0` | none |
+| `FUN_004b7b00`'s screen | `FUN_004b7a70` | none |
+
+So F1 over an open screen has him say that screen's line again, unless a later category-1 raise (the buy screen's own
+`0xc9` and `0xce`, a tag opened) took its place; after the close, F1 says nothing, unless the kept line was another id,
+which the close leaves standing. The kept record is written and read with the advisor thing ("The slots in a park file",
+below), so it lasts across a save. Not read: whether the object windows' own handlers withdraw a line, and whether a
+slot is emptied when its line starts (which decides whether F1 during the line is refused by test 4).
+
+**OpenTPW** keeps no record (the table above, "The kept message"), and nothing reads F1 in a park: `InputButton.Help`
+(F1) has no reader. Measured off-screen on the lane B build of `1d5be3de` (`q870/run1`): the buy screen's open logged
+`Park advisor: post message=188 ... result=queued`; F1 over it and F1 after Escape closed it logged no post in three
+seconds each, the screen standing open after the first (`windows`: `ParkBuyScreen tab 0`).
 
 ## The records in a park file (Q313)
 

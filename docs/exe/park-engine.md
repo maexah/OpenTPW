@@ -3980,7 +3980,8 @@ Closing sends the screen's handler message `0x14`, which calls `FUN_00485b70( 0 
 
 **The keys go to the screen**, whose handler is `FUN_00488ba0` for every one of them. A key down latches the
 `shortcuts` table (`0x00488c2e`). A key up: a plain Escape closes the screen (message 4 to itself, `0x00488bdd`); a
-plain F1 calls `FUN_005194d0` and `FUN_0059ab50` (`0x00488bfb`, not traced); anything else runs the `shortcuts` table
+plain F1 has the advisor say his kept tutorial line again (`FUN_005194d0`, `FUN_0059ab50`, `0x00488bfb`; with no screen
+the `game` table's row 13 does the same: `advisor-park.md`, "F1: the kept tutorial line said again"); anything else runs the `shortcuts` table
 and no other (`0x00488c13`). So with a screen open no camera key turns or scrolls the view, Backspace, Delete and F3
 (the `game` table's) do nothing, and a shortcut still works, B opening the buy screen over whatever was open.
 `FUN_00486b70`, which switches five tables off, is not part of this: its eleven callers are the message box and the
@@ -4042,9 +4043,11 @@ modifier held it does nothing (`ParkFrontEnd.MenuKey`). Where it parts from the 
 - **A click acts on its press here**, so the armed tool's click beside a screen is taken on the press, where the
   original skips the press and commits on the release.
 - **First person** leaves the screen open (`docs/QUEUE.md` Q122).
-- **F1 over a screen** and **the wheel over a screen's body** are not decoded, and neither is built or counted
-  (`docs/QUEUE.md` Q231). Over a park screen's body the wheel zooms the camera wherever the pointer is; over a modal screen it does not
-  (`hud.md`, "The wheel over a modal screen", Q930).
+- **F1** is read by nothing here, over a screen or not; the original's says the kept tutorial line again
+  (`advisor-park.md`, "F1: the kept tutorial line said again", Q870; built in `docs/QUEUE.md` Q231).
+- **The wheel over a park screen's body** zooms the camera here; the original's goes to the screen's controls and moves
+  nothing but a list or a slider under the pointer (`hud.md`, "The wheel over a park screen", Q870; Q231). Over a modal
+  screen it zooms nothing here, as in the original (`hud.md`, "The wheel over a modal screen", Q930).
 
 ### The game menu and the options screen hold the keys
 
