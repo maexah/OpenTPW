@@ -5868,9 +5868,10 @@ Lost Kingdom has 14 non-zero path cells, all corners and junctions — eleven at
 #### A queue cell's counter: what writes it, what reads it
 
 Decoded for Q896 (Q860's decode), read in the private Ghidra copy and run under unicorn: the original's own
-stamp, line walker, op passes, queue walk and clear on a made-up world (`q860/scripts/q860emu.py`, `q860/emu8/run.log`;
-predictions C1 to C6 in `q860/PREDICTION.txt`). **The 1 a queue corner holds is the queue tool's own re-stamp:
-every click's run starts on the anchor, which is already queue, so the stamp adds 1 to it.**
+stamp, line walker, op passes, queue walk and clear on a made-up world (`tools/harness/lib/queuerun.py`, `q860/emu8/run.log`;
+predictions C1 to C6 in `q860/PREDICTION.txt`). **The 1 a queue cell holds after a click is the queue tool's own re-stamp:
+every click's run starts on the anchor, which is already queue, so the stamp adds 1 to it (the walk then sets every corner 1
+too).**
 
 - **The accessors.** The cell class's three are `0x00522890` (`dec [ecx+0x20]`), `0x005228a0` (set) and
   `0x005228b0` (get). They serve both layers, the map cell (`0x44`, `[0x007cf83c] + 0x294`) and the track
@@ -5884,8 +5885,12 @@ every click's run starts on the anchor, which is already queue, so the stamp add
   clear's (`0x00536812`..`0x00536834` for a path, `0x005369ec`..`0x00536abf` for a queue), the design-map cell
   set-up `FUN_00536490` (nought, `0x0053657d`), and the save's serialiser `FUN_004d0b30`. Ghidra's sweep of
   every function that addresses map cells by `+0x294` finds a 16-bit `+0x20` access in the stamp and the clear
-  only (`q860/sweep20.txt`). Eighteen 16-bit `+0x20` accesses elsewhere in the image (`0x004642e6`,
-  `0x005f87a2`, `0x00643adc`..`0x006d6a6a`) sit in unrelated code and were not traced to their structures.
+  only (`q860/sweep20.txt`). Of the 75 other 16-bit `[reg+0x20]` operands in the image (the stored
+  disassembly), six are the track record's (Track_StampCell `0x00539031`, the record reset `FUN_0053af00` `0x0053af7f`,
+  Track_ClearCell `0x0053b388`, `0x0053b393`, `0x0053b54a`, `0x0053b582`; every caller passes `(id + 0x6cde) × 0x28`), two a
+  saved model record's (`0x004642e6`, and the loader's read at `0x00464a2f`), 45 frame slots of `[ebp+0x20]`, and 22 in
+  functions that never address the world (`0x00437500`, `0x005f87a2`, `0x00643adc`..`0x006d6a6a`). A whole-record copy is
+  not seen by this count.
 - **The stamp** `FUN_005346d0( type )`, on a cell already that type, adds 1 and answers 1 having charged
   nothing (C1: 0, then 1, then 2); on another type it writes the type and leaves the counter alone.
 - **A queue run** (the click's passes `0x87`, the stamp with type 3, `0x80`, `0x82`, `0x85`, `0x86`, `0x83`,
@@ -5902,17 +5907,20 @@ every click's run starts on the anchor, which is already queue, so the stamp add
   `0x00536999`): an unstepped call (0, 0) or a corner sets −1 (`0x005369ec`), anything else decrements
   (`0x005369f4`); under force (`DAT_0081d7a8`) the counter is zeroed and the cell removed whatever it held
   (`0x00536a07`); otherwise a counter still `>= 0` keeps the cell (`0x00536ab2`), and a negative one is zeroed
-  and the cell removed (`0x00536abf`). C4: a straight at 1 is kept at 0; a straight at 0, a corner at 1, an
+  and the cell removed (`0x00536abf`). Before the type dispatch every clear returns the cell untouched when it carries
+  the NOMODIFY bit (`0x005367d4`..`0x005367e0`, `[esi+0xe] & 0x20`) unless force is set. C4: a straight at 1 is kept at 0; a straight at 0, a corner at 1, an
   unstepped straight at 3 and a forced straight at 5 are removed; a one-link end at 1 is kept at 0. **A corner's 1
   is never read while it is a corner** (a corner is −1 whatever it holds); it counts once the cell has lost a link.
 - **What that buys is Backspace.** `FUN_0052fe50` clears the line from the last click T back to the click before
   it, P, with op `0x32` (`ClearCell`, stepped, not forced), P last. Each removed cell unlinks its neighbours, so
   when P is reached it has lost its link toward T and is no corner: its 1 becomes 0 and **P stays, the end of the
-  queue as it was before that click** (C5: B kept, mask `0x40`, the first line untouched). With P at nought,
+  queue as it was before that click** (C5: B kept, mask `0x40`, the first line untouched). In the original the apply at P is
+  skipped in mode 3 when P's cell is type 1 (`0x0052ff9a`..`0x0052ffaa`). The run applies the line (`FUN_00536100( 0x32, T -> P )`,
+  called by hand); the key's route to it is read, not run (`0x0052f340`, `0x00525f3a`, `0x00525f63`). With P at nought,
   which is what OpenTPW's lay leaves, P goes too and its own neighbour loses its bit (C6').
 
 OpenTPW: the lay's "Already queue" arm (`ParkPathBuilding`) writes no counter; `LiftQueue` (the console's
-`delqueue`) removes a queue cell whatever it holds; Backspace on a queue is `BACKSPACE_UNDO_QUEUE_RUN`, counted.
+`delqueue`, an unstepped clear) removes a queue cell whatever it holds and needs no change; Backspace on a queue is `BACKSPACE_UNDO_QUEUE_RUN`, counted.
 `QueueEnds` already writes the walk's 1 and 0. The build is Q860's.
 
 **`mFlags & 0x40` marks land outside the park** — the meaning is inferred from a census. `FUN_00536490` sets it as

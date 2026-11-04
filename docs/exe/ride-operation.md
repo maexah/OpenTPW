@@ -4838,7 +4838,7 @@ Script-frame layout used by the families below:
 | `+0x6e` | the field `BOUNCESETBASE` writes; read only by the positioner |
 | `+0x70` | bounce node base, written by `BOUNCESETNODE` |
 | `+0x7c` | walk slot count |
-| `+0xc0` | the script's **speed word**, a short the loader sets to 50 (`MOV word ptr [EBP+0xc0],0x32`); the same one `WAIT` divides by |
+| `+0xc0` | the script's **speed word**, a short the script creator sets to 50 (`MOV word ptr [EBP+0xc0],0x32`, not a park load); the same one `WAIT` divides by |
 | `+0xc8` | the script's **model** handle, `[ThingArray[+0xac].ptr+0x20]` (loader `0x00558d5e`..`0x00558d68`); the thing index is `+0xac` |
 | `+0xd0` | the held scream handle |
 
@@ -5187,7 +5187,7 @@ The family's dispatch-table handlers sit at **`0x00555e5e`** (86), **`0x00555ef7
 | `+0xc8` | — | The script's model handle, which is where the position comes from. | Disassembly |
 | `FUN_00556af0` | — | Where a scream is sounded: `( &script+0xc8, &x, &height, &z )`, two callers, `STARTSCREAM` (`0x00555ea0`) and `SINGLESCREAM` (`0x00555f5d`). With a model and a box, x and z are the box's two ends added and halved (`0x00700fd0`, 0.5) and the height is the model's base height, `[[[record + 8] + 4] + 0x78] + 0x44`; with neither, all three nought and it answers 1. Each is truncated to a whole number before `Sound_PlayEffect`. | Decompile, disassembly |
 
-**Parameter 6 is `(operand + the script's SPEED) / 2`, clamped 0..100.** `+0xc0` is not a scream field. It is the script's speed word, a short the loader sets to 50, the same one `WAIT` divides by. All three instructions READ it and none writes it. So `Bouncy`'s `STARTSCREAM VAR_TEMP, 20` gives `(20+50)/2 = 35` at the loader's speed and `(20+60)/2 = 40` at the 60 the shipped park's Belly Bounce holds (`park.md`, "What a loaded script holds"), and the zones of all four scream effects send either to **variation 2**. The first child of a chain always plays variation 1. The only reader found is the variation pick, and OpenTPW's use of it as a gain is a choice, Q43. `SCREAMLEVEL` does not write the speed field.
+**Parameter 6 is `(operand + the script's SPEED) / 2`, clamped 0..100.** `+0xc0` is not a scream field. It is the script's speed word, a short the script creator (`0x00558c3c`, not a park load) sets to 50, the same one `WAIT` divides by. All three instructions READ it and none writes it. So `Bouncy`'s `STARTSCREAM VAR_TEMP, 20` gives `(20+50)/2 = 35` at the loader's speed and `(20+60)/2 = 40` (by the decode; the original's memory not read) at the 60 the shipped park's Belly Bounce holds (`park.md`, "What a loaded script holds"), and the zones of all four scream effects send either to **variation 2**. The first child of a chain always plays variation 1. The only reader found is the variation pick, and OpenTPW's use of it as a gain is a choice, Q43. `SCREAMLEVEL` does not write the speed field.
 
 `Bouncy` passes `SINGLESCREAM VAR_ONRIDE, 65535`, and 65535 as a SHORT is **-1**, so it takes the negative branch. The handler chooses between the two at `0x00555f6b` (`CMP ESI,EDI` against a zeroed EDI, then `JGE`), so the test is on the **second** operand and `>= 0` takes the grid.
 

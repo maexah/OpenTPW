@@ -571,16 +571,17 @@ filed the items that cite it.
   Piece Q866 (ticked) ran sixteen suites (ten plain, six with the generators a lost scratch patch seeded; not every generator in the product: `ParkAudioScripts.cs:38`, `ParkAudio`, `ParkCarSounds`, `Advisor`, `LobbyAudio`, `LobbyFlyer` stood unseeded) and stored the loop; what is left is the failure itself, still unnamed. Untested: the real-clock zone under a
   machine load heavier than three suites at once. Next failure anywhere: `tools/harness/lib/suiteloop.sh OUTDIR [N]` keeps every run's output, so its file names the test.
   **One of the one-offs is named (2026-11-04):** `ScriptSoundTests.AHeldParksHeldChainMakesItsChildrenUnheardAndNoneBurstsOnResume` failed once in a full suite at `b6531222` (line 1672, "not before the newest child's time", 2 samples where 1), and passed 60 of 60 runs of `ScriptSoundTests` alone and the next full suite; the output is `~/.cache/tpw-harnesses/q942/named-2026-11-04/`. The gap is drawn from `ParkAudioScripts`' unseeded `_scriptRandom`; it is not seeded or changed yet (that is this item's own build).
-- [ ] **Q860. A queue cell's counter is written and read as the original's (decoded in Q896).** From Q153. The 1 a corner
-  holds is the queue tool's re-stamp: each click's run starts on its anchor, already queue, and the stamp `FUN_005346d0` adds 1
-  (`0x005346f5`), so the placer's node and every clicked cell (each corner, and a straight clicked part way) hold 1; the walk
-  (`FUN_00530120`, built as `QueueEnds`) then sets corners 1 and the rest 0; the one reader in play is the clear's queue arm (`park-engine.md`,
+- [ ] **Q860. A queue cell's counter is written and read as the original's (decoded in Q896).** From Q153. The 1 a queue cell
+  holds after a click is the queue tool's re-stamp: each click's run starts on its anchor, already queue, and the stamp `FUN_005346d0` adds 1
+  (`0x005346f5`), so the placer's node and every clicked cell (each corner, and a straight clicked part way) hold 1 (read from the rule, not replayed for the straights); the walk
+  (`FUN_00530120`, built as `QueueEnds`) then sets every corner 1 too and the rest 0; the one reader in play is the clear's queue arm (`park-engine.md`,
   "A queue cell's counter"). The track walks' calls of `0x5228a0` write the track record's counter, not the queue's. Build: the lay's
-  "Already queue" arm (`ParkPathBuilding`) adds 1 as the path arm does; `LiftQueue` reads the counter as the clear does (unstepped or
-  a corner -1, else one less, kept while >= 0, removed under force whatever it holds); and Backspace on a queue
+  "Already queue" arm (`ParkPathBuilding`) adds 1 as the path arm does; `LiftQueue`, an unstepped clear, needs no change (it already removes whatever it holds, as the original's -1 does); and Backspace on a queue
   (`BACKSPACE_UNDO_QUEUE_RUN`, `Level.cs`): `EditQueue` keeps the walk's pending list as the original does (`0x0081b740`), and
   Backspace (`0x0040beb3` -> `FUN_0052fe50`) clears from the last click back to the one before with the stepped clear, which
-  keeps that click's cell (it is at 1 and has lost its link). `tools/harness/lib/queuerun.py` gives the original's answer for any
+  keeps that click's cell (it is at 1 and has lost its link); the apply at P is skipped in mode 3 on a type 1 cell
+  (`0x0052ff9a`..`0x0052ffaa`), and every clear returns a NOMODIFY cell untouched unless forced (`0x005367d4`..`0x005367e0`,
+  `park-engine.md`). The run applies the Backspace line by hand; the key's route to it is read, not run. `tools/harness/lib/queuerun.py` gives the original's answer for any
   made-up run. Confirm (lane A): lay a two-click queue in both games and read the corner's counter (here `cell X Y`, there the
   saved record's `+8`, `parkfile.py`): predicted 1 before the button is pressed; press Backspace once and photograph the queue
   ending at the corner. Also: a sideshow's or feature's window, when built, must not offer the queue button.
@@ -592,11 +593,11 @@ filed the items that cite it.
   answer. `ParkScreamTests` calls the Belly Bounce's 35 "the real park's number", which holds only if its speed is 50.
   Decoded (Q897, `park.md`, "What a loaded script holds"): a load puts the record's `+0xc0` back as the file holds it,
   and the save's `mOperatingSpeed` never reaches the script (the two agree because every writer writes both); the
-  shipped park's Belly Bounce holds 60, so its screams' parameter is 40, not OpenTPW's 35, and its divisor 1.1. Keep the
-  word per script (`ParkScriptStates` already reads it; a bought thing's is its `InitSpeed` when above nought, a
-  `SPAWNCHILD` child's its parent's, the window's speed control writes it) and read it in `WAIT`, the animation
+  shipped park's Belly Bounce holds 60, so its screams' parameter is 40 (by the decode; the original's memory not read), not OpenTPW's 35, and its divisor 1.1. Keep the
+  word per script (`ParkScriptStates.Speed`, `ParkScriptStates.cs:63`, already reads it, a signed short in the exe; a bought thing's is its `InitSpeed` when above nought, a
+  `SPAWNCHILD` child's its parent's, the window's speed control and the repair's upgrade arm (`FUN_004df8f0`, `0x004dfabc`) write it) and read it in `WAIT`, the animation
   triggers and the three scream readings (`STARTSCREAM`, `SINGLESCREAM`, `SCREAMLEVEL`); `park.md`'s table names the
-  other readers (the `TOUR` record's `+0x50`, `COAST`'s ride, the bounce sine, the walk placer, the wear) - check each.
+  other readers (the `TOUR` record's `+0x50`, `COAST`'s ride, the bounce sine, the walk placer, the wear, the scheduler's bumper-ride performance `0x0055183b`) - check each.
   With a divisor of 1.1 a `WAITANIM` of a clip under 300 ms waits for weeks (`park.md`, "`WAITANIM` is NOT `TRIGANIM`
   with a wait"): look for one in `Bouncy` first. `ParkScreamTests`' "35, the real park's number" and
   `ParkAudio.ScriptSpeed`'s remark become wrong with the build. Confirm: `rides` showing the Belly Bounce's word 60

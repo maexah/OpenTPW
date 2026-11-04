@@ -673,13 +673,13 @@ So a locked region runs **atomically, unbounded by the 50-instruction slice**, u
 
 The dispatcher's prologue computes `[ESP+0x14] = DAT_00700fd0 - (short)field[+0xc0] * DAT_00700fcc`, **and that is the divisor `WAIT` FDIVs its duration by**. `DAT_00700fcc` = **-0.01**, `DAT_00700fd0` = **0.5**, so the divisor is `0.5 + 0.01 * speed`. **At the loader's speed of 50 that is exactly 1.0** — the neutral point — which is why the two 50s look like one thing and are not.
 
-**Two 50s that are NOT the same field, and must not be conflated:** the header's time slice is `field[0x25]` (`+0x94`), while `field[0x30]` (byte offset `0xc0`) is the speed the loader sets to 50 itself.
+**Two 50s that are NOT the same field, and must not be conflated:** the header's time slice is `field[0x25]` (`+0x94`), while `field[0x30]` (byte offset `0xc0`) is the speed the script creator sets to 50 itself (`0x00558c3c`; not a park load).
 
 **Three writers of the speed word `+0xc0`, and only two are inside the RSSE subsystem:**
 
 | Address | What writes it |
 |---|---|
-| `0x00558c3c` | the loader, `MOV word ptr [EBP+0xc0],0x32` — the hardcoded 50 |
+| `0x00558c3c` | the script creator (not a park load), `MOV word ptr [EBP+0xc0],0x32` — the hardcoded 50 |
 | `0x00551888` | the scheduler, copying it into the linked script named by field 3 |
 | `0x0055a30d` | `FUN_0055a300(frame, value)`, a plain setter, called from **outside the RSSE subsystem**: the object constructor `FUN_004db090` at `0x004db534` finds the script by the id it has just stored at the thing's `+0x24` and pushes the item's own operating speed in, logging `SPEED = %d` |
 
@@ -726,10 +726,10 @@ Bounce (thing 13, item 1100, script 3) holds **60**, play rate 1000, its `mOpera
 hold 50 over an `mOperatingSpeed` of nought. Alexah's three Full Simulation saves (296 objects): every word equals a
 non-zero `mOperatingSpeed` (60; the Belly Bounce 75, the Minecart 80) and is 50 elsewhere; the Mumbo, Pork Pie and TV
 Sim children hold their parents' 60, and the four records bound to no thing 50. So the shipped park's Belly Bounce
-runs at the divisor 1.1, and its screams' parameter is `(20 + 60) / 2` = **40**, where OpenTPW's constant 50 gives 35
+runs at the divisor 1.1, and its screams' parameter is `(20 + 60) / 2` = **40** (by the decode; the original's memory not read), where OpenTPW's constant 50 gives 35
 (`q155/run2/`: 15 starts of script 3 in 60 s, each `parameter 35`, the census's `level 20`).
 
-**Every reader of the word** (each `movsx` of `+0xc0` from `0x00551000` to `0x0055b000`; the dispatcher's table at
+**Every reader of the word** (each 16-bit read of `+0xc0` from `0x00551000` to `0x0055b000`; the dispatcher's table at
 `0x005567d8` is indexed by the opcode):
 
 | Where | What it does with the word |

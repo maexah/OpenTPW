@@ -44,17 +44,6 @@ Only the item just landed is here. Every earlier item's account is in `docs/hist
 
 - **Q898 (Q156's decode: what `FUN_0066d885`'s two sub-objects paint on the all-staff meters; `q898/PREDICTION.txt`: E1 to E5 and G1 to G3 held):** a decode, nothing of the game changed. Run: the original's own meter setter and stat-bar handler under unicorn on a made-up meter (`q898/emu.py`, `q898/emu1/run.log`); this game off-screen on `q369/skill.TPWS` with the build of `990dc2b4` (`q898/run1/1-handymen.png`, `Staff list: kind 0, 1 rows rewritten, meters 881/896`, the meters split at 0.859 and 0.876, the top and bottom rows alike). Read, not run: that the stream and the opener give the meters no mesh (`uistream.py`, the objdump, checked in the private Ghidra copy, `q898/gd/`). Not run: the original itself (lane B has none); its frame is Q369's (`q369/orig/b-1-handymen.png`), read again, not taken again. Q156 has nothing left to build and waits on the maintainer's close.
 
-
-
-
-
-
-
-
-
-
-
-
 ## Numbers (take counts fresh; these go stale within a day)
 
 - Linux, 2026-11-04, Q898 (`capped.sh`; a decode, no code of the game changed since Q886): with the game, 4865 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 4867; with no game named, 2018 passed, 0 failed, 2849 skipped.
