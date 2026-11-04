@@ -737,13 +737,13 @@ public class HotPotScriptTests
 [TestClass]
 public class KartScriptBump5Tests
 {
-	private RideScript Script( int trackRideValid )
+	private RideScript Script( int trackRideValid, int trackRide = 0x104 )
 	{
 		using var stream = GameData.Required().OpenRead( "levels/jungle/rides/gokarts/GoKarts.RSE" );
 
 		var script = new RideScript( new RideScriptFile( stream ) )
 		{
-			TrackRide = 0x104,
+			TrackRide = trackRide,
 			TrackRideValid = trackRideValid
 		};
 
@@ -778,5 +778,21 @@ public class KartScriptBump5Tests
 		Assert.IsTrue( past > 18, $"a closed loop lets it past, it reached {past}" );
 		Assert.IsFalse( Unimplemented.Summary.Any( entry => entry.What.EndsWith( "BUMP at 15" ) || entry.What.EndsWith( "BUMP at 26" ) ),
 			"BUMP 5 is answered, not counted as a no-op" );
+	}
+
+	[TestMethod]
+	public void Bump5NeedsNoTrackHandle()
+	{
+		// The exe's arm (0x00554836) tests no handle: a thing with TrackRide 0 answers selector 5 as well.
+		var open = Script( 0, 0 );
+		var closed = Script( 1, 0 );
+
+		Unimplemented.Forget();
+
+		var stuck = Run( open );
+		var past = Run( closed );
+
+		Assert.IsTrue( stuck <= 18, $"an open loop holds the script in words 15 to 18, it reached {stuck}" );
+		Assert.IsTrue( past > 18, $"a closed loop lets it past with no handle, it reached {past}" );
 	}
 }

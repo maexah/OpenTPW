@@ -337,7 +337,7 @@ filed the items that cite it.
     admits a guest; the original given the saved file runs on past it (`q939/run3`, `orig3/scripts.log`). Like Q448's BUMP 17 it
     reads the thing, not a record, so it can be answered before the race (Splish Splash's is word 20, past its closed test at 8).
     Q993 (2)'s spin at word 15 is the same loop.
-  - **Note (Q883's run, `q883/fix2.out`):** with `BUMP 5` answered, a bought Dino Karts' script admits the queue's guests (`VAR_ONRIDE` 1 to 3 at 40 s, `VAR_LETMEON` taken) and the five guests sent are then `Riding dest 43` for the rest of the run, with no kart car to seat or return them: the script's `BUMP 1`, `4`, `2`, `3`, `14` (words 74, 79, 142, 189, 106, 109) and `BUMP 7` (20, 45) are counted no-ops here. That is this item's build, and it now holds the guests aboard instead of in the queue.
+  - **Note (Q883's run, `q883/fix2.out`):** with `BUMP 5` answered, a bought Dino Karts' script admits the queue's guests (`VAR_ONRIDE` 1 to 3 at 40 s, `VAR_LETMEON` taken: `fix.out` reads 0 and `fix2.out` 31) and the five guests sent are then `Riding dest 43` for the rest of the run, with no kart car to seat or return them: the script's `BUMP 1`, `4`, `2`, `3`, `14` (words 74, 79, 142, 189, 106, 109) and `BUMP 7` (20, 45) are counted no-ops here. That is this item's build, and it now holds the guests aboard instead of in the queue.
   - **Note (fork watch 2026-10-21, verify-world-other L6):** a loaded ride gets the race's first buoy back from the track-ride
     loader's close chunk, type 6 (`0x00543928`, `saves.md`, "The close"): for BumperType -4 (this ride), after the handle check, it walks
     the buoy chain from `+0xa8` to the first buoy after the start buoy (flag 4) not flagged 2, wrapping, into `+0xa4`. Build that
@@ -360,7 +360,7 @@ filed the items that cite it.
   the race, one lap, removed at the unload point with the ride left at 2, and the boat's spin (`+0x58` moved at a rim or
   an obstacle: p, ±48 × a term not read, when the old spin has p's sign, else old + p; × 0.998 a tick, turn `+0x58 / 128`; the term the contact sets is not read). Confirm against
   `q581/orig/D-track.log` and `D2-track.log` and a frame of a ring in the channel (`D-13-boats.png`). Moves the
-  website's rides list.
+  website's rides list. Splish Splash's `BUMP 5` at word 20 is now answered too (Q883, from `mIsTrackRideValid`); it was not run.
   - **Note (fork watch 2026-10-21, verify-world-other L6):** as Q588's: BumperType -5 takes the same close-chunk arm
     (`0x00543928`, `saves.md`, "The close"), the race's first buoy into `+0xa4` for a ride loaded open.
   - **Note (fork watch 2026-10-25, verify-all.md N2; corrected fork watch 2026-10-28, verify-world C1):** as Q588's: the water kit's pieces (`0x10422` at `0x00522cde`) carry the run-time flag `0x80`

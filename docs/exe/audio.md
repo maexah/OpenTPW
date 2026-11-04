@@ -630,7 +630,7 @@ voices, the crowd's, the park music's, a script's plain and music sounds (the En
 (`cat_ui` 154 and 155). Each voice's later samples ask (`0x006bde33`) and its first does not (`0x006bbfe3`); the voice
 keeps its own last pick (`SoundCategory.PickFrom( ..., ref last, avoidRepeat )`), as the lobby's music does (Q723). The
 land's following voices never reach the step: the global ambient's effects 2 and 3 hold no list of more than two samples
-(one list of two, and three lists of one), so it is dead by CONTENT for them.
+(one list of two, and three lists of one), so it is dead by CONTENT for them. So are the weather's two rain voices (global ambient 33, the music class: four lists of one sample), which draw through `PickFrom( id, variation )` with no pick kept.
 
 **The sample draw, `FUN_006bc680( voice, avoidRepeat )`** (read from the stored dump of the same program; upstream look
 2026-10-19, `verify-sound-ui.md`, "The music roll rule"). A variation with no samples gives none; a variation with one

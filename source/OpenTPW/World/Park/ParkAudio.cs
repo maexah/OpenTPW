@@ -729,6 +729,7 @@ public sealed partial class ParkAudio : Entity
 		if ( first )
 			rain.Volume = Controlled( headers[next], 1, RainParameter, rain.Level, _rainRandom );
 
+		// The rain voices are the music class (docs/exe/audio.md); global ambient 33 holds lists of one sample, so no pick is kept.
 		rain.Voice = Audio.Play( _ambient.PickFrom( RainEffect, next ), ChannelGain( rain.Volume ), bus: AudioBus.Effects );
 
 		if ( rain.Voice is null )
