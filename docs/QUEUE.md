@@ -1031,17 +1031,14 @@ filed the items that cite it.
   channel is held (`q763/probe`: frame 0.0, flags 0x2, the water ride alone). The original draws the hut over the
   station (`q587/orig/W-8-closed.png`). Read which clip shows and places `wr_hut` and what starts it, then compare its
   place and time with the original's frames.
-- [ ] **Q569. Where the original puts down a worker held at a save, decode first.** From the run 6 review of Q241j (VERIFY-3,
-  "anything the first reader missed"; unsettled). The world writer installs the idle mode over the hand
-  (`FUN_0046c350` at `0x00516d13`), which runs the outgoing mode's uninstall: for a worker picked up, the type-6
-  mode's vtable `+0x2c`. Ours puts them back on the middle of the cell they stand in, the one they were picked up
-  from (`ParkHand.LetGo` -> `ParkPeople.PutBack` -> `DropStaff`), and writes them there. Neither `docs/exe/` nor the
-  commit shows that the original does the same (`PutBack`'s comment names `0x0046cdc0` as that uninstall, unshown). Decode the type-6 mode's `+0x2c` in Ghidra (vtable `0x006fea70`):
-  where the worker goes (their pick-up cell, the cell under the pointer, or left where they hung), whether they are
-  set idle and whether a mechanic goes to his job search there too. Write it in `docs/exe/park-engine.md`, "The
-  hand's ways out", and only then change `PutBack` if it differs. Confirm: the original under Proton saving with a
-  worker in the hand, read back with `parkfile.py` (their position and state), against ours
-  (`ParkSaveScreenTests.AWorkerInTheHandIsPutDownBeforeTheParkIsWritten` holds ours).
+- [ ] **Q569. Where the original puts down a worker held at a save: measure it in the original (decoded in Q874).** From
+  the run 6 review of Q241j (VERIFY-3). Q874 read `0x0046cdc0` (`park-engine.md`, "The hand's ways out", "A worker held
+  at a save"): the worker goes to the middle of their pickup cell, idle with `mTimeStartedIdling` 0, every kind but the
+  mechanic (Q60), which is what ours writes (`ParkPeople.PutBack`), so nothing is to be built. Confirm in the original
+  under Proton: a guard picked up from the staff window's PICK UP while walking, the park saved from the menu with him in
+  the hand, read back with `parkfile.py` (his `mX`, `mY` against his cell before the pickup, `mState` 0,
+  `mTimeStartedIdling` 0, thing 1's `mStaffMemberPickedUp` 0), predicted first, against ours
+  (`ParkSaveScreenTests.AWorkerInTheHandIsPutDownBeforeTheParkIsWritten`, `q874/run1`).
 - [ ] **Q571. What the original's autosave holds when its window is closed under the End.** From the run 6 review of Q552
   (`handoff/review6/VERIFY-12.md`, Q552 3). Ours writes `autosave.TPWS` on a window close with the End up
   (`Game.cs` -> `Level.WriteParkOnLeaving`), with no End in it and its two scripts not written
@@ -2853,6 +2850,10 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   job search runs there and then (`FUN_004da5b0`); here a mechanic goes idle like the rest, counted as
   `MECHANIC_PUT_DOWN_JOB_SEARCH`. Decode whether idle here reaches the same search a tick later, and what differs.
   Confirm: pick up a mechanic, put them down, `staff` on the next few ticks.
+  - **Note (Q874):** `FUN_004dad20` clears more than his own claims: it walks the whole object chain and zeroes the
+    assigned member of every object broken down, calling or waiting for an upgrade, whoever held it, with no toilet
+    test, and reads neither argument (`park-engine.md`, "A worker held at a save"). The same runs when a mechanic held
+    at a save is put back.
 - [ ] **Q61. The park-entry fly-in darkens the screen, and nothing here draws it.** Found by Q41's decode
   (`docs/exe/lobby.md`, "Escape cancels the fly-in"). State 2 sets the render camera's `+0x60` to
   `clamp( (1 - (r - 8) / (SPINRADIUS - 8)) x 65536, 0, 65535 )` (`0x005e052f`), states 0 and 1 set it to 0, and

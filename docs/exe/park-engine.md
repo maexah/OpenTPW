@@ -3932,6 +3932,31 @@ uninstall that install runs finds no worker (Q869). The uninstall (`0x0046cdc0`)
 then goes to state 0 **except the mechanic, whose job search runs at once** (`FUN_004da5b0`). The right-button
 slots are `RET 8`.
 
+**A worker held at a save** (decoded for `docs/QUEUE.md` Q874, Q569's decode, first-hand in a private copy of the
+project). The world writer builds the idle mode (`0x00516cc9`, vtable `0x006fea10`) and installs it (`0x00516d13`)
+before it writes anything, and the setter calls the outgoing mode's `+0x2c` (`0x0046c378`). For a worker in the hand
+that slot is `0x0046cdc0` (the vtable's word at `0x006fea9c`, its only reference). It frees the carried figure at the
+mode's `+8` (made by the install `+0x28`, `0x0046cbf0`: pointer 9 and `WorldSprite_Create` with the bank and the
+costume). It logs the line above and computes the cell from the worker thing's own position, byte `+7` × 128 + byte
+`+5` + 1 (`0x0046ce38`..`0x0046ce51`), then hands it to `FUN_00509af0` (`0x0046ce6c`). That cell is the one they were
+picked up in. The pickup (`FUN_00505c50`) writes only the hand's `+0x60` and `SetState( 7 )`. Case 7 frees the sprite
+and the bubble and installs this mode, and writes no position. Each kind's tick (handyman `FUN_004d73c0`, mechanic
+`FUN_004da490`, entertainer `FUN_004d4810`, guard `FUN_004d6410`, researcher `FUN_005029f0`) sends state 7 to the
+shared arm `FUN_005056e0`, whose case 7 returns at once (`0x0050577b`). The body puts them on the cell's middle,
+`0x80` in each low byte (`0x00505ec8`..`0x00505ee7`, set through `FUN_004fa930`), and makes the sprite again
+(`FUN_004d4140( 3, ... )`, `0x00505f05`). Every kind but the mechanic then takes `SetState( 0 )`, whose stamp is
+nought from state 7 (`0x00505542`) and its hurry nought (`0x00505555`), and `+0x200` is written nought again
+(`0x00505f3a`). The hand's `+0x60` is zeroed last (`0x00509b34`). So the file holds the worker idle on the middle of
+their pickup cell, with `mTimeStartedIdling` 0 and `mStaffMemberPickedUp` 0. **The mechanic** (kind byte `+2` = 4,
+`0x00505f0a`) is not set idle there. `FUN_004dad20` (`0x00505f1f`; it reads neither of its two arguments, `RET 8`)
+walks the whole object chain (`mFirstObject`). For every object broken down, calling or waiting for an upgrade
+(`FUN_004e0370`, `FUN_004e03d0`, `FUN_004e03e0`; no toilet test, unlike the search) whose assigned member
+(`FUN_004e0220`) is anyone, it clears that claim (`FUN_004e0210`: `+0x5e` and `+0x60` nought), whoever held it. Then
+his decide `FUN_004da5b0` runs in the same call ("The mechanic's search", `ride-operation.md`), and the file holds the
+state it chose. A mechanic on his way to a ride whose claim was cleared drops it at his next step and decides again
+("UNUSUAL INCIDENT", state `0xc`), and may pick the same ride. The same body runs at a drop (`0x0046cce5`), so all of
+this holds for a put-down by the pointer as well.
+
 The thing at world `+0x1da718` is `mStaffHQ`, thing 1 (`FUN_00519450`; `ride-operation.md`, "The strike"), whose
 `+0x60` the save names `mStaffMemberPickedUp`.
 **Measured** (Q432, `q432/orig/run.sh`, the staff window's PICK UP on the stock park's mechanic): `+0x60` read
@@ -3939,7 +3964,7 @@ The thing at world `+0x1da718` is `mStaffHQ`, thing 1 (`FUN_00519450`; `ride-ope
 then 1 after the drop. The dismissal (`FUN_00505790`) installs the idle mode first where the current mode is type 6
 (`0x00505830`), so a carried worker is put back before anyone is fired.
 
-**Open.** Whether anything moves a carried worker (a carried
+**Open.** Whether anything outside the tick moves a carried worker (the tick does not, above; a carried
 mechanic or handyman whose ride or toilet is deleted leaves state 7 by message 10 and can then walk; whether
 anything deletes one while a worker is carried without first changing the mode is not traced); what sends the park
 window message `0x15`, which also disarms the click.
@@ -3951,8 +3976,12 @@ Delete key (`Level.ClearKey`) - lets go first; a quick right click (`Level.Right
 on its release (`ParkFrontEnd.MenuKey`) and leaving the park (`Level.ForgetPark`, before anything in the park is deleted) let go
 and nothing more; and a sale lets go when no item is held and no build tool armed, as the demolisher's restore of
 tool 0 does (`0x0052818d`).
-`ParkPeople.PutBack` puts a worker down in their own cell through the drop. **Not the original's**: the rotation is not the one
-global, so a purchase always starts at nought; and a mechanic put down goes idle (`MECHANIC_PUT_DOWN_JOB_SEARCH`).
+`ParkPeople.PutBack` puts a worker down in their own cell through the drop. That is the original's rule for every kind
+but the mechanic (Q874). Seen off-screen (`q874/run1`, the stock park): guard 28, held while walking at (41.654,
+28.480), was saved as Idle at (41.5, 28.5). The file reads `mX` 10624, `mY` 7296, `mState` 0, `mTimeStartedIdling` 0
+and thing 1's `mStaffMemberPickedUp` 0. **Not the original's**: the rotation is not the one global, so a purchase always
+starts at nought. A mechanic put down goes idle (`MECHANIC_PUT_DOWN_JOB_SEARCH`, Q60), and the rides' claims are not
+cleared: in the same run mechanic 26 was saved in `mState` 0, and the gap counted 1.
 
 ### A park screen is open
 

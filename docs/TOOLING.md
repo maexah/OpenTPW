@@ -618,6 +618,14 @@ Each was found by trial in the item named, and cost a run to find.
   after the resume's line count, since the guard leaves idle on 763 before the pickup too. Leave the pointer there and
   the walking guard comes back under it (stopped on 771); `move( 300, 450 )` first takes it off him.
 
+- **A worker held at a save, read from the file** (Q874, `q874/run1.py`, off-screen): `enter()`, about 6 s run, `pause`;
+  pick from the `staff` census a walker off the middle of their cell (guard 28 walks there; the mechanic is model 4,
+  thing 26), `pickup N`, then `save()`. The log says "Save: the idle mode is installed before the park is written: put
+  thing N back down at (x,y)". In the file (`pk.Park`, `p.at( N )`) a staff record's `mX` and `mY` are the u16s at `+8`
+  and `+10` (the cell in the high byte, `0x80` its middle), `mState` the int at `+483`, `mTimeStartedIdling` at `+487`,
+  and thing 1's `mStaffMemberPickedUp` the u16 at `+20` (FileFormats `saves.md`). A second save in the same run takes
+  another name through `own_file`.
+
 - **The pointer over a ride, a shop and a queue in either game** (Q478, `q478/confirm.py`, `q478/orig/run.sh`): the
   stock park at camera (480,265) 130 180 (`bothcam`); here `parkscene.find_cell` finds the queue (50,22), the Belly
   Bounce (52,24) and the Drinks Shop (43,31), a real move, then `pointer` (cursor, row and text) and the log's `Park:
