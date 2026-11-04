@@ -566,6 +566,13 @@ public sealed class ParkObjects : Entity
 	/// for a thing stood on the land (<c>FUN_00463060</c>'s flag <c>0x8</c>) where the compositor is on and the loader built
 	/// the item's footprint table: a model exported with a procedural base (header <c>0x8</c>), loaded with its picture, and a
 	/// floor found (or the header's <c>0x80</c>, every cell, on the root). None elsewhere, where the floor draws its own texture.
+	///
+	/// <para>
+	/// <b>A deviation at the load:</b> the original stamps a saved thing through <c>RideSystem_LoadModels</c>' record word
+	/// (<c>0x00464942</c>, its <c>+0x15</c>) and only where that word carries <c>0x8</c>; this stamps every placed thing that has a
+	/// floor, whatever the saved word says. They agree on the New Save (437 cells each); the items whose saved records never carry
+	/// <c>0x8</c> in the park files on this machine are not compared (<c>docs/QUEUE.md</c> Q885).
+	/// </para>
 	/// </summary>
 	private static IReadOnlyDictionary<uint, Texture> BlendFloor( ModelFile file, ParkItemCatalogue.Item item, int angle,
 		(int Left, int Top, int Right, int Bottom) footprint, string shared, List<Texture> made, out int cells, List<(int X, int Y)> stamped )
