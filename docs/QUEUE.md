@@ -199,6 +199,14 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   put-off, yawn and till on raised ground in ours (the stock park's guests walk on flat ground, where the two builds agree); the code is the
   staff's (`Heard`), the tests are `HeardIn`'s.
 - [ ] **Q946. A person's first step from the entry and from the exit, and the stand point's consumer.** From Q945; its exit-point piece is Q873 (done). Left: (1) the board step routes a guest to the stand point (`FUN_004dedf0( 0 )`, then `FUN_004fa5f0`, state 13, `ride-operation.md`, "The boarding chain, end to end"); ours sends them at the entry cell (`PeepBehaviour.SendTo`) and nothing reads `ParkItemCatalogue.Item.StandPointBytes`, which is built and pinned and unused; build the target from it once (2) is measured. (2) Measure a rider's first step from the entry and from the exit in both games (the first sprite place after the put-down and after the board, polled in the original under Proton, `puffpoll.py`'s sprite table; the same in ours): the original's side needs the original running. (3) The Spray and the Kiosk's till (Q611) is read at the put-down's place, which is now the item's point, not the cell's middle: Q611's numbers ((525, 305) at the Spray, (435, 305) at the Kiosk in ours) have moved with it, re-take them before building Q611.
+- [ ] **Q1040. The x87 precision word at the exit point's byte (`FUN_004dedf0`).** From the run 21 review of Q873 (group A). Read the control word live in the running original
+  at `0x004df0ae` (`watch.sh`/gdb under Proton, `p $fctrl`, bits 8-9). `ParkRidePoint.Bytes` keeps 1 - f in doubles for the
+  270 path and 180's first slot (the register, not stored); the 90/180 second slot is already the float store
+  (`0x004df0dc`, `0x004df119`). If the word is 24-bit (`FUN_00591220` sets it for the renderer; `SetCooperativeLevel` is
+  pushed `DDSCL_FPUSETUP`), 0.2 and 0.4 at 270 and in 180's first slot give 204 and 153, not 203 and 152 (Burger Shop and
+  Fries at 180, the Ice Cream's Y at 270): change `Bytes` to cut them to float too, pin 270 and 180 (0.4f first slot) in
+  `ParkRidePointTests`, and put it back to see them fail. If it is 53 or 64, say so in `ride-operation.md` and drop the
+  remark at the site.
 - [ ] **Q802. What Q800 left for a person or a machine it did not have.** From Q800 (run 13, lane A). Done by the
   coordinator (2026-10-29): `opentpw.maintainer` set in `~/repos/OpenTPW-laneB`, and the Saturday audit runs
   `python3 tools/check_docs_paths.py`. The Linux quick start is marked "tested on the maintainer's Linux machine only"

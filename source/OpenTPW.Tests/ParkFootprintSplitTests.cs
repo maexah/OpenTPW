@@ -481,8 +481,8 @@ public class ParkFootprintSplitTests
 
 	/// <summary>
 	/// <b>Lifting a path gives back the stamp a queue piece left under it</b>: the clear ends in a retile of the cell as ground
-	/// (<c>FUN_005367a0</c>, <c>FUN_005346d0( 0 )</c> then <c>FUN_005365d0</c>), which copies the load's word. A path cell the load flagged and
-	/// nothing stamped has nothing to get back, and one the clear refuses (its counter above nought) keeps what it has.
+	/// (<c>FUN_005367a0</c>, <c>FUN_005346d0( 0 )</c> then <c>FUN_005365d0</c>), which copies the load's word. A path cell the
+	/// clear refuses (its counter above nought) keeps what it has.
 	/// </summary>
 	/// <remarks><b>Mutation:</b> the <c>UnstampSplit</c> in <see cref="ParkPathBuilding.ClearPathCell"/> removed fails here.</remarks>
 	[TestMethod]

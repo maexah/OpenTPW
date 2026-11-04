@@ -16,17 +16,19 @@ public static class ParkRidePoint
 	/// </summary>
 	/// <remarks>
 	/// The original also logs "Dodgy X exit point in SAM file" for a fraction not above 0 and below 1 (<c>0x004dee3d</c>..)
-	/// and goes on; no queued item of the four themes trips it (the census test), and the log is not reproduced. The
-	/// arithmetic is in doubles, which is what the x87 does at the 53-bit precision a Windows program runs at; the census
-	/// test pins that no shipped fraction comes within a double's rounding of a whole byte.
+	/// and goes on; no queued item of the four themes trips it (the census test), and the log is not reproduced. The second
+	/// slot's 1 - f at 90 and 180 is stored as a 32-bit float before the multiply (<c>0x004df0dc</c>, <c>0x004df119</c>), so
+	/// it is cut to a float here (0.2 gives 204 and 0.4 gives 153). The 270 path and 180's first slot keep 1 - f in the x87
+	/// register, whose precision word is unsettled (<c>docs/exe/ride-operation.md</c>, "Leaving a ride"): they are done in
+	/// doubles here, which is wrong by one byte at 0.2 and 0.4 if the word is 24-bit.
 	/// </remarks>
 	public static (byte X, byte Y) Bytes( float x, float y, int angle )
 	{
 		var (first, second) = angle switch
 		{
 			0 => ((double)x, (double)y),
-			90 => ((double)y, 1.0 - x),
-			180 => (1.0 - x, 1.0 - y),
+			90 => ((double)y, (double)(1f - x)),
+			180 => (1.0 - x, (double)(1f - y)),
 			270 => (1.0 - y, (double)x),
 			_ => ((double)x, (double)x)
 		};

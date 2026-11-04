@@ -33,6 +33,12 @@ public class ParkRidePointTests
 		Assert.AreEqual( ((byte)127, (byte)229 ), ParkRidePoint.Bytes( 0.5f, 0.1f, 180 ) );
 		Assert.AreEqual( ((byte)229, (byte)127 ), ParkRidePoint.Bytes( 0.5f, 0.1f, 270 ) );
 
+		// The second slot's 1 - f is stored as a float before the multiply at 90 and 180 (0x004df0dc, 0x004df119): in
+		// doubles 1 - 0.2f and 1 - 0.4f would give 203 and 152.
+		Assert.AreEqual( ((byte)127, (byte)153), ParkRidePoint.Bytes( 0.4f, 0.5f, 90 ) );
+		Assert.AreEqual( ((byte)127, (byte)204), ParkRidePoint.Bytes( 0.2f, 0.5f, 90 ) );
+		Assert.AreEqual( ((byte)127, (byte)153), ParkRidePoint.Bytes( 0.5f, 0.4f, 180 ) );
+
 		Assert.AreEqual( ((byte)76, (byte)76), ParkRidePoint.Bytes( 0.3f, 0.9f, 45 ), "an angle off the four leaves x in both" );
 		Assert.AreEqual( ((byte)76, (byte)229), ParkRidePoint.Bytes( 0.3f, 0.9f, 0 ) );
 		Assert.AreEqual( ((byte)229, (byte)178), ParkRidePoint.Bytes( 0.3f, 0.9f, 90 ), "(y, 1 - x) = (0.9, 0.7)" );
@@ -92,7 +98,8 @@ public class ParkRidePointTests
 				pairs[key] = pairs.GetValueOrDefault( key ) + 1;
 
 				// Both the 53-bit and the 64-bit x87 cut the product the same way unless it is within a double's rounding of a
-				// whole byte; 0.2 is 51.0000007 and is nowhere near that.
+				// whole byte (1 - 0.2 and 1 - 0.4 are 204 and 153 less a few millionths, the ones the float store at 90 and 180
+				// decides: the pinned bytes above).
 				foreach ( var f in new[] { item.ExitCellAppearPosX, item.ExitCellAppearPosY, item.EntryCellStandPosX, item.EntryCellStandPosY } )
 					foreach ( var g in new[] { (double)f, 1.0 - f } )
 					{

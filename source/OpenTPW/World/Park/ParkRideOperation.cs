@@ -470,8 +470,8 @@ public sealed class ParkRideOperation
 	internal static void PutDownAtTheExit( Peep peep, PeepWalk walk, ParkWorld.CatalogueObject ride,
 		ParkItemCatalogue.Item? item, IParkInitialState? park )
 	{
-		// A caller with no catalogue names no item, so no point to read: the cell's middle, the Rides.sam default
-		// (a deviation, for the tests that ask about the state change rather than the geography).
+		// A caller with no catalogue names no item, so no point to read: the cell's middle, 128 (Rides.sam's
+		// 0.5 gives 127; a deviation, for the tests that ask about the state change rather than the geography).
 		var (subX, subY) = item is { } known ? known.ExitPointBytes( ride.Angle ) : ((byte)128, (byte)128);
 
 		peep.Navigator.Position = new FixedVector(
