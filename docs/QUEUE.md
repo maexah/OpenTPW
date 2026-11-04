@@ -84,6 +84,14 @@ meets first, found on a Windows 11 PC by a Remote Control session, jobs w1 to w4
 `C:\Users\alexa\tpw-work`): Q976, Q978, Q981, Q979, Q980, Q982, Q977, in that order; then the blocks below. A
 confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
 
+- [ ] **Q883. A bought Dino Karts never lets a guest on: answer `BUMP 5` without a bumper record.** (From Q939's review,
+  run 19; Alexah put it near the top, 2026-11-03.) `RideScript.Bump` returns at its no-record test before the selector, so
+  `BUMP 5` (`0x00554836`: the ride object's `+0x2c`, `mIsTrackRideValid`, no bumper record read) is never answered and a bought
+  kart loops at `GoKarts.RSE` words 15 to 18 from its first tick. Answer selector 5 from the ride object, as the original does,
+  then run a bought Dino Karts with its loop closed and its queue joined in both games (`kartload.py`, TOOLING "A bought kart or
+  water ride saved and loaded, in both games") and see a guest board. The detail and Splish Splash's own `BUMP 5` at word 20 are
+  Q588's run-19 note; Q993 (2)'s spin at word 15 is the same loop.
+
 - [ ] **Q944. A UITEXT row read as its first part alone loses the words after its parameter.** (From Q865's second reader.)
   `StringFile.Entries` holds a row's first text part only (`Parts` holds all). Swept over `UITEXT.str` and `UIHELPTEXT.str`: the rows
   whose text follows a parameter are 29, 30 (`UpgradeToLevel`, `CancelLevel`), 181 to 183 (the loan boxes), 205, 213, 215, 399, 428 and 429
@@ -330,7 +338,7 @@ filed the items that cite it.
   (`FUN_00549c60`), a kart's height over the track. Confirm against `q581/orig/C-track.log` (the grid, 9 to 16 and 8,
   the timer -3 to 0, state 3, the next kart at the centre) and a frame of a kart on the track (`C-4-race.png`). Moves the
   website's rides list.
-  - **Note (run 19 review, q939 finding 1):** `BUMP 5` (`0x00554836`: the object's `+0x2c`, `mIsTrackRideValid`, into the
+  - **Note (run 19 review, q939 finding 1):** (The build is Q883.) `BUMP 5` (`0x00554836`: the object's `+0x2c`, `mIsTrackRideValid`, into the
     register; the object from `0x4cd300`, no bumper record) is not answered for a kart or water ride here: `RideScript.Bump`
     returns at its no-record test before the selector, so a bought Dino Karts with its loop closed and its queue joined loops at
     `GoKarts.RSE` words 15 to 18 (`BUMP 5, 0`, `BRANCH_Z ->15`) from its first tick, counted `Go Kart: BUMP at 15`, and never
