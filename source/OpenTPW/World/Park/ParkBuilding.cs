@@ -177,10 +177,9 @@ public static class ParkBuilding
 		{
 			Stamp( state, ParkObjects.CoveredCells( item, cellX, cellY, angle ), cellX, cellY );
 
-			// The tile pass after the stamp, as the load's: a table cell the map holds as ground is put back to it (read in the
-			// load's live map). The original's purchases run so far gave nothing back (Q886, Q888); the rock's save shows the
-			// purchase typed its whole table, so a pass would find nothing. Whether a purchase runs the pass at all is not read (Q889).
-			objects?.RetileGround( thingId, ( x, y ) => state.Record( x, y ).Type );
+			// No tile pass follows the stamp: the placer retiles only the cells its picture marks (type 4 gives tile 8, which gives
+			// nothing back), and the tile that gives a ground cell its word back (set 0, tile 55) is reached by the load's walk
+			// over every cell, a sale's reset and a link pass on a neighbour, not by a purchase (docs/exe/park-engine.md, "A purchase runs no tile pass over the table's cells", Q890).
 		}
 
 		// And onto its anchor cell's own list, which is the ONE cell the save puts a placed thing on -

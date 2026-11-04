@@ -323,7 +323,7 @@ public sealed class ParkObjects : Entity
 	}
 
 	/// <summary>
-	/// The tile pass over a thing's stamped cells, which runs after the stamp: a cell whose map type is 0 or 5 is retiled with set 0,
+	/// The load's tile pass over a thing's stamped cells (a purchase runs none, Q890): a cell whose map type is 0 or 5 is retiled with set 0,
 	/// tile 55 (<c>FUN_005365d0</c>, <c>0x005365da</c>..<c>0x005365f3</c>, "The tile rule is two tables"), and <c>FUN_0046df50</c> copies its word from the private copy, so
 	/// it ends unstamped and takes the load's split flag again (the New Save's Staff Room at (42,23): its model covers (41,23) and
 	/// (42,23), which the file holds as type 0, and the live map has no <c>0x200</c> there). Answers how many cells it gave back.

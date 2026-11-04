@@ -531,16 +531,18 @@ public class ParkFootprintSplitTests
 	}
 
 	/// <summary>
-	/// <b>A purchase of the Huge Hollow Rock types the model's cells, and its tile pass has none to give back</b>: the rock's model
+	/// <b>A purchase of the Huge Hollow Rock types the model's cells, and runs no tile pass over the stamped ones</b>: the rock's model
 	/// stands one row above its anchor, and the original's purchase typed 23 cells (the model's 5 x 5 less its two empty corners, owner
 	/// the anchor) and stamped all 14 table cells (Q888, <c>q888/orig/run1/</c>); this game typed the anchor's rectangle and gave the
-	/// row above it back (Q744, now fixed). The cells are stood stamped as the model's picture covers them, the way the tile pass
-	/// finds them.
+	/// row above it back (Q744, now fixed). The original's purchase has no pass that gives a stamped cell back: the placer retiles
+	/// only the cells its picture marks, to tile 8 (Q890), so a stamped cell the map holds as ground stays stamped; the stand-in here
+	/// stamps one such cell beside the rock, which must stay.
 	/// </summary>
-	/// <remarks><b>Mutation:</b> <c>Stamp</c> over the anchor's rectangle (<see cref="ParkObjects.FootprintAt"/>) types row 28 and leaves the
-	/// model's top row ground, so the tile pass gives the row's stamps back and fewer cells stay stamped.</remarks>
+	/// <remarks><b>Mutations:</b> <c>Stamp</c> over the anchor's rectangle (<see cref="ParkObjects.FootprintAt"/>) types row 28 and leaves
+	/// the model's top row ground, so fewer cells are typed; the load's tile pass (<c>RetileGround</c>) called after the stamp gives the
+	/// extra cell back and one fewer stays stamped.</remarks>
 	[TestMethod]
-	public void APurchaseOfTheRockTypesTheModelsCellsAndItsTilePassGivesNoneBack()
+	public void APurchaseOfTheRockTypesTheModelsCellsAndGivesNoStampBack()
 	{
 		Log ??= new();
 
@@ -580,7 +582,10 @@ public class ParkFootprintSplitTests
 			// ground; the stamp and the tile pass have run before it.
 			ParkBuilding.StandThing = placed =>
 			{
-				StandStamped( objects, ground, placed.ThingId, placed.CatalogueId, ParkObjects.CoveredCells( item, placed.CellX, placed.CellY, placed.Angle ) );
+				// One stamped cell the picture does not mark (the cell above the rock's top-left corner, ground): the case the original's
+				// purchase leaves stamped and the load's pass would give back.
+				StandStamped( objects, ground, placed.ThingId, placed.CatalogueId,
+					ParkObjects.CoveredCells( item, placed.CellX, placed.CellY, placed.Angle ).Append( (placed.CellX, placed.CellY - 2) ) );
 				stood = placed;
 				return true;
 			};
@@ -599,7 +604,8 @@ public class ParkFootprintSplitTests
 			Assert.IsTrue( marked.All( cell => state.Record( cell.X, cell.Y ).ParentId == MapStep.CellId( at.X, at.Y ) ), "owned by the anchor" );
 			Assert.IsTrue( Enumerable.Range( at.X + 1, 4 ).All( x => marked.Contains( (x, at.Y - 1) ) ), "the row above the anchor is typed" );
 			Assert.IsFalse( marked.Any( cell => cell.Y == at.Y + 4 ), "and the anchor rectangle's last row is not" );
-			Assert.AreEqual( 23, objects.StampedCells, "so the tile pass finds no cell of ground to give back" );
+			Assert.IsFalse( marked.Contains( (at.X, at.Y - 2) ), "the extra cell is ground in the map" );
+			Assert.AreEqual( 24, objects.StampedCells, "no tile pass follows the purchase: the ground cell stamped beside the rock stays stamped" );
 		}
 		finally
 		{
