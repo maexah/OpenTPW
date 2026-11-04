@@ -2503,7 +2503,10 @@ control's own record of the buttons pressed on it: the base proc sets a button's
 release (`FUN_0065f6d1`, `0x0065f871`, `0x0065f9e1`), and the button class and the slider's thumb keep theirs the
 same way. So a list follows the pointer only while no button pressed on it is down. OpenTPW: `UiList.PointerMoved`,
 told by the stack whether a press that landed on the list is still held; whether the original's bit outlives a
-release let go off the control is not decoded. What sends `0x10003` is not traced.
+release let go off the control is not decoded. What sends `0x10003` is not traced. `0x10001`, the pointer coming onto
+the control, carries the point too, and the hit test `FUN_006589f9` sends it as the interface changes as well as on a
+move, so a list built under a resting pointer selects the row under it ("What moves the highlight after the fill's
+pick", Q871); here `WindowStack` hands a list the point only on a frame the pointer moved.
 
 **OpenTPW**: `UiList.SelectsUnderPointer` and `PointerMoved`; `WindowStack` sends the move to the control under the
 pointer on a frame the pointer moved. Every list sets the flag: the buy list (Q233b), the park file screen's
@@ -2551,8 +2554,8 @@ every row still names the row selected before. All five trees of the three list 
 the rows leaves the selection where it was.
 
 **In the original**: the visitors list opens with one row highlighted (the first on one opening, the second and the
-tenth on two others; what chooses it is not decoded, `docs/QUEUE.md` Q232: the pointer resting over the list is one
-candidate, as the list follows it, Q376), and a quick right click on the strip under
+tenth on two others: the add's pick, then the row under the pointer as it rests or passes, "What moves the highlight
+after the fill's pick", Q871), and a quick right click on the strip under
 its tenth row went to that row's guest, not to an eleventh row's.
 
 **OpenTPW**: `UiList.RightClickedAt`, called by `WindowStack.RightClick` with the press's point, and
@@ -3232,6 +3235,60 @@ Staff costs until the next pick. On the same file (`q356/run-fix2`) the opening 
 picked` and `Hire screen: candidate 11 grade 3, skill bar 614 of 1024, staff costs 502`, the bar 0.606 with Chris
 Battson's row highlighted, and the mechanics' tab `added 3,8,10, row 8 picked`, candidate 8 grade 2, 409, staff costs
 554 (Karl Fitzhugh's $ 115 for Chris's $ 63).
+
+#### What moves the highlight after the fill's pick (Q871)
+
+Read 2026-11-04 (Q871, Q232's decode; the private Ghidra copy, `q871/dump1` to `dump6`, and the disassembly). A list's
+selected index `+0x14c` is written only by its constructor and its clear (-1; `0x006625d4`, `0x00664ae1`) and by
+`FUN_0066525c` (`0x0066535f`). That has four callers: the add's pick (`0x006643d4`), the remove (`FUN_006647cb`), the
+point test `FUN_0066552e` (a left or right click, and the pointer under flag `0x80`), and `FUN_00665739`, which selects
+an index and scrolls it into view (a negative index selects nothing). Neither the sorted insert nor the two-second
+rewrite touches it. So after the add's pick these move it:
+
+- **A thing handed to the opener.** The opener finds the thing's row (`FUN_00664d2a`, the row whose id it is) and
+  selects it with `FUN_00665739` after the fill: the visitors list from the visitor's window's `b_kids` (`FUN_004b7720`,
+  button `0x3738`, `[0x007c2658]`), the all-staff list (`FUN_00496620`'s second, from `0x004b5de6` and `0x004b5173`),
+  the four all-items builders, and the buy list from the message bar's buttons 9 to `0xc` (`FUN_0048e0f0`). The
+  visitors, all-staff and all-items ones are built; the buy list's is counted (`TAG_BAR_BUY_ITEM_ROW`).
+- **The pointer at rest where a list appears.** `FUN_006589f9` hit-tests the last pointer position whenever the
+  interface changes (a control built visible `0x0065bff4`, destroyed, shown or hidden, linked, given a new rect, the
+  capture or the focus let go; "The lobby's keys act on the release", `lobby.md`), and a control newly under the
+  pointer is queued `0x10001` carrying the point (`x << 16 | y`). The list's proc answers `0x10001` as it does the move
+  `0x10003` (`FUN_00665c35`: both go to `FUN_006656a0`), so under flag `0x80` a list built under a pointer resting on
+  its rows selects the row under it. The message is queued as the tree is built and taken at the next pump, after the
+  opener's fill, so it lands after the add's pick. A point outside the row area (`+0x138`: the strip under the rows,
+  the bar beside them) selects nothing.
+- **The cursor keys.** A list whose flags hold `0x200` makes itself the key accelerator (`FUN_0065e640`:
+  `[0x00faa578]` the table, `[0x00faa57c]` the list) on its message `0x15`, which every control is queued as it is
+  built (`0x0065bffd`), and on `0x1a`, which a control is sent on becoming the last pressed (`0x0065dd4b`). The table
+  `0x0077c4b8` holds End `0x2300`, Home `0x2400`, Up `0x2600` and Down `0x2800`, each with no modifier, and the key pop
+  (`FUN_006698e6`, `0x006699e5`) hands such a key, down, repeat or up, to that list while it is visible, before the
+  focus. Its key down `0x1000a` goes to `FUN_00665b51`: Home `FUN_00665739( 0 )`, End the last row, Up the selected
+  index less one and Down plus one, each scrolled into view. Up on index 0 selects nothing, and Down with nothing
+  selected selects index 0. The list's destroy lets the accelerator go (`0x0065c325`). The visitors, all-staff,
+  all-items and hire lists carry `0x291` and take the keys; the buy list (`0x91`, `0x00754f0a`) and the Load and Save
+  Park list (`0x81`, `0x00752466`) do not. A park screen has the camera table off already (`park-engine.md`, "A park
+  screen is open"), so the keys turn no camera in either game.
+- **A click** on a row, either button ("A right click on a list"), and the remove's re-selection (Q936, above).
+
+So a list opens on the row sorted first, or on a handed thing's row, and then on the row under the pointer if the
+pointer rests on its rows. The Load and Save Park lists' handlers (`FUN_0049e880`; the Save's `0x0049ea30` is in no
+Ghidra function) have no `0x401` arm, so the pick there is the highlight alone. The list on stream `0x007542b8`
+(`FUN_004a8140`, a screen not identified) is put back to no selection after its refill (`FUN_004a77f0`, `0x004a7940`).
+
+**Q117's frames read again** (`q117/orig/`, made 2026-10-05, not this session): `o2-visitors.png` opened with row 1
+highlighted and the pointer at rest at (866, 203) of 1024 x 768, right of the rows (the row area ends at 1720 of 2048,
+x 860); `o5-visitors-again.png`, the pointer at the same place, row 2; `o7-before-strip.png`, the pointer on the strip
+under the tenth row, the tenth. `gmove.py` glides in a straight line: a glide to (866, 203) from lower in the list
+leaves row 2's band last, and one from there to the strip leaves the tenth row last. That fits the pointer selecting as
+it passes; where each glide began was not recorded, so it is consistent, not measured.
+
+**OpenTPW** (Q871, off-screen on the lane B build of 9f3e7124, the stock park paused, `q871/run2`): the visitors list
+opened by V away from the rows reads `selected index -1` and counts `LIST_FIRST_ROW_SELECTED`; the pointer moved onto
+row 3 logs `List 0x1e497: row 39 at 2 picked under the pointer`; closed and opened again under the pointer resting
+there it reads `selected index -1` with no pick (`WindowStack` hands a list the point only on a frame the pointer
+moved), and Down and then Home leave it at -1 (no list takes a key). Neither the pick at rest nor the keys is built or
+counted: Q232.
 
 #### A tab put down by the opener fills nothing
 

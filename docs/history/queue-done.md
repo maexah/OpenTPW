@@ -12391,3 +12391,13 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   clear-colour patch over the row above the anchor (`q888/ours/final2/case1-bought.png`, beside the original's
   `orig/run1/placed.png`) that ours' loaded rock does not (`final3/loaded-rock.png`) and that stays with all 14 stamped
   (`ours/scratch`): look at it once the typing is the model's.
+- [x] **Q871. Q232's decode: what moves a list's highlight after the fill's pick.** Done 2026-11-04 (run 20, lane B).
+  Read in the private Ghidra copy (`q871/dump1` to `dump6`). A list's selected index is written only by its
+  constructor, its clear and `FUN_0066525c`, reached from the add's pick, the remove, a click and `FUN_00665739`. After
+  the pick it moves for a thing handed to the opener (built for the visitors, all-staff and all-items lists), for the
+  pointer at rest where a list appears (`FUN_006589f9` queues `0x10001` with the point to a control newly under it as
+  the interface changes; the list answers it as a move), and for End, Home, Up and Down, which a list with flag `0x200`
+  takes as the key accelerator (`0x0077c4b8`, `FUN_00665b51`): the visitors, all-staff, all-items and hire lists, not
+  the buy or Load and Save Park lists (`hud.md`, "What moves the highlight after the fill's pick"). Q117's frames fit
+  the pointer passing over rows 2 and 10. This game off-screen (`q871/run2`): the visitors list opened away from the
+  rows, `selected index -1`; reopened under the pointer resting on row 3, -1; Down and Home, -1.

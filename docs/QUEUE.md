@@ -932,17 +932,17 @@ filed the items that cite it.
   `RunBuildMode`'s standing difference.
   Confirm: F1 and the wheel over the buy screen beside the original's, read from memory (the kept record at the
   advisor's `+0x16d0`, its slots, `[0x007909ec]` for the zoom), predicted first; a frame of each.
-- [ ] **Q232. A list opens with no row selected, where the original's opens with one highlighted. Decode first.**
-  Found by Q117 (`hud.md`, "A right click on a list"). The original's add selects the first row as a list fills
-  (`FUN_0066525c( 0 )` in `FUN_0066403b`), and its visitors list opened with a row highlighted every time: the first
-  on one opening, the second and the tenth on two others, so something else moves it (the all-items builders call
-  `FUN_00664d2a` and `FUN_00665739` with a thing; the two-second rewrite and the sorted insert are the other
-  candidates). `UiList.FirstRow` counts the add's selection and builds none (`LIST_FIRST_ROW_SELECTED`), so a right
-  click that misses every row before one is chosen goes nowhere here (`LIST_RIGHT_CLICK_FIRST_ROW_NOT_SELECTED`),
-  and `Remove` dropped the selection on the `0x100` branch though all five list trees have the bit clear
-  (`LIST_RESELECT_PAST_THE_WINDOW`; Q936 built the original's own answer there: the index stands). Decode which row each of the five lists opens on and what the buy and hire
-  lists do, then build it. Confirm: the visitors list opened beside the original's, the highlighted row predicted
-  first; a screenshot.
+- [ ] **Q232. A list opens with no row selected, where the original's opens with one highlighted.** Found by Q117
+  (`hud.md`, "A right click on a list"); decoded in Q871 (`hud.md`, "What moves the highlight after the fill's
+  pick"). Build: (1) the add's pick (`UiList.PicksFirstRow`) on the visitors, buy and Load and Save Park lists, which
+  count it (`LIST_FIRST_ROW_SELECTED`); the buy screen's `0x401` arm takes it, the others' handlers have none, so there
+  it is the highlight alone. (2) A list newly under the pointer is handed the point though the pointer has not moved
+  (`FUN_006589f9`'s `0x10001`: a screen opened, closed or changed under a resting pointer), after the fill's pick.
+  (3) End, Home, Up and Down, no modifier, to the list with flag `0x200` last built or pressed while it is visible
+  (`FUN_00665b51`; Up on the first row selects nothing, Down with none selected the first row), not to the buy or park
+  file lists. (4) The buy list's handed item (`TAG_BAR_BUY_ITEM_ROW`). Confirm: the visitors list opened by V under a
+  pointer resting on row 3 beside the original's, then Down and Home, the highlighted row predicted first and read
+  from memory (`+0x14c`); a screenshot each.
   From Q233b: the buy list now selects the row under a moving pointer (`UiList.SelectsUnderPointer`, the flag `0x80`);
   the hire list carries the flag too and does not set it, and the three list screens' trees carry it (`0x291`). With
   no first row selected, the buy screen's panel stays empty until the pointer has been over a row, where the
