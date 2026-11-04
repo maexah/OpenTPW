@@ -163,6 +163,11 @@ public sealed partial class ParkAudio : Entity
 	/// <summary>The variation the music's last sample was drawn from, zero-based; -1 before the first.</summary>
 	internal int VariationNow { get; private set; } = -1;
 
+	/// <summary>The sample the music's last draw from a list of two or more took, -1 for none: the original's voice byte <c>+0x46</c>, which a change of variation leaves alone (<c>0x006bc747</c>, <c>docs/exe/audio.md</c>, "The sample draw").</summary>
+	internal int MusicLastSample => _musicLast;
+
+	private int _musicLast = -1;
+
 	/// <summary>
 	/// What the music plays when its sample has run out: the variation its next sample is drawn from, and how
 	/// loud - <c>FUN_006be450</c>, the rule a held scream's chain follows too
@@ -264,6 +269,10 @@ public sealed partial class ParkAudio : Entity
 	/// <summary>What the crowd's sample is playing at, before <see cref="Audio.MasterVolume"/>; nought with none.</summary>
 	internal float CrowdVoiceVolume => _crowd is { Playing: true } ? _crowd.Volume : 0f;
 
+	/// <summary>The sample the crowd's voice's last draw from a list of two or more took, -1 for none: the original's voice byte <c>+0x46</c>, which a change of variation leaves alone (<c>0x006bc747</c>, <c>docs/exe/audio.md</c>, "The sample draw").</summary>
+	internal int CrowdVoiceLastSample => _crowdLast;
+
+	private int _crowdLast = -1;
 	private readonly Random _crowdRandom = new();
 	private Voice? _crowd;
 
@@ -294,6 +303,7 @@ public sealed partial class ParkAudio : Entity
 			// A new voice has no variation yet, so its first sample is the first variation's (FUN_006be450).
 			CrowdVoiceHeld = true;
 			CrowdVoiceVariation = -1;
+			_crowdLast = -1;
 			CrowdVoicePlays = (CrowdVoicePlays.Samples, CrowdVoicePlays.Starts + 1);
 
 			Log.Info( $"Crowd voice: started at level {level} on tick {GameClock.Ticks}" );
@@ -360,7 +370,7 @@ public sealed partial class ParkAudio : Entity
 
 		CrowdVoiceVariation = next;
 		CrowdVoiceSample = HeldSample( headers[next], first, CrowdVoiceSample, CrowdVoiceParameter, CrowdVoiceLevelNow, _crowdRandom );
-		_crowd = Audio.Play( _kids.PickFrom( CrowdVoiceEffect, next, avoidRepeat: !first ), ChannelGain( CrowdVoiceSample.Volume ), bus: AudioBus.Effects );
+		_crowd = Audio.Play( _kids.PickFrom( CrowdVoiceEffect, next, ref _crowdLast, avoidRepeat: !first ), ChannelGain( CrowdVoiceSample.Volume ), bus: AudioBus.Effects );
 
 		if ( _crowd is null )
 			return;
@@ -1207,6 +1217,9 @@ public sealed partial class ParkAudio : Entity
 		/// <summary>The volume, of a hundred, and the pitch its first sample drew, which every later one plays at.</summary>
 		public (int Volume, int Pitch) Kept { get; set; }
 
+		/// <summary>The sample the voice's last draw from a list of two or more took, -1 for none: the original's voice byte <c>+0x46</c>, which a change of variation leaves alone (<c>0x006bc747</c>, <c>docs/exe/audio.md</c>, "The sample draw").</summary>
+		public int Last = -1;
+
 		/// <summary>The silence after the sample that is playing, in milliseconds: the variation's wait, none after the first.</summary>
 		public int Wait { get; set; }
 
@@ -1340,7 +1353,7 @@ public sealed partial class ParkAudio : Entity
 			following.Kept = HeldSample( headers[next], first, following.Kept, 0, 0, _followingRandom );
 			following.EndedAt = null;
 
-			var clip = _ambient.PickFrom( following.Sound.Effect, next, avoidRepeat: !first );
+			var clip = _ambient.PickFrom( following.Sound.Effect, next, ref following.Last, avoidRepeat: !first );
 
 			if ( Unheard( place ) )
 			{
@@ -1540,6 +1553,9 @@ public sealed partial class ParkAudio : Entity
 		var first = VariationNow < 0;
 
 		VariationNow = next.Variation;
-		_voice = Audio.Play( _music.PickFrom( MusicEffect, next.Variation, avoidRepeat: !first ), next.Volume, bus: AudioBus.Music );
+		_voice = Audio.Play( _music.PickFrom( MusicEffect, next.Variation, ref _musicLast, avoidRepeat: !first ), next.Volume, bus: AudioBus.Music );
+
+		if ( _voice is not null )
+			Log.Info( $"Park music: sample '{_voice.Name}' variation {next.Variation + 1} volume {next.Volume} on tick {GameClock.Ticks}" );
 	}
 }

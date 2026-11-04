@@ -175,6 +175,57 @@ public class SoundCategoryTests
 		} );
 	}
 
+	/// <summary>
+	/// A park voice's samples (<c>PickFrom</c>) keep the pick in the voice's own byte (<c>+0x46</c>, <c>0x006bc747</c>), not
+	/// the effect's: two voices of one effect step off their own last pick, the first draw asks for no step and still
+	/// stores, and a list of one stores nothing. The rolls are the test's own.
+	/// </summary>
+	[TestMethod]
+	public void AParkVoiceStepsOffItsOwnLastPickAndNoOtherVoices()
+	{
+		FixedRoll.During( 0, roll =>
+		{
+			var music = new SoundCategory( "levels/jungle", ParkSound, "locallobbymusic" );
+			int voiceA = -1, voiceB = -1;
+
+			Assert.IsNotNull( music.PickFrom( 1, 0, ref voiceA, avoidRepeat: false ) );
+			Assert.AreEqual( 0, voiceA, "a first draw asks for no step and stores its pick" );
+			Assert.IsNotNull( music.PickFrom( 1, 0, ref voiceA, avoidRepeat: true ) );
+			Assert.AreEqual( 1, voiceA, "a later sample that rolls the pick before moves on to the next" );
+			Assert.IsNotNull( music.PickFrom( 1, 0, ref voiceB, avoidRepeat: true ) );
+			Assert.AreEqual( 0, voiceB, "another voice of the effect has no pick before, so the same roll stands" );
+			Assert.AreEqual( -1, music.LastSampleOf( 1 ), "and the effect's own pick, the lobby's, was not touched" );
+
+			roll.Roll = 65535;
+			Assert.IsNotNull( music.PickFrom( 1, 0, ref voiceA, avoidRepeat: true ) );
+			Assert.AreEqual( 2, voiceA, "a pick that is not the one before stands" );
+			Assert.IsNotNull( music.PickFrom( 1, 0, ref voiceA, avoidRepeat: true ) );
+			Assert.AreEqual( 0, voiceA, "and a repeat of the last sample wraps to the first" );
+
+			var rides = new SoundCategory( "global", "global/sound", "rides" );
+			var one = -1;
+
+			Assert.IsNotNull( rides.PickFrom( 212, 0, ref one, avoidRepeat: true ) );
+			Assert.AreEqual( -1, one, "a list of one returns before the store (0x006bc6ae)" );
+		} );
+	}
+
+	/// <summary>
+	/// The land's following voices (the jungle's sea and gulls, effects 3 and 2 of the global ambient) never reach the avoid-repeat
+	/// step: no list they draw from holds more than two samples (effect 2 is one list of two, effect 3 three lists of one), so the
+	/// ask they make for every sample after the first (<c>0x006bde33</c>) steps off nothing. Dead by CONTENT (<c>AGENTS.md</c> rule 3):
+	/// this test is what says so, and fails if a bank change gives them a longer list.
+	/// </summary>
+	[TestMethod]
+	public void TheLandsFollowingVoicesHoldNoListOfMoreThanTwoSamples()
+	{
+		var ambient = new SoundCategory( "global", "global/sound", "ambient" );
+
+		Assert.IsTrue( ambient.IsValid, "the global ambient should load" );
+		CollectionAssert.AreEqual( new[] { 2 }, ambient.VariationsOf( 2 ).Select( header => header.Samples ).ToArray() );
+		CollectionAssert.AreEqual( new[] { 1, 1, 1 }, ambient.VariationsOf( 3 ).Select( header => header.Samples ).ToArray() );
+	}
+
 	/// <summary>A list of one is returned with no draw and no store (<c>0x006bc6ae</c>): the pick kept from before stays.</summary>
 	[TestMethod]
 	public void AListOfOneKeepsNoPick()

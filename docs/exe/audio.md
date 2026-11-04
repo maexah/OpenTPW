@@ -625,10 +625,12 @@ of this class is a variation drawn as `FUN_006bc810` draws it, a sample of it, t
 kept, and after every sample, the first included, a silence drawn from its variation's wait, timed on the frame clock
 from the frame the sample is found ended. Built for the land's own type 3 sounds alone; the run is in `park.md`,
 "The land's own sounds". The sample draw's own rule against the sample before (`FUN_006bc680` asked with 1, for a
-variation of more than two samples) is not built for the voices of the plain and music classes: the land's following
+variation of more than two samples) is built for the voices of the plain and music classes (Q742): the land's following
 voices, the crowd's, the park music's, a script's plain and music sounds (the End's global rides 200) and the interface's
-(`cat_ui` 154 and 155). Each voice's later samples ask (`0x006bde33`) and its first does not (`0x006bbfe3`), so only the
-later samples are counted (`SAMPLE_NO_REPEAT`, Q742); the lobby's music builds it (Q723).
+(`cat_ui` 154 and 155). Each voice's later samples ask (`0x006bde33`) and its first does not (`0x006bbfe3`); the voice
+keeps its own last pick (`SoundCategory.PickFrom( ..., ref last, avoidRepeat )`), as the lobby's music does (Q723). The
+land's following voices never reach the step: the global ambient's effects 2 and 3 hold no list of more than two samples
+(one list of two, and three lists of one), so it is dead by CONTENT for them.
 
 **The sample draw, `FUN_006bc680( voice, avoidRepeat )`** (read from the stored dump of the same program; upstream look
 2026-10-19, `verify-sound-ui.md`, "The music roll rule"). A variation with no samples gives none; a variation with one
@@ -647,9 +649,9 @@ the 1,592 sample lists in the 31 SFX maps end below 65,535 (lowest 65,516; the g
 65,534), so the no-sample case happens at most 20 times in 65,536. OpenTPW's `SoundCategory.Draw` is this rule (Q723): the roll is 0 to 65,535, no sample past the last odds, and the
 pick is kept on every draw from a list of two or more and the step is taken only where asked, which is the lobby's music
 restarts (an island's arrival is a fresh voice and asks for none, as `FUN_005e14a0` starts it; confirmed: ten to twelve
-selections of each island in 240 s, no track twice running, `q723/run3`). The pick is kept per effect where the
+selections of each island in 240 s, no track twice running, `q723/run3`). The lobby's pick is kept per effect where the
 original keeps it per voice, the same while one voice of the effect sounds at a time, as the lobby's does. The park's own
-voices keep no last pick yet (Q742). The roll comes from a `System.Random` each category owns, where the original's is
+voices each keep their own (Q742): the crowd's, the park music's, each following voice's and each script voice's. The roll comes from a `System.Random` each category owns, where the original's is
 the shared generator.
 
 | Address | Original name | What it is | Evidence |

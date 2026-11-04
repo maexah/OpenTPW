@@ -556,6 +556,28 @@ public class ParkScreamChainTests
 				StringAssert.StartsWith( loud.Name.ToLowerInvariant(), "level6" );
 				Assert.AreEqual( ParkAudio.MusicVolume, loud.Volume, 0.0001f, "at the same loudness" );
 
+				// Each sample after the first asks the draw for its step against the voice's last pick (0x006bde33): where the
+				// variation it came from holds more than two samples, it is never the same index twice running.
+				var headers = new SoundCategory( "levels/jungle", "levels/jungle/Music", "music", keep: true ).VariationsOf( 2 );
+				var pickBefore = park.MusicLastSample;
+				var stepped = 0;
+
+				for ( var draw = 0; draw < 150; ++draw )
+				{
+					Music().Stop();
+					park.Update();
+
+					if ( headers[park.VariationNow].Samples > 2 )
+					{
+						Assert.AreNotEqual( pickBefore, park.MusicLastSample, $"draw {draw + 1}: the sample before is not drawn again" );
+						++stepped;
+					}
+
+					pickBefore = park.MusicLastSample;
+				}
+
+				Assert.IsTrue( stepped > 100, $"the music's lists hold more than two samples ({stepped} of 150 draws)" );
+
 				// They go again: the level falls with them.
 				foreach ( var id in came )
 					Assert.IsTrue( people.Depart( id ) );
@@ -572,7 +594,7 @@ public class ParkScreamChainTests
 				ToTheBeat();
 				Assert.AreEqual( 0, park.LevelNow, "world state 4: nought" );
 
-				loud.Stop();
+				Music().Stop();
 				park.Update();
 				Assert.AreEqual( 0, park.VariationNow, "the first variation again" );
 				Assert.AreEqual( ParkAudio.MusicVolume, Music().Volume, 0.0001f, "and as loud as ever" );
@@ -819,6 +841,8 @@ public class ParkScreamChainTests
 				var seen = new HashSet<int>();
 				var pitches = new HashSet<int>();
 				var kept = park.CrowdVoiceSample;
+				var pickBefore = park.CrowdVoiceLastSample;
+				var stepped = 0;
 
 				for ( var i = 0; i < 200; ++i )
 				{
@@ -837,8 +861,19 @@ public class ParkScreamChainTests
 					Assert.AreEqual( kept, park.CrowdVoiceSample, $"variation {park.CrowdVoiceVariation + 1} keeps the voice's volume and pitch" );
 					Assert.AreEqual( Gain( 15 ), next.Volume, 0.00001f );
 					seen.Add( park.CrowdVoiceVariation );
+
+					// Each later sample asks the draw for its step against the voice's last pick (0x006bde33), whichever
+					// variation it came from: where its list holds more than two samples, it is never the same index again.
+					if ( samples[park.CrowdVoiceVariation].Count > 2 )
+					{
+						Assert.AreNotEqual( pickBefore, park.CrowdVoiceLastSample, $"draw {i + 1}: the sample before is not drawn again" );
+						++stepped;
+					}
+
+					pickBefore = park.CrowdVoiceLastSample;
 				}
 
+				Assert.IsTrue( stepped > 150, $"the crowd's lists hold more than two samples ({stepped} of 200 draws)" );
 				Assert.AreEqual( 2, seen.Count, "both the first and its twin in two hundred draws" );
 				Assert.AreEqual( 201, park.CrowdVoicePlays.Samples );
 

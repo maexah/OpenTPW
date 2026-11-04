@@ -617,6 +617,74 @@ public class ScriptSoundTests
 	}
 
 	/// <summary>
+	/// <b>A plain voice's later samples never draw the sample before when their variation holds more than two</b>
+	/// (<c>FUN_006bc680</c> asked with 1, <c>0x006bde33</c>; Q742): the End's global rides 200 on node 9 (eleven samples), its
+	/// pick kept in the voice (<c>+0x46</c>) from its first, which asks for no step. A second voice of the same effect keeps
+	/// its own pick.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the step not asked; the pick not kept; the first draw not stored.</remarks>
+	[TestMethod]
+	public void APlainVoicesLaterSamplesNeverDrawTheSampleBeforeFromMoreThanTwo()
+	{
+		var nowBefore = Time.Now;
+
+		WithAParksAudio( park =>
+		{
+			Time.Now = 100f;
+			DrawFrom( park, new Random( 7 ) );
+			HearFrom( new Vector3( 21f, 57f, 0f ) );
+
+			var nodes = RideNodes.Load( "levels/jungle/features/end", "End", (BaseFileSystem)FileSystem, false, [] )!;
+			var script = new RideScript( Build( Word( Opcode.ADDOBJ ), 5, 9, 200, 1, Word( Opcode.ADDOBJ ), 5, 9, 200, 2, Word( Opcode.END ) ) )
+				{ Effects = new RideEffects(), Nodes = nodes, Id = 912 };
+
+			script.Turn( 0f );
+
+			var voices = script.Effects!.Records.Select( record => record.Sound! ).ToArray();
+
+			Assert.AreEqual( 2, voices.Length );
+			Assert.IsTrue( voices.All( voice => voice is { Plain: true } && voice.Samples == 1 ), "two plain voices, each on its first sample" );
+			Assert.IsTrue( voices.All( voice => voice.Last >= 0 ), "the first draw asks for no step and stores its pick" );
+
+			var before = voices.Select( voice => voice.Last ).ToArray();
+			var stepped = 0;
+
+			for ( var sample = 2; sample <= 120; ++sample )
+			{
+				foreach ( var voice in voices )
+					voice.Voice!.Stop();
+
+				park.ServeScriptSounds();
+
+				foreach ( var voice in voices )
+					voice.EndedAt = Time.Now - 100f;
+
+				Time.Now += 100f;
+				park.ServeScriptSounds();
+
+				for ( var i = 0; i < voices.Length; ++i )
+				{
+					var voice = voices[i];
+
+					Assert.AreEqual( sample, voice.Samples, $"voice {i}'s sample {sample}" );
+
+					if ( voice.Category.VariationsOf( voice.Effect )[voice.Variation].Samples > 2 )
+					{
+						Assert.AreNotEqual( before[i], voice.Last, $"voice {i}, sample {sample}: the sample before is not drawn again" );
+						++stepped;
+					}
+
+					before[i] = voice.Last;
+				}
+			}
+
+			Assert.IsTrue( stepped > 200, $"effect 200's lists hold more than two samples ({stepped} of 238 draws)" );
+		} );
+
+		Time.Now = nowBefore;
+	}
+
+	/// <summary>
 	/// <b>Through a park's menu a placed chain's clock runs on and its children are made unheard; none is held to start
 	/// with the rest on resume.</b> The original's service is posted each frame, pause or not, on wall time, and its range
 	/// test is over x and z alone, which the pause's lifted listener leaves alone: its chains go on making children that

@@ -180,6 +180,9 @@ public sealed partial class ParkAudio
 		/// </summary>
 		public bool Parked { get; set; }
 
+		/// <summary>The sample the voice's last draw from a list of two or more took, -1 for none: the original's voice byte <c>+0x46</c>, which a change of variation leaves alone (<c>0x006bc747</c>, <c>docs/exe/audio.md</c>, "The sample draw").</summary>
+		public int Last = -1;
+
 		/// <summary>Whether it is a chain of children (<see cref="ScriptVoiceClass.Chain"/>); <see cref="Voice"/> is its newest.</summary>
 		public bool Chain { get; init; }
 
@@ -732,9 +735,8 @@ public sealed partial class ParkAudio
 		sound.Wait = ParkScreams.GapMilliseconds( headers[next], _scriptRandom );
 		sound.Kept = first ? ControlledSample( headers[next], sound.Values, _scriptRandom ) : sound.Kept;
 		sound.EndedAt = null;
-		// The plain and music classes ask the draw for its step on every sample after the first (0x006bde33); the
-		// step is not built, and the ask is counted SAMPLE_NO_REPEAT where the variation holds more than two samples.
-		sound.Clip = sound.Category.PickFrom( sound.Effect, next, avoidRepeat: !first );
+		// The plain and music classes ask the draw for its step against the voice's last pick on every sample after the first (0x006bde33).
+		sound.Clip = sound.Category.PickFrom( sound.Effect, next, ref sound.Last, avoidRepeat: !first );
 
 		// Started out of range, it holds its first variation and plays nothing until it is in range (see SoundAgain).
 		if ( first && !Reached( sound ) )
