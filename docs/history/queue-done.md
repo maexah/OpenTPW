@@ -12076,6 +12076,18 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   park layer zooms with no screen test (`hud.md`, "The wheel over a park screen"). This game off-screen (`q870/run1`):
   two notches over the buy screen's stats panel zoomed 100 to 120, F1 posted nothing over the screen or after it.
 - [x] **Q846. The lift of a path laid over a stamped queue cell, in both games (piece (5)'s leftover of Q885, from Q841).** The original, in Q841's file (`q841/Q841.TPWS`: the New Save with (31,17) and (31,18) made loose ends, not a played state) and the run (31,15) to (31,18) laid again (`q846/orig/run1/`; cells-1 equal to Q841's: 573 cells with `0x800`, 437 with `0x200`, (31,18) `0x028a`): **Backspace with the hand empty and the pointer on the cell, one press, lifts it** (the saved park reads (31,17) and (31,18) type 0 owner 0, (31,15) and (31,16) type 1): (31,18), flagged at load, `0x028a` to `0x0802` (**`0x800` back, `0x200` gone**; 574 and 436), then (31,17), never flagged, `0x028a` to `0x0002` (`0x200` gone, no `0x800`; 574 and 435); each press retiles the lifted cell's neighbours. **Ours** (`q846/ours/run1`, `ours2.py`, `path` on the four cells, `hover 31 18` and `backspace`, then `hover 31 17` and `backspace`, binary md5 `a2e72a24`, the build of `9392491f`) equals the original's `0x800` bit and stamp at 8,160 of 8,160 cells after the run, after each lift (574 and 436, then 574 and 435): **nothing built**, `ParkPathBuilding.ClearPathCell`'s `UnstampSplit` (Q841) already does it; `LiftingAPathGivesBackTheStampAQueuePieceLeftUnderIt` is its test and the put-back bug (`UnstampSplit` removed, Q841's m6) fails it (`q846/mutate.log`). Frames `q846/orig/run1/g-lift17.png` and `q846/ours/run1/c-lift17.png`: the queue's two cells are ground between the path and the line's rest in both. Not done: the delete tool (Clear Land, unbuilt in ours, `CLEAR_LAND_TOOL`) was not run in the original; the lift of a path laid over a queue cell with a counter above nought (two runs over it) not run; the rest of Q885 stays there.
+- [x] **Q877. A test for `tools/check_docs_paths.py` (Q802's piece 3).** `CheckDocsPathsTests` (41 cases, no game needed, Python and
+  git only; each skips without them) runs the checker over a scratch repository that holds a copy of the script and a few files, so the real pages
+  can change without moving it: a path whole or as the tail of a file or folder (and not a tail that cuts a name, a prefix
+  or a gitignored file), a staged file as good as an untracked one, the skipped names (game folders, placeholders, web
+  addresses, a dot-name with no slash, `NOT_OURS`), a type's declaration and its member (class, struct, enum, interface,
+  record, each with its own member), a fenced block's words and the page after it, a link's file and heading (the page's
+  own folder, `..`, the slug of a heading with a dash, a Q&A, a trailing space, six hashes and not seven), the three
+  default pages against named ones, and the exit code and counts. 104 bugs put back in the script with `mutate.py`
+  (`q877/mutations.py`): 99 failed a test on the first run and 5 survived (a fence that never closes, a fenced `*` and
+  game folder, `md` as a path type, a name with two dots); their values were fixed and all 104 failed on the second run.
+  **Not covered, on purpose:** the entries of `NOT_OURS` other than a few (a list of names, not a rule), and the
+  checker run on the repository's own three pages (that would fail a test run whenever a page is edited; the audit runs it).
 
 ## B. Docs and comments
 

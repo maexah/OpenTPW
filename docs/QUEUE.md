@@ -206,7 +206,16 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   (Q159, Q160, Q284, Q288) were all done by 2026-11-02, so their drafts file was deleted at Alexah's word (2026-11-03);
   new ones are tagged "Good first" in their queue items when chosen, and making them GitHub issues is Alexah's.
   (2) "A place to ask questions" is issues titled "Question: ..." for now; GitHub Discussions are Alexah's to switch
-  on. (3) A test for `tools/check_docs_paths.py` (it is run by hand and by the audit; nothing tests it).
+  on. (3) A test for `tools/check_docs_paths.py`: done by Q877 (`CheckDocsPathsTests`); the checker's gaps it found are Q878.
+- [ ] **Q878. What Q877's test found in `tools/check_docs_paths.py`.** Measured in a scratch repository with the unchanged
+  script, never yet fixed: (1) a backticked call in the project's own style, `ParkState.Gone( 1 )`, is not checked
+  (the `" " in name` branch sends it to the word check, which skips a name with no slash; `ParkState.Gone(1)` is flagged),
+  so a page naming a member that is gone in this form passes; (2) a heading with an underscore (`# snake_name`) gets the
+  slug `snakename`, so the link `#snake_name` is flagged and `#snakename` accepted (GitHub's slug keeps `_`, read in its
+  rules and not measured on GitHub); (3) GitHub's duplicate-heading anchor `#same-1` is flagged as missing, and a heading
+  inside a fenced block (`# only in a fence`) counts as an anchor, which GitHub does not. Fix each in the script with a
+  case in `CheckDocsPathsTests` that fails first (the tests already hold the values that must not move), and change nothing
+  else; the three pages must still print 0 not found.
 
 - [ ] **Q857. A park made fresh's file, off Lost Kingdom.** Split from Q803 (run 17, lane B); waits, Lost Kingdom first. **The other three themes' files**
   (`FRESH_PARK_FILE_OTHER_THEME`: the flyers' values, the music's and the land's voices and its emitter, the generator's seed, the ride system's counts). The advisor's slot
