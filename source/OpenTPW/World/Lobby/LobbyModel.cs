@@ -614,7 +614,7 @@ public sealed class LobbyModel : IChannelPosed
 	/// chosen by (<c>FUN_0044b510</c>): the node's rest turn inside its nearest mesh ancestor, carried by the turn that mesh is drawn
 	/// with. Its translation row is that mesh's draw place, not the node's (<see cref="TryGetDrawnNode"/> answers that). False where
 	/// the node has no mesh ancestor. A node on a morphing face is not turned to the face here (<c>FUN_0044a640</c>, counted
-	/// <c>RIDER_HEAD_FACE_TURN</c>): Mumbo's Head1 matches the original's matrix to 1.6 degrees at every pause measured and its other
+	/// <c>RIDER_HEAD_TURN_AT_REST</c>): Mumbo's Head1 matches the original's matrix to 1.6 degrees at every pause measured and its other
 	/// four heads are up to 71 degrees out while the tentacles morph (Q947, Q1003). A census instrument: the picture is not chosen by it.
 	/// </summary>
 	public bool TryGetDrawnNodeTurn( int index, out Matrix4x4 world )

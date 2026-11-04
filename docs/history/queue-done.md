@@ -12511,18 +12511,18 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `q879/`): the numbered cases (1)-(4) and (6)-(10) are fixed, each by rows that failed on the unchanged script first
   (15 test cases, `q879/run1-old-script.log`), and the dead `"git "` and `"dotnet "` skips are gone. GitHub's real ids were
   **measured** (they can be read from `github.com/<repo>/blob/<ref>/<page>`; the render API gives none): 35 of our pages (339 ids; the 9 biggest are not rendered by GitHub) and
-  `keep-a-changelog`'s `CHANGELOG.md` through `lib/ghids.py`, 0 differences (`q879/ghids-new-checker.txt`); `LICENSE.md`'s
+  `keep-a-changelog`'s `CHANGELOG.md` through `lib/ghids.py`, 0 differences (`q879/ghids-final.txt` for ours; the changelog's 50 ids were measured and the result not saved); `LICENSE.md`'s
   setext heading was the one id the old script lacked (case 2), and `added-1`, `added-2`... settled the numbering of a repeated
   heading. The slug is of the heading as rendered: emphasis, links, images, inline HTML, escapes and code spans resolved by
   CommonMark 0.29's rules (GitHub's cmark-gfm: a symbol such as `€` is not punctuation). Blocks are CommonMark's: fences in
   quotes and list items (a fence ends with its container), four columns past a container's content is indented code
   (its words are checked), setext headings, headings indented up to three, front matter (a first line `---`), definitions
   (`[r]: a.md`; `[^1]:` is not one), link targets in `<...>` or with balanced parentheses, titles with escaped quotes, code
-  spans of any run of backticks (a link in one is no link), and a full stop ending a word is the sentence's. 139 cases
-  (56 added to Q878's 83). The block and inline readers were also fuzzed against `markdown-it-py`
+  spans of any run of backticks (a link in one is no link), and a full stop ending a word is the sentence's. 143 cases
+  (60 added to Q878's 83). The block and inline readers were also fuzzed against `markdown-it-py`
   (`lib/mdfuzz.py`): the first draft had eight bugs no row of mine had, all fixed. Bugs put back: 86 in
   `q879/mutations.py`; the first run left 24 alive, two of them equivalent (code simplified) and 22 given rows;
-  `q879/mutate-run2.out`. `docs/README.md` line 36's two old false reports (a link written in a code span) are gone; no other
+  `q879/mutate-run3.out`. `docs/README.md` line 36's two old false reports (a link written in a code span) are gone; no other
   page under 60 KB prints differently (the bigger ones take minutes to check). Left: Q1021.
 - [x] **Q947. Choose a ride head's picture by the matrix it is drawn with, not its rest matrix (Mumbo).** (From Q940: Mumbo's heads pick the original's picture in 4 of 32 samples by
   the rest matrix.) The unbuilt census is `~/.cache/tpw-harnesses/q940/a18-wip.patch` (`LobbyModel.TryGetDrawnNodeTurn`: the node's rest turn inside its mesh ancestor, carried by that

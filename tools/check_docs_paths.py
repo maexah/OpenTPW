@@ -4,7 +4,7 @@
     check_docs_paths.py [file.md ...]     the three pages, or the files named
 
 Looks at the text of code spans (each path-like word of a command, and of a fenced or indented block too) and at markdown
-link targets and reference definitions (`[r]: a.md`). It reads blocks as CommonMark does: a fenced block is three or more
+link targets and reference definitions (`[r]: a.md`; a line with more after the target than a title is a paragraph). It reads blocks as CommonMark does: a fenced block is three or more
 backticks or tildes, closed by the same mark at least as long with nothing after it, indented up to three spaces past its
 container (a list item's content column; four more is indented code); a quoted line (`> `) is read without its marker; a
 heading is ATX (`#` to `######`, up to three spaces in) or setext (a paragraph over `===` or `---`). A code span is a run
@@ -16,8 +16,10 @@ as the tail of a path (so `Client/GameDir.cs` is found under source/OpenTPW/). A
 (`ParkState`, `ParkState.CellAt`) must be declared as a class, struct, enum, interface or record in source/ (and a
 member after the dot must appear there); a call (`ParkState.CellAt( x, y )`) is checked as its name. A link to another
 page of the repository must reach a file, and its `#anchor` a heading outside a fence, by GitHub's slug of the heading as
-rendered (`## _word_` is `word`; a repeated heading's is numbered -1, -2...). The game's own folders (`data/`, `save/`),
-placeholders (`<kind>`, `*`) and web addresses are not checked. Prints each name it could not find with the file and
+rendered (`## _word_` is read as `word`, as CommonMark renders it; a repeated heading's is numbered -1, -2...). The game's own folders (`data/`, `save/`),
+placeholders (`<kind>`, `*`) and web addresses are not checked. A code span with a bracket or parenthesis that does not
+end in a file type (`(a+b)/50`, `open(tools/x.py)`) has its words checked as a command's; one holding `](` is a link
+written as code and is not checked. Prints each name it could not find with the file and
 line, and exits 1 if there is any. The maintainer's Saturday audit runs it (docs/WORKFLOW.md, "Hooks").
 Python 3.8 or newer, nothing to install; run it from anywhere in the repository."""
 import os, re, subprocess, sys, unicodedata
@@ -42,7 +44,6 @@ ATX = re.compile(r"(#{1,6})(?:[ \t]+(.*))?$")
 SETEXT = re.compile(r"(=+|-+)[ \t]*$")
 THEMATIC = re.compile(r"([-*_])[ \t]*(?:\1[ \t]*){2,}$")
 LIST = re.compile(r"([-+*]|\d{1,9}[.)])(?=[ \t]|$)")
-DEFINITION = re.compile(r"\[(?:[^\]\\]|\\.)+\]:[ \t]*(\S.*)?$")
 AUTOLINK = re.compile(r"<[A-Za-z][A-Za-z0-9+.-]{1,31}:[^\s<>]*>")
 HTML_TAG = re.compile(r"</?[A-Za-z][A-Za-z0-9-]*(?:\s[^<>]*)?/?>|<!--.*?-->", re.S)
 ASCII_PUNCT = set("!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~")
@@ -56,9 +57,10 @@ def tracked():
 
 
 def slug(text):
-    """GitHub's anchor for a heading's rendered text: lower case, every character but a letter, digit, "_", "-" or
-    space dropped, and each space a "-"."""
-    return re.sub(r"[^\w\- ]", "", text.strip().lower()).replace(" ", "-")
+    """GitHub's anchor for a heading's rendered text (github-slugger's `slug`): lower case, every character but a letter,
+    digit, "_", "-" or space dropped, and each space a "-". Nothing is trimmed: a space a dropped tag leaves at an end
+    is a "-"."""
+    return re.sub(r"[^\w\- ]", "", text.lower()).replace(" ", "-")
 
 
 def is_punct(ch):
@@ -102,6 +104,37 @@ def code_spans(line):
         spans.append((i, close + run, content))
         i = close + run
     return spans
+
+
+def definition(body):
+    """The target of a link reference definition `[label]: target "title"` that starts body, or None where the line is
+    not one (CommonMark 0.29, section 4.7): a label with a character other than a space and no unescaped bracket, the
+    target (`<...>` or bare, not empty), and after it nothing, or a space and a title that closes the line or runs on to
+    the next. A label with nothing after the colon takes its target from the next line, which is not read: ""."""
+    m = re.match(r"\[((?:[^\[\]\\]|\\.)*)\]:[ \t]*", body)
+    if not m or not m.group(1).strip() or body[1] == "^":
+        return None
+    rest = body[m.end():]
+    if not rest.strip():
+        return ""
+    dest = read_destination(rest, 0)
+    if dest is None or dest[1] == 0:
+        return None
+    target, i = dest
+    after = rest[i:]
+    if not after.strip():
+        return target
+    title = after.lstrip(" \t")
+    if title == after or title[0] not in TITLE_CLOSE:
+        return None
+    close, j = TITLE_CLOSE[title[0]], 1
+    while j < len(title) and title[j] != close:
+        if title[j] == "\\":
+            j += 1
+        elif title[0] == "(" and title[j] == "(":
+            return None
+        j += 1
+    return target if j >= len(title) or not title[j + 1:].strip() else None
 
 
 def read_destination(s, i):
@@ -402,7 +435,7 @@ def blocks(lines):
                 if m and para and not shallow:
                     yield no, shown, "text"
                     if top:
-                        yield no, "\n".join(para), "heading"
+                        yield no, "\n".join(line.rstrip() for line in para), "heading"
                     para = []
                     break
                 if THEMATIC.match(body):
@@ -423,8 +456,7 @@ def blocks(lines):
                     body = after[gap:].lstrip(" ")
                     indent = items[-1] + len(after) - gap - len(body)
                     continue
-                m = DEFINITION.match(body)
-                if m and not para and body[1] != "^":
+                if not para and definition(body) is not None:
                     yield no, shown, "def"
                     break
             if not para:
@@ -521,8 +553,8 @@ def check(page, index):
             masked = masked[:start] + "\0" * (end - start) + masked[end:]
         targets = link_targets(line, masked)
         if kind == "def":
-            definition = read_destination(line.lstrip().split("]:", 1)[1].lstrip(" \t"), 0)
-            targets += [definition[0]] if definition else []
+            target = definition(line.lstrip())
+            targets += [target] if target else []
         for target in targets:
             if target.startswith(("http://", "https://", "mailto:")):
                 continue
@@ -540,7 +572,10 @@ def check(page, index):
             if " " in name:
                 problems += words_in(page, no, name, index)
                 continue
-            if name in NOT_OURS or any(c in name for c in "<*$=[]()"):
+            if name in NOT_OURS or any(c in name for c in "<*$=") or "](" in name:
+                continue
+            if any(c in name for c in "[]()") and file_type(name) not in PATH_TYPES:
+                problems += words_in(page, no, name, index)
                 continue
             if name.startswith(("/", "~", "%", "-", "http", "C:")) or name.startswith(GAME_FOLDERS + NOT_TRACKED_ON_PURPOSE):
                 continue

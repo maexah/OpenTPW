@@ -184,11 +184,14 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   drawn turn (the node's rest turn in its mesh, carried by its mesh's drawn turn) Head1 matches the original's matrix to 1.6 degrees at every pause measured, and
   Heads 2 to 5 are 20 to 71 degrees out while the tentacles morph, close only at two pauses (`lib/headresidual.py`; `ride-operation.md`, "Mumbo's head matrix against this
   game's drawn turn"). Decode what `FUN_0044a640` does with flag `0x40000` (the face's edge and normal, `park.md`, "Where a head on a morphing face stands"; ours counts
-  `RIDER_HEAD_FACE_TURN`), build it in `TryGetDrawnNodeTurn` for a node `TryGetDrawnNode` places `OnAFace`, and re-run `headframe.py` (prediction P7 in
+  `RIDER_HEAD_TURN_AT_REST`), build it in `TryGetDrawnNodeTurn` for a node `TryGetDrawnNode` places `OnAFace` whose lookup record's flags carry `0x40000` (the pose
+  walk calls it only then: `test eax,0x40000` at `0x0044af61`, `je` past the call at `0x0044af66`; `OnAFace` is the wider `0x40040`): Mumbo's Head1 (`0x100000f1`) does not
+  and keeps the drawn turn it already matches with; Head02-Head05 (`0x000400f1`) and all sixteen Crazy Ape heads (`0x000400f1`, `0x100400f1`) do. Then re-run `headframe.py` (prediction P7 in
   `q947/PREDICTION.txt`: all eight pauses' Heads 2 to 5 under 15 degrees, at least 24 of 32 pictures). If it holds, choose `ParkGuestSprites.HeadOnRide`'s picture by
   the drawn turn and photograph the heads on the desktop against the original's at the same pauses, the Ape staying at least 5 of 8.
 - [ ] **Q1004. The `jm_leaf` first key in Mumbo's `m`, `e` and `s` clips (frame 14, `0x00471c56`).** From Q947 and Q940's second piece. Measure the key in the original and in
-  ours, then build the skip in `NodePoser.Pose`.
+  ours, then build the skip in `NodePoser.Pose`. From Q940: the original keeps the node's turn until the first key (`0x00471c56`), about 3.7 degrees from the last
+  (unmeasured here); `NodePoser` holds the first key (`docs/exe/park.md`, `FUN_00471860`); the build depends on the decode.
 
 - [ ] **Q1005. A rider's sound's height in the original (Q856's second part).** From Q856. The decode says a rider a ride holds keeps `Person_PlaceSprite`'s height less `FUN_004527f0`'s ground (`0x004f9e91`), where a walker's is nought. Left: (1) in the original, a person SEATED on a ride (the person object's `+0x28` set and the sprite's `+0x8c` above 1, which `personsound.sh riders` prints as `held` and `y`) sounding through `Person_PlaySound`: a put-off on the Seat or Walk arm, or whatever else a rider asks for; 150 s of the stock park gave only guests at the Spray's and the Kiosk's till (`held 1`, heights 0.983895 and 0.0, the ints 0 and 0), none on a seat. Ride a ride that sounds one (the Spray's till is no seat), or hold a guest on a ride's seat by writing, and read the ints against the sprite. (2) Then compare ours' `PutOffPoint` height (the point less the ground) with it, and build only if they differ.
 

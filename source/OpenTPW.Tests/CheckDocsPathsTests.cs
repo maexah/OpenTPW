@@ -32,7 +32,7 @@ public class CheckDocsPathsTests
 		("tools/run.sh", "x"u8.ToArray()),
 		("tools/Outside.cs", "class Outside { }\n"u8.ToArray()),
 		("docs/other.md", "x"u8.ToArray()),
-		("docs/guide.md", "# Where things are\n## `Foo` Bar!\n### A \u2014 b (Q&A)\n#### Snake case\n###### Six\n####### Seven\n#NoSpace\n##### Re-use it\n## Trailing \n## snake_name\n## Same\n## Same\n## Same\n```sh\n# InTick\n```\n~~~\n```\n# InTilde\n~~~\n````md\n```\n# InFour\n```\n````\n## After fences\n## Closed ##\n## C# ##\n## Not# closed\n## Sharp # mid\nText # Fake\n## _Word_ and *star* x\n## [Link _a_](http://x.y/z_w \"t\") end\n## <b>Html</b> tag_\n## ![Alt](a_b.png) pic\n## __init__.py\n## foo_bar_\n## \\_lit\\_ x\n## `co_de` x\n## a_b_c\nSetext title\n============\nSetext two\n----------\n- item here\n---\n  ### Indented three\n    #### Code four\n> ## Quoted heading\n- ## Item heading\n\n## x `` a `` y\n## \u20ac_x_ y\n## <https://a_b.c/d> auto\n## c<!-- hid_den -->d\n## [_a](u) b_\n## [a [b](u) c](v) d\n## \\<b> x\nPara before\n***\nSetext after hr\n======\n> lazyq\nlazy underline\n=======\n\nTrailing spaces\n--- \n\n## [i ![j](u) k](v) l\n## [o \\![p](u) q](v) r\n## _.__.\n## *a _b* c_\n## $_q_ z\n\n- list a\n> \n  ### Q heading\n-\n\n   ## Empty item then heading\n\nSetext first\n2. second line\n=========\n\nPara one\n__\nSetext cont\n======\n"u8.ToArray()),
+		("docs/guide.md", "# Where things are\n## `Foo` Bar!\n### A \u2014 b (Q&A)\n#### Snake case\n###### Six\n####### Seven\n#NoSpace\n##### Re-use it\n## Trailing \n## snake_name\n## Same\n## Same\n## Same\n```sh\n# InTick\n```\n~~~\n```\n# InTilde\n~~~\n````md\n```\n# InFour\n```\n````\n## After fences\n## Closed ##\n## C# ##\n## Not# closed\n## Sharp # mid\nText # Fake\n## _Word_ and *star* x\n## [Link _a_](http://x.y/z_w \"t\") end\n## <b>Html</b> tag_\n## ![Alt](a_b.png) pic\n## __init__.py\n## foo_bar_\n## \\_lit\\_ x\n## `co_de` x\n## a_b_c\nSetext title\n============\nSetext two\n----------\n- item here\n---\n  ### Indented three\n    #### Code four\n> ## Quoted heading\n- ## Item heading\n\n## x `` a `` y\n## \u20ac_x_ y\n## <https://a_b.c/d> auto\n## c<!-- hid_den -->d\n## [_a](u) b_\n## [a [b](u) c](v) d\n## \\<b> x\nPara before\n***\nSetext after hr\n======\n> lazyq\nlazy underline\n=======\n\nTrailing spaces\n--- \n\n## [i ![j](u) k](v) l\n## [o \\![p](u) q](v) r\n## _.__.\n## *a _b* c_\n## $_q_ z\n\n- list a\n> \n  ### Q heading\n-\n\n   ## Empty item then heading\n\nSetext first\n2. second line\n=========\n\nPara one\n__\nSetext cont\n======\n\n## <img src=x> Play\n\nSetext trail  \n=====\n"u8.ToArray()),
 		("docs/p(1).md", "x"u8.ToArray()),
 		("docs/front.md", "---\nname: x\n---\n# After front\n"u8.ToArray()),
 		(".gitignore", "ignored/\n"u8.ToArray()),
@@ -377,6 +377,9 @@ public class CheckDocsPathsTests
 	[DataRow( "setext-first2-second-line", true )]
 	[DataRow( "para-one__setext-cont", true )]
 	[DataRow( "setext-cont", false )]
+	[DataRow( "-play", true )]
+	[DataRow( "play", false )]
+	[DataRow( "setext-trail", true )]
 	[DataRow( "lazyqlazy-underline", false )]
 	public void AnAnchorIsGitHubsSlugOfAHeadingOfTheLinkedPage( string anchor, bool found )
 	{
@@ -618,6 +621,15 @@ public class CheckDocsPathsTests
 			"",
 			"para",
 			"[nodef]: docs/gone-nodef.md",
+			"",
+			"[Note]: this is prose",
+			"",
+			"[bad3]: docs/gone-junk.md \"t\" junk",
+			"",
+			"[ ]: docs/gone-blank.md",
+			"",
+			"[next]:",
+			"docs/gone-next.md",
 		]) );
 
 		Assert.AreEqual( 1, exit, string.Join( "\n", lines ) );
@@ -650,18 +662,22 @@ public class CheckDocsPathsTests
 			"`[x](docs/gone-span.md)` and ``[y](docs/gone-span2.md)`` and `a``b` and `c` `d",
 			"`ParkStatR1``x` and ``ParkStatR2`y`` and [not](docs/x\u0001y.md)",
 			"\\`tools/gone-esc.sh\\` `ParkStatE1` \\\\`ParkStatE2`",
+			"`docs/p(1).md` `docs/gone(1).md` `tools/gone[1].py` `open(tools/gone2.py)` `(a+b)/50` `curve[7]/255`",
 		]) );
 
 		Assert.AreEqual( 1, exit, string.Join( "\n", lines ) );
 		CollectionAssert.AreEqual( new[]
 		{
-			Header( 1, 6 ),
+			Header( 1, 9 ),
 			Problem( "README.md", 1, "tools/gone1.sh", NoFile ),
 			Problem( "README.md", 1, "ParkStatDbl", NoType ),
 			Problem( "README.md", 1, "ParkStatPad", NoType ),
 			Problem( "README.md", 1, "ParkStatTri", NoType ),
 			Problem( "README.md", 4, "ParkStatE1", NoType ),
 			Problem( "README.md", 4, "ParkStatE2", NoType ),
+			Problem( "README.md", 5, "docs/gone(1).md", NoFile ),
+			Problem( "README.md", 5, "tools/gone[1].py", NoFile ),
+			Problem( "README.md", 5, "tools/gone2.py", NoFile ),
 		}, lines );
 	}
 

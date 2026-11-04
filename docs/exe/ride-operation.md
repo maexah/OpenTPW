@@ -3716,8 +3716,9 @@ Q940's 32 pauses against a run of this game loaded from the same `Q848.TPWS`, th
 carried by the turn that mesh is drawn with, is the original's matrix to 0.0-1.6 degrees for Head1 in all 7 pauses it was held at (7 of 7 pictures), and for
 Heads 2 to 5 only at two pauses (role 4 frame 111, role 5 frame 101: 1 to 13 degrees); at the other six they are 20 to 71 degrees
 out about a horizontal axis (`lib/headresidual.py`). Over all 32 samples the drawn turn picks the original's picture in 13 (the rest matrix, 4), a mean 30.5 degrees apart. The
-gap is the turn `FUN_0044a640` adds under flag `0x40000` (the face's edge and normal, "Where a head on a morphing face stands", `park.md`), which ours
-does not build: `HeadOnRide`'s choice stays by the rest matrix until it does (Q1003).
+gap is `FUN_0044a640`, which replaces the matrix's rotation rows with cross(edge, normal), the normal and the edge (three kept angles), under flag `0x40000` only
+(`test eax,0x40000` at `0x0044af61`; "Where a head on a morphing face stands", `park.md`), which ours does not build. The flag split is the evidence: Mumbo's Head1
+(`0x100000f1`) lacks it and is the one that matches; Head02-Head05 (`0x000400f1`) carry it and are out. `HeadOnRide`'s choice stays by the rest matrix until it does (Q1003).
 
 ### The excitement match — `FUN_004fdcc0`
 
