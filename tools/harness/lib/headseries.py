@@ -5,6 +5,8 @@ joined to the path at (43,21), five guests sent to it; once `heads 5/5` and runn
 which the original loads with original/loadfile.sh) and then, still paused:
     series (default)   `step STEP` and `rides` COUNT times (env Q848_STEP, Q848_COUNT; 3 and 450): series.json holds, a sample each, the ride's first
                        channel (role, clip, frame, length) and each head's name, kind, drawn place (x, depth, height), rest place and node (the census's leading number)
+    --save-role R      (Q917) a bought ride's park is saved once its first channel is in role R (frames 5 to 30), not as soon as it runs: a file for the original to
+                       load that the riders are on in an OnAMesh role (the original draws its own riders' heads, so it does not hold the same ones: DOES-NOT)
     --load FILE        (Q916) start from a park file the original loaded, not a bought ride: nothing is bought or saved; the file is loaded from the Load Park list
     --photo T,...      on the desktop (not off-screen): a shot of the window at each role:frame (within 1.6 frames) named role<R>-frame<F>.png
 Each head is held on a script node (the census's leading number: Mumbo's are 1-5, the Crazy Ape's sparse; the original's record numbers are the lookup table's, Q916); original/headpause.py reads the original's the same way and
@@ -12,7 +14,8 @@ lib/headcompare.py sets the two against each other. review-codex/venv/bin/python
 import os, sys, json
 OUT = sys.argv[1]; BIN = sys.argv[2]; NAME = "Q848"
 LOAD = os.path.abspath(sys.argv[sys.argv.index("--load") + 1]) if "--load" in sys.argv else None
-pos = [a for a in sys.argv[3:] if not a.startswith("--") and ":" not in a and os.path.abspath(a) != LOAD]
+SAVE_ROLE = sys.argv[sys.argv.index("--save-role") + 1] if "--save-role" in sys.argv else None
+pos = [a for a in sys.argv[3:] if not a.startswith("--") and ":" not in a and os.path.abspath(a) != LOAD and a != SAVE_ROLE]
 ITEM = pos[0] if pos else "1109"; WORD = pos[1] if len(pos) > 1 else "Mumbo"
 PHOTO = [tuple(float(x) for x in t.split(":")) for t in sys.argv[sys.argv.index("--photo") + 1].split(",")] if "--photo" in sys.argv else None
 OFFSCREEN = PHOTO is None
@@ -31,7 +34,7 @@ try:
     enter(); reply("pause", 0.5)
     if LOAD:   # the series starts from a park file (the one the original loaded) instead of a bought ride: Q916
         shutil.copy(LOAD, WROTE)
-        read, _, _ = load(2)   # the list runs oldest first: the autosave, then this file; the log's "reading the park from" says which was read
+        read, _, _ = load(2 if OFFSCREEN else 1)   # off-screen the list runs oldest first, the autosave then this file; the desktop's folder has no autosave, so it is row 1; the log's "reading the park from" says which was read
         assert read.endswith(NAME + ".TPWS"), f"loaded {read}, not the file asked for"
         reply("camera 430 237 90 0", 0.5)
     else:
@@ -48,6 +51,10 @@ try:
             time.sleep(1.0); l = ride()
             if l and "heads 5/5" in l[0] and "running True" in l[0]: ok = True; print("  aboard after", i + 1, "s"); break
         print("  aboard:", ok)
+        for i in range(400 if SAVE_ROLE else 0):   # Q917: running on until the first channel is in role SAVE_ROLE, then pause and save
+            l = ride(); c = chan(l[0]) if l else None
+            if c and c[0] == SAVE_ROLE and 5 <= float(c[2]) <= 30: print("  role", SAVE_ROLE, "frame", c[2], "after", i, "polls"); break
+            time.sleep(0.3)
         reply("pause", 0.5); send("step 2"); time.sleep(1.0)
         p, _ = save(); print("  saved:", WROTE, "things", len(p.things))
     if PHOTO is None:

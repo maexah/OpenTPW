@@ -173,14 +173,12 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
 - [ ] **Q925. What a Load Park and a Restart Park still spend (from Q924).** After Q924 a load from inside a park is 0.7 s in the game's log and 0.7 to 1.0 s in the film (0.14 to 0.17 s in the original, no loading screen). The third Load's phases (`q924/after2/run.log`): `ground` 0.21 s,
   `objects` 0.17, `terrain` 0.14, `guest sprites` 0.05, `queues` 0.03, `audio` 0.07 (the 189 MB music bank and the 17 MB kids bank are read again, because they decode on demand and were not kept), the rest 0.02 or under each; the film adds about 0.1 s to the log's total. Where each could
   be kept across a load (`ground`'s textures and meshes, `terrain`, `objects`' models, the guest sprites) or done off the loading screen, and what keeping costs in memory (the park's 0.70 GB resident), are not looked at; the first load of a launch is 0.2 s slower. Do it only if Alexah wants the load shorter than 0.8 s; Q247's choice on building in place now sets a rebuild of 0.7 to 0.8 s against 0.14 to 0.17 s.
-- [ ] **Q917. The Crazy Ape's OnAMesh clips and its other heads, and a fitted turn for them (from Q916).** Q916 compared three of the Ape's heads (Head02, Head07, Head13) in
-  its clip `l` (role 3), the OnAFace branch, and found no difference above about 0.05 (the census rounds to 0.1). Not compared: the OnAMesh branch (roles 4, 5, 6 and `m1` to
-  `m6`), the ride proper's clips (never paused), and a face-anchored head on a non-morphing parent (`LobbyModel.cs:609`). The original named 13 records, ours held 11 heads;
-  `headpair.py` paired 8 by rest place and left records 0, 2, 6, 10 and 15 and ours' Head04, Head12 and Head15, though the model already names the five (0 Head1, 2 Head06,
-  6 Head08, 10 Head09, 15 Head16). Both games number a head by the same ids and rule and differ only in the generator (DOES-NOT), so the same head is rarely held in one loop.
-  Build nothing unless a difference shows. The cheap route: a park file saved during role 5 names the same heads in both games (`headseries.py --load`), then `headpause.py`
-  pauses of roles 4, 5 and 6 and `headcompare.py --turn --map --xz`; a pause where both hold three paired heads gives the Ape's fitted turn (the original's pause at 81.11 holds
-  records 3, 12, 16 and 17, ours has never held three of them together). Low value, as the heads compared agree to 0.05.
+- [ ] **Q1002. What Q917 left: the Ape's fitted turn on OnAMesh, role 4, and the ride proper's clips (from Q917).** Q917's heights agree to about 0.1 for one or two heads at a time in role 5
+  (all seven clips) and one at role 6; a fitted turn needs three paired heads in one pause, and the original draws its riders' heads by a generator of its own, so a file's four heads are
+  not the original's (`q917/`, seventeen pauses held at most two of ours' four). Ways in, not tried: poll the original's records read-only (`headpause.py`'s `read`) and pause only when it
+  holds three of ours; or a much longer series of ours across many rides (ours holds a new set of heads each ride) against the original's role 5 pauses when three coincide. Role 4 never
+  came in either game's role-5 runs (ours reached it once, 63 frames, in `q916/ape4`'s 1400 samples from a fresh ride); the ride proper's clips and a face-anchored head on a non-morphing
+  parent (`LobbyModel.cs:609`) are also unpaused. Low value: every head compared agrees to about 0.1 and no difference has shown.
 
 - [ ] **Q947. Choose a ride head's picture by the matrix it is drawn with, not its rest matrix (Mumbo).** (From Q940: Mumbo's heads pick the original's picture in 4 of 32 samples by
   the rest matrix.) The unbuilt census is `~/.cache/tpw-harnesses/q940/a18-wip.patch` (`LobbyModel.TryGetDrawnNodeTurn`: the node's rest turn inside its mesh ancestor, carried by that
