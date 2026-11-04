@@ -244,6 +244,10 @@ public sealed class ParkObjects : Entity
 	public static bool CoversGround( ParkWorld.MapCell cell )
 		=> cell.Type is FootprintBody or FootprintUsed or FootprintFar;
 
+	/// <summary>A test's stand-in for <see cref="Place"/> at the load, which wants a graphics device: stands the thing in the
+	/// objects it is given. Null in the game.</summary>
+	internal static Action<ParkObjects, ParkWorld.CatalogueObject>? PlaceInstead { get; set; }
+
 	/// <param name="world">
 	/// The park's own save, already walked, or null where the theme ships none. It is read once by
 	/// <see cref="Level"/> and shared, because the ground and the paths need the same file.
@@ -284,7 +288,12 @@ public sealed class ParkObjects : Entity
 		}
 
 		foreach ( var item in wanted )
-			Place( item, catalogue );
+		{
+			if ( PlaceInstead is { } instead )
+				instead( this, item );
+			else
+				Place( item, catalogue );
+		}
 
 		_savedHoardings.Clear();
 
@@ -570,8 +579,10 @@ public sealed class ParkObjects : Entity
 	/// <para>
 	/// <b>A deviation at the load:</b> the original stamps a saved thing through <c>RideSystem_LoadModels</c>' record word
 	/// (<c>0x00464942</c>, its <c>+0x15</c>) and only where that word carries <c>0x8</c>; this stamps every placed thing that has a
-	/// floor, whatever the saved word says. They agree on the New Save (437 cells each); the items whose saved records never carry
-	/// <c>0x8</c> in the park files on this machine are not compared (<c>docs/QUEUE.md</c> Q885).
+	/// floor, whatever the saved word says. They agree on the New Save (437 cells each), and on the items whose saved records never
+	/// carry <c>0x8</c> in the 859 park files read (the bus, the seaplane; the gates, lights and ferry in all but 14, 14 and 1 records):
+	/// their models have no procedural base, so there is no floor to stamp here (<c>ParkFootprintSplitTests</c>). A record saved
+	/// without <c>0x8</c> on an item that has a floor is the case not met in those files (<c>docs/QUEUE.md</c> Q885).
 	/// </para>
 	/// </summary>
 	private static IReadOnlyDictionary<uint, Texture> BlendFloor( ModelFile file, ParkItemCatalogue.Item item, int angle,

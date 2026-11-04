@@ -165,8 +165,9 @@ public class ParkFootprintSplitTests
 	/// that found a frame's texture.
 	/// </summary>
 	/// <remarks>
-	/// <b>Mutation:</b> the stamp after the frame-name test survives, because no entry of Lost Kingdom's names no frame (dead by
-	/// CONTENT, counted below): the order is the code's, from <c>0x0046347a</c> to <c>0x0046353b</c> having no name to look at.
+	/// <b>Mutation:</b> the stamp after the frame-name test survives, because no entry of Lost Kingdom's names no frame, in the
+	/// catalogue's items or in the queue's pieces (dead by CONTENT, counted below): the order is the code's, from <c>0x0046347a</c>
+	/// to <c>0x0046353b</c> having no name to look at.
 	/// </remarks>
 	[TestMethod]
 	public void EveryTableEntryOfEveryItemIsStamped()
@@ -198,6 +199,28 @@ public class ParkFootprintSplitTests
 			++checkedItems;
 		}
 
+		// The queue's pieces blend their one cell from the root mesh (ParkQueues.BlendFloor), which no catalogue item does.
+		var pieces = ((string[])typeof( ParkQueues ).GetField( "Pieces", AnyStatic )!.GetValue( null )!).Distinct().ToArray();
+		var checkedPieces = 0;
+
+		foreach ( var piece in pieces )
+		{
+			var model = new ModelFile( $"levels/jungle/queue/{piece}.MD2" );
+
+			if ( (model.HeaderFlags & 0x8) == 0 )
+				continue;
+
+			var table = ProceduralFloor.Table( model, model.RootNode, null, 1, 1, true, ProceduralBase.ParkGrid );
+			var named = model.Meshes[model.RootNode].Materials.Where( m => m.FrameOffset != 0 ).Select( m => m.FrameOffset ).ToHashSet();
+			var entry = table[0, 0];
+
+			Assert.IsNotNull( entry, $"queue piece {piece}: its one cell has an entry" );
+			unnamed += named.Contains( entry!.Value.FrameOffset ) ? 0 : 1;
+			++checkedPieces;
+		}
+
+		Assert.AreEqual( 7, pieces.Length, "the table's distinct pieces" );
+		Assert.IsTrue( checkedPieces >= 5, $"{checkedPieces} queue pieces checked" );
 		Assert.IsTrue( checkedItems >= 30, $"{checkedItems} items checked" );
 		Assert.AreEqual( 0, unnamed, "table entries naming no frame, which the stamp would still write" );
 	}
@@ -412,6 +435,196 @@ public class ParkFootprintSplitTests
 		{
 			SetCurrent( current );
 		}
+	}
+
+	/// <summary>Stands a thing in <paramref name="objects"/> as the load and a purchase do (the model of <see cref="ParkObjects.Place"/>
+	/// needs a graphics device), with <paramref name="cells"/> stamped through the ground, so the tile pass has something to give back.</summary>
+	private void StandStamped( ParkObjects objects, ParkGround ground, int thingId, int catalogueId, IEnumerable<(int X, int Y)> cells )
+	{
+		var model = (LobbyModel)RuntimeHelpers.GetUninitializedObject( typeof( LobbyModel ) );
+		typeof( LobbyModel ).GetField( "<Entities>k__BackingField", Any )!.SetValue( model, Array.Empty<ModelEntity>() );
+
+		var catalogue = new ParkItemCatalogue( "jungle", FileSystem );
+		Assert.IsTrue( catalogue.TryGet( catalogueId, out var item ) );
+		objects.Stand( thingId, model, RideAnimations.Load( item.Directory, item.Stem, FileSystem, item.AnimationChannels ), catalogueId );
+
+		var stamped = cells.Where( cell => ground.StampSplit( cell.X, cell.Y ) ).ToList();
+		var standing = ((IDictionary)typeof( ParkObjects ).GetField( "_standing", Any )!.GetValue( objects )!)[thingId]!;
+		standing.GetType().GetProperty( "Stamped" )!.SetValue( standing, stamped );
+	}
+
+	private static void SetType( ParkWorld world, int x, int y, int type )
+	{
+		var cells = (ParkWorld.MapCell[])typeof( ParkWorld ).GetField( "_cells", Any )!.GetValue( world )!;
+		cells[(y * ParkWorld.MapSize) + x] = cells[(y * ParkWorld.MapSize) + x] with { Type = type };
+	}
+
+	private static IEnumerable<(int X, int Y)> CellsOf( (int Left, int Top, int Right, int Bottom) box )
+		=> Enumerable.Range( box.Top, box.Bottom - box.Top + 1 ).SelectMany( y => Enumerable.Range( box.Left, box.Right - box.Left + 1 ).Select( x => (x, y) ) );
+
+	/// <summary>
+	/// <b>The load's tile pass runs after every thing is stood</b> (<c>ParkObjects</c>' constructor): a stamped cell the park file
+	/// holds as type 0 or 5 is given back to the ground, one of any other type stays stamped. Two cells of the stock park's placed
+	/// things are set to types 0 and 5 in the world this reads (the New Save's Staff Room at (42,23) has two such cells), every
+	/// placed thing is stood with its footprint stamped, and the objects are built over that world.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the pass over <c>_standing</c> in the constructor removed leaves both cells stamped.</remarks>
+	[TestMethod]
+	public void TheLoadsTilePassGivesBackTheCellsTheFileHoldsAsGround()
+	{
+		Log ??= new();
+
+		var field = Landscape();
+		var ground = GroundOf( field, 8 );
+		using var stream = new MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
+		var world = new ParkWorld( new SaveReader( stream ).ReadFile() );
+		var catalogue = new ParkItemCatalogue( "jungle", FileSystem );
+
+		var things = world.Objects.Where( o => o.IsPlaced && catalogue.TryGet( o.CatalogueId, out var i ) && i.Shape != null ).ToArray();
+		var covered = things.ToDictionary( o => o.ThingId, o => CellsOf( ParkObjects.FootprintAt( catalogue.All.Single( i => i.Id == o.CatalogueId ), o.CellX, o.CellY, o.Angle ) ).ToArray() );
+		var all = covered.Values.SelectMany( c => c ).ToArray();
+
+		Assert.IsTrue( all.Length > 10, "the stock park's things cover cells" );
+		Assert.AreEqual( all.Length, all.Distinct().Count(), "no two things share a cell" );
+
+		var (ground0, ground5) = (all[0], all[^1]);
+		SetType( world, ground0.X, ground0.Y, 0 );
+		SetType( world, ground5.X, ground5.Y, 5 );
+
+		var current = ParkGround.Current;
+		SetCurrent( ground );
+		ParkObjects.PlaceInstead = ( objects, placed ) =>
+			StandStamped( objects, ground, placed.ThingId, placed.CatalogueId, covered.TryGetValue( placed.ThingId, out var cells ) ? cells : [] );
+
+		try
+		{
+			var objects = new ParkObjects( "jungle", world, catalogue );
+
+			Assert.AreEqual( all.Length - 2, objects.StampedCells, "the two cells the file holds as ground are given back" );
+			Assert.IsFalse( field.IsStamped( ground0.X, ground0.Y ), "type 0: ground again" );
+			Assert.IsFalse( field.IsStamped( ground5.X, ground5.Y ), "type 5: ground again" );
+			Assert.IsTrue( all.Skip( 1 ).SkipLast( 1 ).All( cell => field.IsStamped( cell.X, cell.Y ) ), "every other cell stays stamped" );
+		}
+		finally
+		{
+			ParkObjects.PlaceInstead = null;
+			SetCurrent( current );
+		}
+	}
+
+	/// <summary>
+	/// <b>A purchase's tile pass gives back a table cell outside the typed footprint</b>: the Huge Hollow Rock's model stands one row
+	/// above its anchor, so its floor table covers cells that <c>Stamp</c> does not type (<see cref="ParkObjects.FloorFootprint"/>
+	/// against <see cref="ParkObjects.FootprintAt"/>), and a cell the map holds as ground there is retiled with set 0, tile 55 and ends
+	/// unstamped; the cells <c>Stamp</c> typed 4 stay stamped. (No item bought in the original left such a cell, Q886; this is the
+	/// load's rule applied to a purchase, as the call's remark says.)
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the purchase's <c>RetileGround</c> call removed leaves the untyped row stamped.</remarks>
+	[TestMethod]
+	public void APurchasesTilePassGivesBackTheTableCellsOutsideTheTypedFootprint()
+	{
+		Log ??= new();
+
+		const int Rock = 1427;
+		var level = Level.Current;
+		var (catalogue, _, _) = ParkFootprintPictureTests.BuyScreen();
+		var state = Level.Current!.ParkState!;
+		typeof( ParkState ).GetProperty( nameof( ParkState.Balance ) )!.SetValue( state, 90000 );
+
+		Assert.IsTrue( catalogue.TryGet( Rock, out var item ) );
+
+		var field = Landscape();
+		var ground = GroundOf( field, 8 );
+		var objects = new ParkObjects( "jungle", null, null );
+		var build = typeof( ParkBuilding ).GetMethods( BindingFlags.NonPublic | BindingFlags.Static )
+			.Single( method => method.Name == "Build" && method.GetParameters().Length == 10 );
+
+		(ParkWorld.CatalogueObject Placed, List<(int X, int Y)> Cells)? stood = null;
+
+		var current = ParkGround.Current;
+		SetCurrent( ground );
+
+		try
+		{
+			string Answer( int x, int y )
+			{
+				var built = build.Invoke( null, [state, Level.Current!.Park, catalogue, objects, null, Rock, x, y, 0, 0] )!;
+				return (string)built.GetType().GetProperty( "Answer" )!.GetValue( built )!;
+			}
+
+			// The first cell the rock may stand on: with nothing to stand it, the build answers that it would not load.
+			ParkBuilding.StandThing = _ => false;
+			var at = Enumerable.Range( 0, 128 * 128 ).Select( i => (X: i % 128, Y: i / 128) )
+				.Where( cell => cell.X is >= 10 and < 100 && cell.Y is >= 10 and < 100 ).First( cell => Answer( cell.X, cell.Y ).Contains( "would not load" ) );
+
+			// The ground's own rebuild, which ends a build (ParkSurfaces.Rebuild), wants a graphics device and fails on the stand-in
+			// ground; the tile pass has run before it.
+			ParkBuilding.StandThing = placed =>
+			{
+				var cells = CellsOf( ParkObjects.FloorFootprint( item, placed.CellX, placed.CellY, placed.Angle ) ).ToList();
+				StandStamped( objects, ground, placed.ThingId, placed.CatalogueId, cells );
+				stood = (placed, cells);
+				return true;
+			};
+
+			var failure = Assert.ThrowsException<TargetInvocationException>( () => Answer( at.X, at.Y ) );
+			StringAssert.Contains( failure.InnerException!.StackTrace, "ParkGround.Build", "it is the ground's rebuild that fails" );
+
+			var (placed, cells) = stood!.Value;
+			var typed = CellsOf( ParkObjects.FootprintAt( item, at.X, at.Y, 0 ) ).ToHashSet();
+			var outside = cells.Where( cell => !typed.Contains( cell ) ).ToArray();
+
+			Assert.AreEqual( at, (placed.CellX, placed.CellY) );
+			Assert.IsTrue( outside.Length >= 4, $"the rock's table covers {outside.Length} cells beyond the typed footprint" );
+			Assert.IsTrue( outside.All( cell => state.Record( cell.X, cell.Y ).Type is <= 0 or 5 ), "which Stamp left as the map had them: ground" );
+			Assert.IsTrue( outside.All( cell => !field.IsStamped( cell.X, cell.Y ) ), "so the purchase's tile pass gave them back" );
+			Assert.IsTrue( typed.All( cell => !cells.Contains( cell ) || field.IsStamped( cell.X, cell.Y ) ), "the typed cells stay stamped" );
+			Assert.AreEqual( cells.Count - outside.Length, objects.StampedCells );
+		}
+		finally
+		{
+			ParkBuilding.StandThing = null;
+			SetCurrent( current );
+
+			// The purchase was paid in this level's park state: its month's costs are what the staff costs screen reads of the current level.
+			Level.Current = level;
+		}
+	}
+
+	/// <summary>
+	/// <b>The items whose saved model records never carry <c>0x8</c> have no floor here, so ours stamps none of them.</b> The load
+	/// stamps a record whose word (<c>+0x15</c>, <c>0x00464942</c>) carries <c>0x8</c>; across the 859 distinct park files on the
+	/// maintainer's machine the records of items 1600 and 1602 (the bus and the seaplane) never do, and those of 1601, 1603 and 1604
+	/// (the gates, the lights, the ferry) do in 14, 14 and 1 of 851, 851 and 90. Their models carry no procedural base (header
+	/// <c>0x8</c>), so <see cref="ParkObjects.FloorMeshOf"/> finds no floor and <see cref="ProceduralFloor.Blend"/> is not reached: the
+	/// two games agree there by the model, whatever the word. The other never-<c>0x8</c> ids (1141, 1142, 1151 to 1154, 1171, 1183,
+	/// 4141: wakes, cars and carts, the vehicles' <c>0x101</c>) are not catalogue items and are never placed here.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> <c>FloorMeshOf</c> answering a mesh without the header's <c>0x8</c> fails here.</remarks>
+	[TestMethod]
+	public void TheItemsWhoseSavedRecordsNeverCarry0x8HaveNoFloor()
+	{
+		var catalogue = new ParkItemCatalogue( "jungle", FileSystem );
+
+		foreach ( var id in new[] { 1600, 1601, 1602, 1603, 1604 } )
+		{
+			Assert.IsTrue( catalogue.TryGet( id, out var item ), $"item {id}" );
+
+			var model = new ModelFile( $"{item.Directory}/{item.Stem}.MD2" );
+
+			Assert.AreEqual( 0u, model.HeaderFlags & 0x8, $"{item.Name} ({id}): no procedural base" );
+			Assert.AreEqual( -1, ParkObjects.FloorMeshOf( model, item.Shape! ), $"{item.Name} ({id}): no floor, no stamp" );
+		}
+
+		foreach ( var id in new[] { 1141, 1142, 1151, 1152, 1153, 1154, 1171, 1183, 4141 } )
+			Assert.IsFalse( catalogue.TryGet( id, out _ ), $"item {id} is a vehicle, not a catalogue item" );
+
+		// And no item of that family is among those that do blend a floor.
+		var withFloor = catalogue.All.Where( i => i.Shape != null && ParkObjects.FloorMeshOf( new ModelFile( $"{i.Directory}/{i.Stem}.MD2" ), i.Shape ) >= 0 )
+			.Select( i => i.Id ).ToHashSet();
+
+		Assert.IsFalse( withFloor.Overlaps( new[] { 1600, 1601, 1602, 1603, 1604 } ) );
+		Assert.IsTrue( withFloor.Count >= 30, $"{withFloor.Count} items with a floor" );
 	}
 
 	private static (int X, int Y) FirstBentAfter( HeightfieldFile field, (int X, int Y) after )
