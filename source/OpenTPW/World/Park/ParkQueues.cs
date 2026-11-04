@@ -151,9 +151,36 @@ public sealed class ParkQueues : Entity
 	/// </summary>
 	public void Rebuild()
 	{
-		TakeDown();
+		var was = _stamped.ToList();
+
+		TakeDown( giveBack: false );
 
 		Build( _world );
+
+		if ( ParkGround.Current is { } ground && _world is not null )
+			GiveBackGround( was, _stamped, ( x, y ) => ParkState.CellFor( _world, x, y ).Type, ground );
+	}
+
+	/// <summary>
+	/// What a rebuild gives back of the cells the pieces stamped: one that is ground now takes its split flag again (the clear's
+	/// retile, <c>FUN_005367a0</c> then <c>FUN_005365d0</c>, type 0 gives tile 55, <c>0x0046e031</c>..<c>0x0046e065</c>), and one laid
+	/// over with path or still a piece keeps the stamp, as the path arm copies nothing back (<c>0x0046e0be</c>..<c>0x0046e0da</c>;
+	/// Q841, the original's live map: a path laid over the flagged queue cell (31,18) left it without <c>0x800</c>). Answers how many it gave back.
+	/// </summary>
+	internal static int GiveBackGround( IEnumerable<(int X, int Y)> was, IReadOnlyCollection<(int X, int Y)> still, Func<int, int, int> typeAt, ParkGround ground )
+	{
+		var given = 0;
+
+		foreach ( var (x, y) in was.Except( still ) )
+		{
+			if ( typeAt( x, y ) is not (<= 0 or 5) )
+				continue;
+
+			ground.UnstampSplit( x, y );
+			++given;
+		}
+
+		return given;
 	}
 
 	/// <summary>
@@ -164,7 +191,7 @@ public sealed class ParkQueues : Entity
 	{
 		base.OnDelete();
 
-		TakeDown();
+		TakeDown( giveBack: true );
 
 		if ( Current == this )
 			Current = null;
@@ -185,7 +212,7 @@ public sealed class ParkQueues : Entity
 	/// scene, these among them, and then this runs as well.
 	/// </para>
 	/// </summary>
-	private void TakeDown()
+	private void TakeDown( bool giveBack )
 	{
 		foreach ( var model in _models )
 		{
@@ -201,8 +228,9 @@ public sealed class ParkQueues : Entity
 		_blended.Clear();
 		FloorCellsBlended = 0;
 
-		// The pieces' cells are put back to ground (ParkObjects.Remove says how), and Build stamps the ones still queue again.
-		if ( ParkGround.Current is { } ground )
+		// Gone for good (a scene unloading): the pieces' cells are put back to ground (ParkObjects.Remove says how). A rebuild
+		// decides cell by cell what the original's tile pass gives back (Rebuild).
+		if ( giveBack && ParkGround.Current is { } ground )
 		{
 			foreach ( var (x, y) in _stamped )
 				ground.UnstampSplit( x, y );

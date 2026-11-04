@@ -268,6 +268,25 @@ def thing_set(src, dst, thing, offset, fmt, value):
     packed = zlib.compress(bytes(b), 9); head = bytearray(data[:0x629])
     struct.pack_into('<II', head, 0x611, len(b), 0x629 - 0x60d + len(packed))
     open(dst, 'wb').write(bytes(head) + packed); return was
+def cell_set(src, dst, cells, offset, fmt, value, was=None):
+    """A copy of a park file with one field of the map record of each cell in `cells` ((x, y), the park's own cells) written
+    over: `struct` format `fmt` at `offset` into the map sub-record (FileFormats saves.md; the record starts one byte after the cell's
+    status byte, mNeighbours is 7 as '<B', the type 24 as '<i'), the BILZ block packed again as thing_set packs it. Each cell's
+    record must exist; `was`, when given, is the value every cell must hold first (an assert). Answers the values it replaced.
+    A loose end made in a queue is cell_set(src, dst, [(31, 17), (31, 18)], 7, '<B', 0x04, was=0x44): the cell reads one
+    neighbour (Q841). Not a played state: say so where the file is used."""
+    import zlib
+    data = open(src, 'rb').read(); assert data[0x60d:0x611] == b'BILZ'
+    p = Park(src); b = bytearray(zlib.decompress(data[0x629:])); assert bytes(b) == bytes(p.b)
+    out = []
+    for x, y in cells:
+        a = p.cell[y * 128 + x]; assert b[a] & 1, 'no map record at (%d,%d)' % (x, y)
+        at = a + 1 + offset; old = struct.unpack_from(fmt, b, at)[0]
+        assert was is None or old == was, '(%d,%d) holds %r, not %r' % (x, y, old, was)
+        struct.pack_into(fmt, b, at, value); out.append(old)
+    packed = zlib.compress(bytes(b), 9); head = bytearray(data[:0x629])
+    struct.pack_into('<II', head, 0x611, len(b), 0x629 - 0x60d + len(packed))
+    open(dst, 'wb').write(bytes(head) + packed); return out
 OBJECT_RINGS = {'costs': 228, 'takings': 361, 'customers': 498, 'walkaways': 635, 'served': 768, 'satisfaction': 901}
 def ring_set(src, dst, edits):
     """A copy of a park file with objects' day rings written over: `edits` is [(thing, ring, days, today)], `ring` a name

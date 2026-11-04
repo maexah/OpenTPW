@@ -386,10 +386,130 @@ public class ParkFootprintSplitTests
 
 		try
 		{
-			typeof( ParkQueues ).GetMethod( "TakeDown", Any )!.Invoke( queues, null );
+			typeof( ParkQueues ).GetMethod( "TakeDown", Any )!.Invoke( queues, [true] );
 
 			Assert.IsTrue( ground.Splits( bent.X, bent.Y ), "the cell is ground again" );
 			Assert.AreEqual( 0, queues.StampedCells );
+		}
+		finally
+		{
+			SetCurrent( current );
+		}
+	}
+
+	/// <summary>
+	/// <b>A queue cell laid over with path keeps its stamp; one that is ground gives it back</b> (Q841, the original's live map: a path laid
+	/// over the flagged queue cell (31,18) of the New Save left it without <c>0x800</c>, the path arm copying nothing back). A cell that
+	/// is still a piece is stamped again by the rebuild and is not the give-back's to touch.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the give-back ignoring the cell's type (a path cell given its flag back); keeping every cell (a ground cell not given back);
+	/// not skipping the cells still stamped.</remarks>
+	[TestMethod]
+	public void ARebuildKeepsTheStampOfAQueueCellLaidOverWithPathAndGivesBackGround()
+	{
+		var field = Landscape();
+		var (bent, _) = TwoCells( field );
+		var second = FirstBentAfter( field, bent );
+		var third = FirstBentAfter( field, second );
+		var ground = GroundOf( field, 8 );
+
+		foreach ( var (x, y) in new[] { bent, second, third } )
+			ground.StampSplit( x, y );
+
+		var types = new Dictionary<(int, int), int> { [bent] = CellEdge.Nothing, [second] = CellEdge.Path, [third] = ParkRideChoice.QueueCellType };
+
+		var given = ParkQueues.GiveBackGround( [bent, second, third], [third], ( x, y ) => types[(x, y)], ground );
+
+		Assert.AreEqual( 1, given, "only the ground cell is given back" );
+		Assert.IsTrue( ground.Splits( bent.X, bent.Y ), "ground takes the load's flag again" );
+		Assert.IsFalse( ground.Splits( second.X, second.Y ), "a path laid over a piece keeps the stamp: no 0x800" );
+		Assert.IsTrue( ground.IsStamped( second.X, second.Y ) );
+		Assert.IsFalse( ground.Splits( third.X, third.Y ), "a cell still a piece stays stamped" );
+
+		types[second] = 5;
+		Assert.AreEqual( 1, ParkQueues.GiveBackGround( [second], [], ( x, y ) => types[(x, y)], ground ), "type 5 is ground too" );
+		Assert.IsTrue( ground.Splits( second.X, second.Y ) );
+	}
+
+	/// <summary>
+	/// <b>A queue's rebuild keeps the stamp of a cell a path was laid over, and gives a ground cell its flag back</b> (Q841): the whole
+	/// <see cref="ParkQueues.Rebuild"/>, over the stock park's four queue cells, whose pieces cannot be made without a graphics device (each is
+	/// logged as missing) so nothing stands again and every old stamp is the give-back's to judge.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> <c>TakeDown( giveBack: false )</c> in <see cref="ParkQueues.Rebuild"/> made <c>true</c> fails here (the path cell is
+	/// given its flag back); the call to <c>GiveBackGround</c> removed fails here (the ground cell is not).</remarks>
+	[TestMethod]
+	public void ARebuildOfTheQueuesKeepsAPathCellsStampAndFreesAGroundOne()
+	{
+		Log ??= new();
+
+		var field = Landscape();
+		var (bent, _) = TwoCells( field );
+		var second = FirstBentAfter( field, bent );
+		var ground = GroundOf( field, 8 );
+
+		using var stream = new MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
+		var park = new ParkWorld( new SaveReader( stream ).ReadFile() );
+		var state = new ParkState( park );
+		state.SetRecord( second.X, second.Y, ParkState.CellFor( park, second.X, second.Y ) with { Type = CellEdge.Path } );
+		state.SetRecord( bent.X, bent.Y, ParkState.CellFor( park, bent.X, bent.Y ) with { Type = CellEdge.Nothing } );
+
+		var queues = (ParkQueues)RuntimeHelpers.GetUninitializedObject( typeof( ParkQueues ) );
+		typeof( ParkQueues ).GetField( "_models", Any )!.SetValue( queues, new List<LobbyModel>() );
+		typeof( ParkQueues ).GetField( "_blended", Any )!.SetValue( queues, new List<Texture>() );
+		typeof( ParkQueues ).GetField( "_stamped", Any )!.SetValue( queues, new List<(int X, int Y)> { bent, second } );
+		typeof( ParkQueues ).GetField( "_world", Any )!.SetValue( queues, park );
+		typeof( ParkQueues ).GetField( "<ThemeName>k__BackingField", Any )!.SetValue( queues, "jungle" );
+
+		ground.StampSplit( bent.X, bent.Y );
+		ground.StampSplit( second.X, second.Y );
+
+		var current = ParkGround.Current;
+		SetCurrent( ground );
+
+		try
+		{
+			queues.Rebuild();
+
+			Assert.IsTrue( ground.Splits( bent.X, bent.Y ), "the cell that is ground again takes the load's flag" );
+			Assert.IsFalse( ground.Splits( second.X, second.Y ), "the cell a path lies over keeps the stamp" );
+		}
+		finally
+		{
+			SetCurrent( current );
+		}
+	}
+
+	/// <summary>
+	/// <b>Lifting a path gives back the stamp a queue piece left under it</b>: the clear ends in a retile of the cell as ground
+	/// (<c>FUN_005367a0</c>, <c>FUN_005346d0( 0 )</c> then <c>FUN_005365d0</c>), which copies the load's word. A path cell the load flagged and
+	/// nothing stamped has nothing to get back, and one the clear refuses (its counter above nought) keeps what it has.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the <c>UnstampSplit</c> in <see cref="ParkPathBuilding.ClearPathCell"/> removed fails here.</remarks>
+	[TestMethod]
+	public void LiftingAPathGivesBackTheStampAQueuePieceLeftUnderIt()
+	{
+		var field = Landscape();
+		var (bent, _) = TwoCells( field );
+		var ground = GroundOf( field, 8 );
+
+		using var stream = new MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
+		var park = new ParkWorld( new SaveReader( stream ).ReadFile() );
+		var state = new ParkState( park );
+
+		state.SetRecord( bent.X, bent.Y, ParkState.CellFor( park, bent.X, bent.Y ) with { Type = CellEdge.Path, Flags = 0, OverlapCounter = 1 } );
+		ground.StampSplit( bent.X, bent.Y );
+
+		var current = ParkGround.Current;
+		SetCurrent( ground );
+
+		try
+		{
+			Assert.IsFalse( ParkPathBuilding.ClearPathCell( state, park, bent.X, bent.Y, stepped: true ), "the first press only counts down" );
+			Assert.IsFalse( ground.Splits( bent.X, bent.Y ), "and the stamp stays" );
+
+			Assert.IsTrue( ParkPathBuilding.ClearPathCell( state, park, bent.X, bent.Y, stepped: true ) );
+			Assert.IsTrue( ground.Splits( bent.X, bent.Y ), "the cell is ground again and takes the load's flag" );
 		}
 		finally
 		{

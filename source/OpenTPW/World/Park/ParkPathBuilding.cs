@@ -1074,6 +1074,10 @@ public static class ParkPathBuilding
 
 		state.SetRecord( x, y, Cleared( ParkState.CellFor( park, x, y ) ) with { OverlapCounter = 0 } );
 
+		// The cell is ground now, which the clear retiles (FUN_005367a0's tail: FUN_005346d0( 0 ), then FUN_005365d0, tile 55): a stamp
+		// a queue piece left under the path ends here (Q841).
+		ParkGround.Current?.UnstampSplit( x, y );
+
 		return true;
 	}
 
