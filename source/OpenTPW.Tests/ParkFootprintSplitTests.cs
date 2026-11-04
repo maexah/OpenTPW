@@ -534,8 +534,9 @@ public class ParkFootprintSplitTests
 	/// <b>A purchase's tile pass gives back a table cell outside the typed footprint</b>: the Huge Hollow Rock's model stands one row
 	/// above its anchor, so its floor table covers cells that <c>Stamp</c> does not type (<see cref="ParkObjects.FloorFootprint"/>
 	/// against <see cref="ParkObjects.FootprintAt"/>), and a cell the map holds as ground there is retiled with set 0, tile 55 and ends
-	/// unstamped; the cells <c>Stamp</c> typed 4 stay stamped. (No item bought in the original left such a cell, Q886; this is the
-	/// load's rule applied to a purchase, as the call's remark says.)
+	/// unstamped; the cells <c>Stamp</c> typed 4 stay stamped. (The original's purchase of the rock types the model's cells, the row
+	/// above the anchor too, and stamps all 14 table cells, Q888, so it gives none back; this pins what this game does until Q744
+	/// types the model's cells, and that test is then this one's replacement.)
 	/// </summary>
 	/// <remarks><b>Mutation:</b> the purchase's <c>RetileGround</c> call removed leaves the untyped row stamped.</remarks>
 	[TestMethod]

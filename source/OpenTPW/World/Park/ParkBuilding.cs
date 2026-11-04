@@ -177,7 +177,9 @@ public static class ParkBuilding
 			Stamp( state, footprint, cellX, cellY );
 
 			// The tile pass after the stamp, as the load's: a table cell the map holds as ground is put back to it (read in the
-			// load's live map; a purchase's own pass was not run in the original).
+			// load's live map). The original's purchase gave nothing back in its own runs, since it types every cell its table
+			// covers (the rock's row above the anchor too, Q888); what this gives back is the anchor-typed footprint's
+			// leftover, Q744's.
 			objects?.RetileGround( thingId, ( x, y ) => state.Record( x, y ).Type );
 		}
 
