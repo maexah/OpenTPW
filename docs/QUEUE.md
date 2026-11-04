@@ -844,19 +844,19 @@ filed the items that cite it.
   `DECIDE_HAPPY_SPOT_ANIMATION` is counted. The original's stock park made one in 964 sweeps (guest 33 at 83).
   Confirm: a guest at happiness 90 deciding, set 5 for eleven sweeps and no sooner than 101 sweeps again; a screenshot
   of the jump, beside the original's.
-- [ ] **Q225. A guest full of litter neither walks to a bin nor drops it. Decode first.** Found by Q111, arm (c).
-  Litter 90 or more: the nearest `HoldsLitter` thing within three cells that routes, `MajorDest` and state 9, whose
-  turn `FUN_004fff20` walks there, sets the bin's script variable 0 and zeroes the litter; none, litter of a drawn
-  type on the cell (`FUN_004d93b0`) and the level zeroed. Decode `FUN_004d93b0` and what a cell's litter is drawn as,
-  and check `FUN_004fff20` whole; then build both where `DECIDE_LITTER_BIN_ERRAND` and `DECIDE_LITTER_DROPPED` are
-  counted. Confirm: a guest at litter 90 beside the bin at (44,29) walks to it, `peeps` showing litter 0; one far
-  from it drops, `cell` showing the litter; a screenshot of each.
-  - **Note (fork watch 2026-10-18, `verify-other-b.md` L2):** `FUN_004d93b0` is read whole in `ride-operation.md`, "A cell's
-    litter": it returns at once online and when the cell already holds litter; the kind picks one of eight sprite programs
-    (kinds 1 to 5 their own, 6 and the "Dodgy litter type" log share one, 7 and 8 stamp region effects 2 and 5 first, 8 also
-    particle `0x32`); the cell keeps the sprite (`+0x28`), the kind (`+0x2c`) and nought (`+0x30`); and **it reseeds the park
-    generator with the cell id**, then draws twice for the place in the cell (`10 x cell + 1 + r % 9` on each axis), so a cell's
-    litter always stands in the same spot and every drop resets the shared generator, which the generator mirror must copy.
+- [ ] **Q225. A guest full of litter neither walks to a bin nor drops it (decoded in Q899).** Found by Q111, arm (c).
+  Build, where `DECIDE_LITTER_BIN_ERRAND` and `DECIDE_LITTER_DROPPED` are counted (`PeepBehaviour.CountBeforeLeaving`), as
+  `ride-operation.md` says in "The state-6 turn" (c), "A cell's litter" and "The bin errand": the nearest `HoldsLitter` thing
+  under squared distance 9 that routes (each nearer one's route asked in turn, a tie the first in the chain) into `MajorDest`
+  and state 9; state 9's turn walks there and writes the bin's script variable 0 (`VAR_TRIGGER`) 1, or drops litter of kind
+  1 + r % 5 on the guest's cell if it arrives with no bin or gives up, then litter nought and state 6; with no bin the drop
+  at once, litter nought, and the turn goes on to the leave test. A cell's litter (the cell's kind, the sprite, the reseed of
+  the park's one generator with the cell id and its two draws for the place) drawn flat on the ground from `SPR_LI`'s set
+  kind - 1, depth tested and not written, never picked; a loaded file's littered cells drawn the same (their sprites are the
+  file's sprite table's). Confirm: a guest at litter 90 beside the bin at (44,29) walks to it, `peeps` showing litter 0, the
+  bin's `VAR_TRIGGER` going 1 then 0; one far from it drops, the cell's litter in a census; the drawn litter photographed on
+  the desk beside a frame the original draws of the same file, taken then (`q253/orig/sold-by-the-original.TPWS`, its
+  four littered cells (41,21) and (39,22) to (39,24); no frame of the original shows them yet).
 - [ ] **Q226. Nobody is sick.** Found by Q111, arm (b). Illness exactly 100 on a third of deciding turns: spot
   animation 7, litter type 7 on the cell, event `0x12`, sound `0xcc`, illness nought, and the turn ends. After Q225,
   which builds a cell's litter. Build it where `DECIDE_VOMIT` is counted. Confirm: `need vomit 100`, a guest sick

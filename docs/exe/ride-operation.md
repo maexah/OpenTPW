@@ -1359,8 +1359,10 @@ at `[ESP+0x18]`) serves every arm. A byte below is `(u8)__ftol` of the float nam
 3. **(c) Litter.** Litter (`+0x1b4`) 90 or more, and the state word 6, 7 or 10 (`0x004fedbb`..`0x004fedce`, always
    6 from this function's one caller): `FUN_00500dc0( 3 )` walks the object chain for the nearest `HoldsLitter` thing
    (`+0x32 & 0x40`) within squared cell distance under 9 that routes (`FUN_004fa530` to its `mEntryPos`, `+0x36`,
-   asked of each nearer candidate in turn, so the walk left is the last one asked) - `MajorDest` and state 9, return;
-   none: litter of type 1 + (a fresh draw % (`[0x0070048c]` − 1), 5), `+0x1b4` = 0, on.
+   asked of each nearer candidate in turn, so the walk left is the last one asked; a tie keeps the first in the chain) -
+   the bin's id to `MajorDest` (`+0x1dc`, `0x004fedef`) and state 9, return (its turn is "The bin errand", below);
+   none: litter of kind 1 + r % 5 on the guest's cell (r a fresh draw of the park's generator, `[0x0070048c]` 6 less
+   one; `FUN_004d93b0`, "A cell's litter", below), `+0x1b4` = 0, and on to (d) (`0x004fee0e`..`0x004fee51`).
 4. **(d) Leaving** (`0x004fee5b`..`0x004fee81`): the happiness byte nought, **or `mExitLevel` (`+0x1bc`) exactly
    nought**, or the park shut (`FUN_0051a280`, world `+0x1da710`). It docks `BigHappinessChange` (25,
    `FUN_004fea70( 2 )`) before routing, every turn the test holds; reads the gate script's variable 1 and discards it
@@ -3214,10 +3216,12 @@ guest watches from, the four beside him gain 1 a needs turn. `EntertainerConstsP
 `0x0078539c`) is read by no instruction: the stamp is RegionFX[0]'s whatever his grade. OpenTPW: `Peep.Tick`'s `cell`,
 from `ParkPeople.CellEffects` (Q668).
 
-**A cell's litter, `FUN_004d93b0( cell, kind )`** (fork watch 2026-10-18, `verify-other-b.md` L2; read from the listing, no game
-run). It returns at once in the online visit (game type `[0x00fb3b7c]` 1, `0x004d93ef`) and when the cell already has litter
-(`[cell + 0x2c]` non-zero, `0x004d93fc`). Otherwise `lea eax, [kind - 1]; cmp eax, 7; ja` and the jump table `0x004d95d4` choose the
-sprite program among the eight 0x28-byte records from `0x0074f050`:
+**A cell's litter, `FUN_004d93b0( cell, kind )`** (fork watch 2026-10-18, from the listing; read whole in the private Ghidra
+copy and measured on the original's park files, Q899). A one-time static is made first (`DAT_00fb34b9` bit 0). It returns
+at once in the online visit (game type `[0x00fb3b7c]` 1, `0x004d93ef`) and when the cell already has litter (`[cell + 0x2c]`
+non-zero, `0x004d93fc`). Otherwise it logs "Littering cell %d, %d" (`0x0075af90`, before the choice), and
+`lea eax, [kind - 1]; cmp eax, 7; ja` and the jump table `0x004d95d4` choose the sprite program among the eight 0x28-byte
+records from `0x0074f050`:
 
 | Kind | Record | Besides |
 |---|---|---|
@@ -3227,9 +3231,27 @@ sprite program among the eight 0x28-byte records from `0x0074f050`:
 | 7 | `0x0074f140` (slot 6) | `FUN_004d8440( 2, cell )`, region effect 2 |
 | 8 | `0x0074f168` (slot 7) | `FUN_004d8440( 5, cell )`, region effect 5, and `Particles_Spawn( 0x32, x × 1024, 0, y × 1024 )` (`0x00700498` 1024.0), its handle kept at `+0x38` |
 
-Each record is a sprite program, `0x004768b0 n`, `0x004766d0 0x10 0x80000`, `0x00476940 0`, `0x00476020 <self>`: `n` is the **second**
-word and runs 0 to 7 with the slot. The sprite is made by `FUN_00475a10( record, 0xb, 0, 0, 0, 0, 0 )` and kept at `[cell + 0x28]`;
-`+0x2c` becomes the kind and the word `+0x30` nought; "Littering cell %d, %d" is logged (`0x0075af90`).
+The sprite is made by `FUN_00475a10( record, 0xb, 0, 0, 0, 0, 0 )` and kept at `[cell + 0x28]`; `+0x2c` becomes the kind and
+the word `+0x30` nought. **Its five callers pass 1 to 5, 7 or 8, never 6**: a deciding guest's litter with no bin (arm (c)
+above, `0x004fee4c`) and the bin errand that ends without one (`0x004fffca`, below) pass 1 + r % 5, r a fresh draw of the
+park's generator (`[0x0070048c]`, 6, less one; nothing writes it); the sick pass 7 (`0x004fed5d`); a prankster's litter
+passes 1 + r % 5 on the turn's one draw (`0x004ff237`), and the stink bomb 8 (`0x004ff27e`). So slot 5 and the "Dodgy"
+log are dead by code.
+
+**What it is drawn as.** Sprite kind `0xb` is "litter" in the kinds table (`0x00763f88`, the name at `0x00764088`): the one
+folder `Generic\Litter` of `esprites.wad`, one bank, `SPR_LI`, of eight pictures (FileFormats, "Sprites"). Each record is
+the program `0x004768b0 n` (the set: `n` 0 to 7 with the slot, bank 0), `0x004766d0 0x10 0x80000` (local 16, the draw
+flags), `0x00476940 0` (frame 0) and `0x00476020 <self>` (the jump to its start); the pc rests on the jump, word 7 of the
+record. `SPR_LI`'s sets 0 to 7 are one picture each, facing nowhere (directions 0), set 6 picture 7 and set 7 picture 6:
+kind 1 a small brown-yellow peel-like shape (10 × 7), 2 a carton (12 × 13), 3 a cup (11 × 13), 4 a grey paper ball (11 × 10), 5 a red
+wrapper (17 × 14), 6 a small grey scrap (9 × 8), 7 a green-yellow splat (17 × 12) and 8 a large see-through yellow cloud
+(34 × 21, no texel above alpha 230). **The flag `0x80000` lays the picture flat on the ground**: `Sprite_BuildQuad`'s arm for it
+(`0x00589dd4`..`0x00589e8d`) starts all four corners at the sprite's world place (`+0x14`) rather than its projected one, the
+layout `FUN_005890e0` adds the across span to world x as for a person (its 0.75 included) and the down span to world z in
+place of the height (`0x00589320`..`0x0058934f`, the winding flipped), lifts every corner by `[0x008bd4ec]` (0.6; 0.25 under
+render word `0x2000` or renderer 4, as the shadows), and the four go through the draw matrix (`[0x0087b088]`, `0x00589e7c`);
+the word gains `0x800`: tested against depth, not written. With no `0x200` it is never picked, and its arm ends past the pull, so it is never
+moved towards the eye ("The pull", `park-engine.md`).
 
 **The placement reseeds the park's generator with the cell id** (`0x004d94de`..`0x004d94e2`: `FUN_00516370( cell word )` on `[0x0080239c]`,
 which stores `+0x1da708`) and draws twice (`FUN_00516330`): the sprite stands at world (`10 × cellX + 1 + r1 % 9`,
@@ -3237,13 +3259,30 @@ which stores `+0x1da708`) and draws twice (`FUN_00516330`): the sprite stands at
 a cell's litter always stands in the same place, and every drop resets the shared generator, which a mirror of that generator must copy
 (the handyman who finds litter does the same with the litter cell's id, `FUN_004d7100`, `0x004d71ca`, above).
 
+**The cell's fields in the file** (the map cell's serialiser `FUN_004d8dd0`): `mLitter` is `+0x2c`, the kind; `mLitterCollector`
+the word `+0x30` the drop zeroes; the first `mLitterScript` the sprite's handle `+0x28` and **the second the particle's handle
+`+0x38`**, a stink bomb's; `mTimeMarkedForLitterCollection` `+0x34`. A load reads them back as written and makes no litter:
+no load calls `FUN_004d93b0`, and the sprite is the saved sprite table's at that handle. **Measured** (`q899/littercheck.py`, the
+89 park files the original wrote on this machine, `q899/files.txt`; `littercheck.txt`): 72 littered cells, kinds 7 61, 2 3, 5 3,
+3 2, 1 1, 4 1 and 8 1, none of kind 6; on all 72 the handle names a saved sprite of kind 11, bank 0, flags `0x80000`, its
+program word the record of the cell's kind plus 7, and its place the reseed's two draws to the unit; the second handle is
+nought on 71 and set on the one cell of kind 8 (`q780/orig/O1/Q780after.TPWS`, (47,23)).
+
+**The bin errand, `FUN_004fff20`** (state 9's turn, `FUN_005019f0` its one caller, `0x00501a9f`; read whole, Q899). The walk
+tick `FUN_004fa2a0` first: any answer but 0 and 2 returns, still walking. Arrived (0) with a bin in `MajorDest` (`+0x1dc`): that
+thing's script (`+0x24`, `FUN_0055a070`) gets variable 0 = 1 (`FUN_0055a0b0( script, 0, 1 )`, `0x004fff7d`). Arrived with
+`MajorDest` nought, or given up (2): litter of kind 1 + r % 5 on the guest's own cell (`+5`, `+7`; `0x004fff8c`..`0x004fffca`).
+Either way the litter (`+0x1b4`) becomes nought and the state 6 (`FUN_00501db0( 6 )`). In Lost Kingdom the bin is the
+Litter Bin (`PelBin.RSE`): its one variable, `VAR_TRIGGER`, is what the errand writes; the script waits for it, plays
+`WAITANIM 5, 0` and writes it nought again (`rselisting`, words 11 to 21).
+
 **Measured on every cell of thirteen of the original's park files** (`q257e/fx.py`, the files of `q257e/files13.txt`;
 212,992 cells): the ten bytes are what the file's own things stamp, 0 cells wrong: each object by its `mFlags`, a
 toilet on 1 or on 6 by its State of repair (one of the 47 toilets is dirty, at 19.0, in Alexah's two Lost Kingdom
 saves), each entertainer and guard at their `mLastRecordedMapId` (the person record's `+41`; in three files a member
 stands a cell off it), and litter of kind 7 (four cells). **A cell has an effects record exactly where a word is not
-nought** (0 of 212,992 otherwise). No file holds fireworks or litter of kind 8, so effects 5 and 7 and the attraction
-word are the listing's alone.
+nought** (0 of 212,992 otherwise). None of the thirteen holds fireworks or litter of kind 8, so effects 5 and 7 and the attraction
+word are the listing's alone there (one later file holds a kind 8 cell, above; its words were not compared).
 
 **The staff's two, read whole** (Q257f). The person base's constructor `FUN_004f8940` writes the cell id it is
 handed to `+0xcc`, `mLastRecordedMapId`, so every person records the cell they are made on, and an arrival made on

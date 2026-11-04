@@ -12057,6 +12057,14 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   and handler on a made-up meter: E1 to E5 held (`q898/PREDICTION.txt`, `q898/emu1/run.log`); this game off-screen on
   `q369/skill.TPWS`, G1 to G3 held (`q898/run1`). Not run: the original itself (lane B has none; its frames are Q369's).
 - [x] **Q887. The load's record-word rule read item by item, and the three tests Q949's mutation run left missing (the second piece of Q885, from Q949, Q886).** The census (`q885/records.py`, 859 distinct park files, 141,666 records, 137,644 with `0x8`): the ids whose records never carry the word's `0x8` are vehicles, wakes and carts (1141, 1142, 1151 to 1154, 1171, 1183, 4141: in no theme's catalogue), the bus and the seaplane (1600, 1602) and fantasy's 4600 to 4603; 1601, 1603 and 1604 carry it in 14, 14 and 1 records; every catalogue item among them has a model with no procedural base, so ours gives it no floor and no stamp, and none with a floor was ever saved without `0x8` (`park-engine.md`; test `TheItemsWhoseSavedRecordsNeverCarry0x8HaveNoFloor`). Tests: `TheLoadsTilePassGivesBackTheCellsTheFileHoldsAsGround` (`m15`, through a new test seam `ParkObjects.PlaceInstead`, null in the game, which stands the saved things where `Place` needs a graphics device), `APurchasesTilePassGivesBackTheTableCellsOutsideTheTypedFootprint` (`m16`, the Huge Hollow Rock bought through `ParkBuilding.StandThing`) and the queue pieces' root tables in `EveryTableEntryOfEveryItemIsStamped` (`m7`'s claim); `mutate.py` (`q887/mutate.log`): six of seven bugs fail a test, `m7` survives, dead by CONTENT. Ours' purchase of the rock on the final binary: 10 of its 14 table cells stamped, 4 given back, a sale 8,160 of 8,160 (`q887/run1/`). Q885 keeps the original's own purchase of a map-offset item, the stampers ours does not make, the other themes.
+- [x] **Q899. Q225's decode: what a cell's litter is drawn as, and the bin errand's turn whole.** Done 2026-11-04 (run 20,
+  lane B). `FUN_004d93b0` and `FUN_004fff20` read whole in the private Ghidra copy (`ride-operation.md`, "A cell's litter",
+  "The bin errand"): litter is sprite kind 11 (`Generic\Litter\SPR_LI`), set kind - 1, laid flat on the ground (draw flag
+  `0x80000`); the five callers pass 1 to 5, 7 or 8 (kind 6 dead by code); the errand writes the bin's `VAR_TRIGGER` on arrival
+  and drops litter on the guest's cell when it arrives with no bin or gives up, then zeroes the level and decides again. The
+  file's second `mLitterScript` is the stink bomb's particle handle (FileFormats `saves.md`). Measured on 89 park files the
+  original wrote: 72 littered cells, each sprite kind 11 at the reseed's place (`q899/littercheck.txt`). This game off-screen
+  on one of them (`q899/run1`, `run2`): no litter drawn, the errand and the drop counted, litter left at 90.
 
 ## B. Docs and comments
 
