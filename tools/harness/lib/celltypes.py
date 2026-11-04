@@ -4,7 +4,7 @@
 One file: the box's cells as `type/parent`, a row a line (parkfile.cells(): index y*128 + x, mType and mParentID).
 Two files: the cells whose type or owner differ, `(x,y) A -> B`, and how many (a purchase's own typing: save the original's
 park with original/savepark.sh before and after, or take the start file and the saved one). The box is X0..X1-1 and Y0..Y1-1
-(default 0 0 96 85, the park). Needs tools/harness/lib on sys.path for parkfile; run it with the review venv's python -I."""
+(default 0 0 96 85, the park). Needs tools/harness/lib on sys.path for parkfile; run it with `python3 -I`."""
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import parkfile as pf

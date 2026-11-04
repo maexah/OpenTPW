@@ -614,9 +614,11 @@ public sealed class ParkObjects : Entity
 	/// <b>A deviation at the load:</b> the original stamps a saved thing through <c>RideSystem_LoadModels</c>' record word
 	/// (<c>0x00464942</c>, its <c>+0x15</c>) and only where that word carries <c>0x8</c>; this stamps every placed thing that has a
 	/// floor, whatever the saved word says. They agree on the New Save (437 cells each), and on the items whose saved records never
-	/// carry <c>0x8</c> in the 859 park files read (the bus, the seaplane; the gates, lights and ferry in all but 14, 14 and 1 records):
-	/// their models have no procedural base, so there is no floor to stamp here (<c>ParkFootprintSplitTests</c>). A record saved
-	/// without <c>0x8</c> on an item that has a floor is the case not met in those files (<c>docs/QUEUE.md</c> Q885).
+	/// carry <c>0x8</c> in the original's files (the bus, the seaplane, the gates, the lights, the ferry; the few such records with it in the
+	/// 859 park files read are this game's writer's): their models have no procedural base, so there is no floor to stamp here
+	/// (<c>ParkFootprintSplitTests</c>). The original's table for such a model is empty by <c>0x0046a9ad</c> to <c>0x0046b37b</c> to
+	/// <c>0x00463363</c> (<c>docs/exe/park-engine.md</c>, the load's rule). A record saved without <c>0x8</c> on an item that has a floor
+	/// is met in no file.
 	/// </para>
 	/// </summary>
 	private static IReadOnlyDictionary<uint, Texture> BlendFloor( ModelFile file, ParkItemCatalogue.Item item, int angle,

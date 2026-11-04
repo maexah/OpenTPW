@@ -615,10 +615,12 @@ public class ParkFootprintSplitTests
 	/// <b>The items whose saved model records never carry <c>0x8</c> have no floor here, so ours stamps none of them.</b> The load
 	/// stamps a record whose word (<c>+0x15</c>, <c>0x00464942</c>) carries <c>0x8</c>; across the 859 distinct park files on the
 	/// maintainer's machine the records of items 1600 and 1602 (the bus and the seaplane) never do, and those of 1601, 1603 and 1604
-	/// (the gates, the lights, the ferry) do in 14, 14 and 1 of 851, 851 and 90. Their models carry no procedural base (header
+	/// (the gates, the lights, the ferry) do in 14, 14 and 1 of 851, 851 and 90, all of them `0x32f` records this game's writer made (the
+	/// original's own files never carry it there). Their models carry no procedural base (header
 	/// <c>0x8</c>), so <see cref="ParkObjects.FloorMeshOf"/> finds no floor and <see cref="ProceduralFloor.Blend"/> is not reached: the
-	/// two games agree there by the model, whatever the word. The other never-<c>0x8</c> ids (1141, 1142, 1151 to 1154, 1171, 1183,
-	/// 4141: wakes, cars and carts, the vehicles' <c>0x101</c>) are not catalogue items and are never placed here.
+	/// two games agree there by the model, whatever the word (the original's table for a header-<c>0x1</c> model is empty:
+	/// <c>0x0046a9ad</c>, <c>0x0046b37b</c>, <c>0x00463363</c>, <c>docs/exe/park-engine.md</c>). The other never-<c>0x8</c> ids (1141, 1142, 1151 to 1154, 1171, 1183,
+	/// 4141: wakes, cars and carts, the vehicles' <c>0x101</c>) are not Lost Kingdom catalogue items and are never placed here.
 	/// </summary>
 	/// <remarks><b>Mutation:</b> <c>FloorMeshOf</c> answering a mesh without the header's <c>0x8</c> fails here.</remarks>
 	[TestMethod]
@@ -637,7 +639,7 @@ public class ParkFootprintSplitTests
 		}
 
 		foreach ( var id in new[] { 1141, 1142, 1151, 1152, 1153, 1154, 1171, 1183, 4141 } )
-			Assert.IsFalse( catalogue.TryGet( id, out _ ), $"item {id} is a vehicle, not a catalogue item" );
+			Assert.IsFalse( catalogue.TryGet( id, out _ ), $"item {id} is a vehicle, not a Lost Kingdom catalogue item" );
 
 		// And no item of that family is among those that do blend a floor.
 		var withFloor = catalogue.All.Where( i => i.Shape != null && ParkObjects.FloorMeshOf( new ModelFile( $"{i.Directory}/{i.Stem}.MD2" ), i.Shape ) >= 0 )

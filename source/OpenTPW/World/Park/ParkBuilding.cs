@@ -178,8 +178,8 @@ public static class ParkBuilding
 			Stamp( state, ParkObjects.CoveredCells( item, cellX, cellY, angle ), cellX, cellY );
 
 			// The tile pass after the stamp, as the load's: a table cell the map holds as ground is put back to it (read in the
-			// load's live map). The original's purchase gave nothing back in its own runs (the rock's, Q888), and none is given
-			// here now that the typed cells are the table's own (Q744).
+			// load's live map). The original's purchases run so far gave nothing back (Q886, Q888); the rock's save shows the
+			// purchase typed its whole table, so a pass would find nothing. Whether a purchase runs the pass at all is not read (Q889).
 			objects?.RetileGround( thingId, ( x, y ) => state.Record( x, y ).Type );
 		}
 
