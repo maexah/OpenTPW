@@ -35,7 +35,13 @@ public sealed partial class ParkAudio
 	private SoundCategory? _ui;
 
 	private readonly List<ScriptVoice> _scriptVoices = [];
-	private readonly Random _scriptRandom = new();
+	private Random _scriptRandom = new();
+
+	/// <summary>What the script sounds' draws (waits, variations, volumes and pitches) are made from; a test sets a seeded one.</summary>
+	internal Random ScriptRandom
+	{
+		set => _scriptRandom = value;
+	}
 
 	/// <summary>The fade <c>FADEOBJ</c> stops a sound with: this project's 0.06 s, where the original steps x0.6 (Q509).</summary>
 	private const float ScriptFadeSeconds = 0.06f;
