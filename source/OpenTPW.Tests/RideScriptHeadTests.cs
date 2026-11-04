@@ -186,7 +186,7 @@ public class RideScriptHeadTests
 	}
 
 	/// <summary>Each source vertex of <paramref name="mesh"/> at rest, as the morph's own rest pose recovers them.</summary>
-	private static Vector3[] RestSources( ModelFile.Mesh mesh )
+	internal static Vector3[] RestSources( ModelFile.Mesh mesh )
 	{
 		var rest = new Vector3[mesh.VertexCount];
 
@@ -230,6 +230,98 @@ public class RideScriptHeadTests
 				Assert.IsTrue( System.Numerics.Vector3.Distance( placed, node.WorldTransform.Translation ) < 0.05f,
 					$"{stem} head {id} ({node.Name}) at {placed}, its node at {node.WorldTransform.Translation}" );
 			}
+		}
+	}
+
+	/// <summary>
+	/// <b><c>FUN_0044a640</c>'s turn</b>: the edge from the face's first corner to the anchor's point, normalised (here (0.6, 0, 0.8));
+	/// rows n x e, n and e, the normal left as long as it is (2 here); then the kept turn about z, y and x, each from the 4,096 table, before
+	/// the frame. The numbers are worked out in Python by the decode as `lib/faceturn.py` applies it; the order x, y, z instead, or e from the first corner to
+	/// the second, gives others. Where the corner is the point, e is the normal's z, x, y.
+	/// </summary>
+	[TestMethod]
+	public void TheFaceTurnIsTheOriginals()
+	{
+		var turned = LobbyModel.TurnToFace( new( 1f, 2f, 3f ), new( 4f, 2f, 7f ), new( 0f, 2f, 0f ), new( 0.3f, -0.7f, 1.1f ) );
+		float[] expected = [0.88123f, 1.52932f, 0.01774f, -1.33919f, 1.20656f, 0.48734f, -0.59162f, -0.45321f, 1.35727f];
+		float[] got = [turned.M11, turned.M12, turned.M13, turned.M21, turned.M22, turned.M23, turned.M31, turned.M32, turned.M33];
+
+		for ( var i = 0; i < 9; ++i )
+			Assert.AreEqual( expected[i], got[i], 2e-5f, $"row {(i / 3) + 1} column {(i % 3) + 1}" );
+
+		Assert.AreEqual( 0f, turned.M41, "no translation" );
+
+		var level = LobbyModel.TurnToFace( new( 1f, 2f, 3f ), new( 1f, 2f, 3f ), new( 0.6f, 0f, 0.8f ), default );
+		float[] fallback = [-0.48f, 0.64f, 0.36f, 0.6f, 0f, 0.8f, 0.8f, 0.6f, 0f];
+		float[] read = [level.M11, level.M12, level.M13, level.M21, level.M22, level.M23, level.M31, level.M32, level.M33];
+
+		for ( var i = 0; i < 9; ++i )
+			Assert.AreEqual( fallback[i], read[i], 2e-5f, $"no edge: row {(i / 3) + 1} column {(i % 3) + 1}" );
+	}
+
+	/// <summary>
+	/// <b>At rest the face turn stands near each head's own turn</b>, by the angles an independent reworking measured over every model
+	/// (`lib/faceturn.py`: 42 of the game's 126 such records within 0.1 degrees, 93 within 1): Mumbo's four heads that carry
+	/// <c>0x40000</c> and the Crazy Ape's sixteen, each to a hundredth of a degree, with the kept turn read where the anchor's word points.
+	/// </summary>
+	[TestMethod]
+	public void AtRestTheFaceTurnIsTheMeasuredAngleFromEachHeadsTurn()
+	{
+		var data = GameData.Required();
+		var catalogue = new ParkItemCatalogue( "jungle", data );
+		var measured = new[]
+		{
+			("mumbo", new[] { 1.018, 0.804, 3.017, 4.958 }, 5),
+			("monkey", new[] { 0.630, 0.588, 0.131, 0.382, 0.312, 0.321, 0.500, 0.409, 0.690, 0.623, 0.110, 0.111, 0.191, 1.135, 0.681, 1.349 }, 16)
+		};
+
+		foreach ( var (stem, angles, heads) in measured )
+		{
+			var item = catalogue.All.Single( item => item.Stem == stem );
+			using var stream = new MemoryStream( data.ReadAllBytes( $"{item.Directory}/{item.Stem}.MD2" ) );
+			var model = new ModelFile( stream );
+			var checkedHeads = 0;
+
+			for ( var id = 1; id <= heads; ++id )
+			{
+				var node = model.Nodes[model.FindNode( id, RideNodes.HeadSpace )];
+
+				if ( (node.IdFlags & 0x40000) == 0 )
+				{
+					Assert.AreEqual( "mumbo Head1", $"{stem} {node.Name}", "only Mumbo's Head1 is anchored without the turn" );
+					continue;
+				}
+
+				// Head1, Head02 .. Head16: the measured angle by the head's number.
+				var number = int.Parse( node.Name.Trim()[4..] );
+				var expected = stem == "mumbo" ? angles[number - 2] : angles[number - 1];
+				++checkedHeads;
+
+				var mesh = model.Meshes[node.ParentIndex];
+				var rest = RestSources( mesh );
+				var on = ModelFile.OnFace( mesh, node.Face!.Value, source => rest[source] )!.Value;
+				var turned = LobbyModel.TurnToFace( on.Corner.GetSystemVector3(), on.Point.GetSystemVector3(), on.Normal.GetSystemVector3(),
+					node.Face!.Value.Turn.GetSystemVector3() );
+
+				System.Numerics.Matrix4x4.Invert( mesh.WorldTransform, out var unplaced );
+				var own = node.WorldTransform * unplaced;
+
+				Assert.AreEqual( expected, Degrees( turned, own ), 0.01, $"{stem} head {id} ({node.Name})" );
+			}
+
+			Assert.AreEqual( angles.Length, checkedHeads, $"{stem}: every head with the turn" );
+		}
+
+		static double Degrees( System.Numerics.Matrix4x4 a, System.Numerics.Matrix4x4 b )
+		{
+			System.Numerics.Vector3[] Rows( System.Numerics.Matrix4x4 m ) =>
+				[System.Numerics.Vector3.Normalize( new( m.M11, m.M12, m.M13 ) ), System.Numerics.Vector3.Normalize( new( m.M21, m.M22, m.M23 ) ),
+					System.Numerics.Vector3.Normalize( new( m.M31, m.M32, m.M33 ) )];
+
+			var (p, q) = (Rows( a ), Rows( b ));
+			var trace = System.Numerics.Vector3.Dot( p[0], q[0] ) + System.Numerics.Vector3.Dot( p[1], q[1] ) + System.Numerics.Vector3.Dot( p[2], q[2] );
+
+			return System.Math.Acos( System.Math.Clamp( (trace - 1.0) / 2.0, -1.0, 1.0 ) ) * 180.0 / System.Math.PI;
 		}
 	}
 

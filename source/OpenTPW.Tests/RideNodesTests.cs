@@ -401,6 +401,76 @@ public class RideNodesTests
 			"a Mumbo node hangs on a node that is not a mesh, inside one that is" );
 	}
 
+	/// <summary>
+	/// <b>A head on a morphing face whose record carries <c>0x40000</c> takes the face's frame</b> (<c>LobbyModel.DrawnTurn</c>,
+	/// <c>FUN_0044a640</c>, Q1003): Mumbo's Head02 to Head05, their tentacle drawn turned 40 degrees about a slanted axis, are
+	/// <c>TurnToFace</c> of the face in the mesh, carried by the mesh's drawn turn in the file's axes; Head1, whose record lacks the
+	/// flag, and every head whose parent no morph poses keep the turn inside the mesh. The face turn is about a degree from that at rest,
+	/// so a head left on it is caught.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the flag test left out; the face turn not given; the frame built in the meshes' z-up axes; the mesh's
+	/// drawn turn left out of the corners; the normal moved by the mesh's place.</remarks>
+	[TestMethod]
+	public void AHeadOnAMorphingFaceTakesTheFacesFrameThroughItsMeshsDrawnTurn()
+	{
+		var mumbo = Item( 1109 );
+		var plant = RideNodes.Load( mumbo.Directory, mumbo.Stem, _data, mumbo.DoHeadProcessing,
+			RideAnimations.Load( mumbo.Directory, mumbo.Stem, _data, mumbo.AnimationChannels ).AllClips )!;
+		var model = plant.Model;
+		var drawn = new Drawn( model );
+		var swap = new System.Numerics.Matrix4x4( 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1 );
+		var turnedHeads = 0;
+
+		static void Same( System.Numerics.Matrix4x4 want, System.Numerics.Matrix4x4 got, string what )
+		{
+			float[] a = [want.M11, want.M12, want.M13, want.M21, want.M22, want.M23, want.M31, want.M32, want.M33, want.M41, want.M42, want.M43];
+			float[] b = [got.M11, got.M12, got.M13, got.M21, got.M22, got.M23, got.M31, got.M32, got.M33, got.M41, got.M42, got.M43];
+
+			for ( var i = 0; i < a.Length; ++i )
+				Assert.AreEqual( a[i], b[i], 1e-3f, $"{what}: element {i}" );
+		}
+
+		for ( var id = 1; id <= 5; ++id )
+		{
+			var index = model.FindNode( id, RideNodes.HeadSpace );
+			var node = model.Nodes[index];
+			var mesh = node.ParentIndex;
+			var rest = RideScriptHeadTests.RestSources( model.Meshes[mesh] );
+			var entity = drawn.Entities[mesh];
+			var before = entity.Rotation;
+
+			entity.Rotation = System.Numerics.Quaternion.CreateFromAxisAngle( System.Numerics.Vector3.Normalize( new( 0.3f, 0.5f, 0.8f ) ), 40f * System.MathF.PI / 180f );
+
+			Assert.IsTrue( LobbyModel.DrawnTurnInMesh( model, drawn.Entities, index, out var inMesh ) );
+			Assert.IsTrue( LobbyModel.DrawnTurn( model, drawn.Entities, index, null, out var unmorphed ) );
+			Same( inMesh, unmorphed, $"{node.Name} on a parent no morph poses" );
+
+			Assert.IsTrue( LobbyModel.DrawnTurn( model, drawn.Entities, index, source => rest[source], out var turned ) );
+
+			if ( (node.IdFlags & 0x40000) == 0 )
+			{
+				Assert.AreEqual( 1, id, "only Head1 lacks the flag" );
+				Same( inMesh, turned, $"{node.Name}, no 0x40000" );
+			}
+			else
+			{
+				var on = ModelFile.OnFace( model.Meshes[mesh], node.Face!.Value, source => rest[source], recomputeNormal: true )!.Value;
+				var local = LobbyModel.TurnToFace( on.Corner.GetSystemVector3(), on.Point.GetSystemVector3(), on.Normal.GetSystemVector3(),
+					node.Face!.Value.Turn.GetSystemVector3() );
+				var carried = (local * ((swap * entity.ModelMatrix * swap) with { M41 = 0, M42 = 0, M43 = 0 }))
+					with { M41 = inMesh.M41, M42 = inMesh.M42, M43 = inMesh.M43 };
+
+				Same( carried, turned, $"{node.Name}: the face's frame carried by the tentacle" );
+				Assert.IsTrue( TurnAngle( turned * Invert( inMesh ) ) > 0.5f, $"{node.Name}: the face turn is not the turn inside the mesh" );
+				++turnedHeads;
+			}
+
+			entity.Rotation = before;
+		}
+
+		Assert.AreEqual( 4, turnedHeads, "Head02 to Head05 carry 0x40000" );
+	}
+
 	/// <summary>Whether node <paramref name="index"/> has a mesh among its ancestors.</summary>
 	private static bool HangsInAMesh( ModelFile model, int index )
 	{

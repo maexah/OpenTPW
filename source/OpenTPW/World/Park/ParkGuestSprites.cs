@@ -979,8 +979,10 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// Where the head <c>ADDHEAD</c> or a walk under action 4 hung for this guest stands in the park, and which of the 56 pictures its node shows the
 	/// camera (<see cref="ParkBumperBoats.HeadFrame"/>), or null where no script holds a head of theirs on a node with a
 	/// position. The head stands where the node is drawn this frame (<see cref="ParkObjects.TryDrawnNodeOn"/>): on the
-	/// tentacle a morph has moved, or carried by the arm a clip turns. The picture is chosen by the node's turn at rest,
-	/// counted as the head is hung (<see cref="RideScript.Heads"/>).
+	/// tentacle a morph has moved, or carried by the arm a clip turns. The picture is chosen by the turn the node is drawn with
+	/// (<see cref="ParkObjects.TryDrawnNodeTurnOn"/>): turned to its morphing face where its record carries <c>0x40000</c>, else its
+	/// rest turn inside its nearest mesh as that mesh is drawn (a clip on a node between them is not carried, counted as the head is
+	/// hung, <see cref="RideScript.Heads"/>); by the stored matrix where the thing is not drawn.
 	/// </summary>
 	internal static (Vector3 At, int Frame)? HeadOnRide( ParkPeople? people, int thingId )
 	{
@@ -996,13 +998,20 @@ public sealed class ParkGuestSprites : ModelEntity
 		// drawn, the head goes where its node is drawn.
 		var at = new Vector3( world.M41, world.M43, world.M42 );
 
-		if ( ParkObjects.Current is { } objects
-			&& objects.TryDrawnNodeOn( script.ThingId, nodes.HeadIndex( node ), out var drawn ) != DrawnNode.Missing )
-			at = drawn;
+		var turn = world;
+
+		if ( ParkObjects.Current is { } objects )
+		{
+			if ( objects.TryDrawnNodeOn( script.ThingId, nodes.HeadIndex( node ), out var drawn ) != DrawnNode.Missing )
+				at = drawn;
+
+			if ( objects.TryDrawnNodeTurnOn( script.ThingId, nodes.HeadIndex( node ), out var turned ) )
+				turn = turned;
+		}
 
 		var seen = Camera.Position - at;
 		var towards = new System.Numerics.Vector3( seen.X, seen.Z, seen.Y );
-		var rotation = world with { M41 = 0, M42 = 0, M43 = 0 };
+		var rotation = turn with { M41 = 0, M42 = 0, M43 = 0 };
 
 		if ( System.Numerics.Matrix4x4.Invert( rotation, out var inverse ) )
 			towards = System.Numerics.Vector3.TransformNormal( towards, inverse );

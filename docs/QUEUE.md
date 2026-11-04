@@ -180,15 +180,17 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   came in either game's role-5 runs (ours reached it once, 63 frames, in `q916/ape4`'s 1400 samples from a fresh ride); the ride proper's clips and a face-anchored head on a non-morphing
   parent (`LobbyModel.cs:609`) are also unpaused. Low value: every head compared agrees to about 0.1 and no difference has shown.
 
-- [ ] **Q1003. Turn a head on a morphing face to the face's edge and normal (`FUN_0044a640`), then choose its picture by the drawn turn (Mumbo).** From Q947: with the
-  drawn turn (the node's rest turn in its mesh, carried by its mesh's drawn turn) Head1 matches the original's matrix to 1.6 degrees at every pause measured, and
-  Heads 2 to 5 are 20 to 71 degrees out while the tentacles morph, close only at two pauses (`lib/headresidual.py`; `ride-operation.md`, "Mumbo's head matrix against this
-  game's drawn turn"). Decode what `FUN_0044a640` does with flag `0x40000` (the face's edge and normal, `park.md`, "Where a head on a morphing face stands"; ours counts
-  `RIDER_HEAD_TURN_AT_REST`), build it in `TryGetDrawnNodeTurn` for a node `TryGetDrawnNode` places `OnAFace` whose lookup record's flags carry `0x40000` (the pose
-  walk calls it only then: `test eax,0x40000` at `0x0044af61`, `je` past the call at `0x0044af66`; `OnAFace` is the wider `0x40040`): Mumbo's Head1 (`0x100000f1`) does not
-  and keeps the drawn turn it already matches with; Head02-Head05 (`0x000400f1`) and all sixteen Crazy Ape heads (`0x000400f1`, `0x100400f1`) do. Then re-run `headframe.py` (prediction P7 in
-  `q947/PREDICTION.txt`: all eight pauses' Heads 2 to 5 under 15 degrees, at least 24 of 32 pictures). If it holds, choose `ParkGuestSprites.HeadOnRide`'s picture by
-  the drawn turn and photograph the heads on the desktop against the original's at the same pauses, the Ape staying at least 5 of 8.
+- [ ] **Q1008. The Crazy Ape's head pictures against the original's in clip `l` (Q1003's P9).** From Q1003. The Ape's sixteen heads take the face turn Mumbo's do
+  (all carry `0x40000`), but no pause pairs: the original's role-3 pauses (`q940/orig-ape`) hold Head03 and Head10 only, a fresh Ape of ours (`q1003/census-ape2`, 900
+  samples) held Head1, 02, 06, 09, 12-15 in role 3, and the file the original loaded (`q940/ours-ape/Q848.TPWS`) never reaches role 3 in ours. Ways in: pause the original
+  only when it holds a head ours holds (`headpause.py`'s `read`, polled), or run ours on more fresh rides until it holds 03 or 10 in role 3; then `headframe.py --map
+  ../q916/ape-map.json` (at least 5 of 8, the rest matrix's figure) and the census's `picture` (`q1003/picmatch.py`).
+- [ ] **Q1009. A ride head on a clip-driven ancestor: its picture's turn (`RIDER_HEAD_TURN_AT_REST`).** From Q1003. A head `RideNodes.FindHead` finds `RestPose`
+  (the Sun God, Rocky Racers, the Twister and Eruption, whose heads hang on a clip-driven ancestor, `park.md`, "The head table") takes its rest turn inside its nearest mesh
+  as that mesh is drawn; the engine poses every node, so a clip that turns the head's node or one between it and the mesh is not carried. Measure first: which of those rides'
+  clips turn such a node (`NodePoser`, the clips' tracks). Beside it, the Crazy Ape's heads in its OnAMesh clips (role 5, drawn by the same rest-in-mesh turn, their parent a
+  mesh no morph poses there) against `q917/orig/pauses.jsonl`, once `headframe.py` pairs by the role's clip entry as well as the frame (it pairs by role and frame alone; role 5
+  holds seven clips, so `q1003/headframe-ape2-role5.txt`'s 1 of 7 is not a measure). Build only if a turn is missing.
 - [ ] **Q1004. The `jm_leaf` first key in Mumbo's `m`, `e` and `s` clips (frame 14, `0x00471c56`).** From Q947 and Q940's second piece. Measure the key in the original and in
   ours, then build the skip in `NodePoser.Pose`. From Q940: the original keeps the node's turn until the first key (`0x00471c56`), about 3.7 degrees from the last
   (unmeasured here); `NodePoser` holds the first key (`docs/exe/park.md`, `FUN_00471860`); the build depends on the decode.

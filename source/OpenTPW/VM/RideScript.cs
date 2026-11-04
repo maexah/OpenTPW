@@ -4183,9 +4183,10 @@ public sealed class RideScript
 	/// <summary>
 	/// Stores <paramref name="handle"/> on <paramref name="slot"/> and hangs their head on node slot + 1 where the model has
 	/// it (<c>0x00554cd3</c>..<c>0x00554d13</c>). A script with no model hangs none; the engine, which never gives such a
-	/// script a table, never gets here. A head is drawn where its node is drawn, and its picture chosen by the node's turn
-	/// at rest, where the engine turns a node a clip carries with it and one on a morphing face (with flag <c>0x40000</c>)
-	/// to the face (<c>FUN_0044a640</c>): counted <c>RIDER_HEAD_TURN_AT_REST</c> once a head hung.
+	/// script a table, never gets here. A head is drawn where its node is drawn, and its picture chosen by the turn the node is
+	/// drawn with: on a morphing face, the face's (<c>FUN_0044a640</c>, <c>LobbyModel.TryGetDrawnNodeTurn</c>); on a clip-driven
+	/// ancestor, its rest turn inside its nearest mesh as that is drawn, where the engine poses every node, so a clip that turns the
+	/// head's node or one between it and the mesh is not carried: counted <c>RIDER_HEAD_TURN_AT_REST</c> once such a head hung.
 	/// </summary>
 	private void Hang( int slot, int handle )
 	{
@@ -4195,7 +4196,7 @@ public sealed class RideScript
 
 		_hung[slot] = end != NodeEnd.Missing;
 
-		if ( end is NodeEnd.RestPose or NodeEnd.OnAFace )
+		if ( end is NodeEnd.RestPose )
 			Unimplemented.Report( "RIDER_HEAD_TURN_AT_REST" );
 	}
 

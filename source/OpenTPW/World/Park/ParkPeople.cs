@@ -3711,7 +3711,9 @@ public sealed partial class ParkPeople : Entity
 					+ $"drawn {drawn} matrix [{matrix}]"
 					+ (ParkObjects.Current is { } turns && turns.TryDrawnNodeTurnOn( thing.ThingId, nodes.HeadIndex( head.Node ), out var turn )
 						? $" drawnturn [{string.Join( ' ', new[] { turn.M11, turn.M12, turn.M13, turn.M21, turn.M22, turn.M23, turn.M31, turn.M32, turn.M33 }.Select( v => v.ToString( "0.#####", System.Globalization.CultureInfo.InvariantCulture ) ) )}]"
-						: "");
+						: "")
+					// And the picture the head is drawn with from this frame's camera (ParkGuestSprites.HeadOnRide).
+					+ (ParkGuestSprites.HeadOnRide( this, head.Handle ) is { } shown ? $" picture {shown.Frame}" : "");
 			} ).ToArray();
 
 			// Every walk slot in use and, while it is walked or once a walk off is done, its leg, which is the whole of what a walk-on ride's timing

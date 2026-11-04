@@ -1185,14 +1185,26 @@ as its model's run (the ferry's and the Aztec Mayhem's empty), five of them hold
 off after `WALKOFF`. Every head node has a matrix (flags `0xb1` or `0xf1`); Mumbo's and the Crazy Ape's sit on a
 morphing face (`0x40040`), the other four's on a clip-driven ancestor.
 
-**Where a head on a morphing face stands.** The pose walk (`FUN_0044ab90`) tests the record's flags against `0x40040`
+**Where a head on a morphing face stands.** The pose walk (`Model_PoseWalk`, `FUN_0044ab90`) tests the record's flags against `0x40040`
 (`0x0044abf2`) and its parent mesh for runtime `0x200000` (`0x0044ac00`; `FUN_00472d70` sets it on a mesh a clip carries
 a morph track for). With both, it reads
 the record's face anchor (models.md, "Node lookup ids"): the face's three corners through the mesh's `+0x94` vertex order
 (`0x0044ac2a`) from the posed positions at `+0x60`, the face's normal from `+0x64` by the face's first word `& 0x7fff`
 (`0x0044ad11`), all through the parent's matrix; `FUN_0044b040` lerps corner 0 toward 1 by `u` (`1 - u` from the `1.0` at `0x006fe2a0`),
-that toward 2 by `v`, and adds the normal times the offset; that is the stored translation. With flag `0x40000`,
-`FUN_0044a640` also turns the matrix to the face's edge and normal and a kept turn. The morph routine (`FUN_00471860`)
+that toward 2 by `v`, and adds the normal times the offset; that is the stored translation. With flag `0x40000`
+(`0x0044af61`) `FaceAnchor_TurnToFace` (`FUN_0044a640`, Q1003) replaces the rotation rows, all through the parent's matrix as above:
+the edge e is the face's corner 0 toward the point the two lerps reach (before the offset, `FUN_0044b040`'s sixth argument), normalised
+(`0x0044a65c`..`0x0044a6a2`; where its x is a NaN, `_isnan` at `0x0067b410`, a point on the corner, e is the normal's z, x and y);
+the rows are n × e, the normal n as transformed (not normalised again) and e (`0x0044a6cd`..`0x0044a728`). Then an identity is turned
+by the anchor's kept turn, the three angles at the anchor less its word at +2 (FileFormats models.md, "Node lookup ids"), about z by
+the third (`Mat_TurnZ`, `0x0046f4f0`), y by the second (`Mat_TurnY`, `0x0046f420`) and x by the first (`Mat_TurnX`, `0x0046f240`),
+each the matrix times the turn and each sine and cosine the 4,096 table's (the cosine the sine of the angle less −π/2, `0x006fe2a4`),
+and `Mat_MulTurn` (`0x004704c0`) puts it before the face's frame: rows = Rz · Ry · Rx · F, translation kept. The node's own turn and
+its parent's are not read. At rest, over all 126 records with `0x40000` in the game's models (`lib/faceturn.py`), the rule lands
+within 0.1 degrees of the node's own turn on 42 and within 1 on 93, the worst 14.9 (the Rat Race's `Head07`; Mumbo's four 1.0, 0.8,
+3.0 and 5.0, the Crazy Ape's sixteen 0.1 to 1.3); taken in the order x, y, z 49 are within 1 degree, with e corner 0 toward corner 1
+two, toward the offset point none. OpenTPW: `LobbyModel.TurnToFace`, which `TryGetDrawnNodeTurn` gives a node it stands on a morphing
+face with the flag, and which a rider's head picture is chosen by (`ParkGuestSprites.HeadOnRide`). The morph routine (`FUN_00471860`)
 writes `+0x60` and the bounds, not `+0x64`, but it marks the mesh stale (`0x10000`, `0x00471931`) and `FUN_0044a870` has set
 `0x10000000` on every face-anchored node's parent (`0x0044a93c`), so the pose walk recomputes the parent's face normals
 (`FUN_00473a40`, `0x0044afe0`) from the morphed `+0x60` before it reads one here (`0x0044ad11`); OpenTPW does the same for a head on a morphing
@@ -1213,8 +1225,10 @@ or, for a head on a turned arm, where its nearest mesh is drawn. The `rides` cen
 `ADDHEAD` or `DELHEAD` gets no table, which only those two read; the draw is the script's own generator, as `RAND`'s; a
 draw that never finds the free slot stops after 65,536 tries and takes the first free one (`ADDHEAD_DRAWS_EXHAUSTED`),
 where the engine would hang; a head follows its nearest mesh, where the engine poses every node of the tree, which
-Q915 answered for a clip that turns a dummy past the meshes (`NodePoser.Drives( clip, meshCount )`: Mumbo's `jm_dum` carries the ring of heads); and a head's picture is chosen by its node's turn at rest
-(`RIDER_HEAD_TURN_AT_REST`). Confirmed in the game (`q190/run2`, `run3`): a bought Mumbo, 43
+Q915 answered for a clip that turns a dummy past the meshes (`NodePoser.Drives( clip, meshCount )`: Mumbo's `jm_dum` carries the ring of heads); and a head's picture is chosen by the turn the node is drawn with (Q1003): on a
+morphing face with `0x40000`, `FaceAnchor_TurnToFace`'s above; otherwise its rest turn inside its nearest mesh as that mesh is drawn,
+so a clip that turns the head's node or one between it and the mesh is not carried (`RIDER_HEAD_TURN_AT_REST`, counted for a head
+`RideNodes.FindHead` finds on a clip-driven ancestor). Confirmed in the game (`q190/run2`, `run3`): a bought Mumbo, 43
 census lines with heads equal to riders from 0/5 to 5/5 and back, each head at the drawn node to 0.1; the shots show
 heads at the tentacles while it is full and none when it is empty. Then on the tentacles as they move (`q190/follow1`):
 in a go each of Mumbo's five heads was drawn on its face and its height moved 5.0 to 8.3 units with its tentacle, the

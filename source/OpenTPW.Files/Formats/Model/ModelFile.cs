@@ -141,7 +141,9 @@ public partial class ModelFile : BaseFormat
 	/// <param name="U">The lerp from the first corner toward the second.</param>
 	/// <param name="V">The lerp from that toward the third.</param>
 	/// <param name="Offset">How far along the face's normal the node stands off it.</param>
-	public readonly record struct FaceAnchor( int Face, float U, float V, float Offset );
+	/// <param name="Turn">The kept turn <c>FUN_0044a640</c> puts on the face's frame for a record flagged <c>0x40000</c>: the three angles, x, y
+	/// and z in radians, at the anchor less its word at +2 (FileFormats models.md, "Node lookup ids").</param>
+	public readonly record struct FaceAnchor( int Face, float U, float V, float Offset, Vector3 Turn = default );
 
 	/// <summary>
 	/// A route stored in the model, in the model's own space: the bus, ferry and seaplane each
@@ -851,6 +853,13 @@ public partial class ModelFile : BaseFormat
 	/// reference the recompute is measured against).
 	/// </remarks>
 	public static Vector3? PointOnFace( Mesh mesh, FaceAnchor face, Func<int, Vector3> sourcePosition, bool recomputeNormal = false )
+		=> OnFace( mesh, face, sourcePosition, recomputeNormal ) is { } on ? on.Point + (on.Normal * face.Offset) : null;
+
+	/// <summary>
+	/// What <see cref="PointOnFace"/> works from, in the mesh's own space: the face's first corner, the point the lerps reach on the face
+	/// before the offset, and the face's normal. <c>FUN_0044a640</c> turns a node to the face by the first two and the normal.
+	/// </summary>
+	public static (Vector3 Corner, Vector3 Point, Vector3 Normal)? OnFace( Mesh mesh, FaceAnchor face, Func<int, Vector3> sourcePosition, bool recomputeNormal = false )
 	{
 		if ( face.Face < 0 || face.Face >= mesh.FaceNormalIndices.Length || (face.Face * 3) + 2 >= mesh.Indices.Length )
 			return null;
@@ -880,7 +889,7 @@ public partial class ModelFile : BaseFormat
 
 		var direction = recomputeNormal ? RecomputedFaceNormal( mesh, face.Face, sourcePosition ) : mesh.FaceNormals[normal];
 
-		return point + (direction * face.Offset);
+		return (Corner( 0 ), point, direction);
 	}
 
 	/// <summary>
@@ -1016,14 +1025,22 @@ public partial class ModelFile : BaseFormat
 			Nodes[node].IdHide = reader.ReadUInt32();
 			var face = reader.ReadUInt32();
 
-			// The face record: its face, a ushort not read here (FUN_0044a640 steps back by it to a turn), and
+			// The face record: its face, how far back its kept turn is (FUN_0044a640 reads the three angles there), and
 			// FUN_0044b040's three floats at +4, +8 and +0xc.
 			if ( face != 0 && face + 16L <= stream.Length )
 			{
 				stream.Seek( face, SeekOrigin.Begin );
 				var index = reader.ReadUInt16();
-				_ = reader.ReadUInt16();
-				Nodes[node].Face = new FaceAnchor( index, reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle() );
+				var back = reader.ReadUInt16();
+				var anchor = new FaceAnchor( index, reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle() );
+
+				if ( face >= back )
+				{
+					stream.Seek( face - back, SeekOrigin.Begin );
+					anchor = anchor with { Turn = new Vector3( reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle() ) };
+				}
+
+				Nodes[node].Face = anchor;
 			}
 		}
 	}

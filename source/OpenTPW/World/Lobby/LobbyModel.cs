@@ -610,15 +610,88 @@ public sealed class LobbyModel : IChannelPosed
 	}
 
 	/// <summary>
-	/// The turn node <paramref name="index"/> has as it is drawn this frame, in the model's axes (y up), for a head's picture to be
+	/// The turn node <paramref name="index"/> has as it is drawn this frame, in the model's axes (y up), which a head's picture is
 	/// chosen by (<c>FUN_0044b510</c>): the node's rest turn inside its nearest mesh ancestor, carried by the turn that mesh is drawn
-	/// with. Its translation row is that mesh's draw place, not the node's (<see cref="TryGetDrawnNode"/> answers that). False where
-	/// the node has no mesh ancestor. A node on a morphing face is not turned to the face here (<c>FUN_0044a640</c>, counted
-	/// <c>RIDER_HEAD_TURN_AT_REST</c>): Mumbo's Head1 matches the original's matrix to 1.6 degrees at every pause measured and its other
-	/// four heads are up to 71 degrees out while the tentacles morph (Q947, Q1003). A census instrument: the picture is not chosen by it.
+	/// with; or, for a node <see cref="TryGetDrawnNode"/> stands on a morphing face whose record carries <c>0x40000</c>, the face's frame
+	/// under the anchor's kept turn as the pose walk makes it (<c>0x0044af61</c>, <see cref="TurnToFace"/>). Its translation row is that
+	/// mesh's draw place, not the node's (<see cref="TryGetDrawnNode"/> answers that). False where the node has no mesh ancestor.
 	/// </summary>
 	public bool TryGetDrawnNodeTurn( int index, out Matrix4x4 world )
-		=> DrawnTurnInMesh( _file, Entities, index, out world );
+	{
+		var parent = index >= 0 && index < _file.Nodes.Count ? _file.Nodes[index].ParentIndex : -1;
+		var morphed = Animators.FirstOrDefault( animator => animator.TargetIndex == parent ) is { Morphing: true } animator
+			? animator.SourcePosition
+			: (Func<int, Vector3>?)null;
+
+		return DrawnTurn( _file, Entities, index, morphed, out world );
+	}
+
+	/// <summary>
+	/// <see cref="TryGetDrawnNodeTurn"/> with the node's parent's source vertices where a morph poses them, or null where that parent
+	/// is not morphing.
+	/// </summary>
+	internal static bool DrawnTurn( ModelFile file, ModelEntity[] entities, int index, Func<int, Vector3>? morphedParent, out Matrix4x4 world )
+	{
+		if ( !DrawnTurnInMesh( file, entities, index, out world ) )
+			return false;
+
+		var node = file.Nodes[index];
+		var parent = node.ParentIndex;
+
+		if ( morphedParent != null && node.Face is { } face && (node.IdFlags & FaceTurned) != 0 && parent >= 0 && parent < entities.Length
+			&& ModelFile.OnFace( file.Meshes[parent], face, morphedParent, recomputeNormal: true ) is { } on )
+		{
+			// The corner, the point and the normal through the parent's drawn matrix (FUN_0044ab90, 0x0044acf5..), back in the file's axes:
+			// the face's frame is built by cross products, which the swap of y and z would turn over.
+			var placed = entities[parent].ModelMatrix;
+			System.Numerics.Vector3 Drawn( Vector3 local ) => Swizzle( System.Numerics.Vector3.Transform( Swizzle( local.GetSystemVector3() ), placed ) );
+
+			var normal = Swizzle( System.Numerics.Vector3.TransformNormal( Swizzle( on.Normal.GetSystemVector3() ), placed ) );
+
+			world = TurnToFace( Drawn( on.Corner ), Drawn( on.Point ), normal, face.Turn.GetSystemVector3() )
+				with { M41 = world.M41, M42 = world.M42, M43 = world.M43 };
+		}
+
+		return true;
+	}
+
+	/// <summary>The record flag that has the pose walk turn a face-anchored node to its face (<c>test eax,0x40000</c>, <c>0x0044af61</c>).</summary>
+	private const uint FaceTurned = 0x40000;
+
+	/// <summary>
+	/// <c>FUN_0044a640</c>: the rotation rows a node on a face takes, from the face's first <paramref name="corner"/>, the
+	/// <paramref name="point"/> its anchor reaches on the face (before the offset) and the face's <paramref name="normal"/>, all as
+	/// drawn, and the anchor's kept <paramref name="turn"/>. The edge e is the corner toward the point, normalised; where that has no
+	/// length (a NaN x, <c>0x0067b410</c>) e is the normal's three in the order z, x, y. The face's frame has the rows n x e, n and e,
+	/// unnormalised past e; it is turned by the identity turned about z by the turn's z, then y by its y, then x by its x, each matrix
+	/// times the turn (<c>FUN_0046f4f0</c>, <c>FUN_0046f420</c>, <c>FUN_0046f240</c>), the sines and cosines the 4,096 table's
+	/// (<see cref="ParkSea.Sine"/>), and the turn goes before the frame (<c>FUN_004704c0</c>). Translation nought.
+	/// </summary>
+	internal static Matrix4x4 TurnToFace( System.Numerics.Vector3 corner, System.Numerics.Vector3 point, System.Numerics.Vector3 normal, System.Numerics.Vector3 turn )
+	{
+		var edge = point - corner;
+		var length = MathF.Sqrt( (edge.Z * edge.Z) + (edge.Y * edge.Y) + (edge.X * edge.X) );
+		edge = new( edge.X / length, edge.Y / length, edge.Z / length );
+
+		if ( float.IsNaN( edge.X ) )
+			edge = new( normal.Z, normal.X, normal.Y );
+
+		var face = new Matrix4x4(
+			(edge.Z * normal.Y) - (edge.Y * normal.Z), (edge.X * normal.Z) - (normal.X * edge.Z), (normal.X * edge.Y) - (edge.X * normal.Y), 0,
+			normal.X, normal.Y, normal.Z, 0,
+			edge.X, edge.Y, edge.Z, 0,
+			0, 0, 0, 1 );
+
+		var (cz, sz) = (ParkSea.Cosine( turn.Z ), ParkSea.Sine( turn.Z ));
+		var (cy, sy) = (ParkSea.Cosine( turn.Y ), ParkSea.Sine( turn.Y ));
+		var (cx, sx) = (ParkSea.Cosine( turn.X ), ParkSea.Sine( turn.X ));
+
+		var kept = new Matrix4x4( cz, sz, 0, 0, -sz, cz, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 )
+			* new Matrix4x4( cy, 0, -sy, 0, 0, 1, 0, 0, sy, 0, cy, 0, 0, 0, 0, 1 )
+			* new Matrix4x4( 1, 0, 0, 0, 0, cx, sx, 0, 0, -sx, cx, 0, 0, 0, 0, 1 );
+
+		return kept * face;
+	}
 
 	internal static bool DrawnTurnInMesh( ModelFile file, ModelEntity[] entities, int index, out Matrix4x4 world )
 	{
