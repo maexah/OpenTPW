@@ -881,16 +881,18 @@ filed the items that cite it.
     `0x7f` (rows 125-127, getters `0x0059f360`, `0x0059f370`, `0x0059f380`, keys `PrankSbomb`, `PrankLitter` and
     `PrankBalloon` `.Score`, 35 each, above the 25 cut). The prank done is `mPrankeryIndex` 100 + id % 3, so the
     advice names the prank done for a guest the constructor made.
-- [ ] **Q229. A member of staff put down sets off on the next sweep, where the original's stands eleven. Decode
-  first.** Found by Q112's measurement of the original (`ride-operation.md`, "OpenTPW takes the arm"). Its guard, put
-  down from the staff window's PICK UP, reads state 7 to 0 on the click, 0 to 1 with a destination a sweep later, 0
-  again inside that same tick, and walks eleven or twelve sweeps on (ticks 1206, 1207, 1207, 1218; 1732, 1733, 1733,
-  1745). `ParkPeople.DropStaff` sets Idle from Carried, which stamps 0, so ours decides on the next sweep and keeps
-  walking. What writes the second 0 is not read: the hand mode's uninstall puts a worker it still names down again
-  (`0x0046cdc0`, `FUN_00505ea0`), and state 0 from a walk stamps the clock, which would fit. Decode the drop's order,
-  then build it. In the second run the walk also stopped on grass at (43,27) eight sweeps in and the no-links arm ran
-  again from there: read why. Confirm: `staff` after `putstaff`, `idleSince` and the sweep the walk starts, predicted
-  first; a screenshot.
+- [ ] **Q229. A member of staff put down with the pointer on them sets off on the next sweep, where the original's
+  stands eleven (decoded in Q869).** Found by Q112's measurement of the original (`ride-operation.md`, "OpenTPW takes
+  the arm"). The original's second 0 is the hover's stop (`FUN_00505f50` from `FUN_00486d90`; `ride-operation.md`, "The
+  put-down itself differs"), which first names the member after their first decide; ours (`Level.WorldHelpRow`) names
+  them before the first sweep, idle from idle with the stamp nought, so the walk is not stopped. Measure first, in the
+  original: after a PICK UP and put-down with the pointer left resting, poll the draw's latch `[0x00877350]`, the hovered
+  thing `[0x007b05ac]` and mGameTick, to read when the latch first names the member against their first sweep (the
+  sprite is made at the drop, `0x00505f05`, and takes its animation only in that sweep, `0x004fa91f`); and run 2's
+  put-down on (42,26) again, the latch read through the walk, to settle whether the stop on (43,27) was the hover or the
+  walk's give-up (`+0x18c`). Then build the first naming as measured. Confirm: `staff` after `putstaff` with the pointer
+  moved onto the member (`docs/TOOLING.md`, "A member put down under the pointer"), `idleSince` and the sweep the walk
+  starts beside the original's, predicted first; a screenshot.
   From Q133b: the original's handyman, put down two cells from a dirty toilet, read `0xa` on the tick after the
   put-down and the toilet's stamp was written again a tick later (1389, then 1390: `q133b/orig/a.log`), so the
   second decide runs for him too; from `0xa` the idle between stamps nought, and he does not stand eleven.

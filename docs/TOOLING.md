@@ -595,6 +595,14 @@ Each was found by trial in the item named, and cost a run to find.
   0`, `step 1` stands Duke Mighten and Mike Man a cell apart in view, and `pick X Y` on a grid answers each point's latch
   without moving the pointer; leave out the steps within 3% of an edge, where a tenth of a pixel decides.
 
+- **A member put down under the pointer, here** (Q869, `q869/run1.py`, `run2.py`, off-screen): `enter()`, `pause`,
+  `camera 425 205 110 0`, `pickup 28`, `putstaff 42 24`; a `pick X Y` grid at 40 px finds Mike Man's picture at
+  (620..700, 140..220) of 1280 x 720, and `move( 620, 180 )` puts the pointer on him while paused, which logs "Park:
+  hover set thing 28 idle from Idle on mGameTick G" at once. Resumed, the log's "Staff: 28 leaves idle for Walking on
+  mGameTick T" and any later "hover set thing 28 idle from Walking" give the sweeps; match the "leaves idle" line only
+  after the resume's line count, since the guard leaves idle on 763 before the pickup too. Leave the pointer there and
+  the walking guard comes back under it (stopped on 771); `move( 300, 450 )` first takes it off him.
+
 - **The pointer over a ride, a shop and a queue in either game** (Q478, `q478/confirm.py`, `q478/orig/run.sh`): the
   stock park at camera (480,265) 130 180 (`bothcam`); here `parkscene.find_cell` finds the queue (50,22), the Belly
   Bounce (52,24) and the Drinks Shop (43,31), a real move, then `pointer` (cursor, row and text) and the log's `Park:

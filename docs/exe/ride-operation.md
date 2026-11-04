@@ -1587,9 +1587,46 @@ roll's random cell, and its researcher, whose roll over the whole map fails, sto
 **The put-down itself differs, and is not this arm** (Q229). In the original each put-down reads state 7 to 0 on the
 click, 0 to 1 with the destination a sweep later, **back to 0 inside that same tick**, and 1 again eleven and twelve
 sweeps on (ticks 1206, 1207, 1207, 1218; and 1732, 1733, 1733, 1745, 1744 being a multiple of four), with the same
-destination: the idle wait of a stamp taken at the second 0. OpenTPW's member is put down idle at stamp 0 and walks on
-the next sweep that chooses to. What writes the second 0 is not read. In the second run the walk also stopped on
-(43,27), grass, eight sweeps in, and the arm ran again from there twelve sweeps later: not read either.
+destination: the idle wait of a stamp taken at the second 0 (the guard's grade 3 waits 11 sweeps: 1207 + 11 = 1218;
+1733 + 11 = 1744 stays, a multiple of four, and stamps nought, so 1745).
+
+**The second 0 is the pointer's hover** (Q869, read in the private Ghidra copy, `q869/dump*/`). The poll (`staffwatch.py`)
+reads the state before the tick, so the write falls after sweep 1207's machine and before sweep 1208's increment. The
+sweep `FUN_00516380` walks the used-thing list once and runs each thing's kind once (`FUN_0050b360`; the guard's pre-step
+`FUN_004d6360`, then `FUN_004d6410`), and the machine set 1. Of every caller of `CStaff::SetState` `FUN_005054d0` and of
+the guard's `FUN_004d65d0`, the one that runs outside the sweep and can write 0 from state 1 on grass is `FUN_00505f50`,
+PICK UP's test and then `SetState( 0 )`, which the hover `FUN_00486d90` calls (`0x0048720d`) on the member under the
+pointer `[0x007b05ac]` when the member or the category is new (park-engine.md, "What the hover says over a person"). The
+UI tick's message `0x1e` runs it once a drawn frame (the pick at `0x00488557`, the hover at `0x00488582`), so a pointer
+left resting on the put-down point, as both runs left it, stops the member once the hover first names them; from the
+walk the stamp is the clock. The others: the strike and rest check `FUN_00506a40` writes 4 or 2; the rest-area message
+(`FUN_00504c70`, `FUN_00506d10`) writes 0 only from 2 or 3; `FUN_004d6260` writes `0x10`, the chase; `FUN_004d5de0` is
+the hire. **The hand mode's uninstall is not it**: the drop `0x0046cc40` puts the worker down through `FUN_00509af0`
+(`0x0046cce5`), which runs the body `FUN_00505ea0` and zeroes the hand's `+0x60` (`0x00509b34`) before the default mode
+is installed (`0x0046cd7d`); the mode setter `FUN_0046c350` then runs the worker mode's uninstall `0x0046cdc0`, which
+finds the hand naming nobody. The default mode's install (`0x0046c6b0`, slot `+0x28` of vtable `0x006fea10`) runs the
+hover once at the drop itself, while the latch still holds what the pointer was over during the carry.
+
+**Why the first hover comes after the first decide is not settled.** The hover reads the previous draw's latch
+(`FUN_00540b30`, handed to `0x007b05a8` at `0x0054e345` after the draw `FUN_0044e510`), and the member's new sprite
+(`FUN_004d4140` at `0x00505f05`) takes the put-down's idle animation only in their first sweep (`FUN_004fa870` →
+`FUN_004d4190`, `0x004fa91f`). At the reference install's 30 fps two draws are about a quarter of the 248 ms sweep, yet
+in all three put-downs measured, the guard's two and Q133b's handyman's (`0xa` on 1389, the toilet stamped again on
+1390), the stop fell after the first decide and before the second sweep.
+
+**In the second run the walk stopped on (43,27), grass, eight sweeps in** (1753): a stamp taken from state 1 (the wait
+ends on 1764, a multiple of four, so the walk is 1765). Either the hover again, the walking guard's picture coming back
+under the resting pointer, or the walk's give-up (`FUN_004fa2a0` answers 2 on `+0x18c`) and a failed `FUN_004f9490`; the
+poll read no latch, so which is not settled. Q133b's handyman read state 0 twice more on the put-down cell, at 1417 and
+at 1428, a sweep after walking on 1427 (`q133b/orig/a.log`).
+
+**OpenTPW** (Q869, off-screen, `q869/run1`, `run2`, the stock park, guard 28 put down on (42,24) with `pickup` and
+`putstaff`, paused, the pointer moved onto his picture): the hover (`Level.WorldHelpRow`) named him before any sweep
+and set him idle from idle on 763, the stamp nought; resumed, he stood on 764, a multiple of four, and walked on 765.
+With the pointer left there his walking picture came back under it: the hover stopped the walk on 771 and the idle
+again on 772 (stamp nought), and he walked on 773. With the pointer moved off first he walked on 765 and reached
+(45,21), Q112's first aim, with no hover line. So ours' first hover of a put-down member comes before the first
+decide, where the original's comes after it.
 
 ### Where OpenTPW differs
 
@@ -1597,6 +1634,7 @@ the next sweep that chooses to. What writes the second 0 is not read. In the sec
 |---|---|---|---|
 | A cell with no links, staff | the no-links arm, whoever asks: inside the patrol area, or outside it once `FUN_00506f30` fails (`0x004f95af`) | the same (`StaffBehaviour.SetRandomDest`, through `PeepBehaviour.WanderFromNowhere`; "OpenTPW takes the arm", Q112); each aim is routed under the staff wander's own limits (`staff-wandering.md`), and no stranded refusal is asked of staff | not by the stock park left alone (0 in 240 s); by a member put down off a path |
 | Staff outside their area whose patrol roll fails | the count and the linked walk, with no patrol filter (the flag at `0x004f95af`) | false | not measured |
+| A member put down with the pointer resting on them | the hover first names them after their first decide and stops the walk: 11 or 12 sweeps idle (Q869) | named before the first sweep and set idle from idle, stamp nought: walks on the next sweep that chooses to (Q229) | by a player's PICK UP and put-down |
 | The dead end and the stamp | thought `0x11`, `+0x198` stamped, every route refused until a map edit | the same, for a guest (`PeepBehaviour.SetRandomDest`, `RefusedAsStranded`; "Q110b") | not by the stock park left alone; by a player who cuts a queue's tail off its path ("Q110") |
 | A map type write's block stamp | a fresh counter value in the cell's 16 × 16 block | the same, where a cell becomes ground, path or queue (`ParkState.SetRecord`, `ClearRecord`, `StampBlock`) | every path or queue cell laid or cleared, every sale |
 | The split's events 1 and 2 | pushed onto the guest's event ring | counted, `DECIDE_NOTHING_CHOSEN_EVENT` and `DECIDE_CHOSEN_EVENT`; no ring is kept | every choice |
@@ -3374,7 +3412,8 @@ does (`0x004e24bc`..`0x004e252a`).
 `+0x44` written to 20.0 in the running game's memory (`poke.py`: the one write, nothing on disk), four predictions of
 five. Left on his patrol the handyman stayed in state 1 with `+0x21a` nought for 205 sweeps, the toilet unassigned.
 Picked up with the staff window's hand and put down on (56,18), he read `0xa` with `+0x21a` 21 on tick 1389, the
-tick after the put-down, and the toilet was stamped again on 1390 (the put-down's second decide, Q229): **no
+tick after the put-down, and the toilet was stamped again on 1390 (the hover's stop from `0xa`, stamp nought, then a
+second decide: "The put-down itself differs", Q869): **no
 eleven-sweep wait, which was the prediction that missed**. He walked (56,18), (56,17), (55,17) with his rest
 unchanged, read `0xb` on 1398 with `+0x214` 1398, and state 0 on 1409, S + 11: `+0x44` 100, `+0x5e` 0, `+0x68` 1,
 `+0x60` still 1390, his rest down 0.825 (11 x 0.075). State 1 on 1410.
