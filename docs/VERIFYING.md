@@ -317,10 +317,10 @@ The ones that have bitten more than once.
   default branch will otherwise say something confident.
 - **104** — **A control can fire because its EXPECTED value is wrong, and "the control failed" is then the
   wrong conclusion to draw from it.** Reading a saved script struct, the alignment was checked against the
-  speed word, which the loader sets to 50. Thirteen of the fourteen records read 50 and one
+  speed word, which the script creator (`0x00558c3c`) sets to 50. Thirteen of the fourteen records read 50 and one
   read **60**, and the honest-looking conclusion — "the control fails, so the alignment is wrong, so the
   program counter I just read is noise" — would have thrown away a correct decode. The 60 was real: 50 is
-  what the *loader* writes, and the engine pushes an object's own operating speed over it
+  what the *script creator* writes, and the engine pushes an object's own operating speed over it
   (`FUN_0055a300`), and that object's `mOperatingSpeed` was independently measured at 60. **Before
   believing a control, ask what WRITES the field it reads** — a field with more than one writer cannot
   have one expected value. What actually settled the alignment was a second control with only one

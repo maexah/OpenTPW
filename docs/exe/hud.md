@@ -3892,7 +3892,7 @@ Measured in the original under Proton on `q369/skill.TPWS` (`q353/grades.TPWS` w
 written at the staff record's `+480`; `q369/orig/b`, `thingwords.py` on `+0x1e4`, `+0x1e8` and `+0x1f8`): its rows
 letter "$ 81" and draw the skill bars 0.925, 0.283, 0.192, 0.608 and 0.417 of their width (942, 296, 194, 614 and 430 of
 1024), and the happiness bars 0.85, 0.817, 0.817, 0.858 and 0.817 against its polled happiness at the frames (0.850,
-0.819, 0.829, 0.850, 0.819); its meters 0.828 with a grey rest. Measured by where the grey track starts
+0.819, 0.829, 0.850, 0.819); its meters 0.851 (`barsplit.py`; `barshare.py`'s 0.828) with a grey rest. Measured by where the grey track starts
 (`barsplit.py`): `barshare.py`'s colour count drops `happygrad.wct`'s greyish-teal texels and reads them 0.02 short.
 
 **OpenTPW** (Q369): `ParkStaffScreen.NumbersOf` and `SkillOf`; `UiList.BarSkins` and `BarInset` the styler's skin and
@@ -3900,13 +3900,13 @@ inset; `ParkObjectWindow.UiStatBar.Skin` the texture handed; the meters are `UiS
 kind K, row <thing> <name>: <status> <wage> <skill bar> <happiness bar>`, and the rewrite its row 0 the same way. On
 `q369/skill.TPWS`, paused at the load (`q369/run-fix2`, the final game binary): `row 25 Duke Mighten: Walking 81 942
 880`, `26 ... 92 296 880`, `27 ... 36 194 880`, `28 ... 105 614 901`, `30 ... 125 430 921`; the frames' skill bars 0.92,
-0.292, 0.195, 0.602, 0.425 and happiness bars 0.866, 0.866, 0.866, 0.884, 0.902 (`barsplit.py`); the meters 0.846 and
-0.863 with a grey rest; "$ 81" (`1-handymen.png`). Main's build (`run-control1`) lettered the grade and the happiness as
+0.292, 0.195, 0.602, 0.425 and happiness bars 0.866, 0.866, 0.866, 0.884, 0.902 (`barsplit.py`); the meters 0.859 and
+0.876 (`barsplit.py`; `barshare.py`'s 0.846 and 0.863) with a grey rest; "$ 81" (`1-handymen.png`). Main's build (`run-control1`) lettered the grade and the happiness as
 numbers and filled its meters from the bottom. The headings are framed (Q370, "The list headings' frames"); the
 status's words are Q379's (below); the list's sort is Q381's ("The all-staff list's sort", below).
 
 **What paints the all-staff meters** (Q898, Q156's decode). A meter's setter `FUN_0066d885` (vtable `0x00705c28`, slot
-`+0x1c`) does nothing and answers 0 when the value is the one it holds; otherwise it stores it held to 0..`0x400` at
+`+0x1c`) does nothing and answers 0 when the raw value is the one held at `+0x140` (the test comes before the clamp); otherwise it stores it held to 0..`0x400` at
 `+0x140` and hands it, flag 8, to the object at `+0x98` and then to the one at `+0x9c`, each skipped when null. The two
 slots are every control's painters, filled by twin setters: `FUN_0065d070` puts the stream's op 1 mesh at `+0x98`, at
 the control's depth `+0xe0` over its rectangle `+0x8`; `FUN_0065d1c8` puts a skin (op 2, or a caller's) at `+0x9c`, at
@@ -3920,12 +3920,12 @@ draws them since Q369. (When `FUN_0065d1c8` replaces a skin whose release `FUN_0
 the old skin, `0x0065d205`; the meters take one skin into a null slot, so it is not reached here.)
 Read in the disassembly and checked in the private Ghidra copy (`q898/gd/`, its decompiles agree, `FUN_00496620`'s
 calls to `FUN_0065d1c8` at `0x004969a4` and `0x00496a60` and none to `FUN_0065d070`); there `0x00478400` is defined as
-`StatBar_OnMessage`, which the real project does not yet have.
+`StatBar_OnMessage`.
 Run under unicorn, the original's own setter and handler on a made-up meter (`q898/emu.py`, `q898/emu1/run.log`), E1 to
 E5 held: at 512 the four x floats 50, the y floats 100, 0, 100, 0, u 0.5 and v 1.0, 0.5, 0.5, 0, the rest untouched; the
 same 512 again answers 0 and leaves the buffers alone; 2000 is held to 1024 (100) and -5 to 0; a second skin at `+0x98`
 takes the same 25 at 256. This game on `q369/skill.TPWS` (`q898/run1`, off-screen, the build of `990dc2b4`): `meters
-881/896`, the kind meter split at 0.859 and the all meter at 0.876, its top and bottom rows alike (0.876, 0.876); the
+881/896`, the kind meter split at 0.859 and the all meter at 0.876 (the same frame's figures as above), its top and bottom rows alike (0.876, 0.876); the
 original's frame is Q369's (`q369/orig/b-1-handymen.png`), not taken again: read now, its all meter's top and bottom rows
 split alike too (0.851, 0.851).
 

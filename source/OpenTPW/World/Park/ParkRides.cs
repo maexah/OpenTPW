@@ -1684,7 +1684,9 @@ public sealed class ParkRides : Entity
 		cars.Place( placed.TrackRide, x, z );
 
 		// The speed word the object constructor pushes (0x004db534), which the scheduler then pushes into the ride's
-		// performance at each visit: the item's starting speed when over nought, else the loader's 50.
+		// performance at each visit: the item's starting speed when over nought, else the script creator's 50.
+		// Deviation: this is bound once, so a speed the window or an upgrade changes, or the save holds, never reaches
+		// the cars where the original's performance reads the script word (0x0055183b; Q155, docs/exe/park.md).
 		var speedWord = item.InitSpeed > 0 ? item.InitSpeed : 50;
 		cars.BindSpeedWord( placed.TrackRide, speedWord );
 

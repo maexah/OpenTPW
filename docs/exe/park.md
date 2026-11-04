@@ -671,7 +671,7 @@ So a locked region runs **atomically, unbounded by the 50-instruction slice**, u
 
 **The clock is milliseconds.** The chain is `0x00402d70` -> `0x00402f10` -> `0x004030d0` -> `0x004033a0` -> `0x005f5fa0` -> **`0x005f5f10`**, and that last one is the whole answer: it calls `QueryPerformanceCounter` and divides by a stored divisor, and **falls back to `timeGetTime()`** when the counter is unavailable. The divisor is the counter's frequency over 1000: the clock's set-up at `0x005f5e80` loads 1000 (`MOV ESI,0x3e8`, `0x005f5e87`), asks `QueryPerformanceFrequency` (`0x005f5ea0`) and stores frequency / 1000 at `+0x4` (`DIV ESI` `0x005f5ee5`, `0x005f5eea`), with `timeGetTime()` at `+0x8` and the starting count at `+0x10`; the reading is (count − start) / that + the starting `timeGetTime` (`0x005f5f57`..`0x005f5f62`) — milliseconds on both paths. `WAIT 3000` is three seconds.
 
-The dispatcher's prologue computes `[ESP+0x14] = DAT_00700fd0 - (short)field[+0xc0] * DAT_00700fcc`, **and that is the divisor `WAIT` FDIVs its duration by**. `DAT_00700fcc` = **-0.01**, `DAT_00700fd0` = **0.5**, so the divisor is `0.5 + 0.01 * speed`. **At the loader's speed of 50 that is exactly 1.0** — the neutral point — which is why the two 50s look like one thing and are not.
+The dispatcher's prologue computes `[ESP+0x14] = DAT_00700fd0 - (short)field[+0xc0] * DAT_00700fcc`, **and that is the divisor `WAIT` FDIVs its duration by**. `DAT_00700fcc` = **-0.01**, `DAT_00700fd0` = **0.5**, so the divisor is `0.5 + 0.01 * speed`. **At the script creator's speed of 50 (`0x00558c3c`) that is exactly 1.0** — the neutral point — which is why the two 50s look like one thing and are not.
 
 **Two 50s that are NOT the same field, and must not be conflated:** the header's time slice is `field[0x25]` (`+0x94`), while `field[0x30]` (byte offset `0xc0`) is the speed the script creator sets to 50 itself (`0x00558c3c`; not a park load).
 
@@ -681,7 +681,7 @@ The dispatcher's prologue computes `[ESP+0x14] = DAT_00700fd0 - (short)field[+0x
 |---|---|
 | `0x00558c3c` | the script creator (not a park load), `MOV word ptr [EBP+0xc0],0x32` — the hardcoded 50 |
 | `0x00551888` | the scheduler, copying it into the linked script named by field 3 |
-| `0x0055a30d` | `FUN_0055a300(frame, value)`, a plain setter, called from **outside the RSSE subsystem**: the object constructor `FUN_004db090` at `0x004db534` finds the script by the id it has just stored at the thing's `+0x24` and pushes the item's own operating speed in, logging `SPEED = %d` |
+| `0x0055a316` | `FUN_0055a300(frame, value)`, a plain setter, called from **outside the RSSE subsystem**: the object constructor `FUN_004db090` at `0x004db534` finds the script by the id it has just stored at the thing's `+0x24` and pushes the item's own operating speed in, logging `SPEED = %d` |
 
 **No opcode writes it.** A sweep of `0x00551000`-`0x0055a000` (loader, scheduler, dispatcher, every handler) finds **exactly two** writers — the first two rows above; the third sits **past the top of that window**, which is why a scan bounded by the RSSE subsystem misses it. The constructor does the same for a duration through `FUN_0055a0b0(frame, 3, value)`, which writes **variable index 3** — `VAR_DURATION` — and logs `DUR = %d`.
 
@@ -749,9 +749,9 @@ runs at the divisor 1.1, and its screams' parameter is `(20 + 60) / 2` = **40** 
 | `0x0055a341`, `FUN_0055a330` | a getter; its one caller is the wear, `FUN_004df670` (`0x004df758`) |
 
 OpenTPW keeps no word (Q155): `RideScript` divides by nothing, `ParkAudio.ScriptSpeed` is 50 in all three scream
-readings, and the wear and a bumper ride's performance take the thing's `mOperatingSpeed`, or 50 at nought
-(`ParkRideWear.SpeedWord`, `ParkBumperCars.BindSpeedWord`), which the files above show is the same number for an
-object's own script. The other readers' use in OpenTPW was not checked here.
+readings, and the wear takes the thing's `mOperatingSpeed`, or 50 at nought (`ParkRideWear.SpeedWord`); a bumper ride's performance
+takes its item's `InitSpeed`, or 50 at nought (`ParkRides.cs:1688`, `ParkBumperCars.BindSpeedWord`'s only caller),
+whatever the file or the window says. The other readers' use in OpenTPW was not checked here.
 
 ### What a kept `GETTIME` reading is, and what a load does to it (Q181)
 
@@ -842,11 +842,11 @@ Opcode numbers: 15 FLUSHANIM, 16 TRIGANIM (3 operands), 17 WAITANIM, 18 LOOPANIM
 
 **`FLUSHANIM` stops nothing.** `FUN_00473270` writes the sentinel 12 into `channel+0x24` — the role *queued* to play next. The clip actually running is untouched and plays out, and nothing is answered.
 
-**`WAITANIM` is NOT `TRIGANIM` with a wait, and that is the trap.** It stores `len - 300` as the **low half of a qword whose high half is nought** and reads it back with `FILD qword`, so `-300` arrives as 4,294,966,996; `__ftol` (`0x0067a830`) is a `FISTP qword` handing back the **low dword**, so at the divisor 1 nothing overflows and `-300` comes back out; and the 300 floor is then compared with **`JNC`, unsigned**, which a negative passes where `TRIGANIM`'s `JGE` catches it. **So with no model `WAITANIM`'s deadline is `clock - 300`, already past, and the instruction costs exactly one turn** — it still yields, because the engine sets the deadline without looking at it. It does **not** "wait 300 ms". **That holds only at the divisor 1**, the loader's speed 50: the `FDIV` at `0x00552acd` comes between, so with any other divisor a length under 300, or no model at all, makes the quotient's low dword land far from `clock - 300`, ahead or behind by hours to weeks (at the Easymode clock, speed 60 waits about 45 days, speed 49 half a day, and speed 51 passes at once). OpenTPW keeps no divisor (Q155).
+**`WAITANIM` is NOT `TRIGANIM` with a wait, and that is the trap.** It stores `len - 300` as the **low half of a qword whose high half is nought** and reads it back with `FILD qword`, so `-300` arrives as 4,294,966,996; `__ftol` (`0x0067a830`) is a `FISTP qword` handing back the **low dword**, so at the divisor 1 nothing overflows and `-300` comes back out; and the 300 floor is then compared with **`JNC`, unsigned**, which a negative passes where `TRIGANIM`'s `JGE` catches it. **So with no model `WAITANIM`'s deadline is `clock - 300`, already past, and the instruction costs exactly one turn** — it still yields, because the engine sets the deadline without looking at it. It does **not** "wait 300 ms". **That holds only at the divisor 1**, the script creator's speed 50: the `FDIV` at `0x00552acd` comes between, so with any other divisor a length under 300, or no model at all, makes the quotient's low dword land far from `clock - 300`, ahead or behind by hours to weeks (at the Easymode clock, speed 60 waits about 45 days, speed 49 half a day, and speed 51 passes at once). OpenTPW keeps no divisor (Q155).
 
 `WAITANIM` does trigger the clip: `0x00552a95` tests the model handle and `0x00552ab0` calls `FUN_004732a0`; the no-model path is `XOR EAX,EAX`. **Three of Lost Kingdom's eight items run only `WAITANIM`** — Staff Room, Security Camera, Litter Bin — so a passive wait leaves them inert.
 
-**Two timing asymmetries.** Both `TRIGANIM` and `WAITANIM` divide by the speed divisor (`0x00552acd` is `FDIV float ptr [ESP+0x14]`, the same divisor, worked out afresh per instruction as `0.5 + 0.01 * speed`, exactly 1 at the loader's 50, which a bound script's item speed replaces). The real asymmetry is the **order and the signedness**: `TRIGANIM` floors at 300 **signed** (`JGE`) and *then* divides; `WAITANIM` divides and *then* floors at 300 **unsigned** (`0x00552ad6` `CMP EAX,0x12c` / `JNC`). `LOOPANIM` is idempotence-guarded on the key at `+0xa8` and discards its length. **`0xffff` is what breaks the guard**, and five writers put it there: the loader (`0x00558c4f`, so every new script starts at it), `TRIGANIM` and `TRIGANIMSPEED` (`0x00552feb`), `TRIGWAITANIM`'s first visit (`0x00552da5`) and **`WAITANIM`'s first visit** (`0x00552b1a`). The `_CH` forms never touch `+0xa8`, so a `_CH` trigger leaves the guard standing. A save carries the field (below). No shipped `LOOPANIM` has the key 0 or `0xffff`: all 210 name two literals.
+**Two timing asymmetries.** Both `TRIGANIM` and `WAITANIM` divide by the speed divisor (`0x00552acd` is `FDIV float ptr [ESP+0x14]`, the same divisor, worked out afresh per instruction as `0.5 + 0.01 * speed`, exactly 1 at the script creator's 50, which a bound script's item speed replaces). The real asymmetry is the **order and the signedness**: `TRIGANIM` floors at 300 **signed** (`JGE`) and *then* divides; `WAITANIM` divides and *then* floors at 300 **unsigned** (`0x00552ad6` `CMP EAX,0x12c` / `JNC`). `LOOPANIM` is idempotence-guarded on the key at `+0xa8` and discards its length. **`0xffff` is what breaks the guard**, and five writers put it there: the loader (`0x00558c4f`, so every new script starts at it), `TRIGANIM` and `TRIGANIMSPEED` (`0x00552feb`), `TRIGWAITANIM`'s first visit (`0x00552da5`) and **`WAITANIM`'s first visit** (`0x00552b1a`). The `_CH` forms never touch `+0xa8`, so a `_CH` trigger leaves the guard standing. A save carries the field (below). No shipped `LOOPANIM` has the key 0 or `0xffff`: all 210 name two literals.
 
 **`WAIT4ANIM` waits on a second deadline field** (`+0xa4`, `0x005538eb`) — **not** `WAIT`'s twin. Two differences, both load-bearing: it never arms anything itself, and **when `+0xa4` is nought it leaves at once without waiting at all**.
 
@@ -1602,7 +1602,7 @@ while the ride loads.
 it from the template (50); `BUMP 7` sets it again from `+0x1c`; the save loader from the saved dword (`0x00543788`);
 and **each scheduler visit of the ride's script pushes the script's speed word** (`0x00551844`, `FUN_005516b0`, through
 the thing's `+0x28`), whether or not a turn ran, logging "Set ride performance to %d". The word is the ride's operating
-speed, pushed by the constructor and an upgrade only when `InitSpeed` is over nought (else the loader's 50): 60 for
+speed, pushed by the constructor and an upgrade only when `InitSpeed` is over nought (else the script creator's 50): 60 for
 all four bumper rides as bought, none of which sets `Upgrades[0].InitSpeed` over `Rides.sam`'s 60.
 
 | BumperType | ride | radius | thrust | friction | turn | restitution | at 60 | arena, buoys |

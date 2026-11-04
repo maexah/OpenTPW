@@ -593,8 +593,8 @@ filed the items that cite it.
   answer. `ParkScreamTests` calls the Belly Bounce's 35 "the real park's number", which holds only if its speed is 50.
   Decoded (Q897, `park.md`, "What a loaded script holds"): a load puts the record's `+0xc0` back as the file holds it,
   and the save's `mOperatingSpeed` never reaches the script (the two agree because every writer writes both); the
-  shipped park's Belly Bounce holds 60, so its screams' parameter is 40 (by the decode; the original's memory not read), not OpenTPW's 35, and its divisor 1.1. Keep the
-  word per script (`ParkScriptStates.Speed`, `ParkScriptStates.cs:63`, already reads it, a signed short in the exe; a bought thing's is its `InitSpeed` when above nought, a
+  shipped park's Belly Bounce holds 60, so its screams' parameter is 40 (by the decode; the original's memory not read), not OpenTPW's 35, and its divisor 1.1. A speed changed by the window or an upgrade never reaches our bumper cars either, after a load or live (`ParkRides.cs:1688` binds the item's `InitSpeed` once; the original's performance reads the script word, `0x0055183b`). Keep the
+  word per script (`SavedScript.Speed`, `ParkScriptStates.cs:63`/`:77`, already reads it, a signed short in the exe, and the save writer already fills it from `ParkRideWear.SpeedWord`, `ParkRides.cs:1140`, `ParkScriptStates.Made.cs:72`; a bought thing's is its `InitSpeed` when above nought, a
   `SPAWNCHILD` child's its parent's, the window's speed control and the repair's upgrade arm (`FUN_004df8f0`, `0x004dfabc`) write it) and read it in `WAIT`, the animation
   triggers and the three scream readings (`STARTSCREAM`, `SINGLESCREAM`, `SCREAMLEVEL`); `park.md`'s table names the
   other readers (the `TOUR` record's `+0x50`, `COAST`'s ride, the bounce sine, the walk placer, the wear, the scheduler's bumper-ride performance `0x0055183b`) - check each.
@@ -617,7 +617,7 @@ filed the items that cite it.
   there (jungle `Gates` 4000). The Easymode Belly Bounce was saved looping at 1.1, and OpenTPW's second trigger at its
   word 43 (`park.md`, "Where OpenTPW's animation state parts from the engine's", difference 4) replaces it at 1.0. With a divisor other than 1, a clip under 300 ms or no model makes
   `WAITANIM`'s qword sum wrap `+0xa0` (`park.md`, "`WAITANIM` is NOT `TRIGANIM` with a wait").
-- [ ] **Q156. The staff screen's two happiness meters fill upward (decoded in Q898).** Found by the 2026-09-26 staleness
+- [ ] **Q156. The staff screen's two happiness meters (decoded in Q898: they fill from the left).** Found by the 2026-09-26 staleness
   audit. Nothing is left to build: the original paints each meter with its stat-bar skin alone and fills it from the left
   (`hud.md`, "What paints the all-staff meters"), and this game has drawn them so since Q369 (`ParkStaffScreen.Meter`, a
   `UiStatBar` in `happygrad.wct` inset 8). The confirm asked for, the staff screen at a known happiness photographed, is

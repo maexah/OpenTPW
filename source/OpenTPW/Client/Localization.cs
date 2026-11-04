@@ -9,6 +9,7 @@ public static class Localization
 
 	static Localization()
 	{
+		// Deviation: the original reads the american folder (registry Language 0x409, docs/exe/park-engine.md); this reads English. Filed as Q697.
 		UIStrings = new StringFile( "Language/English/UITEXT.str" );
 		HelpTexts = new StringFile( "Language/English/UIHELPTEXT.str" );
 	}
