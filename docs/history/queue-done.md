@@ -12004,6 +12004,10 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   water ride saved and loaded, in both games") and see a guest board. The detail and Splish Splash's own `BUMP 5` at word 20 are
   Q588's run-19 note; Q993 (2)'s spin at word 15 is the same loop.
   **Done 2026-11-04** (branch `alexah/884-bump5-answers-without-a-bumper-record`; `q883/`): `RideScript.Bump` answers selector 5 from the thing's `mIsTrackRideValid` before its record test. A bought Dino Karts, run 40 s in Q939's scene: the control (`main`) sits at word 18 with `BUMP at 15` counted 6,099 times; the branch is at word 99, no count at 15, 26 or 117, `VAR_ONRIDE` 1 and `VAR_LETMEON` 0 (the script took the guest), then whole go cycles. The five guests sent are `Riding dest 43` and stay so: no kart car carries or returns them, and the kart's other `BUMP`s are still counted no-ops (Q588's: not filed again). The original on the branch's file runs on past word 15 (pc 197, 138); its picture of the ride was not seen. 4843 passed, 0 failed, 2 skipped of 4845 with the game; 2014 passed, 2831 skipped without. Left undone: a loaded kart on her Full Simulation file (Q993 (2)) was not re-run, and Splish Splash's own `BUMP 5` at word 20 was not run (its ride has no queue here).
+- [x] **Q892. `ParkBuildMarkers`' strip records and vertex count, tested at the caller.** From Q211. The strip's `Over`
+  is `RecordHeight( square.Lift )` and the mesh holds four corners to each square and wall; both are now `ParkBuildMarkers.
+  Recorded` and `VertexCount`, asserted for a lift of 20 (21.5) and for 3 squares with 4 walls (28). Both bugs put back,
+  both tests fail. No game run (Q211 says so). **Done 2026-11-04.**
 
 ## B. Docs and comments
 

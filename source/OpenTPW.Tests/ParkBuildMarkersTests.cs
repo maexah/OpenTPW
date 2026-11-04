@@ -36,6 +36,34 @@ public class ParkBuildMarkersTests
 	}
 
 	/// <summary>
+	/// The strip the mesh holds records each square at <see cref="ParkBuildMarkers.RecordHeight"/> of its own lift, not
+	/// of the bare ground: the game's <c>strip</c> census prints <c>Over - Lift</c>, so a lifted cell reads 20 (Q435, Q892).
+	/// </summary>
+	[TestMethod]
+	public void TheStripRecordsEachSquareOverItsOwnLift()
+	{
+		var strip = ParkBuildMarkers.Recorded(
+		[
+			((52, 26, ParkPathBuilding.MarkerBlue, 0, false, 1), 20f),
+			((53, 26, ParkPathBuilding.MarkerRed, 1, true, 2), 0f)
+		] );
+
+		CollectionAssert.AreEqual( new[] { 21.5f, 1.5f }, strip.Select( square => square.Over ).ToArray() );
+		Assert.AreEqual( (53, 26, ParkPathBuilding.MarkerRed, 1, true, 2),
+			(strip[1].X, strip[1].Y, strip[1].Marker, strip[1].Turn, strip[1].Glides, strip[1].Size), "the rest carried over" );
+	}
+
+	/// <summary>Four corners to a square or a wall; the vertex array is sized from squares and walls together (Q892).</summary>
+	[TestMethod]
+	public void TheMeshHoldsFourCornersToEverySquareAndWall()
+	{
+		Assert.AreEqual( 0, ParkBuildMarkers.VertexCount( 0, 0 ) );
+		Assert.AreEqual( 4, ParkBuildMarkers.VertexCount( 1, 0 ) );
+		Assert.AreEqual( 4, ParkBuildMarkers.VertexCount( 0, 1 ) );
+		Assert.AreEqual( 28, ParkBuildMarkers.VertexCount( 3, 4 ) );
+	}
+
+	/// <summary>
 	/// A lifted square's walls, as the original queued them on the stock park (<c>q435/orig/b-5-squares.txt</c>): (52,26),
 	/// lifted 20 beside (51,26) at 20, (53,26) at 10 and (52,27) on the ground, with (52,25) as high, laid its square at
 	/// 21.5 and then records at 11.5, 1.5 and 11.5 - one wall toward the east and two toward the south, lowest first.

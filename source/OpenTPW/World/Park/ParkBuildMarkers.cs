@@ -93,7 +93,7 @@ public sealed class ParkBuildMarkers : ModelEntity
 	/// One square of the mesh: its cell, its marker, how far over the ground its corners start, the compass bit its
 	/// texture is turned by (<see cref="TurnedUvs"/>), and whether it glides (<see cref="Glide"/>).
 	/// </summary>
-	private readonly record struct Square( int X, int Y, int Marker, float Over, int Turn = 0, bool Glides = false, int Size = 1 );
+	internal readonly record struct Square( int X, int Y, int Marker, float Over, int Turn = 0, bool Glides = false, int Size = 1 );
 
 	/// <summary>The squares the mesh holds now, and its vertices, so the wave can move them every frame.</summary>
 	private List<Square> _strip = [];
@@ -453,9 +453,7 @@ public sealed class ParkBuildMarkers : ModelEntity
 			.Select( square => (Square: square, Lift: SquareLift( square.X, square.Y, square.Size )) )
 			.ToList();
 
-		_strip = lifts.Select( square => new Square( square.Square.X, square.Square.Y, square.Square.Marker, RecordHeight( square.Lift ),
-				square.Square.Turn, square.Square.Glides, square.Square.Size ) )
-			.ToList();
+		_strip = Recorded( lifts );
 		_toolSquares = strip.Count( square => OnTheField( square.X, square.Y ) ) + carried.Count( square => OnTheField( square.X, square.Y ) );
 		_patrolSquares = _strip.Count - _toolSquares;
 
@@ -475,7 +473,7 @@ public sealed class ParkBuildMarkers : ModelEntity
 		_strip.AddRange( stranded.Where( cell => OnTheField( cell.X, cell.Y ) )
 			.Select( cell => new Square( cell.X, cell.Y, ParkPathBuilding.MarkerRed, StrandedLift ) ) );
 
-		_vertices = new Vertex[(_strip.Count + _walls.Count) * 4];
+		_vertices = new Vertex[VertexCount( _strip.Count, _walls.Count )];
 
 		if ( Fill( field ) == 0 )
 			return;
@@ -501,6 +499,15 @@ public sealed class ParkBuildMarkers : ModelEntity
 		TranslucentModel = new Model( _vertices, elements, material );
 		TranslucentModel.EnableFrequentUpdates( _vertices );
 	}
+
+	/// <summary>The squares as the mesh holds them: each at its record, <see cref="RecordHeight"/> of the lift under it.</summary>
+	internal static List<Square> Recorded( IEnumerable<((int X, int Y, int Marker, int Turn, bool Glides, int Size) Square, float Lift)> lifts )
+		=> lifts.Select( square => new Square( square.Square.X, square.Square.Y, square.Square.Marker, RecordHeight( square.Lift ),
+				square.Square.Turn, square.Square.Glides, square.Square.Size ) )
+			.ToList();
+
+	/// <summary>Four corners to every square and wall.</summary>
+	internal static int VertexCount( int squares, int walls ) => (squares + walls) * 4;
 
 	/// <summary>Lays the four corners of every square and wall at the wave's current height; answers how many were laid.</summary>
 	private int Fill( HeightfieldFile field )

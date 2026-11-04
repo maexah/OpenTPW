@@ -689,11 +689,8 @@ filed the items that cite it.
   objects; the prankery id's `& 0xffff`; the cash's `Math.Max( 0, ... )`; `Players.Load`'s read-only stand-in. And
   `ArchiveDamageTests.EveryInstalledWadEntryStillDecodes` prints its hash and count without asserting either. Write
   each test, put its bug back, see it fail (`AGENTS.md` rule 6). No game run.
-  From the run review (2026-10-17): three more callers whose tests stop at the helper. `ParkBuildMarkers` hands
-  `RecordHeight( square.Lift )` to the strip's `Over`; put back `square.Lift` and every test passes, and the game's `strip`
-  census prints `Over - Lift`: assert a built strip's `Over` for a lifted cell (21.5), or print `Over` (Q435).
-  `ParkBuildMarkers.Fill` needs no GPU and runs before `Build`'s first GPU call, so Q436's mutation m12 (the vertex count)
-  is not "game-only": move the count into a testable `VertexCount( squares, walls )`. `CameraLensTests.
+  From the run review (2026-10-17): more callers whose tests stop at the helper (the first, `ParkBuildMarkers`' strip
+  `Over` and vertex count, was Q892). `CameraLensTests.
   TheLobbyDrawsItsFilesAngle` asserts 100, which `LobbyCameraMode.ReadSettings( TextReader )` also falls back to, so a wrong
   path or an unread stream passes: open `lobby/lobby.txt` through `FileSystem`, assert it is found, parse that stream (Q441).
   `ParkStaffCellListTests` (Q446) demands a relink from a member in the Held state, where the original relinks only in
