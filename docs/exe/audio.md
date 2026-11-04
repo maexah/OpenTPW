@@ -832,7 +832,7 @@ first frame (Alexah's Full Simulation save: 319 of 328 people read exactly 0.0).
 the listener (all three axes, `AudioListener.RangeGain`) differs from a sound at the ground. **OpenTPW**: `ParkGuestSprites.Heard` places the sound for `StaffSound`, a queue's `PutOff`, `Yawn` and the till (the `PutOffSound.Feet` arm) at
 the person's x and y and the height nought; no site of those is a held rider, and the pool's saved sprite `Height` is not read for sound. A rider's put-off on the Seat and Walk arms
 (`PutOffPoint`) stands at the node's or the placer's point less the ground (`0x004f9e91`). The draw adds no saved offset either: a walker stands on the ground, and a seated rider
-is drawn at the node, which already holds the height the original's draw adds the ground back to. Deviation: the original truncates all three coordinates to
+is drawn at the node, unlifted (the original lifts a bounce rider on a sine: `RIDER_BOUNCE`, Q511), which already holds the height the original's draw adds the ground back to. Deviation: the original truncates all three coordinates to
 whole units (`_ftol`, `0x004faa27`..`0x004faa3b`); ours keeps the float. Seen here, off-screen (`q847/`): the five staff put down on the
 stock park's 20.0 plateau (cells (40..64, 58)) voice at z 20.0 and then the ground's height as they walk off before (49 voices, 3.5
 to 20.0), at z 0.0 after (40 and 51 voices, all 0.0). A guest on the same plateau (Q1020, `q1020/`; the console's `admit 40 58` makes one at (405, 585)): the
@@ -853,17 +853,17 @@ the Spray's or the Kiosk's till (heights 0.983895 and 0.0, both handed as 0); th
 Ours (`q856/ours1/`, this build, off-screen; the staff put on cells (40..62, 58), where the ground reads 20.0000): 48 staff voices on raised ground (36 on sampled raised ground, none on flat; x 386..642, y 475..694, ground 14.5 to 20 where `q847/probe1/` read it), all z 0.0. Both games sound a walker at nought, so nothing was built.
 
 **A seated rider's put-off, in the original** (Q1005, 2026-11-04, `q1005/`; `tools/harness/original/riderputoff.sh`; `personsound.sh putoff`). A sale puts every rider in raw state `0x10` off in one
-frame, and clears the person's `+0x28` first (`0x004fb3df`) before kids `0x80` goes through `Person_PlaySound` (`0x004fb3f5`), so `personsound.sh riders` cannot see it: the put-off is read by its
+frame, and clears the person's `+0x28` first (`0x004fb3df`) before kids `0x80` goes through `Person_PlaySound` (called at `0x004fb3f5`, in `FUN_004fb360`), so `personsound.sh riders` cannot see it: the put-off is read by its
 effect. Two rides, each sold from its window in the original (a park file ours saved with the riders aboard, loaded with `loadfile.sh`). **The Crazy Ape** (Q917's park, four aboard,
-`q1005/orig/b-brk.log`): four put-offs, every one the sprite at (0.000, 0.000, 0.000) and the ints (0, 0, 0): the ride keeps no rider's sprite, the eviction makes one with no place
+`q1005/orig/b-brk.log`): four put-offs, every one the sprite at (0.000, 0.000, 0.000), and the three the hit count let through handed the ints (0, 0, 0): the ride keeps no rider's sprite, the eviction makes one with no place
 (`park-engine.md`, "Selling and the people on it"), and the sound is at the world's origin, which is ours' `PutOffSound.Origin` arm. **The Bouncy Dino** (thing 13, the window's "Belly Bounce"), a rider on a
-bounce node: the first frame `FUN_004fa030` meets a person with `+0x28` set and a sprite above 1.5 holds the game, the confirm's click is queued, and the next frame is the sale's. Run h: the sprite
+bounce node: the first frame `FUN_004fa030` meets a person with `+0x28` set and a sprite above 1.5 holds the game, the confirm's click is queued, and the next frame is the sale's. In both runs the rider's `+0x8c`, its drawn height and the sale's read are equal to six places, where the running ride moves it every frame (`l-brk.log`): with the DELETE ITEM box open the lift stands still (observed; the cause not read), so a sale's height is the phase at which the box was opened. Run h: the sprite
 (522.576, 19.174019, 248.386) made the ints (522, 19, 248); run k (the final build's file): (522.428, 10.928638, 248.157) made (522, 10, 248). So a seated rider is sounded at the sprite's own `+0x8c`
-cut toward nought, as a walker is, and that height is the seat's, above nought. The drawn height `+0xe8` read the same as `+0x8c` in each, the ground there 0.0 (ours' console: 0.0000 at the seats' cells (52,24),
-(52,25)), so "the point less the ground" is NOT told from "the point" on flat ground (Q1007). The seat is not still: 200 frames of one rider (handle 16, `l-brk.log`, ticks 1338 to 1364) ran `+0x8c` from 8.49 to 24.0.
+cut toward nought, as a walker is, and that height is the seat's, above nought. The drawn height `+0xe8` read the same as `+0x8c` in each, the ground there 0.0 or the sprite carries `+0xc4`'s `0x1000000` (not read; ours' console reads 0.0000 at the seats' cells (52,24),
+(52,25), the same park file), so "the point less the ground" is NOT told from "the point" on flat ground (Q1007). The seat is not still: 200 frames of one rider (handle 16, `l-brk.log`, ticks 1338 to 1364) ran `+0x8c` from 8.49 to 24.0.
 **Ours** (`q1005/ours-final.out`, `ours-final2/`, the build of this branch, md5 `f5196a14`; the stock park off-screen, the same ride and sale): `ParkPeople.SeatOn` takes the node's PLACED point
-(`ParkObjects.TryNodeOn`, "placed, not loaded": the rest pose), so each seat's z is one number, 10.3, 9.5 and 11.9 for the three riders and the same over 16 ticks, and the three put-off lines read exactly
-those, ground 0.0 taken off. They differ: ours does not follow the bounce (Q1006). Not the same instant, riders or frames in the two games; the comparison is the rule, not the number.
+(`ParkObjects.TryNodeOn`, "placed, not loaded": the rest pose), so each seat's height (ours' z) is one number, 10.3, 9.5 and 11.9 for the three riders and the same over 16 ticks, and the three put-off lines read exactly
+those, ground 0.0 taken off. They differ: ours does not follow the bounce (Q511). Not the same instant, riders or frames in the two games; the comparison is the rule, not the number.
 
 | Address | Original name | What it is | Evidence |
 |---|---|---|---|

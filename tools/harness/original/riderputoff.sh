@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# riderputoff.sh [SECS] - a ride's SALE with its riders seated, in the ORIGINAL (Q1005): the sale's DELETE ITEM box must be open already
+# riderputoff.sh [SECS] (env HITS, default 8, caps the lines: the RIDER line, then PS and SPE a rider, so four riders need HITS=9; the PS condition is any kids 0x80 sound, a rider's line is known by id = the RIDER handle) - a ride's SALE with its riders seated, in the ORIGINAL (Q1005): the sale's DELETE ITEM box must be open already
 # (the ride's window, the bomb (185,435); the pointer is then put on the tick (707,283)), and the sale puts every rider off in one frame, which
 # needs them aboard (a ride's riders are aboard a few seconds in a cycle of tens). One gdb session on three addresses (brk.sh):
 #   0x004fa087  FUN_004fa030's test of the person's +0x28 (the ride holds the sprite): the first person with it set HOLDS the game, prints
