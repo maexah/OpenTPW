@@ -899,6 +899,70 @@ public class ParkFootprintSplitTests
 		}
 	}
 
+	/// <summary>
+	/// <b>A coaster's pylon stamps no cell</b>, as the original's does for the pylons it makes in play (Q840: the Chac Atak
+	/// bought in the running original and its first nodes laid; each click's one cell went <c>0x0004</c> to <c>0x0105</c> with no
+	/// <c>0x200</c>, as the 40 loaded pylon cells read <c>0x103</c> or <c>0x105</c>; <c>docs/exe/park-engine.md</c>, "The track
+	/// kit's, the hoardings' and the coaster's cells stamp nothing"). A pylon's model has the procedural base (header <c>0x8</c>) and a
+	/// floor, <c>mc_pylbase</c> or its kin, so a table is read for its one cell, but that cell has no entry and the header has no
+	/// <c>0x80</c>: <see cref="ProceduralFloor.Blend"/> over it stamps nothing.
+	/// </summary>
+	/// <remarks>
+	/// A data guard on this game's rule, not a drive of a built coaster: ours builds no coaster in play (Q594), and a played
+	/// coaster's pylons are stood by <see cref="ParkCoasterPylons"/>, which conforms and never blends.
+	/// <b>Mutation:</b> <c>everyCell</c> read as true for a pylon fails the count of entries and the stamp.
+	/// </remarks>
+	[TestMethod]
+	public void ACoastersPylonModelsStampNoCell()
+	{
+		var catalogue = new ParkItemCatalogue( "jungle", FileSystem );
+		var field = Landscape();
+		var checkedModels = 0;
+
+		foreach ( var item in catalogue.All.Where( i => i.TrackType == ItemDescriptionFile.CoasterTrack ) )
+		{
+			foreach ( var stem in new[] { "StdPylon", "LoopPylon" } )
+			{
+				var path = $"{item.Directory}/{stem}.MD2";
+
+				using ( var stream = FileSystem.OpenReadOrNull( path ) )
+				{
+					if ( stream == null )
+						continue;
+				}
+
+				var model = new ModelFile( path );
+
+				Assert.AreNotEqual( 0u, model.HeaderFlags & 0x8, $"{path}: a procedural base" );
+				Assert.AreEqual( 0u, model.HeaderFlags & 0x80, $"{path}: no every-cell floor" );
+
+				var mesh = ParkObjects.FloorMeshOf( model, ParkCoasterPylons.Footprint );
+
+				if ( mesh < 0 )
+				{
+					++checkedModels;
+					continue;
+				}
+
+				var table = ProceduralFloor.Table( model, mesh, ParkCoasterPylons.Footprint, 1, 1, false, ProceduralBase.ParkGrid );
+				Assert.IsNull( table[0, 0], $"{path}: its one cell has no table entry" );
+
+				var ground = GroundOf( field, 8 );
+				var stamped = new List<(int X, int Y)>();
+
+				ProceduralFloor.Blend( model, mesh, ParkCoasterPylons.Footprint, 1, 1, false, 0, (40, 40, 40, 40), ground, name => name, [], out var cells,
+					stamped );
+
+				Assert.AreEqual( 0, stamped.Count, $"{path}: no cell stamped" );
+				Assert.AreEqual( 0, cells, $"{path}: nothing blended" );
+				Assert.IsFalse( ground.IsStamped( 40, 40 ), $"{path}: the cell keeps its flag" );
+				++checkedModels;
+			}
+		}
+
+		Assert.IsTrue( checkedModels >= 3, $"{checkedModels} pylon models read" );
+	}
+
 	private static (int X, int Y) FirstBentAfter( HeightfieldFile field, (int X, int Y) after )
 	{
 		for ( var i = (after.Y * field.CellsX) + after.X + 1; i < field.CellsX * field.CellsY; ++i )
