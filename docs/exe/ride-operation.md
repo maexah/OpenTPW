@@ -5334,7 +5334,7 @@ near edge, `+0xc0` (x the high word, z the low) times 10, to the greatest cell's
 (`0x006fe760` is -1.0, taken away) times 10 (`0x006fe75c`), and `FUN_00556af0` halves each sum. **Read in the
 running original** (Q266, `original/modelboxes.py` on the loaded stock park, predicted first, 11 of 11): the
 eleven objects' rectangles are the cells OpenTPW's `ParkObjects.FootprintOf` gives them, a turned one included
-(the Round Fountain, (57,17)..(59,19); the Staff Room, (58,15)..(59,16)), and the Belly Bounce's, (51,23)..(53,26),
+(the Round Fountain, (57,17)..(59,19); the Staff Room, (58,15)..(59,16); a bought rock's and pillar's, Q844, `park-engine.md`, "A bought rock's and pillar's voice place"), and the Belly Bounce's, (51,23)..(53,26),
 has its middle at (525, 250), the place its scream channels read in the mixer (`audio.md`, "A voice's range, and
 the rectangle it follows the listener in"). Each record's base height read nought, to seven places. A fixed item's
 record (the gate's) reads (0,0)..(0,0). OpenTPW: `ParkObjects.TrySoundPlace`, the middle of the footprint kept as

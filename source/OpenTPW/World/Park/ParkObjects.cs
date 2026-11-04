@@ -492,9 +492,11 @@ public sealed class ParkObjects : Entity
 			// is right for a reason rather than by eye.
 			var voice = _standing[placed.ThingId].Footprint ?? covered;
 
+			var voiceAt = BoxMiddle( voice, model.PlacedOrigin.Z );
+
 			Log.Info( $"{ThemeName}: '{item.Name}' anchored at ({placed.CellX},{placed.CellY}) turned " +
 				$"{placed.Angle} covers ({covered.Left},{covered.Top})..({covered.Right},{covered.Bottom}), its voice at the middle " +
-				$"({BoxMiddle( voice, 0f ).X:F0},{BoxMiddle( voice, 0f ).Y:F0})" );
+				$"({voiceAt.X:F0},{voiceAt.Y:F0}) at height {voiceAt.Z:F1}" );
 		}
 		catch ( Exception e )
 		{

@@ -265,6 +265,11 @@ public class ParkMapOffsetCellsTests
 		Assert.IsTrue( catalogue.TryGet( 1422, out var pillar ) );
 
 		var carried = typeof( ParkBuilding ).GetMethod( "CarriedAnchorUnder", BindingFlags.NonPublic | BindingFlags.Static )!;
+		var turn = typeof( ParkBuilding ).GetProperty( nameof( ParkBuilding.CarryingAngle ) )!;
+
+		// The static carried angle is read by the anchor: set it, so a test that turned it and left it does not reach this one.
+		turn.SetValue( null, 0 );
+
 		var (x, y) = ((int X, int Y))carried.Invoke( null, [state, pillar, 71, 25, null] )!;
 
 		Assert.AreEqual( (69, 23), (x, y), "the pointer on (71,25) anchors it at (69,23)" );
@@ -300,6 +305,44 @@ public class ParkMapOffsetCellsTests
 
 		Assert.AreEqual( (69, 23, 73, 27), objects.StoredFootprint( 4000 ) );
 		Assert.AreEqual( new Vector3( 715f, 255f, 0f ), ParkObjects.BoxMiddle( objects.StoredFootprint( 4000 )!.Value, 0f ) );
+	}
+
+	/// <summary>
+	/// <b>The voice's rectangle of a bought rock and pillar is the one the original's model record held</b> (Q844, <c>q844/orig/run1/</c>,
+	/// <c>original/modelboxes.py</c> on the running original after a real purchase): the rock, pointer on (71,25), turned 0 and turned 90
+	/// (anchors (69,24) and (70,27)), read (69,23)..(73,27), middle (715,255) both; the Large Rock Pillar, pointer on (76,26), anchored
+	/// at (74,24), read (74,24)..(77,27), middle (760,260). The pillar's own place at its other anchor (69,23) is the same model
+	/// shifted five cells.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> <c>SoundBoxOf</c> answering the anchor's footprint (<see cref="ParkObjects.FootprintAt"/>) moves the rock's
+	/// middle a row south and the pillar's keeps (it has no map offset), so the rock cases fail it; the pillar's width and depth, read as
+	/// 5 x 5 or 3 x 3, fail the pillar's.</remarks>
+	[TestMethod]
+	public void ABoughtRockAndPillarSoundAtTheMiddleOfTheRectangleTheOriginalReads()
+	{
+		var (world, catalogue) = Park();
+		var state = new ParkState( world );
+
+		Assert.IsTrue( catalogue.TryGet( Rock, out var rock ) );
+		Assert.IsTrue( catalogue.TryGet( 1422, out var pillar ) );
+
+		var cases = new (ParkItemCatalogue.Item Item, int X, int Y, int Angle, (int, int, int, int) Box, Vector3 Middle)[]
+		{
+			(rock, 69, 24, 0, (69, 23, 73, 27), new Vector3( 715f, 255f, 0f )),
+			(rock, 70, 27, 90, (69, 23, 73, 27), new Vector3( 715f, 255f, 0f )),
+			(pillar, 74, 24, 0, (74, 24, 77, 27), new Vector3( 760f, 260f, 0f )),
+		};
+
+		foreach ( var (item, x, y, angle, box, middle) in cases )
+		{
+			var placed = ParkBuilding.Constructed( item, 4000, x, y, angle, 0, 0, ParkWorld.BuiltWhen.At( state.CalendarNow ) );
+			var objects = new ParkObjects( Theme, null, null );
+
+			objects.StandPlaced( placed, item, null!, RideAnimations.None(), null, [], 0, [], 0, () => default );
+
+			Assert.AreEqual( box, objects.StoredFootprint( 4000 ), $"{item.Name} at ({x},{y}) turned {angle}: the model's rectangle" );
+			Assert.AreEqual( middle, ParkObjects.BoxMiddle( objects.StoredFootprint( 4000 )!.Value, 0f ), $"{item.Name} at ({x},{y}) turned {angle}: its middle" );
+		}
 	}
 
 	/// <summary>
