@@ -160,7 +160,7 @@ belongs to or at the end. Grep it by area or Q-number; never read it whole.
   cells swept from `mTopLeft`'s cell, turned, owner the anchor. A purchase of the Huge Hollow Rock at (69,24) turned 0 types the
   original's 23 cells and stamps its 14, none given back (Q888's original run); its voice's rectangle and the pillar's are the original's model record's (Q844: (69,23)..(73,27) and (74,24)..(77,27) at anchor (74,24), base height -8.5 in both games), the refusal, the carried squares, the sale's
   clear and the voice's box use the same cells, and the bought rock's frame has no clear-colour patch over the row above the
-  anchor (`q744/run-final`; a rock turned 90, 180 and 270 types and stamps the original's cells and anchors at the original's cell, Q842; the Large Rock Pillar's purchase and the Tunnel's put-down are the original's cells and stamps, Q843).
+  anchor (`q744/run-final`; a rock turned 90, 180 and 270 types and stamps the original's cells and anchors at the original's cell, Q842; the Large Rock Pillar's purchase (the original's file edited to mark 1422 researched, which gives it its buy row) and the Tunnel's put-down are the original's cells and stamps, Q843).
 - **A built thing's floor and a queue's are blended into the ground's tiles, as the original's are** (Q649,
   `ProceduralFloor`): each footprint cell's floor frame draws that cell's ground tile, at the tiles' own size, with the
   frame's texture laid over by its alpha, turned as the original stamps it; again for a thing bought or moved, let go

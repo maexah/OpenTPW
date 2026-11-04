@@ -86,7 +86,7 @@ public class ParkMapOffsetCellsTests
 		Assert.IsTrue( checkedItems >= 55, $"{checkedItems} items with a picture" );
 		// Item 1426, the rock and the tunnel are the ones the 861 saved parks place (Q744's census); the Large Rock Pillar (1422) is placed in
 		// none of them and the three tools (Mystery, Buy Land and Clear Land: UI type 4, no buy row, pictures of empty cells only) are never
-		// built, so the placer's rule on an empty cell is measured on the first three alone.
+		// built, so the placer's rule on an empty cell is measured on the first three alone and on the Large Rock Pillar's purchase in the original (Q843, `q843/orig/run2/`).
 		CollectionAssert.AreEquivalent( new[] { 100, 101, 102, 1422, Bones, Rock, Tunnel }, withEmpty, "the items whose picture has empty cells" );
 
 		Assert.IsTrue( catalogue.TryGet( Rock, out var rock ) );
@@ -250,7 +250,7 @@ public class ParkMapOffsetCellsTests
 
 	/// <summary>
 	/// <b>The Large Rock Pillar (1422) as the original's own purchase typed it</b> (Q843, <c>q843/orig/run2/</c>: bought from its buy
-	/// row with the pointer on (71,25)): anchored at (69,23), the pointer less (2,2); 14 cells, the 4 x 4 (69..72, 23..26) less its
+	/// row, the original's file edited to mark 1422 researched, which gives it that row, with the pointer on (71,25)): anchored at (69,23), the pointer less (2,2); 14 cells, the 4 x 4 (69..72, 23..26) less its
 	/// two bottom corners (69,26) and (72,26), owned by the anchor's cell id (3014); the stamp holds the ring of ten of them (the
 	/// interior 2 x 2 is not stamped), as ours does on the same cells.
 	/// </summary>
@@ -267,22 +267,69 @@ public class ParkMapOffsetCellsTests
 		var carried = typeof( ParkBuilding ).GetMethod( "CarriedAnchorUnder", BindingFlags.NonPublic | BindingFlags.Static )!;
 		var turn = typeof( ParkBuilding ).GetProperty( nameof( ParkBuilding.CarryingAngle ) )!;
 
-		// The static carried angle is read by the anchor: set it, so a test that turned it and left it does not reach this one.
-		turn.SetValue( null, 0 );
+		try
+		{
+			turn.SetValue( null, 0 );
 
-		var (x, y) = ((int X, int Y))carried.Invoke( null, [state, pillar, 71, 25, null] )!;
+			var (x, y) = ((int X, int Y))carried.Invoke( null, [state, pillar, 71, 25, null] )!;
 
-		Assert.AreEqual( (69, 23), (x, y), "the pointer on (71,25) anchors it at (69,23)" );
+			Assert.AreEqual( (69, 23), (x, y), "the pointer on (71,25) anchors it at (69,23)" );
 
-		var cells = ParkObjects.CoveredCells( pillar, x, y, 0 ).ToHashSet();
-		var whole = Enumerable.Range( 69, 4 ).SelectMany( cx => Enumerable.Range( 23, 4 ).Select( cy => (cx, cy) ) ).ToHashSet();
-		var typed = new HashSet<(int, int)>( whole );
+			var cells = ParkObjects.CoveredCells( pillar, x, y, 0 ).ToHashSet();
+			var whole = Enumerable.Range( 69, 4 ).SelectMany( cx => Enumerable.Range( 23, 4 ).Select( cy => (cx, cy) ) ).ToHashSet();
+			var typed = new HashSet<(int, int)>( whole );
 
-		typed.ExceptWith( [(69, 26), (72, 26)] );
+			typed.ExceptWith( [(69, 26), (72, 26)] );
 
-		Assert.AreEqual( 14, cells.Count, "4 x 4 less two corners" );
-		Assert.IsTrue( typed.SetEquals( cells ), "the 14 cells the original typed: the bottom corners left at 0" );
-		Assert.IsTrue( cells.SetEquals( ParkBuilding.CarrySquares( state, pillar, x, y, 0 ).Select( s => (s.X, s.Y) ) ), "the carried squares are the covered cells" );
+			Assert.AreEqual( 14, cells.Count, "4 x 4 less two corners" );
+			Assert.IsTrue( typed.SetEquals( cells ), "the 14 cells the original typed: the bottom corners left at 0" );
+			Assert.IsTrue( cells.SetEquals( ParkBuilding.CarrySquares( state, pillar, x, y, 0 ).Select( s => (s.X, s.Y) ) ), "the carried squares are the covered cells" );
+
+			// The owner: every typed cell names the anchor's packed cell id, 3014.
+			ParkBuilding.Stamp( state, cells, x, y );
+
+			Assert.AreEqual( 3014, MapStep.CellId( x, y ), "the anchor's packed cell id" );
+
+			foreach ( var (cx, cy) in cells )
+			{
+				var record = state.Record( cx, cy );
+
+				Assert.AreEqual( CellEdge.Footprint, record.Type, $"({cx},{cy}) is typed 4" );
+				Assert.AreEqual( 3014, record.ParentId, $"({cx},{cy}) is owned by the anchor's cell id" );
+			}
+
+			// The footprint stamp: the model's floor table, swept as the blend sweeps it, holds the ring of ten (the 2 x 2 inside is not
+			// stamped), whatever the 14 typed cells are.
+			var model = new ModelFile( $"{pillar.Directory}/{pillar.Stem}.MD2" );
+			var mesh = ParkObjects.FloorMeshOf( model, pillar.Shape! );
+
+			Assert.IsTrue( mesh >= 0, "the pillar has a floor mesh" );
+
+			var table = ProceduralFloor.Table( model, mesh, pillar.Shape, pillar.Shape!.Width, pillar.Shape.Depth, (model.HeaderFlags & 0x80) != 0, ProceduralBase.ParkGrid );
+			var covered = ParkObjects.FloorFootprint( pillar, x, y, 0 );
+			var ring = new HashSet<(int, int)>();
+
+			for ( var row = 0; row < pillar.Shape.Depth; ++row )
+			{
+				for ( var column = 0; column < pillar.Shape.Width; ++column )
+				{
+					if ( table[column, row] != null )
+						ring.Add( ProceduralFloor.CellOf( column, row, 0, covered ) );
+				}
+			}
+
+			var expected = new HashSet<(int, int)>
+			{
+				(69, 23), (69, 24), (69, 25), (70, 23), (70, 26), (71, 23), (71, 26), (72, 23), (72, 24), (72, 25)
+			};
+
+			Assert.AreEqual( 10, ring.Count, "the stamp holds ten cells" );
+			Assert.IsTrue( expected.SetEquals( ring ), "the original's ring of ten: (69,23..25) (70,23) (70,26) (71,23) (71,26) (72,23..25)" );
+		}
+		finally
+		{
+			turn.SetValue( null, 0 );
+		}
 	}
 
 	/// <summary>
