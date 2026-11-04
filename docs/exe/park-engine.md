@@ -3923,8 +3923,8 @@ frees the worker's sprite and sets state 7, which every staff machine answers wi
 position. The drop (`0x0046cc40`) reads the hovered cell and refuses with the type-5 rules ("Can't put staff
 here", nothing else); passed, it puts the worker down on that cell itself, `FUN_00509af0` (`0x0046cce5`: the body
 `FUN_00505ea0`, then `+0x60` zeroed at `0x00509b34`), before it installs the default mode (`0x0046cd7d`), so the
-uninstall that install runs finds no worker (Q869). The uninstall (`0x0046cdc0`), when the hand still names a worker, logs "Dropping staff where
-he was before he was picked up" and puts them down on **their own current cell** with the drop's body
+uninstall that install runs finds no worker (Q869). The uninstall (`0x0046cdc0`), when the hand still names a worker, logs
+"Dropping staff where he was before he was picked up" and puts them down on **their own current cell** with the drop's body
 `FUN_00505ea0`: the centre of the cell, the walk reset, the cell lists relinked, the sprite rebuilt. Every kind
 then goes to state 0 **except the mechanic, whose job search runs at once** (`FUN_004da5b0`). The right-button
 slots are `RET 8`.
@@ -5605,7 +5605,7 @@ state not 4, 5, 7, `0xd` or `0x12`, and `FUN_004fa990` passing the member's cell
 CStaff's `SetState`, `FUN_005054d0( 0 )`; a guard's `0x12` test after it is reached and can never pass. So a member the pointer
 comes onto is set idle: from a walk the stamp `+0x200` is the clock and the wait is the grade's, from anything else
 nought (`ride-operation.md`, "The idle wait, and the stamp it counts from"); a member put down with the pointer resting
-on them is stopped this way after their first decide, which is the put-down's eleven sweeps (`ride-operation.md`, "The
+on them is stopped this way after their first decide (inferred; Q229 measures it), which is the put-down's eleven sweeps (`ride-operation.md`, "The
 put-down itself differs", Q869). Either puts up pointer 2, which `FUN_00489720` registers as `c_pick.ani`. Where the
 guests decide and nobody is taken the empty row `0x0078a374` is posted, only if the last hover category was not
 nought (`0x004870f3` to `0x004870ff`; otherwise nothing is posted and the old row stays; each hover keeps the old

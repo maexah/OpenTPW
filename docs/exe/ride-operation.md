@@ -1590,16 +1590,17 @@ sweeps on (ticks 1206, 1207, 1207, 1218; and 1732, 1733, 1733, 1745, 1744 being 
 destination: the idle wait of a stamp taken at the second 0 (the guard's grade 3 waits 11 sweeps: 1207 + 11 = 1218;
 1733 + 11 = 1744 stays, a multiple of four, and stamps nought, so 1745).
 
-**The second 0 is the pointer's hover** (Q869, read in the private Ghidra copy, `q869/dump*/`). The poll (`staffwatch.py`)
+**The second 0 is most likely the pointer's hover** (by elimination; Q229 measures it; Q869, read in the private Ghidra copy, `q869/dump*/`). The poll (`staffwatch.py`)
 reads the state before the tick, so the write falls after sweep 1207's machine and before sweep 1208's increment. The
-sweep `FUN_00516380` walks the used-thing list once and runs each thing's kind once (`FUN_0050b360`; the guard's pre-step
+sweep `FUN_00516380` first increments the clock (`inc ecx`, `0x00516394`, stored `0x00516398`), then walks the used-thing list once and runs each thing's kind once (`FUN_0050b360`; the guard's pre-step
 `FUN_004d6360`, then `FUN_004d6410`), and the machine set 1. Of every caller of `CStaff::SetState` `FUN_005054d0` and of
 the guard's `FUN_004d65d0`, the one that runs outside the sweep and can write 0 from state 1 on grass is `FUN_00505f50`,
 PICK UP's test and then `SetState( 0 )`, which the hover `FUN_00486d90` calls (`0x0048720d`) on the member under the
 pointer `[0x007b05ac]` when the member or the category is new (park-engine.md, "What the hover says over a person"). The
-UI tick's message `0x1e` runs it once a drawn frame (the pick at `0x00488557`, the hover at `0x00488582`), so a pointer
-left resting on the put-down point, as both runs left it, stops the member once the hover first names them; from the
-walk the stamp is the clock. The others: the strike and rest check `FUN_00506a40` writes 4 or 2; the rest-area message
+UI tick's message `0x1e` runs it (the pick at `0x00488557`, the hover at `0x00488582`; how often is unread, Q229 counts it), so a pointer
+left resting on the put-down point, as both runs left it, would stop the member once the hover names them (inferred; no read of the
+latch was made); from the walk the stamp is the clock. D1's arithmetic fits any writer that sets 0 from 1: CStaff's `SetState` case 0
+stamps the clock whenever `+0x19c` was 1 (`0x00505526`..`0x00505542`). The others: the strike and rest check `FUN_00506a40` writes 4 or 2; the rest-area message
 (`FUN_00504c70`, `FUN_00506d10`) writes 0 only from 2 or 3; `FUN_004d6260` writes `0x10`, the chase; `FUN_004d5de0` is
 the hire. **The hand mode's uninstall is not it**: the drop `0x0046cc40` puts the worker down through `FUN_00509af0`
 (`0x0046cce5`), which runs the body `FUN_00505ea0` and zeroes the hand's `+0x60` (`0x00509b34`) before the default mode
@@ -1607,12 +1608,19 @@ is installed (`0x0046cd7d`); the mode setter `FUN_0046c350` then runs the worker
 finds the hand naming nobody. The default mode's install (`0x0046c6b0`, slot `+0x28` of vtable `0x006fea10`) runs the
 hover once at the drop itself, while the latch still holds what the pointer was over during the carry.
 
-**Why the first hover comes after the first decide is not settled.** The hover reads the previous draw's latch
-(`FUN_00540b30`, handed to `0x007b05a8` at `0x0054e345` after the draw `FUN_0044e510`), and the member's new sprite
+**When the hover first names them is not settled.** The hover reads the previous draw's latch
+(`FUN_00540b30`, reached through `call 0x475430` at `0x0054e345`, hands the old `[0x00877350]` to `0x007b05a8` at `0x00540b79`
+and stores the new pick at `0x00540b7e`; `0x0054e34f` resolves it to `0x007b05ac`, `+4` of it), and the member's new sprite
 (`FUN_004d4140` at `0x00505f05`) takes the put-down's idle animation only in their first sweep (`FUN_004fa870` →
 `FUN_004d4190`, `0x004fa91f`). At the reference install's 30 fps two draws are about a quarter of the 248 ms sweep, yet
 in all three put-downs measured, the guard's two and Q133b's handyman's (`0xa` on 1389, the toilet stamped again on
-1390), the stop fell after the first decide and before the second sweep.
+1390), the stop fell after the first decide and before the second sweep. Two explanations fit: (H-late) the hover first names
+them after the first decide; (H-rename) it names them before the first sweep, a no-op (`SetState( 0 )` on a member in 0 with stamp 0,
+`0x00505f35`, `0x00505542`: invisible to `staffwatch.py`), and names them again when their picture changes at the walk's start (the
+decide's animation swap, `FUN_004d4190` to `FUN_00475b80`, moves the pick circle; the category is zeroed each hover, `0x00486de5`, and
+compared at `0x004871ac`), as ours showed on 771. Against H-late, the drop's sprite is pickable at once: `FUN_004d4140( 3, ...)` at
+`0x00505f05` takes the stand program (`0x0074dc20`, local 16 `0x1200`), which first steps 62 ms after creation, well inside a
+248 ms sweep. Q229 measures which.
 
 **In the second run the walk stopped on (43,27), grass, eight sweeps in** (1753): a stamp taken from state 1 (the wait
 ends on 1764, a multiple of four, so the walk is 1765). Either the hover again, the walking guard's picture coming back
@@ -1634,7 +1642,7 @@ decide, where the original's comes after it.
 |---|---|---|---|
 | A cell with no links, staff | the no-links arm, whoever asks: inside the patrol area, or outside it once `FUN_00506f30` fails (`0x004f95af`) | the same (`StaffBehaviour.SetRandomDest`, through `PeepBehaviour.WanderFromNowhere`; "OpenTPW takes the arm", Q112); each aim is routed under the staff wander's own limits (`staff-wandering.md`), and no stranded refusal is asked of staff | not by the stock park left alone (0 in 240 s); by a member put down off a path |
 | Staff outside their area whose patrol roll fails | the count and the linked walk, with no patrol filter (the flag at `0x004f95af`) | false | not measured |
-| A member put down with the pointer resting on them | the hover first names them after their first decide and stops the walk: 11 or 12 sweeps idle (Q869) | named before the first sweep and set idle from idle, stamp nought: walks on the next sweep that chooses to (Q229) | by a player's PICK UP and put-down |
+| A member put down with the pointer resting on them | most likely the hover stops the walk, naming them after their first decide or again at the walk's start (inferred; Q229 measures it): 11 or 12 sweeps idle (Q869) | named before the first sweep and set idle from idle, stamp nought: walks on the next sweep that chooses to (Q229) | by a player's PICK UP and put-down |
 | The dead end and the stamp | thought `0x11`, `+0x198` stamped, every route refused until a map edit | the same, for a guest (`PeepBehaviour.SetRandomDest`, `RefusedAsStranded`; "Q110b") | not by the stock park left alone; by a player who cuts a queue's tail off its path ("Q110") |
 | A map type write's block stamp | a fresh counter value in the cell's 16 × 16 block | the same, where a cell becomes ground, path or queue (`ParkState.SetRecord`, `ClearRecord`, `StampBlock`) | every path or queue cell laid or cleared, every sale |
 | The split's events 1 and 2 | pushed onto the guest's event ring | counted, `DECIDE_NOTHING_CHOSEN_EVENT` and `DECIDE_CHOSEN_EVENT`; no ring is kept | every choice |
@@ -3285,11 +3293,42 @@ kind 1 a small brown-yellow peel-like shape (10 × 7), 2 a carton (12 × 13), 3 
 wrapper (17 × 14), 6 a small grey scrap (9 × 8), 7 a green-yellow splat (17 × 12) and 8 a large see-through yellow cloud
 (34 × 21, no texel above alpha 230). **The flag `0x80000` lays the picture flat on the ground**: `Sprite_BuildQuad`'s arm for it
 (`0x00589dd4`..`0x00589e8d`) starts all four corners at the sprite's world place (`+0x14`) rather than its projected one, the
-layout `FUN_005890e0` adds the across span to world x as for a person (its 0.75 included) and the down span to world z in
-place of the height (`0x00589320`..`0x0058934f`, the winding flipped), lifts every corner by `[0x008bd4ec]` (0.6; 0.25 under
+layout `FUN_005890e0` adds the across span to world x as for a person (its 0.75 included) and the down span to world z, added
+where the upright arm adds it to the quad's y (`0x00589320`..`0x0058934f`, the winding flipped), lifts every corner by `[0x008bd4ec]` (0.6; 0.25 under
 render word `0x2000` or renderer 4, as the shadows), and the four go through the draw matrix (`[0x0087b088]`, `0x00589e7c`);
 the word gains `0x800`: tested against depth, not written. With no `0x200` it is never picked, and its arm ends past the pull, so it is never
 moved towards the eye ("The pull", `park-engine.md`).
+
+The flat draw's geometry, **read from the listing, not measured in the original** (Q899 second reader):
+
+- **Scale.** The arm pushes 0 twice (`0x00589de5`, `0x00589de6`), so `FUN_005890e0` takes its defaults (`0x00589104`..`0x00589136`):
+  across sx = scale × 20 × G (`[0x008bcbcc]`, 0.75), down sy = scale × 20. The scale is the sprite's `+0xa4` (to the draw record
+  `+0x2c`, `0x005422b6`), 1.0 by `FUN_004758f0` and 1.0 on all 72 saved litter sprites. A texel is 20/128 × 0.75 = 0.1171875
+  across and 20/128 = 0.15625 down (the pictures' reference `+0x08`/`+0x0A` is 128 in all eight).
+- **The 0.75 is a world squash here.** An upright sprite adds G's span in projected space, where the screen scale's 1.5 cancels
+  it ("The size a sprite is drawn", `park-engine.md`); the flat arm adds it to a world x before the draw matrix, so litter is
+  0.75 as wide in world x as its texels are tall in z. A projection that carries the aspect must multiply world x by 0.75 for
+  litter (the original runs only at 4:3, G 0.75).
+- **Corners** (the frame's `+0x14`/`+0x16` is the picture's signed origin, the `.TPC` header's `+0x0C`/`+0x10`): L = originAcross ×
+  0.1171875, R = (width + originAcross) × 0.1171875 (`0x0058922d`..`0x00589256`; corners 0 and 3 on L, 1 and 2 on R); T =
+  originDown × 0.15625, B = (height + originDown) × 0.15625 (`0x00589329`..`0x0058934f`; corners 0 and 1 at z + T, 2 and 3 at z + B).
+- **Texels.** The batch add `0x00566220` gives corner 0 (u0, v0), 1 (u1, v0), 2 (u1, v1), 3 (u0, v1) (`0x005664e0`, `0x00566513`,
+  `0x00566541`, `0x00566579`): the picture's top-left texel at (x + L, z + T). Columns run +x, rows run +z, the top row at the
+  smallest z, fixed in the world whatever the camera's turn. The flags are exactly `0x80000` (72 of 72; the draw record's word is
+  `+0xc4 & 0xffffff` with no reflection, `0x005421f4`..`0x00542293`), so none of `0x10`, `0x60`, `0x80` applies. Not read: whether
+  v0 is the top row for this bank (the decoder writes rows top first).
+- **Height: one for all four corners.** The anchor is the sprite's place (`+0x88`, `+0x90`) at the reseed's (10x + 1 + r1 % 9,
+  10y + 1 + r2 % 9); its y is the land under the anchor, `FUN_004527f0( x, z )` + the sprite's `+0x8c` (`0x005420e2`..`0x005420f3`;
+  0 for litter, `FUN_00475480( ..., 0, ... )` at `0x004d957c`; the flags lack `0x1000000`), then every corner + `[0x008bd4ec]`
+  (`0x00576a63`..`0x00576a81`). A flat plane at the anchor's ground + 0.6, not laid over the land under each corner.
+- **Per kind** (set k - 1; picture w × h, origin across/down; x span; z span, relative to the anchor): 1: p0 10×7 (0, -8), x 0.000
+  to +1.172, z -1.250 to -0.156; 2: p1 12×13 (-3, -14), x -0.352 to +1.055, z -2.188 to -0.156; 3: p2 11×13 (0, -16), x 0.000 to
+  +1.289, z -2.500 to -0.469; 4: p3 11×10 (-2, -13), x -0.234 to +1.055, z -2.031 to -0.469; 5: p4 17×14 (-6, -16), x -0.703 to
+  +1.289, z -2.500 to -0.312; 6: p5 9×8 (1, -10), x +0.117 to +1.172, z -1.562 to -0.312; 7: p7 17×12 (-5, -13), x -0.586 to
+  +1.406, z -2.031 to -0.156; 8: p6 34×21 (-13, -23), x -1.523 to +2.461, z -3.594 to -0.312. Every picture lies wholly on the -z
+  side of its anchor; a kind 8 reaches 3.6 units into the cell of y - 1.
+- Depth tested, not written (`0x800`, `0x00589e85`); no pull (`0x00589f5c` past `0x00589f17`); never picked (no `0x200`). The
+  winding flag 2 is set (`0x00589335`, `0x00589f68`): two-sided in ours is the same picture.
 
 **The placement reseeds the park's generator with the cell id** (`0x004d94de`..`0x004d94e2`: `FUN_00516370( cell word )` on `[0x0080239c]`,
 which stores `+0x1da708`) and draws twice (`FUN_00516330`): the sprite stands at world (`10 × cellX + 1 + r1 % 9`,
@@ -3300,8 +3339,10 @@ a cell's litter always stands in the same place, and every drop resets the share
 **The cell's fields in the file** (the map cell's serialiser `FUN_004d8dd0`): `mLitter` is `+0x2c`, the kind; `mLitterCollector`
 the word `+0x30` the drop zeroes; the first `mLitterScript` the sprite's handle `+0x28` and **the second the particle's handle
 `+0x38`**, a stink bomb's; `mTimeMarkedForLitterCollection` `+0x34`. A load reads them back as written and makes no litter:
-no load calls `FUN_004d93b0`, and the sprite is the saved sprite table's at that handle. **Measured** (`q899/littercheck.py`, the
-89 park files the original wrote on this machine, `q899/files.txt`; `littercheck.txt`): 72 littered cells, kinds 7 61, 2 3, 5 3,
+no load calls `FUN_004d93b0`, and the sprite is the saved sprite table's at that handle. **Measured** (`tools/harness/lib/littercheck.py`, 89
+park files: 79 the original wrote on this machine, 8 from Alexah's Full Simulation computer, 2 copies of the shipped
+`Easymode.TPWI`; `q899/files.txt`, `littercheck.txt`): 72 littered cells in 19 files, 13 distinct cells ((8,28), (18,31), (43,26)
+and (47,26), kind 7, in 15 files each), instances by kind 7 61, 2 3, 5 3,
 3 2, 1 1, 4 1 and 8 1, none of kind 6; on all 72 the handle names a saved sprite of kind 11, bank 0, flags `0x80000`, its
 program word the record of the cell's kind plus 7, and its place the reseed's two draws to the unit; the second handle is
 nought on 71 and set on the one cell of kind 8 (`q780/orig/O1/Q780after.TPWS`, (47,23)).
@@ -3412,7 +3453,7 @@ does (`0x004e24bc`..`0x004e252a`).
 `+0x44` written to 20.0 in the running game's memory (`poke.py`: the one write, nothing on disk), four predictions of
 five. Left on his patrol the handyman stayed in state 1 with `+0x21a` nought for 205 sweeps, the toilet unassigned.
 Picked up with the staff window's hand and put down on (56,18), he read `0xa` with `+0x21a` 21 on tick 1389, the
-tick after the put-down, and the toilet was stamped again on 1390 (the hover's stop from `0xa`, stamp nought, then a
+tick after the put-down, and the toilet was stamped again on 1390 (the hover's stop from `0xa`, inferred, stamp nought, then a
 second decide: "The put-down itself differs", Q869): **no
 eleven-sweep wait, which was the prediction that missed**. He walked (56,18), (56,17), (55,17) with his rest
 unchanged, read `0xb` on 1398 with `+0x214` 1398, and state 0 on 1409, S + 11: `+0x44` 100, `+0x5e` 0, `+0x68` 1,

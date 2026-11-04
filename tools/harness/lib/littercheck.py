@@ -3,7 +3,7 @@
 particle), and the saved sprite at the first: its kind (11, "litter"), bank, program word (inside the record of the cell's kind,
 0x0074f050 + 0x28 x (kind - 1), as a word of the table at 0x0074dab8; the original's rest on the record's word 7), flags (0x80000)
 and place (+0x88, +0x90), against (10 x + 1 + r1 % 9, 10 y + 1 + r2 % 9), r1 and r2 the park generator's two draws after a reseed
-with the cell id. A line a cell, OK or DIFF, and a TOTAL of what matched. A file this game writes can be checked the same way."""
+with the cell id. A line a cell, OK or DIFF (OK needs kind 11, the place with y 0, flags 0x80000, word = the record + 7, bank 0, and a nonzero second handle only for kind 8), and a TOTAL of what matched. A file this game writes can be checked the same way."""
 import os, sys, struct
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import parkfile
@@ -29,10 +29,12 @@ for path in sys.argv[1:]:
         hd = parkfile.head(p, h1)
         tot['cells'] += 1; tot['kinds'][kind] = tot['kinds'].get(kind, 0) + 1; tot['part'][h2] = tot['part'].get(h2, 0) + 1
         if hd:
-            ok_k = hd['kind'] == 11; ok_p = abs(hd['place'][0] - want[0]) < 1e-3 and abs(hd['place'][2] - want[1]) < 1e-3
+            ok_k = hd['kind'] == 11; ok_p = abs(hd['place'][0] - want[0]) < 1e-3 and abs(hd['place'][2] - want[1]) < 1e-3 and hd['place'][1] == 0
+            ok_f = hd['flags'] == 0x80000; ok_w = hd['word'] == want_word + 7; ok_b = hd['bank'] == 0
+            ok_h = (h2 != 0) == (kind == 8)
             tot['kind11'] += ok_k; tot['place'] += ok_p; tot['flags'][hd['flags']] = tot['flags'].get(hd['flags'], 0) + 1
             rows.append('  (%d,%d) kind %d h %d/%d sprite kind %d bank %d word %d (decode %d..%d) flags %#x place (%.3f, %.3f, %.3f) want (%d, 0, %d) %s'
-                        % (x, y, kind, h1, h2, hd['kind'], hd['bank'], hd['word'], want_word, want_word + 9, hd['flags'], *hd['place'], *want, 'OK' if ok_k and ok_p else 'DIFF'))
+                        % (x, y, kind, h1, h2, hd['kind'], hd['bank'], hd['word'], want_word, want_word + 9, hd['flags'], *hd['place'], *want, 'OK' if ok_k and ok_p and ok_f and ok_w and ok_b and ok_h else 'DIFF'))
             tot['word'] += want_word <= hd['word'] <= want_word + 9
         else:
             rows.append('  (%d,%d) kind %d h %d/%d NO SPRITE at handle' % (x, y, kind, h1, h2))

@@ -852,7 +852,8 @@ filed the items that cite it.
   1 + r % 5 on the guest's cell if it arrives with no bin or gives up, then litter nought and state 6; with no bin the drop
   at once, litter nought, and the turn goes on to the leave test. A cell's litter (the cell's kind, the sprite, the reseed of
   the park's one generator with the cell id and its two draws for the place) drawn flat on the ground from `SPR_LI`'s set
-  kind - 1, depth tested and not written, never picked; a loaded file's littered cells drawn the same (their sprites are the
+  kind - 1, depth tested and not written, never picked (the geometry in `ride-operation.md`, "What it is drawn as"; nothing on a
+  cell that already holds litter: the kind's draw is spent and the generator not reseeded); a loaded file's littered cells drawn the same (their sprites are the
   file's sprite table's). Confirm: a guest at litter 90 beside the bin at (44,29) walks to it, `peeps` showing litter 0, the
   bin's `VAR_TRIGGER` going 1 then 0; one far from it drops, the cell's litter in a census; the drawn litter photographed on
   the desk beside a frame the original draws of the same file, taken then (`q253/orig/sold-by-the-original.TPWS`, its
@@ -883,14 +884,35 @@ filed the items that cite it.
     advice names the prank done for a guest the constructor made.
 - [ ] **Q229. A member of staff put down with the pointer on them sets off on the next sweep, where the original's
   stands eleven (decoded in Q869).** Found by Q112's measurement of the original (`ride-operation.md`, "OpenTPW takes
-  the arm"). The original's second 0 is the hover's stop (`FUN_00505f50` from `FUN_00486d90`; `ride-operation.md`, "The
-  put-down itself differs"), which first names the member after their first decide; ours (`Level.WorldHelpRow`) names
-  them before the first sweep, idle from idle with the stamp nought, so the walk is not stopped. Measure first, in the
-  original: after a PICK UP and put-down with the pointer left resting, poll the draw's latch `[0x00877350]`, the hovered
-  thing `[0x007b05ac]` and mGameTick, to read when the latch first names the member against their first sweep (the
-  sprite is made at the drop, `0x00505f05`, and takes its animation only in that sweep, `0x004fa91f`); and run 2's
-  put-down on (42,26) again, the latch read through the walk, to settle whether the stop on (43,27) was the hover or the
-  walk's give-up (`+0x18c`). Then build the first naming as measured. Confirm: `staff` after `putstaff` with the pointer
+  the arm"). The original's second 0 is most likely the hover's stop (by elimination; `FUN_00505f50` from `FUN_00486d90`;
+  `ride-operation.md`, "The put-down itself differs"; inferred, Q229 measures it); ours (`Level.WorldHelpRow`) names
+  them before the first sweep, idle from idle with the stamp nought, so the walk is not stopped. The hand-off of the draw's
+  latch is `FUN_00540b30` (`0x00540b79`, `0x00540b7e`), reached through `0x00475430` at `0x0054e345`, read as `0x007b05ac`.
+  **Measure first, in the original** (Q112's put-downs, `q112/orig/put1.log`, `put2.log`: the stock jungle park, the guard
+  picked up from the staff window and put down on (42,24) (put 1) and (42,26) (put 2) with a real click, the pointer left where
+  the click put it, said in the PREDICTION; ID his thing id, M = `*(u32*)(0x007cfb90 + 4*ID)`, mGameTick =
+  `*(u32*)(*(u32*)0x0080239c + 0x1da70c)`).
+  **Run A, the writer:** `BRK_COND='$ecx == M' original/brk.sh 0x0048720d,0x005054d0,0x004d6410 60 120` started before the click.
+  `0x0048720d` is the hover's call of `FUN_00505f50` (a naming), `0x005054d0` every `SetState` (the first stack word its caller:
+  `0x00505f9e` the hover, `0x00505f3a` the drop body, `0x004d672b`/`0x004d674d` the guard's own), `0x004d6410` his turn once a
+  sweep. Predictions, written first: H-late, no `0x0048720d` hit between the drop and his first `0x004d6410` (T1), then
+  `0x004d674d` at T1, a `0x0048720d` hit and `0x005054d0` from `0x00505f9e` at T1, walk at T1 + 11 (+ 12 on a multiple of four);
+  H-rename, a `0x0048720d` + `0x00505f9e` pair at T0 < T1 and a second at T1 after `0x004d674d`; another writer, the `SetState( 0 )`
+  at T1 with another first stack word. On put 2, thirty more hits through the walk: at the stop on (43,27), a `0x0048720d` hit then
+  `0x00505f9e` is the hover, `0x004d672b` with no naming the walk's give-up (`FUN_004fa2a0` answers 2 on `+0x18c`) or a failed
+  `FUN_004f9490`.
+  **Run B, why** (`tpwmem.py` every 15 ms after Run A's gdb is detached, the same put-down): mGameTick; M `+0x19c`, `+0x200`,
+  `+0x18c`, `+0x198`, cell bytes `+5`, `+7`; his sprite S = `*(u32*)(*(u32*)0x007b49f0 + 4*handle)`, handle = `*(u32*)(M + 0xc)`:
+  S `+0x114`, `+0xc4`, `+0x7c`, `+0x08`, `+0xe0`; the latches `[0x008bd4fc]`, `[0x00877350]`, `[0x007b05a8]`, `[0x007b05ac]`; the
+  hover's `[0x007c24f8]` (last named), `[0x007c24f4]` (category, 8 to 12 staff, 0 over nobody), `[0x007c24fc]` (pointer in the
+  view) and `[0x007c24c8]` (must be 0). H-late predicts `[0x007b05ac]` != M until after T1's sweep; H-rename `[0x007b05ac]` = M and
+  `[0x007c24f8]` = M before T1, then a poll after T1's decide with `[0x007b05ac]` != M or `[0x007c24f4]` = 0, then M again.
+  **Control:** the same put-down with the pointer moved onto the panel at once (`[0x007c24fc]` cleared, `0x0048887b`): the hover
+  predicts the walk on T1 with no second 0 and no stop on (43,27); another writer predicts the second 0 unchanged.
+  **Hover rate:** `original/brk.sh 0x0048849f 40 10`, no condition, hits per mGameTick (the handler `0x004881a0` is registered at
+  `0x0048a0d4`; "once a drawn frame" is unread).
+  **The build waits on Run A:** under H-rename ours' early naming is already right and the difference is in the latch's continuity
+  at the walk's start; under H-late build the first naming as measured. Confirm: `staff` after `putstaff` with the pointer
   moved onto the member (`docs/TOOLING.md`, "A member put down under the pointer"), `idleSince` and the sweep the walk
   starts beside the original's, predicted first; a screenshot.
   From Q133b: the original's handyman, put down two cells from a dirty toilet, read `0xa` on the tick after the
