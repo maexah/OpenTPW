@@ -655,6 +655,63 @@ public class ParkFootprintSplitTests
 		Assert.IsTrue( withFloor.Count >= 30, $"{withFloor.Count} items with a floor" );
 	}
 
+	/// <summary>
+	/// <b>The track kits' and the hoardings' piece models carry no procedural base in any theme, and the queue's do, so ours stamps the queue's
+	/// and none of theirs, as the original does.</b> The original's pieces are made flags <c>0x33a</c> (<c>0x8</c> set) like the queue's, but
+	/// the stamp needs the model's table (<c>0x00463363</c>), which <c>ProceduralBase_Build</c> makes at registration only when the
+	/// load flag <c>0x1</c> is set (<c>0x00462c69</c>): the kits' and the hoardings' registrations pass <c>0x10422</c> and <c>0x422</c>
+	/// (<c>0x00522b1e</c>, <c>0x00522cde</c>, <c>0x00522eb1</c>) and every one of the models has header <c>0x1</c>, where the queue's seven have
+	/// <c>0x9</c>. In the original a Dino Karts' and a Splish Splash's loops, and a fresh park's 107 hoardings, stamp no cell and the
+	/// New Save's 163 hoardings and 31 kart cells carry no <c>0x200</c> (<c>docs/exe/park-engine.md</c>, "The track kit's, the
+	/// hoardings' and the coaster's cells stamp nothing").
+	/// </summary>
+	/// <remarks><b>Mutation:</b> <c>FloorMeshOf</c> reading the header's <c>0x1</c> in place of <c>0x8</c> fails here.</remarks>
+	[TestMethod]
+	public void TheKitsAndTheHoardingsModelsHaveNoProceduralBaseAndTheQueuesDo()
+	{
+		var shape = new ItemShape( 2, 2, [[1, 1], [1, 1]] );
+		var checkedModels = 0;
+
+		foreach ( var theme in new[] { "jungle", "fantasy", "hallow", "space" } )
+		{
+			var pieces = new List<string>();
+
+			foreach ( var anchor in new[] { ParkTrackPieces.KartAnchor, ParkTrackPieces.WaterAnchor } )
+			{
+				for ( var row = 1; row < 25; ++row )
+				{
+					if ( ParkTrackPieces.ModelOf( anchor, row ) is { } model )
+						pieces.Add( $"{ParkTrackPieces.KitDirectory( theme, anchor )}/{model}.MD2" );
+				}
+			}
+
+			pieces.AddRange( new[] { "ho_end1", "ho_fos1", "ho_fos2", "ho_fos3", "ho_fos4", "ho_fob1", "ho_fob2", "ho_fob3", "ho_fob4" }
+				.Select( name => $"levels/{theme}/hoarding/{name}.MD2" ) );
+
+			foreach ( var path in pieces.Distinct( StringComparer.OrdinalIgnoreCase ) )
+			{
+				using ( var stream = FileSystem.OpenReadOrNull( path ) )
+				{
+					if ( stream == null )
+						continue;
+				}
+
+				var model = new ModelFile( path );
+
+				Assert.AreEqual( 0u, model.HeaderFlags & 0x8, $"{path}: no procedural base" );
+				Assert.AreEqual( -1, ParkObjects.FloorMeshOf( model, shape ), $"{path}: no floor, no stamp" );
+				++checkedModels;
+			}
+		}
+
+		Assert.IsTrue( checkedModels >= 100, $"{checkedModels} piece models read" );
+
+		var queuePieces = (string[])typeof( ParkQueues ).GetField( "Pieces", AnyStatic )!.GetValue( null )!;
+
+		foreach ( var name in queuePieces.Distinct() )
+			Assert.AreNotEqual( 0u, new ModelFile( $"levels/jungle/queue/{name}.MD2" ).HeaderFlags & 0x8, $"queue piece {name}: a procedural base, so it stamps" );
+	}
+
 	private static (int X, int Y) FirstBentAfter( HeightfieldFile field, (int X, int Y) after )
 	{
 		for ( var i = (after.Y * field.CellsX) + after.X + 1; i < field.CellsX * field.CellsY; ++i )
