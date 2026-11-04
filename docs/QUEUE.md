@@ -220,23 +220,17 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   (Q159, Q160, Q284, Q288) were all done by 2026-11-02, so their drafts file was deleted at Alexah's word (2026-11-03);
   new ones are tagged "Good first" in their queue items when chosen, and making them GitHub issues is Alexah's.
   (2) "A place to ask questions" is issues titled "Question: ..." for now; GitHub Discussions are Alexah's to switch
-  on. (3) A test for `tools/check_docs_paths.py`: done by Q877 (`CheckDocsPathsTests`); the checker's gaps it found were Q878 (done); what is left is Q879.
-- [ ] **Q879. Where `tools/check_docs_paths.py` still reads markdown differently from GitHub.** From Q878 (run 21, lane B);
-  none is on the three pages today. (1) A heading's markup is not rendered before its slug: `## _word_` keeps its `_`
-  (GitHub renders `<em>word</em>`, `q878/github-render.html`), and a link or inline HTML in a heading keeps characters
-  of its target. (2) Setext headings (a line over `===` or `---`) are no anchors. (3) A heading indented one to three
-  spaces is not found, and a fence indented four or more is still read as a fence (CommonMark's indented code; kept for
-  list items). (4) A link target in `<...>` is read with its brackets, and one with parentheses inside is
-  cut at the first `)`: each gives a false 'not in the repository' for a file that exists. A `<...>` target with a space, and
-  reference links (`[x][r]` with `[r]: a.md`), are not read. (5) Not measured: GitHub's own ids (the render API gives none), so the `_`, the `-1` numbering and its
-  meeting a heading already named `same-1` (the checker numbers as github-slugger does, read and not run), and a letter
-  with a combining mark (Python's `\w` drops the mark). Measure (5) first, on a page of ours as GitHub shows it; fix each
-  with a row that fails first. Also: the `"git "` and `"dotnet "` entries of `check()`'s skip are dead by CODE (a name with
-  a space never reaches them).
-  (6) A fence inside a blockquote (`> ```sh`) is not found, so its words are not checked. (7) A double-backtick code span
-  is not read. (8) A link written inside a code span is read as a link (a false report). (9) A fenced or spaced word ending
-  in punctuation (`tools/a.py.`) has no file type and is skipped. (10) A link title with a backslash-escaped quote
-  (`'it\'s'`, `"say \"hi\""`) hides the link.
+  on. (3) A test for `tools/check_docs_paths.py`: done by Q877 (`CheckDocsPathsTests`); the checker's gaps it found were Q878 and Q879 (done); what is left is Q1021.
+- [ ] **Q1021. What `tools/check_docs_paths.py` leaves unmeasured or unread (what Q879 left).** From Q879 (run 21, lane B).
+  (1) **Not measured**, so read from the documented rules and left: GitHub's id for `_word_` in a heading (we read the
+  rendered `word`; the render shows `<em>`), a heading meeting a literal `same-1` (the checker numbers as github-slugger does),
+  a letter with a combining mark (Python's `\w` drops the mark; JavaScript's would keep it), a heading over two lines (the
+  line break is dropped), a heading inside a quote or a list item (left out: GitHub numbers it, how is unmeasured), an entity
+  (`&amp;`) or a reference link (`[text][ref]`) in a heading. Find a public page that has each with `lib/ghids.py fetch`, read
+  the id, then fix with a row that fails first. (2) **Not read**: HTML blocks (`<details>`, a comment over several lines), a
+  code span, destination or title over two lines, a table's cells; a link inside a spaced code span (`a [y](docs/x.md) b`) is
+  still checked as a path. (3) `lib/mdfuzz.py blocks` still finds a few pages in 3000 that differ from markdown-it in the
+  nesting of a quote, a list and a lazy line; none of our pages has one. Low value: do only if a page ever needs it.
 
 - [ ] **Q857. A park made fresh's file, off Lost Kingdom.** Split from Q803 (run 17, lane B); waits, Lost Kingdom first. **The other three themes' files**
   (`FRESH_PARK_FILE_OTHER_THEME`: the flyers' values, the music's and the land's voices and its emitter, the generator's seed, the ride system's counts). The advisor's slot
