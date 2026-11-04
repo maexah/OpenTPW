@@ -12008,6 +12008,11 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   is `RecordHeight( square.Lift )` and the mesh holds four corners to each square and wall; both are now `ParkBuildMarkers.
   Recorded` and `VertexCount`, asserted for a lift of 20 (21.5) and for 3 squares with 4 walls (28). Both bugs put back,
   both tests fail. No game run (Q211 says so). **Done 2026-11-04.**
+- [x] **Q893. The lobby camera's `lobby.txt` read, tested at its caller.** From Q211 (Q441). `CameraLensTests.
+  TheLobbyDrawsItsFilesAngle` asserted 100, which `LobbyCameraMode.ReadSettings()` also falls back to. It now opens
+  `lobby/lobby.txt` through `FileSystem`, finds its one `ISLANDFOV` line, and holds the caller's result to that line; two
+  tests with no game read a folder holding a `lobby.txt` of 60, 80 and 25 and a stand-in `lobby.wad` without it (70, 20, 100).
+  Five bugs put back in `ReadSettings()` itself (`q893/mutations.py`, `mutate.py`): all fail a test. No game run (Q211 says so). **Done 2026-11-04.**
 
 ## B. Docs and comments
 

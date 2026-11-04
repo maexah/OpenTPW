@@ -1,6 +1,8 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace OpenTPW.Tests;
 
@@ -55,17 +57,107 @@ public class CameraLensTests
 		Assert.AreEqual( 53.1301f, new ParkCamcorderCameraMode().FieldOfView, 1e-3f, "the camcorder's first person" );
 	}
 
-	/// <summary>The lobby takes lobby.txt's ISLANDFOV, 100 in the shipped file, through the same law.</summary>
+	/// <summary>
+	/// The lobby takes lobby.txt's ISLANDFOV, 100 in the shipped file, through the same law. 100 is also what the reader falls
+	/// back to, so the file is opened here through the game's file system and its ISLANDFOV line found in the stream before
+	/// the reader is trusted to have read it (<see cref="TheLobbyReadsItsFileFromTheFileSystem"/> shows the reader's own path).
+	/// </summary>
 	[TestMethod]
 	public void TheLobbyDrawsItsFilesAngle()
 	{
 		Log ??= new();
 		FileSystem = GameData.Required();
 
+		using var stream = FileSystem.OpenReadOrNull( "lobby/lobby.txt" );
+		Assert.IsNotNull( stream, "lobby/lobby.txt is in the game's files" );
+
+		var lines = new List<string>();
+		using ( var reader = new StreamReader( stream ) )
+		{
+			while ( reader.ReadLine() is { } line )
+				lines.Add( line );
+		}
+
+		var found = lines.Where( line => LobbyScript.TryReadSetting( line.TrimStart(), "ISLANDFOV", out _ ) ).ToList();
+		Assert.AreEqual( 1, found.Count, "one ISLANDFOV line in the file" );
+		LobbyScript.TryReadSetting( found[0].TrimStart(), "ISLANDFOV", out var inFile );
+		Assert.AreEqual( 100f, inFile, 1e-4f, "the file's own line" );
+
 		var settings = LobbyCameraMode.ReadSettings();
 
-		Assert.AreEqual( 100f, settings.IslandFov, 1e-4f, "the file's" );
+		Assert.AreEqual( inFile, settings.IslandFov, 1e-4f, "what the caller read is that line" );
 		Assert.AreEqual( 61.5795f, LobbyCameraMode.LensOf( settings ), 1e-3f, "drawn" );
+	}
+
+	/// <summary>
+	/// <see cref="LobbyCameraMode.ReadSettings()"/> opens <c>lobby/lobby.txt</c> through the file system and parses that
+	/// stream: a folder holding one with values the reader's fallbacks (70, 20, 100) are not, and no game needed. A wrong
+	/// path throws or gets the fallbacks; an unread stream gets them too.
+	/// </summary>
+	[TestMethod]
+	public void TheLobbyReadsItsFileFromTheFileSystem()
+	{
+		var root = Directory.CreateTempSubdirectory( "opentpw-lobbycam-" ).FullName;
+		var old = FileSystemOrNull;
+
+		try
+		{
+			Directory.CreateDirectory( Path.Combine( root, "lobby" ) );
+			File.WriteAllText( Path.Combine( root, "lobby", "lobby.txt" ), "SPINRADIUS(60)\n  ISLANDFOV(80)\nVERTICALOFFSET(25)\n" );
+			FileSystemOrNull = new BaseFileSystem( root );
+
+			var settings = LobbyCameraMode.ReadSettings();
+
+			Assert.AreEqual( 80f, settings.IslandFov, 1e-4f, "ISLANDFOV from the file" );
+			Assert.AreEqual( 60f, settings.SpinRadius, 1e-4f, "SPINRADIUS from the file" );
+			Assert.AreEqual( 25f, settings.VerticalOffset, 1e-4f, "VERTICALOFFSET from the file" );
+		}
+		finally
+		{
+			FileSystemOrNull = old;
+			Directory.Delete( root, true );
+		}
+	}
+
+	/// <summary>
+	/// The game keeps lobby.txt inside <c>lobby.wad</c>; an archive without it hands the reader no stream, and the reader draws
+	/// the values the shipped file has (70, 20, 100), as it does for a file it cannot find. A stand-in archive holds nothing.
+	/// </summary>
+	[TestMethod]
+	public void AnArchiveWithoutLobbyTxtLeavesTheShippedValues()
+	{
+		var root = Directory.CreateTempSubdirectory( "opentpw-lobbycam-" ).FullName;
+		var old = FileSystemOrNull;
+
+		try
+		{
+			File.WriteAllBytes( Path.Combine( root, "lobby.wad" ), [] );
+			var files = new BaseFileSystem( root );
+			files.RegisterArchiveHandler( ".wad", _ => new EmptyArchive() );
+			FileSystemOrNull = files;
+
+			var settings = LobbyCameraMode.ReadSettings();
+
+			Assert.AreEqual( new LobbyCameraMode.CameraSettings( 70f, 20f, 100f ), settings, "the shipped values" );
+		}
+		finally
+		{
+			FileSystemOrNull = old;
+			Directory.Delete( root, true );
+		}
+	}
+
+	/// <summary>An archive that holds no file: every ask for one answers nothing.</summary>
+	private sealed class EmptyArchive : IArchive
+	{
+		public string[] GetFiles( string internalPath ) => [];
+		public string[] GetDirectories( string internalPath ) => [];
+		public ArchiveFile? GetFile( string internalPath ) => null;
+		public byte[] GetData( int offset, int length ) => [];
+		public Stream? OpenFile( string path ) => null;
+		public long GetFileSize( string path ) => 0;
+		public DateTime GetModifiedTime() => default;
+		public void Dispose() { }
 	}
 
 	/// <summary>
