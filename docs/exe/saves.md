@@ -1027,7 +1027,9 @@ gone:
   its table of the file's own count (`FUN_00475730`).
 - **A queue cell's model.** A queue cell's `mMeshInstance` (the cell's `+4`) is the handle of the model the retile
   made for it (`FUN_005365d0`: tile set 2 frees the handle held and stores `FUN_005229e0`'s). No load calls the
-  retile, so the handle in the file is the one used: 4 of 4 queue cells in the shipped park and 78 of 78 in a
+  retile: the post-load rebuild (`FUN_005366e0`) claims the saved model record that matches the cell's saved index,
+  flags, cell and angle through `FUN_00463ab0` (`park-engine.md`, "An index past the queue table"), so the model in the
+  file is the one used: 4 of 4 queue cells in the shipped park and 78 of 78 in a
   played one hold one, and no other cell of either does (`q241g/cells.py`). The handle is a slot of `RSYS` plus
   one (below).
 
@@ -2021,7 +2023,8 @@ is given a record in an empty slot (`ParkThingStates.QueuePieceRecord`) and name
 - **A handle that names no queue piece's record is not freed**: a cell whose `mMeshInstance` names an object's
   model, or a slot past the table, is written naming none and the slot is left.
 - **Still counted** (`SAVE_PARK_QUEUE_CELL_MODEL`): a cell on a tile outside the eight pieces, which draws
-  nothing here (the original very probably draws a kart's model there, `park-engine.md`, "That `+3` can exceed the MODEL table") (`QUEUE_TILE_INDEX_OUTSIDE_TABLE`), and every changed queue cell of a park written with
+  nothing here (the original draws a kart track piece from 9 on, nothing at 8, and faults loading a park that holds an 8:
+  `park-engine.md`, "An index past the queue table") (`QUEUE_TILE_INDEX_OUTSIDE_TABLE`), and every changed queue cell of a park written with
   its things as the file's.
 
 **Measured (Q254, `q254/`).** Lost Kingdom from `easymode.TPWI`, held with `pause`. The Belly Bounce's queue runs

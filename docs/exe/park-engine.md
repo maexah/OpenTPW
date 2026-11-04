@@ -5324,21 +5324,15 @@ type 1 or 3, so a kart or water ride's end or straight laid over a queue gives i
 the parent swap; inferred). OpenTPW's track tool refuses that run (`TRACK_RUN_OVER_PATH`, Q587), so here the one writer is
 `FreshParkBoundary` on a type-25 record, which queue laying refuses; the refusing branch is reached only by a made-up cell.)
 
-**That `+3` can exceed the MODEL table, and a reimplementation without the gate reaches it.** The queue
-models are a table of **eight** (`0x76338c`, walked by `FUN_00522900` and indexed by `FUN_005229e0`),
-so an index of 8 or more is **very probably not** "nothing at all" (read from the disassembly, not run): `FUN_005229e0`
-does not bound its index (`0x00522a1d`, `0x00522a22`..`0x00522a2f`; callers `0x00536682`, `0x00536730`), and the rows run on
-into the next table (`0x7633e8`..`0x7634d8`, `FUN_00522aa0`): index 8 is a `-` with handle 0, 9 `gk_trckQ.md2`, 10
-`gk_trckS.md2`, 11 `gk_trckB.md2`, so a bumped corner meeting two paths very probably draws a kart straight in the
-original (index 8 unchecked at `0x00463b11`). The base index is 2 for a straight and 3 for a corner (0 is a cell with no
-links, 1 `quedead`, the end piece 5); a straight with two mutual path links takes `2 + 3 + 3 = 8`, a corner `3 + 3 + 3 = 9`,
-and `10` only on the four bumped pairs (`3 + 1 + 3 + 3`). **Lost Kingdom cannot
-arbitrate** — its one end piece at (49,22) has a single path link, so no cell in it ever gets past 5 —
-but the flags gate is **not** what keeps the original inside the table (Q154): it is one answer for the whole cell,
-so a straight with two mutual links and clear flags reaches 8 there too, and what the original draws at an index the table
-does not hold is not decoded (very probably a kart's model, above; Q859). Left unguarded, such a cell draws nothing in OpenTPW, and because
-the ground leaves any tile-set-2 cell to the queue renderer, the **sky shows through the hole**. OpenTPW now
-drops path links until the index is in the table (`ParkPathBuilding.Retile`, counted `QUEUE_TILE_INDEX_OUTSIDE_TABLE`).
+**That `+3` can exceed the MODEL table, and the original does not guard it** ("An index past the queue table",
+below). The base index is 2 for a straight and 3 for a corner (0 is a cell with no links, 1 `quedead`, the end piece 5);
+a straight with two mutual path links takes `2 + 3 + 3 = 8`, a corner `3 + 3 + 3 = 9`, and `10` only on the four bumped
+pairs (`3 + 1 + 3 + 3`). **Lost Kingdom cannot arbitrate** — its one end piece at (49,22) has a single path link, so no
+cell in it ever gets past 5 — and the flags gate is **not** what keeps the original inside the table (Q154): it is one
+answer for the whole cell, so a straight with two mutual links and clear flags reaches 8 there too. Left unguarded, such
+a cell draws nothing in OpenTPW, and because the ground leaves any tile-set-2 cell to the queue renderer, the **sky
+shows through the hole**. OpenTPW drops path links until the index is in the table (`ParkPathBuilding.Retile`,
+counted `QUEUE_TILE_INDEX_OUTSIDE_TABLE`), a deviation; Q859 builds what the original does.
 
 **Queue cells need a filler ground tile as well as a model.** When the set is 2, `FUN_005365d0` frees
 any existing mesh, instantiates a per-cell model through `FUN_005229e0`, stores the handle in
@@ -5362,6 +5356,51 @@ straight will be flaky; assert the base or its variant.
 **A latent defect in the shipped table, to reproduce rather than fix:** rows 27 and 29 both carry
 mask `0x77` and rows 28 and 30 both carry `0xdd`, and the first match wins — so tile 12 at 180 and at
 270 can never be selected.
+
+### An index past the queue table
+
+Decoded for Q895 (Q859's decode) from the listing and the private Ghidra copy, and run under unicorn: `FUN_00535dd0`,
+`FUN_005229e0` with the two loaders, and `FUN_00463060` and `FUN_00463ab0` as they are (`tools/harness/lib/queuetile.py`,
+its report in `q859/emu2/run.log`). Not seen in the running original.
+
+**The table runs on into the kart kit's.** The queue models are eight `{ model, name, mask }` rows at `0x00763388`
+that `FUN_00522900` fills (its loop stops at `0x007633ec`). `FUN_005229e0` takes the model at `0x00763388 + 12 x index`
+and the mask byte at `+8` with no bound (`0x00522a1d`..`0x00522a2f`, `0x00522a59`..`0x00522a66`), so index `8 + r`
+is row `r` of the kart table `0x007633e8` (park.md, "A track piece's model, price and open end"), which
+`TrackKit_LoadKartPieces` fills straight after it in `FUN_0052f050` (`0x0052f155`, `0x0052f15a`) in every park,
+whatever rides it holds:
+
+    index   8     9         10        11        12        13        14        15        16
+    model   none  gk_trckQ  gk_trckS  gk_trckB  gk_trckX  (X)       (X)       (X)       (X)
+    mask    0     0x01      0x11      0         0x55      0x15      0x54      0x51      0x45
+
+**Which indices a queue cell reaches.** `FUN_00535dd0` counts each of the four cardinals (`FUN_004d8c20( bit, 4 )`
+steps 1, 4, 0x10, 0x40) whose neighbour is a path linked back. Run on made-up cells: a straight with both ends on
+paths answers 8, a corner 9, a bumped corner 10, a T with three paths 11 (pass two takes a straight's row first, so a T
+or a cross starts at 2), a cross with four 14. No mask reaches 12 or 13. A one-link cell whose link is a path answers
+`1 + 3 = 4`, the bumped corner's model, inside the table.
+
+- **9 and up draw a kart track piece on the queue cell.** `FUN_00463060` makes the kart row's model with the queue's
+  flags `0x33a`, its one-cell footprint (`0x00816d68`) and the queue's angle, and the row's mask hides end caps as on a
+  kart track: 9 is `gk_trckQ`, the kart's end, 10 `gk_trckS` with both caps hidden, 11 `gk_trckB`, 14 `gk_trckX`.
+  Read from the code, not seen; where it stands against the cell (a kart piece is laid one cell on from its anchor) is
+  not established.
+- **8 draws no model.** Row 8 is the kart table's `-`, handle 0, and `FUN_00463060` answers 0 at its first test
+  (`0x0046306a`), reading nothing more. The retile `FUN_005365d0` stores the 0 and gives the ground its filler
+  tile (set 0, index 8) as for every queue cell, so the cell shows the ground and no queue piece.
+- **A park saved with a cell at 8 is not loaded: the game faults.** The post-load rebuild (`FUN_00415140`, `0x00415169`)
+  calls `FUN_004d83a0`, which walks every cell through `FUN_005366e0`; that asks `FUN_005229e0` again from the SAVED index
+  with its sixth argument 1, which calls `FUN_00463ab0` with the row's handle. `0x00463b11` reads slot 0 of the type
+  table `0x007ae6a8`, which nothing writes (`RideSystem_RegisterType` stores at the pre-incremented count,
+  `0x00463002`..`0x00463015`; the teardown loop stops at 1, `0x00464123`..`0x0046412c`), and `0x00463b18` reads `+0xf8`
+  of that 0: address `0xf8`. Under unicorn it faults there. The C++ frames of the load and its callers
+  (`FUN_00414d40`, `FUN_005accf0`, `Game_StateMachine`, `WinMain_Main`; FuncInfo `0x00713550`, `0x0071b840`, `0x0071ac98`,
+  `0x00714008`) hold no try block, so only the C runtime's frame at `entry` is left (its filter not read).
+- **How play reaches it is read, not run.** The queue tool links a cell to the previous cell and the entrance only,
+  and to a path only at the run's end ("A queue run, and how the tool puts itself away"), so one run gives one path
+  link. Laying a path over the queue cell before that end demotes it by writing the type alone (same section), so the
+  end cell is left between two paths linked back: a straight there takes 8, a corner 9, at its next retile (the
+  path's neighbour rule retiles it where it carries the bit back and the retile flag is set, `0x00534a76`..`0x00534ad2`).
 
 ### Deleting is not demolishing
 

@@ -12023,6 +12023,13 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   leaves him in (40,28) the cell's list names him and (39,28)'s does not. Six bugs put back in `Step`'s own relink
   (`q894/mutations.py`, `mutate.py`): all fail the test; a relink moved into `Walked` (the original's shape) passes it and
   fails the old Held test (`q894/p5-relink-in-walked.log`). No game run (Q211 says so). **Done 2026-11-04.**
+- [x] **Q895. Q859's decode: what the original does with a queue index past its table of eight.** Done 2026-11-04 (run 20,
+  lane B, `alexah/901-queue-index-past-table-decoded`). `FUN_005229e0` reads on into the kart kit's table: index 8 is no model
+  (handle 0), 9 `gk_trckQ`, 10 `gk_trckS`, 11 `gk_trckB`, 12 to 16 `gk_trckX`, each with the kart row's end-cap mask; the tile rule
+  reaches 8, 9, 10, 11 and 14 and no other past 7; a park saved with a cell at 8 faults the original's load, `0x00463b18` reading
+  address `0xf8` (`park-engine.md`, "An index past the queue table"). Run under unicorn, the original's own routines on made-up
+  cells (`tools/harness/lib/queuetile.py`, new; `exeleaf.py` gains `tib=True`): predictions E1 to E5 held (`q859/PREDICTION.txt`,
+  `q859/emu2/run.log`). Not run: the original itself (lane B has none); how play reaches it (read). Q859 keeps the build.
 
 ## B. Docs and comments
 

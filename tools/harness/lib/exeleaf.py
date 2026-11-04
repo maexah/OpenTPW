@@ -9,7 +9,8 @@
 
 What "leaf" means here (docs/TOOLING.md, "The executable's own routines under unicorn"): no Windows import, no thread,
 no object built at run time unless the caller builds it in `alloc`'d memory. The C runtime is in the image, so
-`__ftol` works. The x87 control word is 0x027F (53-bit, the Windows default) unless `fpcw` says otherwise.
+`__ftol` works. A routine that sets an exception frame (`mov eax,fs:0`) needs `Exe( tib=True )`: FS then names a
+zeroed page through a small GDT (SS, DS and ES flat), and page 0 stays unmapped, so a null read still faults. The x87 control word is 0x027F (53-bit, the Windows default) unless `fpcw` says otherwise.
 `call` returns EAX as an unsigned int; `signed( v )` turns it into a signed one. `reads( fn )` lists the addresses
 outside the stack a call read, to see which globals it touched.
 
@@ -21,12 +22,13 @@ import os, sys; sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(
 import pefile
 from unicorn import Uc, UC_ARCH_X86, UC_MODE_32, UC_HOOK_MEM_READ
 from unicorn.x86_const import UC_X86_REG_ESP, UC_X86_REG_ECX, UC_X86_REG_EAX, UC_X86_REG_FPCW
+from unicorn.x86_const import UC_X86_REG_GDTR, UC_X86_REG_FS, UC_X86_REG_SS, UC_X86_REG_DS, UC_X86_REG_ES
 
 EXE = paths.exe()
 
 
 class Exe:
-	def __init__( self, exe=EXE, fpcw=0x027F ):
+	def __init__( self, exe=EXE, fpcw=0x027F, tib=False ):
 		pe = pefile.PE( exe, fast_load=True )
 		ib = pe.OPTIONAL_HEADER.ImageBase
 		mu = self.mu = Uc( UC_ARCH_X86, UC_MODE_32 )
@@ -43,6 +45,22 @@ class Exe:
 		self.HEAP = self.hp = 0x60000000
 		mu.mem_map( self.HEAP, 0x4000000 )
 		self.fpcw = fpcw
+		if tib:
+			self._tib()
+
+	def _tib( self, gdt=0x71000000, tib=0x70000000 ):
+		# Entry 1 is FS, on the TIB page; entry 2 flat data. With a GDT loaded unicorn otherwise takes the stack as 16-bit.
+		def desc( base ):
+			return 0xffff | ( ( base & 0xffffff ) << 16 ) | ( 0x93 << 40 ) | ( 0xf << 48 ) | ( 0xc << 52 ) | ( ( base >> 24 ) << 56 )
+		mu = self.mu
+		mu.mem_map( gdt, 0x1000 )
+		mu.mem_map( tib, 0x1000 )
+		mu.mem_write( gdt + 0x08, struct.pack( '<QQ', desc( tib ), desc( 0 ) ) )
+		mu.mem_write( tib, struct.pack( '<I', 0xffffffff ) )
+		mu.reg_write( UC_X86_REG_GDTR, ( 0, gdt, 0xfff, 0 ) )
+		for r in ( UC_X86_REG_SS, UC_X86_REG_DS, UC_X86_REG_ES ):
+			mu.reg_write( r, 0x10 )
+		mu.reg_write( UC_X86_REG_FS, 0x08 )
 
 	def alloc( self, size ):
 		a = self.hp

@@ -42,7 +42,7 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the maintainer's pre-commit hook: grep it by Q-number.
 
-- **Q894 (Q211's third piece, the staff relink at `StaffBehaviour.Step`'s end tested in a walk; `q894/PREDICTION.txt`: P1 to P6 held):** no game run (Q211 says none). Seen: six bugs put back in `Step`'s own relink (none, the target cell, y from x, idle members only, from where the turn began, members with no route only) each fail `AMemberWalkingOneCellIsRelinkedOnTheTurnThatCrossesIt` (`q894/mutate.log`), and the relink moved into `Walked` (the original's shape) passes it and fails the old Held test (`q894/p5-relink-in-walked.log`). Not checked: the crossing on screen (Q446's both-games run stands), and a placement's relink (`DropStaff`, `Hire`) only by their own tests. The rest of Q211 stays open in `docs/QUEUE.md`.
+- **Q895 (Q859's decode: a queue index past the table of eight; `q859/PREDICTION.txt`: E1 to E6 held):** a decode, nothing of the game changed. Run: the original's own routines under unicorn (`tools/harness/lib/queuetile.py`, `q859/emu2/run.log`, `q859/emu3/run.log`): the loaders' rows (8 none, 9 `gk_trckQ`, 10 `gk_trckS`, 11 `gk_trckB`, 12 to 16 `gk_trckX`), the tile rule on made-up cells (8, 9, 10, 11 and 14; Q154's flags gate refusing at `0x2`, not at `0x10`), `FUN_00463060` answering 0 for handle 0, and the post-load call for index 8 faulting at `0x00463b18`, reading `0xf8`. Read, not run: the C runtime's filter ending the game there, how play lays such a cell (a path over the queue cell before its end), where a kart piece stands against the queue cell. Not seen: anything in the running original (lane B has none) or on screen, so no screenshot. Q859 keeps the build and its confirm in the original.
 
 
 
@@ -57,6 +57,7 @@ Only the item just landed is here. Every earlier item's account is in `docs/hist
 
 ## Numbers (take counts fresh; these go stale within a day)
 
+- Linux, 2026-11-04, Q895 (`capped.sh`; a decode, no code of the game changed since Q894; `exeleaf.py` and the new `queuetile.py` are harness tools no test runs): with the game, 4851 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 4853; with no game named, 2018 passed, 0 failed, 2835 skipped.
 - Linux, 2026-11-04, Q894 (`capped.sh`; one test replaced, which needs the game, so no count moves; after review fixes group A): with the game, 4851 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 4853; with no game named, 2018 passed, 0 failed, 2835 skipped.
 - Linux, 2026-11-04, review fixes group A (`capped.sh`; one test added, which needs the game; after Q884): with the game, 4851 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 4853; with no game named, 2018 passed, 0 failed, 2835 skipped.
 - Linux, 2026-11-04, Q884 (`capped.sh`; a decode, no code changed since Q893, the counts taken at the rebase's gate): with the game, 4850 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 4852; with no game named, 2018 passed, 0 failed, 2834 skipped.
