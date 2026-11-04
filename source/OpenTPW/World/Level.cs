@@ -3005,6 +3005,7 @@ public class Level
 	/// (<see cref="UI.ParkShopWindow"/>) are built (the visitor's is
 	/// <see cref="UI.ParkVisitorWindow"/>, opened from the locator and the visitors list, and the staff member's
 	/// <see cref="UI.ParkStaffWindow"/>).
+	/// The original's <c>+0x30</c> (an add-on's ride) and <c>+0x284</c> arms (<c>0x00486978</c>) are not built; no player reaches them here (the world click is guarded), the all-items row's would (<c>docs/exe/park-engine.md</c>, "An add-on has no window and no sale of its own").
 	/// </summary>
 	internal void OpenObjectWindow( int thingId )
 	{

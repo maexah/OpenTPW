@@ -910,7 +910,8 @@ public class ParkFootprintSplitTests
 	/// <remarks>
 	/// A data guard on this game's rule, not a drive of a built coaster: ours builds no coaster in play (Q594), and a played
 	/// coaster's pylons are stood by <see cref="ParkCoasterPylons"/>, which conforms and never blends.
-	/// <b>Mutation:</b> <c>everyCell</c> read as true for a pylon fails the count of entries and the stamp.
+	/// <b>A data guard:</b> the pylon models' header (<c>0x8</c>, no <c>0x80</c>) and <c>ProceduralFloor.Table</c> and <c>Blend</c> with <c>everyCell</c> false;
+	/// the production <c>everyCell</c> (<c>ParkObjects.BlendFloor</c>) is not reached.
 	/// </remarks>
 	[TestMethod]
 	public void ACoastersPylonModelsStampNoCell()
@@ -938,11 +939,7 @@ public class ParkFootprintSplitTests
 
 				var mesh = ParkObjects.FloorMeshOf( model, ParkCoasterPylons.Footprint );
 
-				if ( mesh < 0 )
-				{
-					++checkedModels;
-					continue;
-				}
+				Assert.IsTrue( mesh >= 0, $"{path}: a floor mesh (mc_pylbase, 0x0046a82c)" );
 
 				var table = ProceduralFloor.Table( model, mesh, ParkCoasterPylons.Footprint, 1, 1, false, ProceduralBase.ParkGrid );
 				Assert.IsNull( table[0, 0], $"{path}: its one cell has no table entry" );

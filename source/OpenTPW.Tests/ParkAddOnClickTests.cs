@@ -1,5 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NeoVeldrid;
 using OpenTPW.UI;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -80,7 +82,7 @@ public class ParkAddOnClickTests
 	[TestMethod]
 	public void AClickOnAnAddOnOpensNothingWhereARideOpensItsWindow()
 	{
-		// The Dino Karts Tunnel (1501), Jump (1500) and Upgrade to level 2 (1502): items fitting a ride, all of type 1.
+		// The Dino Karts Tunnel (1501), Jump (1500) and the Splish Splash Tunnel (1502): items fitting a ride, all of type 1.
 		foreach ( var addOn in new[] { 1500, 1501, 1502 } )
 		{
 			var (thing, x, y) = PutDown( addOn, 17, 21 );
@@ -88,6 +90,25 @@ public class ParkAddOnClickTests
 			StringAssert.Contains( Level.Current!.ClickWorldAt( x, y, 0, thing ), $"nothing to do at ({x},{y})" );
 			Assert.AreEqual( 0, _stack.Windows.OfType<ParkObjectWindow>().Count(), $"item {addOn}: no window" );
 			Level.Current.ParkState!.RemoveObject( thing );
+		}
+
+		// Ctrl held: the add-on's guard comes before Ctrl's buy-another, so it still does nothing and the hand stays empty.
+		var before = Input.Keyboard;
+
+		try
+		{
+			Level.Current!.ParkState!.SetBalance( 88000 );
+			Input.Keyboard = new Input.KeyboardInfo( new List<Key> { Key.ControlLeft } );
+			var (ctrlThing, ctrlX, ctrlY) = PutDown( 1501, 17, 21 );
+
+			StringAssert.Contains( Level.Current!.ClickWorldAt( ctrlX, ctrlY, 0, ctrlThing ), $"nothing to do at ({ctrlX},{ctrlY})" );
+			Assert.AreEqual( 0, _stack.Windows.OfType<ParkObjectWindow>().Count(), "Ctrl: no window" );
+			Assert.AreEqual( 0, ParkBuilding.Carrying, "Ctrl: nothing in the hand" );
+			Level.Current.ParkState!.RemoveObject( ctrlThing );
+		}
+		finally
+		{
+			Input.Keyboard = before;
 		}
 
 		// The Belly Bounce (13), which fits no ride, opens its window (a feature's is unbuilt, FEATURE_WINDOW).
