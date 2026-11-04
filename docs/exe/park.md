@@ -703,6 +703,56 @@ The other time opcodes:
 
 **`GETTIME` is NOT "how long the ride has been alive"** — that was the published docs' claim and it is wrong; it stores the shared clock verbatim. 172 uses / 57 scripts. **SETTIMER 40 uses and GETTIMER 21, across the same 18 scripts**, and all 21 GETTIMERs name a *literal* destination, so the answer lands in the result register and the write is skipped. **WAITABS has zero uses in all 308**, so it was deliberately left unimplemented.
 
+#### What a loaded script holds (Q897)
+
+**A load puts the word back as the file holds it.** `FUN_005597a0` (from the load, `FUN_00415270` at `0x0041593f`) reads each
+record's struct, as many bytes as the module's header gives (244 in every file read), over a zeroed `0xf4` (`0x00559a00`), keeps only its two list links (`0x00559a08`), and after the
+record's blocks writes `+0xe6` = `0xffff` and `+0xb0` = nought (`0x00559f29`, `0x00559f32`), then builds the object
+list again. Nothing on the load writes `+0xc0`. The thing's `mOperatingSpeed` goes to `+0x58` alone (`FUN_004db7d0`,
+from `FUN_005179c0`; its name pushed at `0x004dc42f`), and the load's object reader makes nothing through the
+constructor: `FUN_004db090`'s five calls are the level set-up's gates and lights (`FUN_005156a0`, `0x00515be1`,
+`0x00515c94`; their items' `InitSpeed` is nought, so nothing is pushed there), the arrival vehicles (`FUN_0051a2f0`,
+`0x0051a57e`), the end features (`0x00516b8b`) and the placer (`FUN_00529e10`, `0x00529fd5`). **So a
+save's `mOperatingSpeed` does not reach the script**; the two agree because each caller of `FUN_0055a300` writes both:
+the constructor (`0x004db534`, `+0x58` at `0x004db54c`, both only when `InitSpeed` is above nought), the ride window's
+speed control (`FUN_004dd6e0` from `RideWindow_Slot3C` at `0x004af450`: `0x004dd6f6`, `+0x58` at `0x004dd70e`, at any
+value) and the repair's upgrade arm (`FUN_004df8f0`: `0x004dfabc`, `+0x58` at `0x004dfad4`, when the new tier's
+`InitSpeed` is above nought). A `SPAWNCHILD` child takes its parent's word at every scheduler visit (`0x0055184c`..
+`0x00551888`, the child's handle at `+0x0c` looked up in the list; a handle not in it leaves `EAX` nought, and the store
+goes to address `0xc0`).
+
+**Measured in the files** (`tools/harness/lib/scriptrecords.py -s`; `q155/m1/`): the shipped `Easymode.TPWI`'s Belly
+Bounce (thing 13, item 1100, script 3) holds **60**, play rate 1000, its `mOperatingSpeed` 60; its thirteen other scripts
+hold 50 over an `mOperatingSpeed` of nought. Alexah's three Full Simulation saves (296 objects): every word equals a
+non-zero `mOperatingSpeed` (60; the Belly Bounce 75, the Minecart 80) and is 50 elsewhere; the Mumbo, Pork Pie and TV
+Sim children hold their parents' 60, and the four records bound to no thing 50. So the shipped park's Belly Bounce
+runs at the divisor 1.1, and its screams' parameter is `(20 + 60) / 2` = **40**, where OpenTPW's constant 50 gives 35
+(`q155/run2/`: 15 starts of script 3 in 60 s, each `parameter 35`, the census's `level 20`).
+
+**Every reader of the word** (each `movsx` of `+0xc0` from `0x00551000` to `0x0055b000`; the dispatcher's table at
+`0x005567d8` is indexed by the opcode):
+
+| Where | What it does with the word |
+|---|---|
+| `0x00551cc3`, the dispatcher's prologue | the divisor `0.5 + 0.01 × speed`: `WAIT` (above), the animation triggers' deadlines and rates ("The animation opcodes", below) |
+| `0x00551748`, the scheduler | every channel's queued speed, times `+0xe4` / 1000 (below) |
+| `0x005517c0`, the scheduler | the `TOUR` record named at `+0x9c` (the table `0x008791f8`): its `+0x50` = speed / 10 (`FUN_0055d9b0`) |
+| `0x005517e1`, the scheduler | the ride named at `+0xe0` (`COAST`'s `INITIALISE`): `FUN_0043b2b0( ride, speed )`, which calls `FUN_0043c3d0` when the node's `+0x30` differs |
+| `0x0055183b`, the scheduler | a bumper ride's performance (`FUN_00545180`; "The performance", below) |
+| `0x00551881`, the scheduler | the `SPAWNCHILD` child's word |
+| `0x00554aab`, `COAST` (55) sub-op 8, `INITIALISE` | `FUN_0043b2b0( ride, speed )` once, at the bind |
+| `0x00555ed0`, `STARTSCREAM` (86) | parameter 6, `clamp( ( level + speed ) / 2, 0, 100 )` (`FUN_00551130`) |
+| `0x00555fb8`, `SINGLESCREAM` (88) | the grid's step, `min( ( level + speed ) / 50, 3 )` (`FUN_00551320`) |
+| `0x00555fea`, `SCREAMLEVEL` (89) | parameter 6 again, the same average (`FUN_00551290`, `0x005512a0`..`0x005512bb`) |
+| `0x00557c03`, `FUN_00557ab0` | the bounce riders' sine, `0.8 + 0.005 × speed` (`ride-operation.md`, "The bounce riders' height") |
+| `0x00558208`, `Walk_PlaceRider` | the divisor `0.5 + 0.01 × speed` again (`0x0055823e`..`0x0055824a`) |
+| `0x0055a341`, `FUN_0055a330` | a getter; its one caller is the wear, `FUN_004df670` (`0x004df758`) |
+
+OpenTPW keeps no word (Q155): `RideScript` divides by nothing, `ParkAudio.ScriptSpeed` is 50 in all three scream
+readings, and the wear and a bumper ride's performance take the thing's `mOperatingSpeed`, or 50 at nought
+(`ParkRideWear.SpeedWord`, `ParkBumperCars.BindSpeedWord`), which the files above show is the same number for an
+object's own script. The other readers' use in OpenTPW was not checked here.
+
 ### What a kept `GETTIME` reading is, and what a load does to it (Q181)
 
 **Every reading a script keeps is a deadline, compared against a fresh reading by its sign.** Across all 308 files (197

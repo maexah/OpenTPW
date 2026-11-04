@@ -42,7 +42,7 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the maintainer's pre-commit hook: grep it by Q-number.
 
-- **Q896 (Q860's decode: what writes a queue cell's counter, and what reads it; `q860/PREDICTION.txt`: C1 to C5 held, C6 missed on which neighbour loses its bit and held restated, R1 held):** a decode, nothing of the game changed. Run: the original's own stamp, line passes, queue walk and clear under unicorn on a made-up world (`tools/harness/lib/queuerun.py`, new; `q860/emu8/run.log`, `q860/emu9/run.log`): each click's anchor gains 1 from the re-stamp (`0x005346f5`), the walk leaves corners 1 and the rest 0, the clear's six cases, and Backspace's line keeping the previous click's cell at 1 and dropping it at 0. Read, not run: the other callers of `0x5228a0` take a track record (Ghidra's private copy, `q860/gd1`); eighteen 16-bit `+0x20` accesses in unrelated code were not traced. Not checked: anything in the running original (lane B has none), or a laid queue's counters in OpenTPW (Q860's build).
+- **Q897 (Q155's decode: what a loaded object's script holds as its speed word; `q155/PREDICTION.txt`: P1, P2, P3, P4b held, P4 missed on its own check):** a decode, nothing of the game changed. Read in the private Ghidra copy and the disassembly: the load writes no `+0xc0`, the save's `mOperatingSpeed` never reaches the script, and the thirteen readers. Measured in the files (`scriptrecords.py -s`, `q155/m1/`): the shipped park's Belly Bounce 60, every other script 50, no object over four files whose word differs from its `mOperatingSpeed`. Run off-screen (`q155/run2/`, shot `bellybounce.png`): OpenTPW's Belly Bounce screams at `parameter 35` (15 starts), the census's `level 20`. Not run: the original (lane B has none), so its 40 is the decode's arithmetic on the file's 60, not a reading of its memory; which of the other readers OpenTPW reproduces was not checked. Q155 keeps the build.
 
 
 
@@ -57,6 +57,7 @@ Only the item just landed is here. Every earlier item's account is in `docs/hist
 
 ## Numbers (take counts fresh; these go stale within a day)
 
+- Linux, 2026-11-04, Q897 (`capped.sh`; a decode, no code of the game changed since review fixes group B; `scriptrecords.py` is a harness tool no test runs): with the game, 4865 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 4867; with no game named, 2018 passed, 0 failed, 2849 skipped.
 - Linux, 2026-11-04, review fixes group B (`capped.sh`; five tests added, which need the game; after Q896): with the game, 4865 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 4867; with no game named, 2018 passed, 0 failed, 2849 skipped.
 - Linux, 2026-11-04, Q896 (`capped.sh`; a decode, no code of the game changed since Q949; the new `queuerun.py` is a harness tool no test runs): with the game, 4860 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 4862; with no game named, 2018 passed, 0 failed, 2844 skipped.
 - Linux, 2026-11-04, Q949 (`capped.sh`; nine tests added, which need the game; after Q895): with the game, 4860 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 4862; with no game named, 2018 passed, 0 failed, 2844 skipped.

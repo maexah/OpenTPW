@@ -584,16 +584,23 @@ filed the items that cite it.
   made-up run. Confirm (lane A): lay a two-click queue in both games and read the corner's counter (here `cell X Y`, there the
   saved record's `+8`, `parkfile.py`): predicted 1 before the button is pressed; press Backspace once and photograph the queue
   ending at the corner. Also: a sideshow's or feature's window, when built, must not offer the queue button.
-- [ ] **Q155. Every script's speed word is 50, where a placed thing's is its own. Decode first.** Found by the
+- [ ] **Q155. Every script's speed word is 50, where a placed thing's is its own (decoded in Q897).** Found by the
   2026-09-26 staleness audit. The object constructor pushes the item's operating speed into its script (`FUN_0055a300`
   at `0x004db534`), and the ride window's speed slider writes it (`FUN_004dd6e0`); `docs/exe/park.md`, "The clock, the
   speed word, and WAIT". `RideScript` keeps no speed word: `WAIT`'s divisor is counted as `RIDE_SPEED_SCALES_WAITS`,
   and `ParkAudio.ScriptSpeed` is a constant 50 in `ScreamVolume` and `ScreamGridIndex`, where the speed is half the
   answer. `ParkScreamTests` calls the Belly Bounce's 35 "the real park's number", which holds only if its speed is 50.
-  Decode what a loaded object's script holds (the constructor's push from descriptor `+0x1a8`, and whether the save's
-  `mOperatingSpeed` reaches the script after it), measure the Belly Bounce's, then keep the word per script and read
-  it in `WAIT` and in both scream readings. Confirm: `rides` showing the Belly Bounce's word, and the scream's level
-  by capture.
+  Decoded (Q897, `park.md`, "What a loaded script holds"): a load puts the record's `+0xc0` back as the file holds it,
+  and the save's `mOperatingSpeed` never reaches the script (the two agree because every writer writes both); the
+  shipped park's Belly Bounce holds 60, so its screams' parameter is 40, not OpenTPW's 35, and its divisor 1.1. Keep the
+  word per script (`ParkScriptStates` already reads it; a bought thing's is its `InitSpeed` when above nought, a
+  `SPAWNCHILD` child's its parent's, the window's speed control writes it) and read it in `WAIT`, the animation
+  triggers and the three scream readings (`STARTSCREAM`, `SINGLESCREAM`, `SCREAMLEVEL`); `park.md`'s table names the
+  other readers (the `TOUR` record's `+0x50`, `COAST`'s ride, the bounce sine, the walk placer, the wear) - check each.
+  With a divisor of 1.1 a `WAITANIM` of a clip under 300 ms waits for weeks (`park.md`, "`WAITANIM` is NOT `TRIGANIM`
+  with a wait"): look for one in `Bouncy` first. `ParkScreamTests`' "35, the real park's number" and
+  `ParkAudio.ScriptSpeed`'s remark become wrong with the build. Confirm: `rides` showing the Belly Bounce's word 60
+  and `parameter 40` in its scream lines, against `q155/run2/`'s 35.
   From Q166: every trigger hands the divisor (`[ESP+0x14]`, 0.5 + 0.01 × speed, `0x00551cdc`) to the channel as its
   play rate - `TRIGANIM` `0x00552952`, `WAITANIM` `0x00552a9f`, `LOOPANIM` `0x00552be4`, `TRIGWAITANIM` `0x00552d2f`,
   `TRIGANIM_CH` `0x00553190`, `WAITANIM_CH` `0x00553325`, `LOOPANIM_CH` `0x00553465`, `TRIGWAITANIM_CH` `0x00553624` -

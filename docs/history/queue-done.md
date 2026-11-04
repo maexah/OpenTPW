@@ -12038,6 +12038,18 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   (`park-engine.md`, "A queue cell's counter"). Run under unicorn, the original's own stamp, line passes, walk and clear on a
   made-up world (`tools/harness/lib/queuerun.py`, new): C1 to C5 held, C6 missed on which neighbour loses its bit and held
   restated (`q860/PREDICTION.txt`, `q860/emu8/run.log`, `emu9/run.log`). Not run: the original itself (lane B has none). Q860 keeps the build.
+  cells (`tools/harness/lib/queuetile.py`, new; `exeleaf.py` gains `tib=True`): predictions E1 to E5 held (`q859/PREDICTION.txt`,
+  `q859/emu2/run.log`). Not run: the original itself (lane B has none); how play reaches it (read). Q859 keeps the build.
+- [x] **Q897. Q155's decode: what a loaded object's script holds as its speed word.** Done 2026-11-04 (run 20, lane B,
+  `alexah/903-speed-word-decoded`). A load reads each script record raw (`FUN_005597a0`, `0x00559a00`) and writes no
+  `+0xc0`; the save's `mOperatingSpeed` goes to the thing's `+0x58` alone (`FUN_004db7d0`), and the load's object reader
+  makes nothing through the constructor, so it does not reach the script; the setter's three callers (the constructor, the window's speed
+  control, the repair's upgrade arm) each write both. Thirteen readers of the word listed (`park.md`, "What a loaded
+  script holds"). Measured in the files (`scriptrecords.py -s`, new): the shipped park's Belly Bounce holds 60 (rate
+  1000, `mOperatingSpeed` 60), every other script 50; over Alexah's three Full Simulation saves no object's word differs
+  from its `mOperatingSpeed` (`q155/PREDICTION.txt`, P1 and P2 held). OpenTPW off-screen: the Belly Bounce's 15 scream
+  starts in 60 s all `parameter 35` against the original's 40 by the decode (`q155/run2/`, P3 and P4b held; P4 missed
+  on its own check). Not run: the original (lane B has none). Q155 keeps the build.
 
 ## B. Docs and comments
 
