@@ -3711,6 +3711,14 @@ apart, 31 to 147, since the original's matrix turns with the ring and ours' rest
 samples (a mean 0.4 degrees, 1.4 % of directions: the three misses are the rest place, the tool's term; with ours' rest turn at the original's own place, 8 of 8). Mumbo's heads are the case;
 the Ape's are not. Not measured: a clip-driven RestPose head of any other ride.
 
+**Mumbo's head matrix against this game's drawn turn** (Q947; `LobbyModel.TryGetDrawnNodeTurn`, the `rides` census's `drawnturn [...]`; `lib/headframe.py` on
+Q940's 32 pauses against a run of this game loaded from the same `Q848.TPWS`, the nearest frame of the same role). The node's rest turn inside its mesh,
+carried by the turn that mesh is drawn with, is the original's matrix to 0.0-1.6 degrees for Head1 in all 7 pauses it was held at (7 of 7 pictures), and for
+Heads 2 to 5 only at two pauses (role 4 frame 111, role 5 frame 101: 1 to 13 degrees); at the other six they are 20 to 71 degrees
+out about a horizontal axis (`lib/headresidual.py`). Over all 32 samples the drawn turn picks the original's picture in 13 (the rest matrix, 4), a mean 30.5 degrees apart. The
+gap is the turn `FUN_0044a640` adds under flag `0x40000` (the face's edge and normal, "Where a head on a morphing face stands", `park.md`), which ours
+does not build: `HeadOnRide`'s choice stays by the rest matrix until it does (Q1003).
+
 ### The excitement match — `FUN_004fdcc0`
 
 Decoded first-hand and put to three refuters (Q169), every step at its address. It runs behind the settle-up's gate on

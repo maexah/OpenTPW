@@ -180,12 +180,15 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   came in either game's role-5 runs (ours reached it once, 63 frames, in `q916/ape4`'s 1400 samples from a fresh ride); the ride proper's clips and a face-anchored head on a non-morphing
   parent (`LobbyModel.cs:609`) are also unpaused. Low value: every head compared agrees to about 0.1 and no difference has shown.
 
-- [ ] **Q947. Choose a ride head's picture by the matrix it is drawn with, not its rest matrix (Mumbo).** (From Q940: Mumbo's heads pick the original's picture in 4 of 32 samples by
-  the rest matrix.) The unbuilt census is `~/.cache/tpw-harnesses/q940/a18-wip.patch` (`LobbyModel.TryGetDrawnNodeTurn`: the node's rest turn inside its mesh ancestor, carried by that
-  mesh's drawn turn; the `rides` line then prints `drawnturn [...]`, which `lib/headframe.py` reads). Not built or run: the machine's disk stalled (2026-11-01). Apply it on `main` (`git apply --exclude=tools/harness/original/headpause.py`; it holds the `matrix` and `drawnturn` census, which `main` does not print), load the
-  `Q848.TPWS` that `headseries.py` saved in ours (`headseries.py --load`), and run `headframe.py` on `q940/orig-mumbo/pauses.jsonl`: if the drawn turn picks the original's picture (predictions P5, P6 in
-  `q940/PREDICTION.txt`), choose `ParkGuestSprites.HeadOnRide`'s picture by it and photograph the heads on the desktop against the original at the same pauses. The Ape needs nothing
-  (Q940). Second piece of Q940 (the `jm_leaf` first key in Mumbo's `m`, `e` and `s`, frame 14, `0x00471c56`): still open here, measure the key, then build the skip in `NodePoser.Pose`.
+- [ ] **Q1003. Turn a head on a morphing face to the face's edge and normal (`FUN_0044a640`), then choose its picture by the drawn turn (Mumbo).** From Q947: with the
+  drawn turn (the node's rest turn in its mesh, carried by its mesh's drawn turn) Head1 matches the original's matrix to 1.6 degrees at every pause measured, and
+  Heads 2 to 5 are 20 to 71 degrees out while the tentacles morph, close only at two pauses (`lib/headresidual.py`; `ride-operation.md`, "Mumbo's head matrix against this
+  game's drawn turn"). Decode what `FUN_0044a640` does with flag `0x40000` (the face's edge and normal, `park.md`, "Where a head on a morphing face stands"; ours counts
+  `RIDER_HEAD_FACE_TURN`), build it in `TryGetDrawnNodeTurn` for a node `TryGetDrawnNode` places `OnAFace`, and re-run `headframe.py` (prediction P7 in
+  `q947/PREDICTION.txt`: all eight pauses' Heads 2 to 5 under 15 degrees, at least 24 of 32 pictures). If it holds, choose `ParkGuestSprites.HeadOnRide`'s picture by
+  the drawn turn and photograph the heads on the desktop against the original's at the same pauses, the Ape staying at least 5 of 8.
+- [ ] **Q1004. The `jm_leaf` first key in Mumbo's `m`, `e` and `s` clips (frame 14, `0x00471c56`).** From Q947 and Q940's second piece. Measure the key in the original and in
+  ours, then build the skip in `NodePoser.Pose`.
 
 - [ ] **Q856. A person's sound's height against the original's.** (From Q847; its second piece, a guest's on raised ground in ours, is Q1020, done.) Q847 built the sound from the decode
   (`FUN_004754e0`, `0x00475513`..`0x00475533`): nought for anyone the walk places (`FUN_004fa030` writes the sprite's `+0x8c` nought each frame,

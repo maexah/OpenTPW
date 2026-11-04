@@ -3703,8 +3703,15 @@ public sealed partial class ParkPeople : Entity
 						drawn = $"{how} ({now.X:0.0},{now.Y:0.0},{now.Z:0.0})";
 				}
 
+				// And the node's stored matrix, whole, in the model's axes: the picture a head shows is chosen from it (Q940).
+				var matrix = string.Join( ' ', new[] { world.M11, world.M12, world.M13, world.M21, world.M22, world.M23, world.M31, world.M32, world.M33,
+					world.M41, world.M42, world.M43 }.Select( v => v.ToString( "0.#####", System.Globalization.CultureInfo.InvariantCulture ) ) );
+
 				return $"{head.Node}:{head.Handle} '{name}' {end} ({world.M41:0.0},{world.M43:0.0},{world.M42:0.0}) model {rest} "
-					+ $"drawn {drawn}";
+					+ $"drawn {drawn} matrix [{matrix}]"
+					+ (ParkObjects.Current is { } turns && turns.TryDrawnNodeTurnOn( thing.ThingId, nodes.HeadIndex( head.Node ), out var turn )
+						? $" drawnturn [{string.Join( ' ', new[] { turn.M11, turn.M12, turn.M13, turn.M21, turn.M22, turn.M23, turn.M31, turn.M32, turn.M33 }.Select( v => v.ToString( "0.#####", System.Globalization.CultureInfo.InvariantCulture ) ) )}]"
+						: "");
 			} ).ToArray();
 
 			// Every walk slot in use and, while it is walked or once a walk off is done, its leg, which is the whole of what a walk-on ride's timing

@@ -610,6 +610,43 @@ public sealed class LobbyModel : IChannelPosed
 	}
 
 	/// <summary>
+	/// The turn node <paramref name="index"/> has as it is drawn this frame, in the model's axes (y up), for a head's picture to be
+	/// chosen by (<c>FUN_0044b510</c>): the node's rest turn inside its nearest mesh ancestor, carried by the turn that mesh is drawn
+	/// with. Its translation row is that mesh's draw place, not the node's (<see cref="TryGetDrawnNode"/> answers that). False where
+	/// the node has no mesh ancestor. A node on a morphing face is not turned to the face here (<c>FUN_0044a640</c>, counted
+	/// <c>RIDER_HEAD_FACE_TURN</c>): Mumbo's Head1 matches the original's matrix to 1.6 degrees at every pause measured and its other
+	/// four heads are up to 71 degrees out while the tentacles morph (Q947, Q1003). A census instrument: the picture is not chosen by it.
+	/// </summary>
+	public bool TryGetDrawnNodeTurn( int index, out Matrix4x4 world )
+		=> DrawnTurnInMesh( _file, Entities, index, out world );
+
+	internal static bool DrawnTurnInMesh( ModelFile file, ModelEntity[] entities, int index, out Matrix4x4 world )
+	{
+		world = Matrix4x4.Identity;
+
+		if ( index < 0 || index >= file.Nodes.Count )
+			return false;
+
+		var mesh = file.Nodes[index].ParentIndex;
+
+		for ( var guard = file.Nodes.Count; mesh >= entities.Length && guard > 0; --guard )
+			mesh = file.Nodes[mesh].ParentIndex;
+
+		if ( mesh < 0 || mesh >= entities.Length || !Matrix4x4.Invert( file.Meshes[mesh].WorldTransform, out var unplaced ) )
+			return false;
+
+		// The swap of y and z that takes the file's axes to the meshes' own, and back.
+		var swap = new Matrix4x4( 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1 );
+
+		var within = file.Nodes[index].WorldTransform * unplaced;
+		var turned = (swap * within * swap) with { M41 = 0, M42 = 0, M43 = 0 };
+		var carried = turned * entities[mesh].ModelMatrix;
+
+		world = swap * carried * swap;
+		return true;
+	}
+
+	/// <summary>
 	/// Where node <paramref name="index"/> is drawn as it rests inside its nearest mesh ancestor, as
 	/// <paramref name="entities"/> draw that mesh; false where it has none.
 	/// </summary>

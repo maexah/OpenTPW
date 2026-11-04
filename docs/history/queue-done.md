@@ -12523,3 +12523,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `q879/mutations.py`; the first run left 24 alive, two of them equivalent (code simplified) and 22 given rows;
   `q879/mutate-run2.out`. `docs/README.md` line 36's two old false reports (a link written in a code span) are gone; no other
   page under 60 KB prints differently (the bigger ones take minutes to check). Left: Q1021.
+- [x] **Q947. Choose a ride head's picture by the matrix it is drawn with, not its rest matrix (Mumbo).** (From Q940: Mumbo's heads pick the original's picture in 4 of 32 samples by
+  the rest matrix.) The unbuilt census is `~/.cache/tpw-harnesses/q940/a18-wip.patch` (`LobbyModel.TryGetDrawnNodeTurn`: the node's rest turn inside its mesh ancestor, carried by that
+  mesh's drawn turn; the `rides` line then prints `drawnturn [...]`, which `lib/headframe.py` reads). Not built or run: the machine's disk stalled (2026-11-01). Apply it on `main` (`git apply --exclude=tools/harness/original/headpause.py`; it holds the `matrix` and `drawnturn` census, which `main` does not print), load the
+  `Q848.TPWS` that `headseries.py` saved in ours (`headseries.py --load`), and run `headframe.py` on `q940/orig-mumbo/pauses.jsonl`: if the drawn turn picks the original's picture (predictions P5, P6 in
+  `q940/PREDICTION.txt`), choose `ParkGuestSprites.HeadOnRide`'s picture by it and photograph the heads on the desktop against the original at the same pauses. The Ape needs nothing
+  (Q940). Second piece of Q940 (the `jm_leaf` first key in Mumbo's `m`, `e` and `s`, frame 14, `0x00471c56`): still open here, measure the key, then build the skip in `NodePoser.Pose`.
+  **TICKED 2026-11-04 (run 21, lane A; first piece, measured; nothing built in the draw): P5 MISSED** (`q947/PREDICTION.txt`). The census is in `main` now
+  (`LobbyModel.TryGetDrawnNodeTurn`, the `matrix [...]` and `drawnturn [...]` on the `rides` line, one test pinned by six put-back bugs). `headframe.py` on
+  `q940/orig-mumbo/pauses.jsonl` against this game loaded from the same `Q848.TPWS` (450 `rides` lines): the drawn turn picks the original's picture in 13 of 32
+  samples (rest matrix 4 of 32), a mean 30.5 degrees from the original's matrix; Head1 is exact in all 7 pauses it was held at, Heads 2 to 5 are 20 to 71 degrees out at
+  six of eight pauses, about a horizontal axis, and within 1 to 13 degrees only at two pauses (role 4 frame 111, role 5 frame 101). The cause is the face turn `FUN_0044a640` adds (Q1003), so `HeadOnRide` is not
+  changed and no head's picture moved: the screenshots (`q947/final-photos/`) show the plant at the same role frames as the original's `q940/orig-mumbo/shots/` and the
+  heads are too small there to be told apart by eye. The Ape needs nothing (Q940). The `jm_leaf` piece is Q1004.

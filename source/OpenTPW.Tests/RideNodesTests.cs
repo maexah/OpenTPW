@@ -323,6 +323,102 @@ public class RideNodesTests
 		}
 	}
 
+	/// <summary>The angle, in degrees, of the rotation in a matrix's upper three rows.</summary>
+	private static float TurnAngle( System.Numerics.Matrix4x4 m )
+		=> System.MathF.Acos( System.Math.Clamp( (m.M11 + m.M22 + m.M33 - 1f) / 2f, -1f, 1f ) ) * 180f / System.MathF.PI;
+
+	/// <summary>
+	/// <b>A node's drawn turn is its rest turn inside its mesh, carried by the turn that mesh is drawn with</b>
+	/// (<c>LobbyModel.DrawnTurnInMesh</c>, the matrix a head's picture is chosen from, Q947): the End's nodes 5, 6 and 11
+	/// and every Mumbo node under a mesh (its heads among them), each with the mesh it hangs in left as it rests and then turned 40 degrees about a slanted
+	/// axis. Each axis of the turn is the node's axis in its mesh (file axes, y up), taken to the mesh's own (z up),
+	/// through the mesh's draw matrix and back, worked here a row at a time; the place in it is the mesh's draw place; and
+	/// the turn has moved by 40 degrees from the one at rest (a conjugation keeps the angle).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the mesh's drawn turn left out or put on the wrong side; the node's axes not taken into
+	/// its mesh or not swapped back; the first ancestor taken where it is not a mesh; the mesh's place left out.</remarks>
+	[TestMethod]
+	public void ANodesDrawnTurnIsItsRestTurnCarriedByItsMeshsDrawnTurn()
+	{
+		const string End = "levels/jungle/features/end";
+
+		var mumbo = Item( 1109 );
+		var players = RideAnimations.Load( End, "end", _data, 1 );
+		var plane = RideNodes.Load( End, "end", _data, false, players.AllClips )!;
+		var plant = RideNodes.Load( mumbo.Directory, mumbo.Stem, _data, mumbo.DoHeadProcessing,
+			RideAnimations.Load( mumbo.Directory, mumbo.Stem, _data, mumbo.AnimationChannels ).AllClips )!;
+		var checkedNodes = 0;
+
+		foreach ( var (model, indices) in new[]
+		{
+			(plane.Model, new[] { 5, 6, 11 }.Select( id => plane.Model.FindNode( id, RideNodes.ParticleSpace ) ).ToArray()),
+			(plant.Model, Enumerable.Range( 0, plant.Model.Nodes.Count ).Where( i => HangsInAMesh( plant.Model, i ) ).ToArray()),
+		} )
+		{
+			var drawn = new Drawn( model );
+
+			foreach ( var index in indices )
+			{
+				var mesh = model.Nodes[index].ParentIndex;
+
+				while ( mesh >= drawn.Entities.Length )
+					mesh = model.Nodes[mesh].ParentIndex;
+
+				var entity = drawn.Entities[mesh];
+				var before = entity.Rotation;
+
+				Assert.IsTrue( LobbyModel.DrawnTurnInMesh( model, drawn.Entities, index, out var rest ), $"node {index} hangs in a mesh" );
+				Assert.AreEqual( 1f, rest.GetDeterminant(), 1e-3f, $"node {index}: a rigid turn" );
+
+				entity.Rotation = System.Numerics.Quaternion.CreateFromAxisAngle( System.Numerics.Vector3.Normalize( new( 0.3f, 0.5f, 0.8f ) ), 40f * System.MathF.PI / 180f );
+
+				Assert.IsTrue( LobbyModel.DrawnTurnInMesh( model, drawn.Entities, index, out var turned ) );
+				Assert.AreEqual( 40f, TurnAngle( turned * Invert( rest ) ), 0.5f, $"node {index}: moved by the angle its mesh was turned by" );
+
+				// The same turn worked a row at a time: each of the node's axes in its mesh, to the mesh's own axes, drawn, and back.
+				var within = model.Nodes[index].WorldTransform * Invert( model.Meshes[mesh].WorldTransform );
+				var draw = entity.ModelMatrix;
+				var rows = new[] { new System.Numerics.Vector3( within.M11, within.M12, within.M13 ), new( within.M21, within.M22, within.M23 ), new( within.M31, within.M32, within.M33 ) };
+
+				for ( var axis = 0; axis < 3; ++axis )
+				{
+					var drawnAxis = System.Numerics.Vector3.TransformNormal( new( rows[axis].X, rows[axis].Z, rows[axis].Y ), draw );
+					var got = axis == 0 ? new System.Numerics.Vector3( turned.M11, turned.M12, turned.M13 )
+						: axis == 1 ? new( turned.M21, turned.M22, turned.M23 ) : new( turned.M31, turned.M32, turned.M33 );
+
+					Assert.IsTrue( (got - new System.Numerics.Vector3( drawnAxis.X, drawnAxis.Z, drawnAxis.Y )).Length() < 1e-3f, $"node {index} axis {axis}: {got} against {drawnAxis}" );
+				}
+
+				Assert.IsTrue( (turned.Translation - new System.Numerics.Vector3( draw.M41, draw.M43, draw.M42 )).Length() < 1e-3f, $"node {index}: the mesh's draw place" );
+
+				entity.Rotation = before;
+				++checkedNodes;
+			}
+		}
+
+		Assert.IsTrue( checkedNodes >= 8, $"three plane nodes and Mumbo's nodes were checked, not {checkedNodes}" );
+		Assert.IsTrue( Enumerable.Range( 0, plant.Model.Nodes.Count ).Any( i => HangsInAMesh( plant.Model, i ) && plant.Model.Nodes[i].ParentIndex >= plant.Model.Meshes.Count ),
+			"a Mumbo node hangs on a node that is not a mesh, inside one that is" );
+	}
+
+	/// <summary>Whether node <paramref name="index"/> has a mesh among its ancestors.</summary>
+	private static bool HangsInAMesh( ModelFile model, int index )
+	{
+		var node = model.Nodes[index].ParentIndex;
+
+		for ( var guard = model.Nodes.Count; node >= model.Meshes.Count && guard > 0; --guard )
+			node = model.Nodes[node].ParentIndex;
+
+		return node >= 0 && node < model.Meshes.Count;
+	}
+
+	private static System.Numerics.Matrix4x4 Invert( System.Numerics.Matrix4x4 m )
+	{
+		Assert.IsTrue( System.Numerics.Matrix4x4.Invert( m, out var inverse ) );
+
+		return inverse;
+	}
+
 	/// <summary>
 	/// <b>A followed node stands where the drawn model draws it</b>: the End's trail nodes 5 and 6 and plane 06's climbing
 	/// node 11, from one set of players, found by <see cref="RideNodes.Follow"/> (its own composition, the engine's

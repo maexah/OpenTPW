@@ -149,10 +149,11 @@ def main():
             seen_orig = picture(into_node(cam, theirs))
             seen_ours = picture(into_node(cam, ours))
             # This game at the same channel frame (nearest sample of the same role in any loop of the clip), its drawn turn at its drawn place.
-            near = min((x for x in series if x["role"] == int(a["role"]) and name in x["heads"]), key=lambda x: abs(x["frame"] - a["frame"]), default=None)
+            key = next((k for k in (name, f"Head{int(name[4:]):02d}", f"Head{int(name[4:])}") if any(k in x["heads"] for x in series)), name)   # the census spells Head1 and Head02
+            near = min((x for x in series if x["role"] == int(a["role"]) and key in x["heads"]), key=lambda x: abs(x["frame"] - a["frame"]), default=None)
             seen_turn, turn_angle, gap = None, None, None
-            if near and near["heads"][name]["turn"]:
-                h = near["heads"][name]
+            if near and near["heads"][key]["turn"]:
+                h = near["heads"][key]
                 gap = round(abs(near["frame"] - a["frame"]), 1)
                 m12 = h["turn"][0:3] + [0] + h["turn"][3:6] + [0] + h["turn"][6:9] + [0] + h["at"] + [1]
                 seen_turn = picture(into_node(cam, m12))

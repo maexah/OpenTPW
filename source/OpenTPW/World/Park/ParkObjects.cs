@@ -133,6 +133,14 @@ public sealed class ParkObjects : Entity
 		return DrawnNode.Missing;
 	}
 
+	/// <summary>The turn a placed thing's node, by index, is drawn with this frame (<see cref="LobbyModel.TryGetDrawnNodeTurn"/>).</summary>
+	internal bool TryDrawnNodeTurnOn( int thingId, int node, out System.Numerics.Matrix4x4 world )
+	{
+		world = System.Numerics.Matrix4x4.Identity;
+
+		return _standing.TryGetValue( thingId, out var standing ) && standing.Model.TryGetDrawnNodeTurn( node, out world );
+	}
+
 	/// <summary>
 	/// Where a placed thing's own voice is sounded: the middle of the cells it covers, at its base height
 	/// (<c>FUN_00556af0</c>, docs/exe/ride-operation.md, "Where a scream is sounded").
