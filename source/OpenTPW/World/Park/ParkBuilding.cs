@@ -86,9 +86,10 @@ public static class ParkBuilding
 		if ( PlacementRefusal( state, item, cellX, cellY, angle, addOnFor ) is { } refused )
 			return new( refused, Refused: true );
 
-		// A track add-on's cells are the ones its model covers (ParkTrackAddOn.Cells), as the placer stamps them.
+		// The cells the placer marks are the picture's, swept from the cell the model stands on (ParkObjects.CoveredCells; a track
+		// add-on's the same, ParkTrackAddOn.Cells); the rectangle round them is what the log names.
 		var addOn = ParkTrackAddOn.Is( item );
-		var footprint = addOn ? ParkObjects.FloorFootprint( item, cellX, cellY, angle ) : ParkObjects.FootprintAt( item, cellX, cellY, angle );
+		var footprint = ParkObjects.FloorFootprint( item, cellX, cellY, angle );
 
 		var thingId = state.NextThingId();
 
@@ -174,12 +175,11 @@ public static class ParkBuilding
 		}
 		else
 		{
-			Stamp( state, footprint, cellX, cellY );
+			Stamp( state, ParkObjects.CoveredCells( item, cellX, cellY, angle ), cellX, cellY );
 
 			// The tile pass after the stamp, as the load's: a table cell the map holds as ground is put back to it (read in the
-			// load's live map). The original's purchase gave nothing back in its own runs, since it types every cell its table
-			// covers (the rock's row above the anchor too, Q888); what this gives back is the anchor-typed footprint's
-			// leftover, Q744's.
+			// load's live map). The original's purchase gave nothing back in its own runs (the rock's, Q888), and none is given
+			// here now that the typed cells are the table's own (Q744).
 			objects?.RetileGround( thingId, ( x, y ) => state.Record( x, y ).Type );
 		}
 
@@ -228,7 +228,7 @@ public static class ParkBuilding
 			if ( ParkTrackAddOn.Refusal( state, item, ride, cellX, cellY, angle, ( x, y ) => Refusal( state, (x, y, x, y) ) ) is { } refused )
 				return $"buy: '{item.Name}' will not fit at ({cellX},{cellY}) - {refused}";
 		}
-		else if ( Refusal( state, ParkObjects.FootprintAt( item, cellX, cellY, angle ) ) is { } why )
+		else if ( Refusal( state, ParkObjects.CoveredCells( item, cellX, cellY, angle ) ) is { } why )
 			return $"buy: '{item.Name}' will not fit at ({cellX},{cellY}) - {why}";
 
 		// The affordability test the original makes when a buy row is clicked, before it ever builds
@@ -526,7 +526,7 @@ public static class ParkBuilding
 			Unimplemented.Report( "SALE_TRACK_ADD_ON" );
 
 		var refund = item.BuildPrice;
-		var footprint = ParkObjects.FootprintAt( item, placed.CellX, placed.CellY, placed.Angle );
+		var covered = ParkObjects.CoveredCells( item, placed.CellX, placed.CellY, placed.Angle ).ToList();
 
 		// Before the footprint goes, what the demolisher does outside it (FUN_00527ee0): a queued thing's
 		// queue is drained, node and all, then its track torn down by its track type, and the paths laid
@@ -558,7 +558,7 @@ public static class ParkBuilding
 		state.RemoveObject( thingId );
 		state.DeleteThing( thingId );
 
-		Unstamp( state, footprint, placed.CellX, placed.CellY, thingId );
+		Unstamp( state, covered, placed.CellX, placed.CellY, thingId );
 
 		// The destructor's "object removed" message (0x004dd150): a rider is put off where they are, a
 		// queuer is put out of the queue, and staff resting in it or heading there to rest give it up. It
@@ -763,27 +763,28 @@ public static class ParkBuilding
 	/// </para>
 	/// </summary>
 	private static string? Refusal( ParkState state, (int Left, int Top, int Right, int Bottom) footprint )
+		=> Refusal( state, ParkObjects.CellsOf( footprint ) );
+
+	/// <summary>The same test over the cells a picture marks, which are not always a whole rectangle (<see cref="ParkObjects.CoveredCells"/>).</summary>
+	private static string? Refusal( ParkState state, IEnumerable<(int X, int Y)> cells )
 	{
 		Unimplemented.Report( "PLACEMENT_TERRAIN_RULE" );
 
-		for ( var y = footprint.Top; y <= footprint.Bottom; ++y )
+		foreach ( var (x, y) in cells )
 		{
-			for ( var x = footprint.Left; x <= footprint.Right; ++x )
-			{
-				if ( !ParkState.OnMap( x, y ) )
-					return $"({x},{y}) is off the map";
+			if ( !ParkState.OnMap( x, y ) )
+				return $"({x},{y}) is off the map";
 
-				var cell = state.Record( x, y );
+			var cell = state.Record( x, y );
 
-				if ( ParkObjects.CoversGround( cell ) )
-					return $"({x},{y}) already has something built on it";
+			if ( ParkObjects.CoversGround( cell ) )
+				return $"({x},{y}) already has something built on it";
 
-				if ( ParkPaths.IsPath( cell ) )
-					return $"({x},{y}) is a path";
+			if ( ParkPaths.IsPath( cell ) )
+				return $"({x},{y}) is a path";
 
-				if ( ParkQueues.IsQueue( cell ) )
-					return $"({x},{y}) is a queue";
-			}
+			if ( ParkQueues.IsQueue( cell ) )
+				return $"({x},{y}) is a queue";
 		}
 
 		return null;
@@ -1194,33 +1195,34 @@ public static class ParkBuilding
 	/// </remarks>
 	internal static void Unstamp( ParkState state, (int Left, int Top, int Right, int Bottom) footprint,
 		int anchorX, int anchorY, int thingId )
+		=> Unstamp( state, ParkObjects.CellsOf( footprint ), anchorX, anchorY, thingId );
+
+	/// <summary>Takes a thing's mark off the cells given, by owner: the cells its picture marked (<see cref="ParkObjects.CoveredCells"/>).</summary>
+	internal static void Unstamp( ParkState state, IEnumerable<(int X, int Y)> cells, int anchorX, int anchorY, int thingId )
 	{
-		for ( var y = footprint.Top; y <= footprint.Bottom; ++y )
+		foreach ( var (x, y) in cells )
 		{
-			for ( var x = footprint.Left; x <= footprint.Right; ++x )
+			if ( !ParkState.OnMap( x, y ) )
+				continue;
+
+			var cell = state.Record( x, y );
+
+			if ( cell.ParentId != MapStep.CellId( anchorX, anchorY ) )
+				continue;
+
+			if ( state.Park?.CellAt( x, y ) is { } saved && !BuiltOver( saved.Type ) )
 			{
-				if ( !ParkState.OnMap( x, y ) )
-					continue;
-
-				var cell = state.Record( x, y );
-
-				if ( cell.ParentId != MapStep.CellId( anchorX, anchorY ) )
-					continue;
-
-				if ( state.Park?.CellAt( x, y ) is { } saved && !BuiltOver( saved.Type ) )
-				{
-					state.ClearRecord( x, y );
-					continue;
-				}
-
-				var end = cell.Type is CellEdge.RideEnd or CellEdge.RideFarEnd;
-
-				state.SetRecord( x, y, ParkPathBuilding.Cleared( cell ) with
-				{
-					Flags = (ushort)(cell.Flags & ParkPathBuilding.OutsideThePark),
-					OverlapCounter = end ? (short)0 : cell.OverlapCounter
-				} );
+				state.ClearRecord( x, y );
+				continue;
 			}
+
+			var end = cell.Type is CellEdge.RideEnd or CellEdge.RideFarEnd;
+
+			state.SetRecord( x, y, ParkPathBuilding.Cleared( cell ) with
+			{
+				Flags = (ushort)(cell.Flags & ParkPathBuilding.OutsideThePark),
+				OverlapCounter = end ? (short)0 : cell.OverlapCounter
+			} );
 		}
 
 		state.LeaveCell( anchorX, anchorY, thingId );
@@ -1249,27 +1251,28 @@ public static class ParkBuilding
 	/// </remarks>
 	internal static void Stamp( ParkState state, (int Left, int Top, int Right, int Bottom) footprint,
 		int anchorX, int anchorY )
+		=> Stamp( state, ParkObjects.CellsOf( footprint ), anchorX, anchorY );
+
+	/// <summary>Marks the cells given as built on, owned by the anchor: the cells its picture marks (<see cref="ParkObjects.CoveredCells"/>).</summary>
+	internal static void Stamp( ParkState state, IEnumerable<(int X, int Y)> cells, int anchorX, int anchorY )
 	{
-		for ( var y = footprint.Top; y <= footprint.Bottom; ++y )
+		foreach ( var (x, y) in cells )
 		{
-			for ( var x = footprint.Left; x <= footprint.Right; ++x )
+			if ( !ParkState.OnMap( x, y ) )
+				continue;
+
+			var cell = state.Record( x, y );
+
+			// The type, and the OWNER - which is how the save marks a footprint and therefore how a
+			// click finds a thing anywhere but its anchor cell. Every cell of the shipped park's
+			// footprints carries its owner's packed cell in mParentID while only the anchor carries
+			// an occupant, so writing one without the other would leave a bought thing clickable on
+			// a twelfth of itself. See ParkPicking.ThingOn.
+			state.SetRecord( x, y, cell with
 			{
-				if ( !ParkState.OnMap( x, y ) )
-					continue;
-
-				var cell = state.Record( x, y );
-
-				// The type, and the OWNER - which is how the save marks a footprint and therefore how a
-				// click finds a thing anywhere but its anchor cell. Every cell of the shipped park's
-				// footprints carries its owner's packed cell in mParentID while only the anchor carries
-				// an occupant, so writing one without the other would leave a bought thing clickable on
-				// a twelfth of itself. See ParkPicking.ThingOn.
-				state.SetRecord( x, y, cell with
-				{
-					Type = FootprintType,
-					ParentId = (ushort)MapStep.CellId( anchorX, anchorY )
-				} );
-			}
+				Type = FootprintType,
+				ParentId = (ushort)MapStep.CellId( anchorX, anchorY )
+			} );
 		}
 	}
 
@@ -1578,7 +1581,7 @@ public static class ParkBuilding
 			return [];
 
 		var addOn = ParkTrackAddOn.Is( item );
-		var (originX, originY) = addOn ? ParkObjects.ModelCell( item, cellX, cellY, angle ) : (cellX, cellY);
+		var (originX, originY) = ParkObjects.ModelCell( item, cellX, cellY, angle );
 
 		var squares = new List<CarrySquare>();
 		var refused = false;

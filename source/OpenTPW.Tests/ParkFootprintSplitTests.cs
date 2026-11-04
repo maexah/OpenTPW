@@ -531,16 +531,16 @@ public class ParkFootprintSplitTests
 	}
 
 	/// <summary>
-	/// <b>A purchase's tile pass gives back a table cell outside the typed footprint</b>: the Huge Hollow Rock's model stands one row
-	/// above its anchor, so its floor table covers cells that <c>Stamp</c> does not type (<see cref="ParkObjects.FloorFootprint"/>
-	/// against <see cref="ParkObjects.FootprintAt"/>), and a cell the map holds as ground there is retiled with set 0, tile 55 and ends
-	/// unstamped; the cells <c>Stamp</c> typed 4 stay stamped. (The original's purchase of the rock types the model's cells, the row
-	/// above the anchor too, and stamps all 14 table cells, Q888, so it gives none back; this pins what this game does until Q744
-	/// types the model's cells, and that test is then this one's replacement.)
+	/// <b>A purchase of the Huge Hollow Rock types the model's cells, and its tile pass has none to give back</b>: the rock's model
+	/// stands one row above its anchor, and the original's purchase typed 23 cells (the model's 5 x 5 less its two empty corners, owner
+	/// the anchor) and stamped all 14 table cells (Q888, <c>q888/orig/run1/</c>); this game typed the anchor's rectangle and gave the
+	/// row above it back (Q744, now fixed). The cells are stood stamped as the model's picture covers them, the way the tile pass
+	/// finds them.
 	/// </summary>
-	/// <remarks><b>Mutation:</b> the purchase's <c>RetileGround</c> call removed leaves the untyped row stamped.</remarks>
+	/// <remarks><b>Mutation:</b> <c>Stamp</c> over the anchor's rectangle (<see cref="ParkObjects.FootprintAt"/>) types row 28 and leaves the
+	/// model's top row ground, so the tile pass gives the row's stamps back and fewer cells stay stamped.</remarks>
 	[TestMethod]
-	public void APurchasesTilePassGivesBackTheTableCellsOutsideTheTypedFootprint()
+	public void APurchaseOfTheRockTypesTheModelsCellsAndItsTilePassGivesNoneBack()
 	{
 		Log ??= new();
 
@@ -558,7 +558,7 @@ public class ParkFootprintSplitTests
 		var build = typeof( ParkBuilding ).GetMethods( BindingFlags.NonPublic | BindingFlags.Static )
 			.Single( method => method.Name == "Build" && method.GetParameters().Length == 10 );
 
-		(ParkWorld.CatalogueObject Placed, List<(int X, int Y)> Cells)? stood = null;
+		ParkWorld.CatalogueObject? stood = null;
 
 		var current = ParkGround.Current;
 		SetCurrent( ground );
@@ -577,28 +577,29 @@ public class ParkFootprintSplitTests
 				.Where( cell => cell.X is >= 10 and < 100 && cell.Y is >= 10 and < 100 ).First( cell => Answer( cell.X, cell.Y ).Contains( "would not load" ) );
 
 			// The ground's own rebuild, which ends a build (ParkSurfaces.Rebuild), wants a graphics device and fails on the stand-in
-			// ground; the tile pass has run before it.
+			// ground; the stamp and the tile pass have run before it.
 			ParkBuilding.StandThing = placed =>
 			{
-				var cells = CellsOf( ParkObjects.FloorFootprint( item, placed.CellX, placed.CellY, placed.Angle ) ).ToList();
-				StandStamped( objects, ground, placed.ThingId, placed.CatalogueId, cells );
-				stood = (placed, cells);
+				StandStamped( objects, ground, placed.ThingId, placed.CatalogueId, ParkObjects.CoveredCells( item, placed.CellX, placed.CellY, placed.Angle ) );
+				stood = placed;
 				return true;
 			};
 
 			var failure = Assert.ThrowsException<TargetInvocationException>( () => Answer( at.X, at.Y ) );
 			StringAssert.Contains( failure.InnerException!.StackTrace, "ParkGround.Build", "it is the ground's rebuild that fails" );
 
-			var (placed, cells) = stood!.Value;
-			var typed = CellsOf( ParkObjects.FootprintAt( item, at.X, at.Y, 0 ) ).ToHashSet();
-			var outside = cells.Where( cell => !typed.Contains( cell ) ).ToArray();
+			Assert.AreEqual( at, (stood!.Value.CellX, stood.Value.CellY) );
 
-			Assert.AreEqual( at, (placed.CellX, placed.CellY) );
-			Assert.IsTrue( outside.Length >= 4, $"the rock's table covers {outside.Length} cells beyond the typed footprint" );
-			Assert.IsTrue( outside.All( cell => state.Record( cell.X, cell.Y ).Type is <= 0 or 5 ), "which Stamp left as the map had them: ground" );
-			Assert.IsTrue( outside.All( cell => !ground.IsStamped( cell.X, cell.Y ) ), "so the purchase's tile pass gave them back" );
-			Assert.IsTrue( typed.All( cell => !cells.Contains( cell ) || ground.IsStamped( cell.X, cell.Y ) ), "the typed cells stay stamped" );
-			Assert.AreEqual( cells.Count - outside.Length, objects.StampedCells );
+			var marked = CellsOf( (at.X - 1, at.Y - 2, at.X + 6, at.Y + 6) )
+				.Where( cell => state.Record( cell.X, cell.Y ).Type == CellEdge.Footprint ).ToHashSet();
+			var model = ParkObjects.CoveredCells( item, at.X, at.Y, 0 ).ToHashSet();
+
+			Assert.AreEqual( 23, marked.Count, "the model's 5 x 5 less its two empty corners" );
+			Assert.IsTrue( marked.SetEquals( model ), "typed on the model's cells, not the anchor's rectangle" );
+			Assert.IsTrue( marked.All( cell => state.Record( cell.X, cell.Y ).ParentId == MapStep.CellId( at.X, at.Y ) ), "owned by the anchor" );
+			Assert.IsTrue( Enumerable.Range( at.X + 1, 4 ).All( x => marked.Contains( (x, at.Y - 1) ) ), "the row above the anchor is typed" );
+			Assert.IsFalse( marked.Any( cell => cell.Y == at.Y + 4 ), "and the anchor rectangle's last row is not" );
+			Assert.AreEqual( 23, objects.StampedCells, "so the tile pass finds no cell of ground to give back" );
 		}
 		finally
 		{

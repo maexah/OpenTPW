@@ -12361,3 +12361,33 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   mode goes in. Why the original's first hover of a put-down member falls after the first decide, and which writer
   stopped run 2's walk on (43,27), are not settled. This game off-screen (`q869/run1`, `run2`): the hover named the guard
   before any sweep, idle from idle, stamp nought; he walked on 765, and a resting pointer stopped his walk on 771.
+- [x] **Q744. An item with a map offset (the Huge Hollow Rock, the Dino Karts Tunnel) is marked, refused and sounded on the anchor's cells, not the model's. (from the run 11 review of Q649.)**
+  Q649 made the floor blend use the cells the model covers (`ParkObjects.FloorFootprint`: `FootprintAt` of `ModelCell`);
+  every other footprint of such an item is still the anchor's. `ParkBuilding` stamps (`:83` -> `Stamp` `:157`), refuses
+  (`PlacementRefusal` `:193`) and clears on a sale (`:483` -> `Unstamp` `:511`) over `FootprintAt( anchor )`, and
+  `TrySoundPlace` takes `BoxMiddle( Standing.Footprint )` (`ParkObjects.cs:151`, set at `:388` from the anchor's footprint).
+  The original's marked cells and its sound place are the model's rectangle, with the anchor as the cells' owner. Evidence:
+  Alexah's Full Simulation jungle saves (`autosave.TPWS`, `New Save.TPWS`; read through `lib/parkfile.py`): the rock,
+  thing 252, item 1427, anchor (19,27) angle 0, `mTopLeft` 3348, its model record's place (19,26); its mType-4 cells are
+  x 19..23, rows 26..30 (row 31 is all path), every `mParentID` (19,27); the tunnel, thing 404, item 1501, anchor (17,21)
+  angle 90, `mTopLeft` 2705, record place (16,21); its mType-4 cells are x 16..19, rows 19..21 less its two `.` cells,
+  owner (17,21). The sound place: `FUN_00556af0` (`0x00556b04`) calls `FUN_00466b70`, which reads the instance's
+  `+0xc0`/`+0xc4` (`0x00466b9a`, `0x00466ba0`), the rectangle `FUN_00467030` makes from the model's place. In OpenTPW a
+  rock bought in Full Simulation marks rows 27..31 under a model standing on 26..30; selling the loaded rock unstamps
+  27..31 by owner and leaves row 26 mType 4 for a thing that is gone; its sound place stands a row off.
+  **Read the original's marking code first** (what writes the mType-4 cells, and from which rectangle; the cells in the
+  files are the evidence so far, the code was not read), then give the build marks, `PlacementRefusal`, the carry squares,
+  the sale's `Unstamp` and `TrySoundPlace` one helper for an item's covered cells (`ParkObjects.FloorFootprint`), the owner
+  staying the anchor. Confirm in Full Simulation (research and buy the rock and the tunnel, both left out of Instant
+  Action): the cells the buy marks read with `parkfile.py` against the original's own save of the same buy, a sale
+  clearing exactly those, and the sound place beside the original's.
+  **The original's own buy was run (Q888, `q888/orig/run1/rock-bought.TPWS`, read by `lib/celltypes.py` against
+  `q948/newsave.TPWS`):** the rock put down anchored at (69,24) typed exactly 23 cells, type 4, owner (69,24)'s id 3142:
+  (70..73,23) (69..73,24..26) (69..72,27), the model's rectangle (the map offset's row above) less its two empty shape
+  cells, and nothing else in the map changed; its stamp covered all 14 table cells. Ours' `buy 1427 69 24 0` types the
+  anchor's rectangle (69..73,24..28) and stamps 10, giving the row above back (`q888/ours/final1`). The fix should end
+  with ours' typed set equal to those 23, 14 stamped and no give-back, in each turn (only turn 0 was run in the original;
+  the Staff Room's turned 270 stamp is Q949's). **Also seen, not explained:** the bought rock's frame in ours has a
+  clear-colour patch over the row above the anchor (`q888/ours/final2/case1-bought.png`, beside the original's
+  `orig/run1/placed.png`) that ours' loaded rock does not (`final3/loaded-rock.png`) and that stays with all 14 stamped
+  (`ours/scratch`): look at it once the typing is the model's.

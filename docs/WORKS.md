@@ -156,6 +156,11 @@ belongs to or at the end. Grep it by area or Q-number; never read it whole.
   Every 32-pixel tile of the four parks and the stock park's 78 path tiles equal the original's code. At the gate the
   path reads 3.20 and the grass 3.72 (`lib/sharp.py`), the original made to draw 32 reads 3.23 and
   3.64; at 16, 1.39 and 1.20 here (`q618/side-by-side-gate.png`).
+- **An item with a map offset is marked on its model's cells** (Q744, `ParkObjects.CoveredCells`): the picture's non-empty
+  cells swept from `mTopLeft`'s cell, turned, owner the anchor. A purchase of the Huge Hollow Rock at (69,24) turned 0 types the
+  original's 23 cells and stamps its 14, none given back (Q888's original run), the refusal, the carried squares, the sale's
+  clear and the voice's box use the same cells, and the bought rock's frame has no clear-colour patch over the row above the
+  anchor (`q744/run-final`; a turned rock and the tunnel's purchase are not compared with the original, Q889).
 - **A built thing's floor and a queue's are blended into the ground's tiles, as the original's are** (Q649,
   `ProceduralFloor`): each footprint cell's floor frame draws that cell's ground tile, at the tiles' own size, with the
   frame's texture laid over by its alpha, turned as the original stamps it; again for a thing bought or moved, let go

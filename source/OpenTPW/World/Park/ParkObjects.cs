@@ -420,9 +420,8 @@ public sealed class ParkObjects : Entity
 			// outright - see RideAnimations.AllClips for why probing for a numbered run is not the same set.
 			var animations = RideAnimations.Load( item.Directory, item.Stem, FileSystem, item.AnimationChannels );
 
-			// The cells the builder marks, from the anchor; the model of an item with a map offset stands off it, and
-			// its floor is blended over the cells the model covers (FloorFootprint).
-			var footprint = FootprintAt( item, placed.CellX, placed.CellY, placed.Angle );
+			// The cells the model covers: the builder marks them, the voice is sounded at their middle and the floor is
+			// blended over them (FloorFootprint); an item with a map offset stands them off its anchor.
 			var covered = FloorFootprint( item, placed.CellX, placed.CellY, placed.Angle );
 			var shared = $"levels/{ThemeName.ToLowerInvariant()}/sharetex";
 			var blended = new List<Texture>();
@@ -467,7 +466,7 @@ public sealed class ParkObjects : Entity
 			_models.Add( model );
 			_standing[placed.ThingId] = new Standing( model, animations, placed.CatalogueId, sign )
 			{
-				Footprint = footprint,
+				Footprint = SoundBoxOf( item, placed ),
 				Blended = blended,
 				FloorCells = floorCells,
 				Stamped = stamped,
@@ -499,7 +498,8 @@ public sealed class ParkObjects : Entity
 			// turn, and the save's from the cells it marks as built on - so when they agree the placement
 			// is right for a reason rather than by eye.
 			Log.Info( $"{ThemeName}: '{item.Name}' anchored at ({placed.CellX},{placed.CellY}) turned " +
-				$"{placed.Angle} covers ({footprint.Left},{footprint.Top})..({footprint.Right},{footprint.Bottom})" );
+				$"{placed.Angle} covers ({covered.Left},{covered.Top})..({covered.Right},{covered.Bottom}), its voice at the middle " +
+				$"({BoxMiddle( covered, 0f ).X:F0},{BoxMiddle( covered, 0f ).Y:F0})" );
 		}
 		catch ( Exception e )
 		{
@@ -545,15 +545,49 @@ public sealed class ParkObjects : Entity
 	}
 
 	/// <summary>
-	/// The cells a placed item's floor is stamped and blended over: the rectangle the model covers (<c>FUN_00467030</c>'s
-	/// <c>+0xc0</c>/<c>+0xc4</c>, made from the place <c>FUN_004dd500</c> builds from <c>mTopLeft</c>), so the footprint at the
-	/// item's <see cref="ModelCell"/>. It is the anchor's own footprint except for an item with a map offset.
+	/// The rectangle a placed item's model covers (<c>FUN_00467030</c>'s <c>+0xc0</c>/<c>+0xc4</c>, made from the place
+	/// <c>FUN_004dd500</c> builds from <c>mTopLeft</c>), so the footprint at the item's <see cref="ModelCell"/>: where its floor is
+	/// blended and its voice sounded, and round the cells it marks (<see cref="CoveredCells"/>). It is the anchor's own footprint
+	/// except for an item with a map offset.
 	/// </summary>
 	public static (int Left, int Top, int Right, int Bottom) FloorFootprint( ParkItemCatalogue.Item item, int cellX, int cellY, int angle )
 	{
 		var (modelX, modelY) = ModelCell( item, cellX, cellY, angle );
 
 		return FootprintAt( item, modelX, modelY, angle );
+	}
+
+	/// <summary>
+	/// The cells a placed item marks as built on, owned by its anchor: its picture's cells that are not empty, swept from the
+	/// cell its model stands on (<see cref="ModelCell"/>) with each column and row turned by the angle, as the placer sweeps them
+	/// (<c>0x0052916c</c>'s case 0 passes an empty one by). That is the rectangle <see cref="FloorFootprint"/> less the picture's
+	/// empty cells, and the rectangle itself for an item with no picture, in a rectangle's own order (row by row from the top left). The saved parks hold exactly these as map type 4 (the
+	/// rock, the tunnel and item 1426 less their two empty cells each, 101 things in 861 files, <c>docs/exe/park-engine.md</c>).
+	/// </summary>
+	public static IEnumerable<(int X, int Y)> CoveredCells( ParkItemCatalogue.Item item, int cellX, int cellY, int angle )
+	{
+		if ( item.Shape is not { } shape || shape.Width != item.Width || shape.Depth != item.Depth )
+			return CellsOf( FloorFootprint( item, cellX, cellY, angle ) );
+
+		// Row by row from the top left, as a rectangle's cells run, whatever the turn: the order a refusal names its first cell in.
+		return ParkTrackAddOn.Cells( item, cellX, cellY, angle ).Select( cell => (cell.X, cell.Y) ).OrderBy( cell => cell.Y ).ThenBy( cell => cell.X );
+	}
+
+	/// <summary>
+	/// The rectangle a thing's own voice is sounded at the middle of (<see cref="TrySoundPlace"/>): the one its model covers, from the
+	/// place <c>FUN_00466b70</c> reads (<c>+0xc0</c>/<c>+0xc4</c>, <c>0x00466b9a</c>), not the anchor's footprint.
+	/// </summary>
+	internal static (int Left, int Top, int Right, int Bottom) SoundBoxOf( ParkItemCatalogue.Item item, ParkWorld.CatalogueObject placed )
+		=> FloorFootprint( item, placed.CellX, placed.CellY, placed.Angle );
+
+	/// <summary>Every cell of a rectangle, row by row from its top left.</summary>
+	public static IEnumerable<(int X, int Y)> CellsOf( (int Left, int Top, int Right, int Bottom) rectangle )
+	{
+		for ( var y = rectangle.Top; y <= rectangle.Bottom; ++y )
+		{
+			for ( var x = rectangle.Left; x <= rectangle.Right; ++x )
+				yield return (x, y);
+		}
 	}
 
 	/// <summary>The floor cells of the things standing blended into the ground's tiles (<see cref="BlendFloor"/>).</summary>
