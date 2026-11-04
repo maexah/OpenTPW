@@ -150,11 +150,14 @@ public static class ProceduralFloor
 	/// cell of <paramref name="covered"/>, and its frame's texture (read from <paramref name="textureFor"/>'s path for the
 	/// frame's name) blended into that cell's ground tile (<see cref="ParkGround.BlendFloor"/>). The textures by frame, the
 	/// later cell's where two cells share one; every texture made, superseded ones too, goes in <paramref name="made"/>, the
-	/// caller's to let go of with the model. <paramref name="cells"/> counts the cells blended.
+	/// caller's to let go of with the model. <paramref name="cells"/> counts the cells blended. Every table entry is stamped
+	/// first, whatever its frame or texture (<see cref="ParkGround.StampSplit"/>; the original writes the word at <c>0x0046352a</c>
+	/// before it blends, <c>0x004635af</c>), and the cells stamped are added to <paramref name="stamped"/>, the caller's to give
+	/// back with the thing (<see cref="ParkGround.UnstampSplit"/>).
 	/// </summary>
 	public static Dictionary<uint, Texture> Blend( ModelFile model, int mesh, ItemShape? shape, int width, int depth, bool everyCell,
 		int angle, (int Left, int Top, int Right, int Bottom) covered, ParkGround ground, Func<string, string> textureFor,
-		List<Texture> made, out int cells )
+		List<Texture> made, out int cells, List<(int X, int Y)>? stamped = null )
 	{
 		var textures = new Dictionary<uint, Texture>();
 		var table = Table( model, mesh, shape, width, depth, everyCell, ProceduralBase.ParkGrid );
@@ -167,10 +170,16 @@ public static class ProceduralFloor
 		{
 			for ( var column = 0; column < width; ++column )
 			{
-				if ( table[column, row] is not { } cell || !names.TryGetValue( cell.FrameOffset, out var name ) )
+				if ( table[column, row] is not { } cell )
 					continue;
 
 				var (x, y) = CellOf( column, row, angle, covered );
+
+				if ( ground.StampSplit( x, y ) )
+					stamped?.Add( (x, y) );
+
+				if ( !names.TryGetValue( cell.FrameOffset, out var name ) )
+					continue;
 
 				if ( ground.BlendFloor( x, y, Stamped( cell.Flags, angle, 0 ), textureFor( name ) ) is not { } blended )
 					continue;

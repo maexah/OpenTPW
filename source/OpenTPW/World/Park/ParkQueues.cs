@@ -200,6 +200,15 @@ public sealed class ParkQueues : Entity
 
 		_blended.Clear();
 		FloorCellsBlended = 0;
+
+		// The pieces' cells are put back to ground (ParkObjects.Remove says how), and Build stamps the ones still queue again.
+		if ( ParkGround.Current is { } ground )
+		{
+			foreach ( var (x, y) in _stamped )
+				ground.UnstampSplit( x, y );
+		}
+
+		_stamped.Clear();
 	}
 
 	private void Build( IParkInitialState? world )
@@ -248,7 +257,7 @@ public sealed class ParkQueues : Entity
 			Log.Warning( $"{ThemeName}: {unnamed} queue cells name a piece outside the game's own table of {Pieces.Length}" );
 
 		if ( Placed > 0 )
-			Log.Info( $"{ThemeName}: {Placed} queue cells stand in the park, {FloorCellsBlended} of them blended into the ground's tiles" );
+			Log.Info( $"{ThemeName}: {Placed} queue cells stand in the park, {FloorCellsBlended} of them blended into the ground's tiles, {StampedCells} stamped (the split flag off)" );
 	}
 
 	/// <summary>
@@ -300,8 +309,14 @@ public sealed class ParkQueues : Entity
 	/// <summary>The textures the pieces' floors were blended into, let go of with the pieces.</summary>
 	private readonly List<Texture> _blended = [];
 
+	/// <summary>The cells the pieces' footprint stamp took the split flag off (<see cref="ParkGround.StampSplit"/>), given back with them.</summary>
+	private readonly List<(int X, int Y)> _stamped = [];
+
 	/// <summary>The pieces' cells blended into the ground's tiles (<see cref="BlendFloor"/>).</summary>
 	public int FloorCellsBlended { get; private set; }
+
+	/// <summary>The pieces' cells the footprint stamp took the split flag off (<see cref="ParkGround.StampSplit"/>).</summary>
+	public int StampedCells => _stamped.Count;
 
 	/// <summary>How many vertices of the pieces the ground draped (<see cref="ProceduralConform.Drape"/>).</summary>
 	public int Draped { get; private set; }
@@ -318,7 +333,7 @@ public sealed class ParkQueues : Entity
 			return new Dictionary<uint, Texture>();
 
 		var blended = ProceduralFloor.Blend( file, file.RootNode, null, 1, 1, true, angle, (x, y, x, y), ground,
-			name => LobbyModel.TexturePath( name, directory, shared ), _blended, out var cells );
+			name => LobbyModel.TexturePath( name, directory, shared ), _blended, out var cells, _stamped );
 
 		FloorCellsBlended += cells;
 		return blended;

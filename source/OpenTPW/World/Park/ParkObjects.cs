@@ -66,6 +66,9 @@ public sealed class ParkObjects : Entity
 		/// <summary>How many cells of its floor were blended.</summary>
 		public int FloorCells { get; init; }
 
+		/// <summary>The cells its footprint stamp took the split flag off, given back when it is taken down (<see cref="ParkGround.UnstampSplit"/>).</summary>
+		public List<(int X, int Y)> Stamped { get; init; } = [];
+
 		/// <summary>The rim vertices the ground moved, and what the model measures against the ground now (<see cref="ProceduralConform.Measure"/>).</summary>
 		public int Conformed { get; init; }
 
@@ -285,7 +288,11 @@ public sealed class ParkObjects : Entity
 
 		_savedHoardings.Clear();
 
-		Log.Info( $"{themeName}: {Placed} of {wanted.Length} objects stand in the park, {FloorCellsBlended} floor cells blended into the ground's tiles" );
+		// The load's tile pass, after every stamp: a cell the file holds as ground is put back to it.
+		foreach ( var thingId in _standing.Keys.ToArray() )
+			RetileGround( thingId, ( x, y ) => ParkState.CellFor( world, x, y ).Type );
+
+		Log.Info( $"{themeName}: {Placed} of {wanted.Length} objects stand in the park, {FloorCellsBlended} floor cells blended into the ground's tiles, {StampedCells} stamped (the split flag off)" );
 	}
 
 	/// <summary>
@@ -304,6 +311,32 @@ public sealed class ParkObjects : Entity
 		Place( placed, catalogue );
 
 		return _models.Count > before;
+	}
+
+	/// <summary>
+	/// The tile pass over a thing's stamped cells, which runs after the stamp: a cell whose map type is 0 or 5 is retiled with set 0,
+	/// tile 55 (<c>FUN_00535dd0</c>, "The tile rule is two tables"), and <c>FUN_0046df50</c> copies its word from the private copy, so
+	/// it ends unstamped and takes the load's split flag again (the New Save's Staff Room at (42,23): its model covers (41,23) and
+	/// (42,23), which the file holds as type 0, and the live map has no <c>0x200</c> there). Answers how many cells it gave back.
+	/// </summary>
+	public int RetileGround( int thingId, Func<int, int, int> typeAt )
+	{
+		if ( !_standing.TryGetValue( thingId, out var standing ) || ParkGround.Current is not { } ground )
+			return 0;
+
+		var given = standing.Stamped.RemoveAll( cell =>
+		{
+			if ( typeAt( cell.X, cell.Y ) is not (<= 0 or 5) )
+				return false;
+
+			ground.UnstampSplit( cell.X, cell.Y );
+			return true;
+		} );
+
+		if ( given > 0 )
+			Log.Info( $"thing {thingId}: {given} stamped cells are ground by the map's type, given back their split flag" );
+
+		return given;
 	}
 
 	/// <summary>
@@ -335,6 +368,16 @@ public sealed class ParkObjects : Entity
 		// Its entities are gone, so nothing draws with its blended floor now.
 		foreach ( var texture in standing.Blended )
 			texture.Delete();
+
+		// Its cells are put back to ground, which takes the load's split flag again where it had one (FUN_0046df50, 0x0046e031..0x0046e06f).
+		if ( ParkGround.Current is { } ground )
+		{
+			foreach ( var (x, y) in standing.Stamped )
+				ground.UnstampSplit( x, y );
+		}
+
+		if ( standing.Stamped.Count > 0 )
+			Log.Info( $"thing {thingId}: its {standing.Stamped.Count} stamped cells given back their split flag" );
 
 		if ( standing.Blended.Count > 0 )
 			Log.Info( $"thing {thingId}: its {standing.Blended.Count} blended floor textures let go" );
@@ -375,6 +418,7 @@ public sealed class ParkObjects : Entity
 			var shared = $"levels/{ThemeName.ToLowerInvariant()}/sharetex";
 			var blended = new List<Texture>();
 			var floorCells = 0;
+			var stamped = new List<(int X, int Y)>();
 
 			var origin = ModelOriginFor( item, placed );
 			var turn = Turn( placed.Angle );
@@ -385,7 +429,7 @@ public sealed class ParkObjects : Entity
 				sharedTextureDirectory: shared,
 				clips: animations.AllClips,
 				opaqueFrames: file => ProceduralBase.ForItem( file, item.Shape ),
-				frameTextures: file => BlendFloor( file, item, placed.Angle, covered, shared, blended, out floorCells ),
+				frameTextures: file => BlendFloor( file, item, placed.Angle, covered, shared, blended, out floorCells, stamped ),
 				stand: file => conformed = StandOnGround( file, item, origin, turn ) );
 
 			// Put away whatever building it left behind before it is stood anywhere.
@@ -417,6 +461,7 @@ public sealed class ParkObjects : Entity
 				Footprint = footprint,
 				Blended = blended,
 				FloorCells = floorCells,
+				Stamped = stamped,
 				Conformed = conformed,
 				Measure = () => ProceduralConform.Measure( model.Source, item.Shape, origin.GetSystemVector3(), turn,
 					ParkGround.Current?.Heightfield )
@@ -505,6 +550,9 @@ public sealed class ParkObjects : Entity
 	/// <summary>The floor cells of the things standing blended into the ground's tiles (<see cref="BlendFloor"/>).</summary>
 	public int FloorCellsBlended => _standing.Values.Sum( standing => standing.FloorCells );
 
+	/// <summary>The cells of the things standing that the footprint stamp took the split flag off (<see cref="ParkGround.StampSplit"/>).</summary>
+	public int StampedCells => _standing.Values.Sum( standing => standing.Stamped.Count );
+
 	/// <summary>
 	/// The mesh a model's floor table is read from, or -1 where it blends none: a model exported with a procedural base (header
 	/// <c>0x8</c>) and a floor found, or the header's <c>0x80</c>, every cell, on the root.
@@ -520,7 +568,7 @@ public sealed class ParkObjects : Entity
 	/// floor found (or the header's <c>0x80</c>, every cell, on the root). None elsewhere, where the floor draws its own texture.
 	/// </summary>
 	private static IReadOnlyDictionary<uint, Texture> BlendFloor( ModelFile file, ParkItemCatalogue.Item item, int angle,
-		(int Left, int Top, int Right, int Bottom) footprint, string shared, List<Texture> made, out int cells )
+		(int Left, int Top, int Right, int Bottom) footprint, string shared, List<Texture> made, out int cells, List<(int X, int Y)> stamped )
 	{
 		cells = 0;
 
@@ -530,7 +578,7 @@ public sealed class ParkObjects : Entity
 		var everyCell = (file.HeaderFlags & 0x80) != 0;
 
 		var blended = ProceduralFloor.Blend( file, mesh, shape, shape.Width, shape.Depth, everyCell, angle, footprint, ground,
-			name => LobbyModel.TexturePath( name, $"{item.Directory}/textures", shared ), made, out cells );
+			name => LobbyModel.TexturePath( name, $"{item.Directory}/textures", shared ), made, out cells, stamped );
 
 		if ( cells > 0 )
 			Log.Info( $"'{item.Name}': {cells} floor cells blended into the ground's tiles" );

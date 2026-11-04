@@ -173,7 +173,13 @@ public static class ParkBuilding
 			Log.Info( $"Building: '{item.Name}' flags {flagged} track cells 0x10 for ride thing {addOnFor}" );
 		}
 		else
+		{
 			Stamp( state, footprint, cellX, cellY );
+
+			// The tile pass after the stamp, as the load's: a table cell the map holds as ground is put back to it (read in the
+			// load's live map; a purchase's own pass was not run in the original).
+			objects?.RetileGround( thingId, ( x, y ) => state.Record( x, y ).Type );
+		}
 
 		// And onto its anchor cell's own list, which is the ONE cell the save puts a placed thing on -
 		// through EnterCell, so a guest standing there is kept behind it rather than evicted. The rest

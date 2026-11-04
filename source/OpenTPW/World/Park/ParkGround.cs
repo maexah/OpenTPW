@@ -231,12 +231,21 @@ public sealed class ParkGround : ModelEntity
 		}
 	}
 
+	/// <summary>
+	/// The heightfield, read once: a rebuild keeps the one it has, whose cells a built thing's footprint stamp has taken the split flag
+	/// off (<see cref="StampSplit"/>), where a second read would give every cell its load-time flag back.
+	/// </summary>
+	internal static HeightfieldFile KeptOrRead( HeightfieldFile? kept, Func<HeightfieldFile> read ) => kept ?? read();
+
 	private void Build( IParkInitialState? world )
 	{
 		var path = $"levels/{_themeName.ToLowerInvariant()}/terrain/base.MD2";
 
-		using ( var stream = FileSystem.OpenRead( path ) )
-			Heightfield = new HeightfieldFile( stream );
+		Heightfield = KeptOrRead( Heightfield, () =>
+		{
+			using var stream = FileSystem.OpenRead( path );
+			return new HeightfieldFile( stream );
+		} );
 
 		var field = Heightfield;
 
@@ -593,6 +602,23 @@ public sealed class ParkGround : ModelEntity
 		_pathTextures[index] = texture;
 		return texture;
 	}
+
+	/// <summary>
+	/// The footprint stamp's write to a cell's live word (<c>FUN_00463060</c>, <c>0x0046352a</c>), which drops the split flag
+	/// <c>0x800</c> (<c>park-engine.md</c>, "The footprint stamp clears <c>0x800</c>"). The stamp runs only where the compositor is
+	/// on (<c>[0x007a1a8c] &amp; 0x4000</c>, <c>0x00463354</c>): here, where the ground has a tile size. Answers whether the cell was stamped.
+	/// </summary>
+	public bool StampSplit( int x, int y )
+	{
+		if ( _tileSize <= 0 )
+			return false;
+
+		Heightfield.ClearSplit( x, y );
+		return true;
+	}
+
+	/// <summary>A cell put back to ground takes its load-time split flag again (<see cref="HeightfieldFile.RestoreSplit"/>).</summary>
+	public void UnstampSplit( int x, int y ) => Heightfield.RestoreSplit( x, y );
 
 	/// <summary>
 	/// <c>TileCache_CompositeCell</c> (<c>0x00572630</c>) for one cell of a built thing's floor (<c>ProceduralBase_BlendFloor</c>): cell (x, y)'s ground tile at the

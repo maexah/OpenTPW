@@ -256,6 +256,9 @@ public sealed class HeightfieldFile
 	/// </summary>
 	private void FlagNonPlanarCells()
 	{
+		_bentAtLoad = new bool[CellsX * CellsY];
+		_stamped = new bool[CellsX * CellsY];
+
 		for ( var y = 0; y < CellsY; ++y )
 		for ( var x = 0; x < CellsX; ++x )
 		{
@@ -265,8 +268,52 @@ public sealed class HeightfieldFile
 			var b = Face( new N.Vector3( -CellSizeX, alongY - far, 0f ), new N.Vector3( 0f, alongX - far, -CellSizeY ) );
 
 			if ( N.Vector3.Dot( a, b ) < PlanarDot )
+			{
 				Cells[(y * CellsX) + x] |= SplitFlag;
+				_bentAtLoad[(y * CellsX) + x] = true;
+			}
 		}
+	}
+
+	/// <summary>Which cells the load flagged <see cref="SplitFlag"/>: the private copy <c>DAT_0079fc54</c> the original keeps of the live words (<c>FUN_00450950</c>, after the flagging).</summary>
+	private bool[] _bentAtLoad = [];
+
+	/// <summary>Whether the load flagged a cell <see cref="SplitFlag"/>, whatever has been done to it since.</summary>
+	public bool BentAtLoad( int x, int y ) => _bentAtLoad[(y * CellsX) + x];
+
+	/// <summary>The cells a footprint stamp has written since they were last ground (<see cref="ClearSplit"/>, <see cref="RestoreSplit"/>), bent or not: the original's <c>0x200</c> cells.</summary>
+	private bool[] _stamped = [];
+
+	/// <summary>Whether a footprint stamp holds a cell now.</summary>
+	public bool IsStamped( int x, int y ) => _stamped[(y * CellsX) + x];
+
+	/// <summary>
+	/// Takes <see cref="SplitFlag"/> off a cell, as the footprint stamp's whole-word write does (<c>0x0046352a</c>; <c>park-engine.md</c>,
+	/// "The footprint stamp clears <c>0x800</c>"). The other bits are left as they are: a stamp's own word is the picture's, which
+	/// <c>ProceduralFloor.Stamped</c> makes. Off the grid, nothing.
+	/// </summary>
+	public void ClearSplit( int x, int y )
+	{
+		if ( x < 0 || y < 0 || x >= CellsX || y >= CellsY )
+			return;
+
+		Cells[(y * CellsX) + x] &= ~(uint)SplitFlag;
+		_stamped[(y * CellsX) + x] = true;
+	}
+
+	/// <summary>
+	/// Gives a cell its load-time <see cref="SplitFlag"/> back where the load set it, as the original's retile of a cell put back to
+	/// ground does (<c>FUN_0046df50</c>'s copy of the private copy's word, <c>0x0046e031</c>..<c>0x0046e065</c>). Off the grid, nothing.
+	/// </summary>
+	public void RestoreSplit( int x, int y )
+	{
+		if ( x < 0 || y < 0 || x >= CellsX || y >= CellsY )
+			return;
+
+		_stamped[(y * CellsX) + x] = false;
+
+		if ( _bentAtLoad[(y * CellsX) + x] )
+			Cells[(y * CellsX) + x] |= SplitFlag;
 	}
 
 	/// <summary>The dot of the two triangles' faces under which the load calls a cell not planar (<c>[0x006fe39c]</c>).</summary>

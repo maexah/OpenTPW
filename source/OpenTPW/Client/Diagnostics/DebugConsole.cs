@@ -1655,6 +1655,43 @@ public static class DebugConsole
 					$"camera {ground.CameraHeight( groundX, groundY ):F4} bilinear {ground.HeightAtWorld( groundX, groundY ):F4}" );
 				break;
 
+			// Every cell's live flag word in the ground's heightfield, a row a line (y first, then the words from x = 0 in hex, a
+			// cell a footprint stamp holds starred), then the census: how many cells carry 0x800, how many the load flagged, how
+			// many of those a stamp has since cleared, and how many cells a stamp holds. Alexah's New Save in the original's live
+			// map: 589 flagged, 16 lost, 437 stamped (docs/exe/park-engine.md, "The footprint stamp clears 0x800"). `cellflags` alone
+			// prints the census only.
+			case "cellflags":
+				if ( ParkGround.Current?.Heightfield is not { } flagField )
+				{
+					Reply( "cellflags: only in a park" );
+					break;
+				}
+
+				var (flagged, bent, cleared, stampHeld) = (0, 0, 0, 0);
+
+				for ( var row = 0; row < flagField.CellsY; ++row )
+				{
+					var words = new List<string>();
+
+					for ( var column = 0; column < flagField.CellsX; ++column )
+					{
+						var word = flagField.FlagsAt( column, row );
+						var wasBent = flagField.BentAtLoad( column, row );
+						flagged += (word & 0x800) != 0 ? 1 : 0;
+						bent += wasBent ? 1 : 0;
+						cleared += wasBent && (word & 0x800) == 0 ? 1 : 0;
+						stampHeld += flagField.IsStamped( column, row ) ? 1 : 0;
+						words.Add( word.ToString( "x4" ) + (flagField.IsStamped( column, row ) ? "*" : "") );
+					}
+
+					if ( parts.Length > 1 )
+						Reply( $"cellflags row {row}: {string.Join( ' ', words )}" );
+				}
+
+				Reply( $"cellflags: {flagField.CellsX} x {flagField.CellsY} cells, {flagged} carry 0x800, {bent} flagged at load, {cleared} of those cleared since, {stampHeld} cells held by a stamp (starred in the rows); " +
+					$"stamped: objects {ParkObjects.Current?.StampedCells ?? 0}, queue pieces {ParkQueues.Current?.StampedCells ?? 0}" );
+				break;
+
 			// Walking on the ground, driven by hand, because `camcorder x y` TELEPORTS - it calls
 			// StandAt - and so crosses no cell edge at all, and what happens BETWEEN two cells is the question.
 			//
