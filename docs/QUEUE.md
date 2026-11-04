@@ -563,17 +563,19 @@ filed the items that cite it.
   prove it by putting the cause back (`VERIFYING.md`, the flaky-test rule).
   Piece Q866 (ticked) ran sixteen suites (ten plain, six with the generators a lost scratch patch seeded; not every generator in the product: `ParkAudioScripts.cs:38`, `ParkAudio`, `ParkCarSounds`, `Advisor`, `LobbyAudio`, `LobbyFlyer` stood unseeded) and stored the loop; what is left is the failure itself, still unnamed. Untested: the real-clock zone under a
   machine load heavier than three suites at once. Next failure anywhere: `tools/harness/lib/suiteloop.sh OUTDIR [N]` keeps every run's output, so its file names the test.
-- [ ] **Q860. What the original's queue lay writes into a corner's counter, and what reads it. Decode first.** From Q153. The walk the queue button
-  and the sale's drain make (`FUN_00530120`, built as `ParkPathBuilding.QueueEnds`) sets every queue or entrance cell's counter
-  (`+0x20`), 1 on a corner and nought elsewhere (`0x005302be`..`0x005302cd`, through `FUN_005228a0`); the shipped Belly Bounce's corner (52,22) holds 1 already, but a queue laid here by
-  the tool leaves its corners at nought until the button is pressed (Q254's relay: `cell 50 22` and `cell 50 23` read `overlap 0` before, 1 after, `q153/run-final-relay.out`).
-  Where the original writes it is not `FUN_00535dd0` (no `+0x20` write): `FUN_005346d0` does `inc WORD [esi+0x20]` (`0x005346f5`) when the cell already is the wanted type, so a re-stamp
-  adds 1 (the code here writes no counter on a re-stamp, `ParkPathBuilding.cs`'s "Already queue" arm; `docs/exe/park-engine.md` already says so). Something reads it: the clear's queue arm
-  of `FUN_005367a0` (type table `0x536c2c` -> `0x536999`): an unstepped press or a corner sets it -1 (`0x005369ec`), a non-corner decrements it (`0x005369f4`), and it stays while >= 0
-  (`0x00536ab2`), so a corner's 1 is ignored and a former corner holding 1 survives one press. `saves-fullsim`: every queue corner holds 1 (14 fantasy, 45 jungle) and 6 straights hold 1; the source of
-  the 1 is another caller of `0x5228a0` (`0x530974`, `0x53099b`, `0x530cfa`, `0x530d21`, `0x530d34`, `0x531921`, `0x53b799`), so writing 1 on the button's corners moves toward the original.
-  Three leftovers belong here: `ParkPathBuilding.LiftQueue` reads no counter where the clear does; `EditQueue` drops the walk's pending list (the original keeps it at `0x0081b740`; its
-  Backspace, `0x0040beb3` -> `FUN_0052fe50`, would pop the edited queue corner by corner, where ours counts `BACKSPACE_UNDO_QUEUE_RUN`, `Level.cs`); and a sideshow's or feature's window, when built, must not offer the button. Decode the lay's writes and the readers; build what the original reads.
+- [ ] **Q860. A queue cell's counter is written and read as the original's (decoded in Q896).** From Q153. The 1 a corner
+  holds is the queue tool's re-stamp: each click's run starts on its anchor, already queue, and the stamp `FUN_005346d0` adds 1
+  (`0x005346f5`), so the placer's node and every clicked cell (each corner, and a straight clicked part way) hold 1; the walk
+  (`FUN_00530120`, built as `QueueEnds`) then sets corners 1 and the rest 0; the one reader in play is the clear's queue arm (`park-engine.md`,
+  "A queue cell's counter"). The track walks' calls of `0x5228a0` write the track record's counter, not the queue's. Build: the lay's
+  "Already queue" arm (`ParkPathBuilding`) adds 1 as the path arm does; `LiftQueue` reads the counter as the clear does (unstepped or
+  a corner -1, else one less, kept while >= 0, removed under force whatever it holds); and Backspace on a queue
+  (`BACKSPACE_UNDO_QUEUE_RUN`, `Level.cs`): `EditQueue` keeps the walk's pending list as the original does (`0x0081b740`), and
+  Backspace (`0x0040beb3` -> `FUN_0052fe50`) clears from the last click back to the one before with the stepped clear, which
+  keeps that click's cell (it is at 1 and has lost its link). `tools/harness/lib/queuerun.py` gives the original's answer for any
+  made-up run. Confirm (lane A): lay a two-click queue in both games and read the corner's counter (here `cell X Y`, there the
+  saved record's `+8`, `parkfile.py`): predicted 1 before the button is pressed; press Backspace once and photograph the queue
+  ending at the corner. Also: a sideshow's or feature's window, when built, must not offer the queue button.
 - [ ] **Q155. Every script's speed word is 50, where a placed thing's is its own. Decode first.** Found by the
   2026-09-26 staleness audit. The object constructor pushes the item's operating speed into its script (`FUN_0055a300`
   at `0x004db534`), and the ride window's speed slider writes it (`FUN_004dd6e0`); `docs/exe/park.md`, "The clock, the

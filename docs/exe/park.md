@@ -1695,8 +1695,8 @@ nothing; the click (`FUN_004879d0`: the cell's type is looked at from `0x00487f3
 installs mode 0xe (karts) or 0x13 (water). That mode's release (`0x00526c19`..`0x00526c4d`), when the ride's `+0x2c` is nought, walks
 the ride's track from the mouth (`FUN_00530830`): in 2-cell steps along laid track (0xb, 0x10), turning at a bend the
 way its links leave it (`mask ^ opposite( heading )`), until a cell with no link onward or the station met from its far
-side; the pending list `0x0081b740` is the mouth, each bend and the cell it stops on, which is the anchor; each cell's
-overlap counter `+0x20` is set, 1 at a bend or crossing, 0 on a straight or an end (`FUN_005228a0`). Then
+side; the pending list `0x0081b740` is the mouth, each bend and the cell it stops on, which is the anchor; each track
+record's overlap counter `+0x20` (`TrackOverlapCounter`, not the map cell's: `park-engine.md`, "A queue cell's counter") is set, 1 at a bend or crossing, 0 on a straight or an end (`FUN_005228a0`). Then
 `FUN_0052f580( 0xb )` (or `0x10`), which keeps the anchor. With `+0x2c` set the same mode takes two clicks and joins the
 loop at them (`FUN_00539760( 0xe )`, `FUN_0052b400`), not read further. **A click** on release: a run the preview
 flagged red (`DAT_00816d48`) lays nothing, plays 0xaf and puts the tool away (`0x00524a63`..`0x00524acd`); otherwise

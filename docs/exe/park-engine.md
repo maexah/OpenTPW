@@ -5860,6 +5860,56 @@ force (`0x00536825`). Nothing is refunded. So Backspace takes up exactly what a 
 Lost Kingdom has 14 non-zero path cells, all corners and junctions — eleven at 1, (47,21), (48,21) and
 (48,28) at 2 — and the queue node (52,22) at 1.
 
+#### A queue cell's counter: what writes it, what reads it
+
+Decoded for Q896 (Q860's decode), read in the private Ghidra copy and run under unicorn: the original's own
+stamp, line walker, op passes, queue walk and clear on a made-up world (`q860/scripts/q860emu.py`, `q860/emu8/run.log`;
+predictions C1 to C6 in `q860/PREDICTION.txt`). **The 1 a queue corner holds is the queue tool's own re-stamp:
+every click's run starts on the anchor, which is already queue, so the stamp adds 1 to it.**
+
+- **The accessors.** The cell class's three are `0x00522890` (`dec [ecx+0x20]`), `0x005228a0` (set) and
+  `0x005228b0` (get). They serve both layers, the map cell (`0x44`, `[0x007cf83c] + 0x294`) and the track
+  record (`0x28`, `[0x007cf83c] + (id + 0x6cde) × 0x28`), which share the field offsets. **Only the queue
+  walk `FUN_00530120` sets a map cell's** (`0x005302c2`, `0x005302cd`; `ECX` is the `0x44` cell formed at
+  `0x00530265`). The setter's other callers (`FUN_00530830` and `FUN_00530b70`, the track walks;
+  `FUN_005311c0`; `Track_ClearCell` `FUN_0053b280`), and every caller of the get and the decrement
+  (`FUN_0053bc60`), pass a track record: that is the track's counter (`ParkTrackTool`'s
+  `TrackOverlapCounter`), not a queue's.
+- **Every other write to a map cell's** is direct, in the cell family: the stamp's `inc` (`0x005346f5`), the
+  clear's (`0x00536812`..`0x00536834` for a path, `0x005369ec`..`0x00536abf` for a queue), the design-map cell
+  set-up `FUN_00536490` (nought, `0x0053657d`), and the save's serialiser `FUN_004d0b30`. Ghidra's sweep of
+  every function that addresses map cells by `+0x294` finds a 16-bit `+0x20` access in the stamp and the clear
+  only (`q860/sweep20.txt`). Eighteen 16-bit `+0x20` accesses elsewhere in the image (`0x004642e6`,
+  `0x005f87a2`, `0x00643adc`..`0x006d6a6a`) sit in unrelated code and were not traced to their structures.
+- **The stamp** `FUN_005346d0( type )`, on a cell already that type, adds 1 and answers 1 having charged
+  nothing (C1: 0, then 1, then 2); on another type it writes the type and leaves the counter alone.
+- **A queue run** (the click's passes `0x87`, the stamp with type 3, `0x80`, `0x82`, `0x85`, `0x86`, `0x83`,
+  `0x81`, each over the whole line through `FUN_00536100`, whose first cell is the anchor): the stamp pass meets
+  the anchor already queue, so **each click's anchor gains 1** and every cell laid fresh keeps nought (C2). The
+  placer's node is the first click's anchor, so it holds 1 after one click, as the shipped (52,22) does; each
+  later click's anchor is the last one's end, so every corner holds 1, and so does a straight where the player
+  clicked part way along. That fits `saves-fullsim` (every queue corner at 1, 14 in fantasy and 45 in jungle,
+  and 6 straights at 1), read from the rule, not replayed.
+- **The walk** `FUN_00530120` (the queue button, a click on a queue cell, Move and the sale's drain) overwrites
+  every type 3 or 9 cell it passes: a corner (`FUN_0053ae00`, two perpendicular cardinals) 1, anything else 0
+  (C3: a straight node at 1 goes to 0, the corners keep 1). So after the button only the corners hold 1.
+- **The one reader in play is the clear** `FUN_005367a0( dx, dy )` (the save's serialiser apart), its queue arm (type table `0x536c2c` to
+  `0x00536999`): an unstepped call (0, 0) or a corner sets −1 (`0x005369ec`), anything else decrements
+  (`0x005369f4`); under force (`DAT_0081d7a8`) the counter is zeroed and the cell removed whatever it held
+  (`0x00536a07`); otherwise a counter still `>= 0` keeps the cell (`0x00536ab2`), and a negative one is zeroed
+  and the cell removed (`0x00536abf`). C4: a straight at 1 is kept at 0; a straight at 0, a corner at 1, an
+  unstepped straight at 3 and a forced straight at 5 are removed; a one-link end at 1 is kept at 0. **A corner's 1
+  is never read while it is a corner** (a corner is −1 whatever it holds); it counts once the cell has lost a link.
+- **What that buys is Backspace.** `FUN_0052fe50` clears the line from the last click T back to the click before
+  it, P, with op `0x32` (`ClearCell`, stepped, not forced), P last. Each removed cell unlinks its neighbours, so
+  when P is reached it has lost its link toward T and is no corner: its 1 becomes 0 and **P stays, the end of the
+  queue as it was before that click** (C5: B kept, mask `0x40`, the first line untouched). With P at nought,
+  which is what OpenTPW's lay leaves, P goes too and its own neighbour loses its bit (C6').
+
+OpenTPW: the lay's "Already queue" arm (`ParkPathBuilding`) writes no counter; `LiftQueue` (the console's
+`delqueue`) removes a queue cell whatever it holds; Backspace on a queue is `BACKSPACE_UNDO_QUEUE_RUN`, counted.
+`QueueEnds` already writes the walk's 1 and 0. The build is Q860's.
+
 **`mFlags & 0x40` marks land outside the park** — the meaning is inferred from a census. `FUN_00536490` sets it as
 the map loads on every cell but the first paths (`0x00536553`, `0x005365b5`), and `FUN_005311c0` tests it (`FUN_00535db0( 0x40 )`) and clears it (`FUN_0053a530( 0x40 )`, first at `0x00531327`), and Buy Land's apply arm reaches that (tool `0x39` tested at `0x00525c4e`, `FUN_005327e0` at `0x00525d52`, the call at `0x005328b4`), as does the terrain initializer `FUN_005323f0` (`0x00532557`). 13,878 of Lost Kingdom's 16,384 cells carry it, all
 of mType 7, 0, 2 or 30; every path, queue, footprint and entrance is among the 2,506 without it. **Every track record's `mNeighbours` is 0**, so the corner
