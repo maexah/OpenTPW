@@ -205,4 +205,26 @@ public class ParkGuestSoundHeightTests
 			AssertHeardOnThePlateau( voices(), "the till" );
 		} );
 	}
+
+	/// <summary>A ride's settle-up sounds the till at the pinned guest's x and y and nought, through the game's own <c>Charge</c> and the default place.</summary>
+	/// <remarks><b>Mutation:</b> <see cref="ParkRideOperation"/>'s till site taking <see cref="ParkGuestSprites.StandsOn"/> for the height fails here. No walk is handed in, so the guest is not put down at the exit and the pin holds.</remarks>
+	[TestMethod]
+	public void ARidesSettleUpOnRaisedGroundSoundsTheTillAtNought()
+	{
+		OnThePlateau( ( park, guest, voices ) =>
+		{
+			guest.SetState( PeepState.Riding, tick: 1, new Random( 1 ) );
+
+			var ride = park.World.Objects.Single( o => o.ThingId == BellyBounce ) with { PricePerUse = 20 };
+			using var stream = data.OpenRead( "levels/jungle/rides/bouncy/bouncy.RSE" );
+			var script = new RideScript( new RideScriptFile( stream ) );
+
+			script.Set( ParkRideOperation.DismissVariable, Sixteen );
+
+			var operation = new ParkRideOperation( park.State, park.People.Peeps.ToDictionary( peep => peep.ThingId ) );
+
+			Assert.IsTrue( operation.Dismiss( script, ride, tick: 9, new Random( 1 ) ), "the guest is let off" );
+			AssertHeardOnThePlateau( voices(), "the ride's till" );
+		} );
+	}
 }
