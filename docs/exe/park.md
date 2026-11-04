@@ -2148,8 +2148,32 @@ straight over water or hidden ground carries flag 1 (row 11, `ho_fos4`). The mod
 (51,17), to slot 109, (43,17), in Lost Kingdom), and the straights' variants follow it: in all 34 fresh Lost Kingdom parks
 the original made (Alexah's and 33 under Proton), no two straights next in the walk share a variant, where in row order 31 of 34 have such a pair and in column order all 34; 27.4 variants a park on average (27.9 for one roll a straight in that order).
 Everything else is the same in all 34: 107 anchors, 10 `ho_fob1`, 6 `ho_fob2`, one `ho_fos4`, 90 among the three
-`ho_fos`. The variants differ from park to park, so the generator is seeded each time. How often the laying chooses an
-anchor before the last time, so how far it moves the generator, is not read.
+`ho_fos`. The variants differ from park to park, so the generator is seeded each time.
+**How often the laying draws** (Q872, read in a private copy of the Ghidra project, `q872/dump1` to `dump4`): once for
+each straight that draws, at its last retile, in the walk's order, and nothing else of the laying draws. Each click is
+`FUN_00524960` in mode 0x19 (`BuildTool_SetMode( 0x19, 1 )` clears the drag's start, so the first click only sets it),
+and each later click runs `Track_RunPass` (`FUN_0053aac0`, every second cell from the last click to this one, both
+ends) six times, with the ops 0x19, 0x80, 0x82, 0x85, 0x86 and 0x81 (`0x00525b06`..`0x00525bc1`). In
+`Track_CellOp` (`FUN_005370e0`, switch at `0x0053811f`): 0x19 stamps the cell type 25 (`FUN_00538fc0`; a cell already
+25 only counts the overlap, `+0x20`); 0x80 (`FUN_00539220`) links the anchor to the one before it, both ways, by the
+pass's step (the tables at `0x007cdba0`..`0x007cdbd4` are the four unit steps), so during the walk an anchor's mask
+(`+0x22`) holds the walk's links alone; 0x82 (`FUN_00539670`) sets its direction to the pass's step; 0x85 sets flag 1
+on a straight over water or hidden ground; 0x81 (`0x00538181`) retiles it (`Track_RetileCell`, `0x005387d5`), the one
+arm that does. The chooser draws on every retile of a straight with flags `& 0xf` clear, whether its variant is added or
+not. So a segment's middle anchors are straights at their one retile and draw then; its last anchor has one link when
+the segment retiles it (no draw), and the next segment's first retile, its last, finds a corner (no draw) or a
+straight (one draw). After the walk, `FUN_00531040( 1 )` marks every anchor reached from entrance B's end (`0x20`)
+and `FUN_005311c0` clears only an anchor it did not mark (`0x0053188d`, then `Track_ClearCell`, which retiles); its
+other retiles are the map's tiles (`FUN_005365d0`), which draw nothing. `FUN_0052ba50( B's end, A's end, 4, 1 )`
+retiles an anchor only where its direction differs from the walk's (`0x0052bbf4`) or at a cell of three or more links
+(`0x0052bb17`), neither of which a simple walk makes; the gate's two rows are map retiles. **Measured** in the
+original's own files (`tools/harness/lib/wallseed.py`, `q872/run-p*.txt`): in all 96 fresh Lost Kingdom parks it made
+on this machine (`original/freshfs.sh make`), the file's `mRandomSeed` stepped back exactly 88 draws (the park's 88
+drawing straights: 107 anchors less 16 corners, the two ends and the one flagged straight) is a state whose rolls give
+every later straight's row, and no other count up to 2000 is; two draws a straight, one more a corner, or the walk
+reversed fit none. Over all 2^32 states, five of the parks (`q872/run-p1.txt`) have one state each that fits, and it
+lies 88 draws before the file's seed. So the generator stands, at tick nought, exactly one draw a drawing straight past where
+the laying found it.
 **The model:** `FUN_00522f20` (`Hoarding_MakePieceModel`)`( x, y, family, row, rotation, restoring )` turns the piece by the angle 360 less the rotation (360 folded to 0) and moves
 the cell one on by that angle: 90 moves y, 180 x and y, 270 x (so a rotation of 90 moves x and one of 270 moves y), then makes the model with `FUN_00463060( table[row].model, 0x33a,
 { x, y, angle, 0x008179f8 }, table[row].mask, ..., -1, 0 )`: flags `0x33a` with a footprint, so the height is the middle of
@@ -2179,8 +2203,9 @@ then frees or hides a 173xx record no anchor claimed (a slot lacking `0x10000`) 
 model, on its cell moved by its angle, at the record's angle (360 less the turn), and no 173xx record lacks an anchor.
 **OpenTPW builds it** from the records (`ParkBoundaryHoarding`); a park made fresh chooses each anchor's piece once, in
 the walk's order, with the chooser above (`FreshParkBoundary`, `ParkBoundaryHoarding.PieceFor`, `PieceOf`; Q656), its
-straights drawing the fresh park's generator; the laying's draws before that are counted,
-`FRESH_BOUNDARY_LAYING_DRAWS`. Measured: the stock park's wall right of the gate and along row 13 in both games at the
+straights drawing the fresh park's generator, as often as the original's laying does (above; this game's fresh park's
+file fits after 88 draws too, `q872/run-p7.txt`); `FRESH_BOUNDARY_LAYING_DRAWS` still counts the laying until Q680
+takes it out. Measured: the stock park's wall right of the gate and along row 13 in both games at the
 same cameras (Q620, `q620/overlay-gate-final.png`); a fresh park's in both games (Q656).
 
 **Alexah's Full Simulation jungle drew none until Q810, and why (Q811, `q806/`, every prediction in its `PREDICTION.txt`, 7 of 7 held).**

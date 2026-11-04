@@ -213,7 +213,8 @@ belongs to or at the end. Grep it by area or Q-number; never read it whole.
   fresh park's generator; the 107 anchors' masks, directions, flags, rows and turns are the original's own fresh park's
   (its 22 and 25 taken as 2), the same in all 34 it made. In this game's fresh park: 107 on 107, 10 `ho_fob1`, 6
   `ho_fob2`, one `ho_fos4`, 61 `ho_fos1`, 15 `ho_fos2`, 14 `ho_fos3`; beside the gate it lies on the original's fresh
-  park's (`q656/overlay-gate.png`). The laying's draws before the last choice are counted, `FRESH_BOUNDARY_LAYING_DRAWS`.
+  park's (`q656/overlay-gate.png`). Its straights draw the generator as often as the original's laying, 88 in Lost Kingdom (Q872: the original's 96 fresh
+  park files and this game's each fit after 88 draws); `FRESH_BOUNDARY_LAYING_DRAWS` still counts the laying (Q680).
 - The original runs under Proton as a reference (Q168, `docs/TOOLING.md`); the console's `admit`/`send` place a guest (Q184).
 - **A tester's `console.log` says what a bug report needs, and nothing about who sent it** (Q751): its head names the
   build and commit (`weekly-YYYY-MM-DD` from the weekly workflow, `local` otherwise), the system, processor and
