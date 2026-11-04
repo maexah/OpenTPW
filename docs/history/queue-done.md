@@ -12013,6 +12013,8 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `lobby/lobby.txt` through `FileSystem`, finds its one `ISLANDFOV` line, and holds the caller's result to that line; two
   tests with no game read a folder holding a `lobby.txt` of 60, 80 and 25 and a stand-in `lobby.wad` without it (70, 20, 100).
   Five bugs put back in `ReadSettings()` itself (`q893/mutations.py`, `mutate.py`): all fail a test. No game run (Q211 says so). **Done 2026-11-04.**
+- [x] **Q884. Q949's decode: where the original's live cell word loses `0x800`.** Done 2026-11-04 (run 20, lane A, `alexah/885-footprint-stamp-clears-0x800`).
+  The footprint stamp, `Model_MakeAndStampFootprint` (`FUN_00463060`), writes a stamped cell's whole word, `(word & 0x6) | mirror and turn | 0x281` (`0x0046352a`), so `0x800` goes; a path (`Terrain_SetCellTile`'s path arm) keeps it; a cell retiled to ground takes it back from the private copy, which `Terrain_CopyHeightfield` made after the flag was set (`park-engine.md`, "The footprint stamp clears `0x800`"). Measured in the original on Alexah's New Save (`q949/orig/run1`, frame `g-32.png`): 437 live cells carry the stamp's `0x200`, none of them `0x800`, and the 16 that lose it are all among them; by map type, all of 3, 9 and 10 and 278 of 355 of type 4. Predictions D1 and D2 held (`q949/PREDICTION.txt`). The stamp in play, the path in play and the restore were read, not run.
 
 ## B. Docs and comments
 
