@@ -82,10 +82,12 @@ public class ScriptSoundTests
 
 	/// <summary>
 	/// The seed of the script sounds' draws in every test here. Unseeded, the held-chain test's last hold frame fell on the
-	/// very millisecond the newest unheard child was due about 1 run in 440 (17 of 7,500 seeds, Q1022), where the park's
+	/// very millisecond the newest unheard child was due about 1 run in 470 (17 of 8,000 seeds, Q1022), where the park's
 	/// audio empties the chain's list and the resume frame makes the next child at once.
 	/// </summary>
 	private const int ScriptSeed = 942;
+
+	private int _scriptSeed = ScriptSeed;
 
 	private readonly List<Voice> _before = [];
 
@@ -117,7 +119,7 @@ public class ScriptSoundTests
 		try
 		{
 			ready.SetValue( null, true );
-			park = new ParkAudio( Theme ) { ScriptRandom = new Random( ScriptSeed ) };
+			park = new ParkAudio( Theme ) { ScriptRandom = new Random( _scriptSeed ) };
 			play( park );
 		}
 		finally
@@ -736,12 +738,16 @@ public class ScriptSoundTests
 			Assert.IsNull( lava.Voice, "its newest child is an unheard one" );
 
 			var due = lava.NextAt;
+			var pruned = ParkAudio.Milliseconds( Time.Now ) == ParkAudio.Milliseconds( due );
+
+			Assert.AreEqual( pruned, lava.ListEmpty, "the list empties only when the hold's last frame is the newest child's due millisecond" );
 
 			Time.Now = due;
 			Frame( park, held: false );
 
 			Assert.IsFalse( first.IsHeld, "the resume lets the held child go" );
-			Assert.AreEqual( 1, lava.Samples, "not before the newest child's time" );
+			Assert.AreEqual( pruned ? 2 : 1, lava.Samples,
+				pruned ? "its list pruned on the due millisecond, the next child at once" : "not before the newest child's time" );
 
 			Time.Now = due + 0.001f;
 			Frame( park, held: false );
@@ -1618,9 +1624,13 @@ public class ScriptSoundTests
 	/// comes at the time the running clock gives it, alone. The original's service ticks it through a pause and its
 	/// mixer plays the children at nought (<c>docs/exe/audio.md</c>, "The pause substitution").
 	/// </summary>
-	[TestMethod]
-	public void AHeldParksHeldChainMakesItsChildrenUnheardAndNoneBurstsOnResume()
+	[DataTestMethod]
+	[DataRow( ScriptSeed )]
+	[DataRow( 2199 )]
+	public void AHeldParksHeldChainMakesItsChildrenUnheardAndNoneBurstsOnResume( int seed )
 	{
+		_scriptSeed = seed;
+
 		var nowBefore = Time.Now;
 
 		WithAParksAudio( park =>
@@ -1671,12 +1681,16 @@ public class ScriptSoundTests
 			Assert.IsNull( staff.Voice, "its newest child is an unheard one" );
 
 			var due = staff.NextAt;
+			var pruned = ParkAudio.Milliseconds( Time.Now ) == ParkAudio.Milliseconds( due );
+
+			Assert.AreEqual( pruned, staff.ListEmpty, "the list empties only when the hold's last frame is the newest child's due millisecond" );
 
 			Time.Now = due;
 			Frame( park, held: false );
 
 			Assert.IsFalse( first.IsHeld, "the resume lets the held child go" );
-			Assert.AreEqual( 1, staff.Samples, "not before the newest child's time" );
+			Assert.AreEqual( pruned ? 2 : 1, staff.Samples,
+				pruned ? "its list pruned on the due millisecond, the next child at once" : "not before the newest child's time" );
 
 			Time.Now = due + 0.001f;
 			Frame( park, held: false );

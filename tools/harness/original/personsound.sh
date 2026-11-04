@@ -7,6 +7,7 @@
 # MODE plateau  only a sprite whose z is over ZMIN (default 500: the stock park's plateau row, cells (40..64, 58), ground 20.0)
 #      riders   only a person whose +0x28 is set (a rider a ride holds, by the decode; the sprite's own +0x28 is a float, not that flag); 'all' every person (a hit holds the game for ~ms: use HITS)
 #      putoff   only kids effect 0x80 (a guest put off: a sale of a ride clears the rider's +0x28 BEFORE it sounds, 0x004fb3df, so `riders` cannot see it: Q1005)
+# BRK_INIT sets $rf = 0 first: with $rf void the riders condition errors and the first hit would pass unfiltered (Q856).
 # HITS counts the PS and SPE lines together (default 60); SECS default 150. Output on stdout; run it beside the game (brk.sh's rules).
 set -euo pipefail
 H="$(cd "$(dirname "$0")" && pwd)"; M="${1:-plateau}"; ZMIN="${ZMIN:-500}"

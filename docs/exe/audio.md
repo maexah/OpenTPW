@@ -848,9 +848,9 @@ breaks on `Person_PlaySound` and on `Sound_PlayEffect` when its return is `0x004
 mechanic's `+0x88`/`+0x90` to (505, 585), where the sprite's drawn height `+0xe8` reads 20.000. In two runs of 100 s (f, i) all 41 of its sounds
 (effect `0xa2`, the mechanic walking, category 5) read the sprite at (505.000, 0.000, 585.000) and hand `Sound_PlayEffect` the ints (505, 0, 585): the height is the sprite's own
 `+0x8c`, exactly nought, and not the ground's 20. The cut is `_ftol`'s, toward nought: in the unfiltered run a guest at the Spray's till (sprite height 0.983895) hands 0. With the
-person object's `+0x28` set (the test at `0x004fa087` is the person's; the sprite's own `+0x28` is a float, 0x4198c9e8 on a guest at the Kiosk) 20 sounds in 150 s were all guests at the
-Spray's or the Kiosk's till (heights 0.983895 and 0.0, both handed as 0): none was seated on a ride's seat, so a rider's height is read by a sale instead (the next paragraph).
-Ours, same cells (`q856/ours1/`, this build, off-screen): 48 staff voices on the plateau, all z 0.0, the ground there 20.0000. Both games sound a walker at nought, so nothing was built.
+person object's `+0x28` set (the test at `0x004fa087` is the person's; the sprite's own `+0x28` is a float, 0x4198c9e8 on a guest at the Kiosk) 20 sounds before the run's 40-line cap stopped it at 106 s: 19 with the person's `+0x28` set, all guests at
+the Spray's or the Kiosk's till (heights 0.983895 and 0.0, both handed as 0); the first, a researcher walking (`0xa8`, `+0x28` clear), passed while the filter's condition was still in error: none was seated on a ride's seat, so a rider's height is read by a sale instead (the next paragraph).
+Ours (`q856/ours1/`, this build, off-screen; the staff put on cells (40..62, 58), where the ground reads 20.0000): 48 staff voices on raised ground (36 on sampled raised ground, none on flat; x 386..642, y 475..694, ground 14.5 to 20 where `q847/probe1/` read it), all z 0.0. Both games sound a walker at nought, so nothing was built.
 
 **A seated rider's put-off, in the original** (Q1005, 2026-11-04, `q1005/`; `tools/harness/original/riderputoff.sh`; `personsound.sh putoff`). A sale puts every rider in raw state `0x10` off in one
 frame, and clears the person's `+0x28` first (`0x004fb3df`) before kids `0x80` goes through `Person_PlaySound` (`0x004fb3f5`), so `personsound.sh riders` cannot see it: the put-off is read by its
