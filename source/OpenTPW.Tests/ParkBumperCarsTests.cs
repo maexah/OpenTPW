@@ -728,3 +728,55 @@ public class HotPotScriptTests
 		Assert.AreEqual( 92680, ParkBumperCars.Distance( 0x10001, -0x10001 ), "both halved twice, the root truncated before the shift" );
 	}
 }
+
+/// <summary>
+/// <c>BUMP 5</c> on a kart ride, which has no bumper record (<c>docs/exe/park.md</c>, "<c>BUMP</c> and <c>TOUR</c>"; Q883):
+/// <c>GoKarts.RSE</c> words 15 to 18 are <c>BUMP 5, 0</c> and <c>BRANCH_Z -&gt;15</c>, so the script waits there until the
+/// thing's <c>mIsTrackRideValid</c> is non-zero.
+/// </summary>
+[TestClass]
+public class KartScriptBump5Tests
+{
+	private RideScript Script( int trackRideValid )
+	{
+		using var stream = GameData.Required().OpenRead( "levels/jungle/rides/gokarts/GoKarts.RSE" );
+
+		var script = new RideScript( new RideScriptFile( stream ) )
+		{
+			TrackRide = 0x104,
+			TrackRideValid = trackRideValid
+		};
+
+		return script;
+	}
+
+	private static int Run( RideScript script )
+	{
+		var furthest = 0;
+
+		for ( var i = 0; i < 40; ++i )
+		{
+			script.Turn( i * 250f );
+			furthest = System.Math.Max( furthest, script.Position );
+		}
+
+		return furthest;
+	}
+
+	[TestMethod]
+	public void AClosedLoopLetsTheScriptPastBump5()
+	{
+		var open = Script( 0 );
+		var closed = Script( 1 );
+
+		Unimplemented.Forget();
+
+		var stuck = Run( open );
+		var past = Run( closed );
+
+		Assert.IsTrue( stuck <= 18, $"an open loop holds the script in words 15 to 18, it reached {stuck}" );
+		Assert.IsTrue( past > 18, $"a closed loop lets it past, it reached {past}" );
+		Assert.IsFalse( Unimplemented.Summary.Any( entry => entry.What.EndsWith( "BUMP at 15" ) || entry.What.EndsWith( "BUMP at 26" ) ),
+			"BUMP 5 is answered, not counted as a no-op" );
+	}
+}

@@ -2505,14 +2505,23 @@ public sealed class RideScript
 	/// <para>
 	/// The selector is fetched unresolved, as <c>COAST</c>'s is: a variable or a value outside 1..17, and 15, whose
 	/// table entry is the error logger, are the engine's "RSSE: Unknown bumper ride command", counted. <b>Only the
-	/// bumper family is built</b>: on a go-kart or water ride every <c>BUMP</c> is a counted no-op, because their cars
-	/// end a go by steering to buoys, which nothing here does.
+	/// bumper family is built</b>: on a go-kart or water ride every <c>BUMP</c> but 5 is a counted no-op, because their
+	/// cars end a go by steering to buoys, which nothing here does. <c>BUMP 5</c> reads the thing, not a record
+	/// (<c>0x00554836</c>), so every ride answers it.
 	/// </para>
 	/// </summary>
 	private void Bump( RideInstruction instruction, IReadOnlyList<RideOperand> operands )
 	{
 		var selector = operands[0].Kind == RideOperandKind.Literal ? operands[0].Value : -1;
 		var argument = operands[1];
+
+		if ( selector == 5 )
+		{
+			// The thing's mIsTrackRideValid into the register, no record read (0x0055483c): answered before the
+			// record test, for a kart or water ride as for a bumper ride.
+			Result = TrackRideValid;
+			return;
+		}
 
 		if ( Bumpers is null || Bumpers.RideOf( TrackRide ) is null )
 		{
@@ -2548,10 +2557,6 @@ public sealed class RideScript
 				// The car's pointer in the original; its pool slot plus one here, which only a branch tests.
 				var car = Bumpers.Launch( handle );
 				Result = car is null ? 0 : IndexIn( Bumpers.All, car ) + 1;
-				break;
-
-			case 5:
-				Result = TrackRideValid;
 				break;
 
 			case 6:

@@ -19,6 +19,7 @@ L = os.path.dirname(os.path.abspath(__file__)) + "/"
 sys.path.insert(0, L)
 exec(open(L + "parkrun.py").read())
 exec(open(L + "parkscene.py").read())
+SENT = []
 def karts(guests=5):
     """The ride bought on its site, its loop by Q763's clicks and, for the karts, the queue joined to the path before the exit and guests sent. Returns (thing, guests sent)."""
     reply(f"camera {VIEW}", 0.5, 0)
@@ -34,6 +35,7 @@ def karts(guests=5):
     for i in range(guests):
         g = _re.findall(r"guest (\d+)", " ".join(reply("admit 43 21", 0.8, 0)))
         if g: sent.append(int(g[-1])); reply(f"send {g[-1]} {k}", 0.4, 0)
+    SENT[:] = sent
     return k, sent
 def reads(tag, ride):
     sc = reply("scripts", 3, 0, 600)
@@ -48,6 +50,12 @@ def reads(tag, ride):
     for l in v: print(f"READ {tag}   {l.strip()[:200]}")
     print(f"READ {tag} Car sounds lines in the log (all so far): {len(_re.findall(r'Car sounds: ride', logtext()))}")
     print(f"READ {tag} gaps: {gaps(r'SAVE_PARK|LOADED_|TRACK_CAP')}")
+    # The ride script's admit gate (Q883): VAR_ONRIDE counts the guests it let on, VAR_LETMEON is the engine's pending admit; the BUMPs it counted as no-ops, by word.
+    for var in ("VAR_ONRIDE", "VAR_LETMEON", "VAR_SPACELEFT", "VAR_RIDECLOSED"): print(f"READ {tag} {' '.join(reply(f'scriptvar {ride} {var}', 0.6, 0)[-1:]).strip()[:120]}")
+    print(f"READ {tag} counted BUMPs: {gaps(r' BUMP at ')}")
+    # The guests sent to the queue (`peeps`, one line each): where each is and what it is doing, to see whether an admitted guest ever leaves.
+    pe = reply("peeps", 1.5, 0, 600)
+    for g in SENT: print(f"READ {tag} peep {g}: " + " ".join(next((l for l in pe if _re.search(rf"\b{g}\b", l)), "(not listed)").split())[:200])
 try:
     enter(); reply("pause", 0.3, 0)
     reads("0-entered", 43)   # 43 is the thing id the bought ride gets in the stock park, read before it is bought
