@@ -35,7 +35,7 @@ internal sealed class ParkSceneHeight( ParkItemCatalogue? catalogue )
 			_lifts[item.Id] = lift;
 		}
 
-		return lift is { } above ? field.ScapeHeight( x, y ) + above : last;
+		return lift is { } above ? ParkGround.ScapeHeight( field, x, y ) + above : last;
 	}
 
 	/// <summary>

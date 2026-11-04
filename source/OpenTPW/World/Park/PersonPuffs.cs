@@ -31,7 +31,7 @@ internal static class PersonPuffs
 	{
 		var x = at.X / (float)FixedVector.One * field.CellSizeX;
 		var z = at.Y / (float)FixedVector.One * field.CellSizeY;
-		var height = field.ScapeHeight( x, z );
+		var height = ParkGround.ScapeHeight( field, x, z );
 
 		return ((int)(x * 1024f), (int)(height * 1024f), (int)(z * 1024f));
 	}

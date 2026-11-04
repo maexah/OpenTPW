@@ -71,49 +71,66 @@ public class ParkFootprintSplitTests
 	}
 
 	/// <summary>
-	/// <b>The load flags 589 cells of the stock park, and a cleared one stands on the near corner's plane.</b> The flag goes and
-	/// the rest of the word stays; the height at the cell's far corner is then the plane's, not the bent cell's; restored, both
+	/// <b>The load flags 589 cells of the stock park, and a stamped one stands on the near corner's plane.</b> The ground's split
+	/// answer goes and the file's word stays; the height at the cell's far corner is then the plane's, not the bent cell's; restored, both
 	/// are the load's again. A cell the load did not flag does not get the flag from a restore, and a cell off the grid is left.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> <c>ClearSplit</c> clearing the whole word; <c>RestoreSplit</c> setting the flag on every cell;
-	/// <c>ClearSplit</c> doing nothing.</remarks>
+	/// <remarks><b>Mutations:</b> <c>StampSplit</c> doing nothing; <c>UnstampSplit</c> doing nothing; <c>ParkGround.ScapeHeight</c> not passing
+	/// the mask; <c>Splits</c> ignoring the mask.</remarks>
 	[TestMethod]
 	public void AClearedCellStandsOnThePlaneAndARestoredOneOnItsBend()
 	{
 		var field = Landscape();
 		var (bent, flat) = TwoCells( field );
+		var ground = GroundOf( field, 8 );
 
 		var flagged = Enumerable.Range( 0, field.CellsX * field.CellsY ).Count( i => (field.FlagsAt( i % field.CellsX, i / field.CellsX ) & 0x800) != 0 );
 		Assert.AreEqual( 589, flagged, "the cells the load flags (Q823's stock dump)" );
 
 		// A point close to the cell's far corner, where the bent cell and the near corner's plane part most.
 		var (worldX, worldY) = ((bent.X + 0.9f) * field.CellSizeX, (bent.Y + 0.9f) * field.CellSizeY);
-		var (word, bentHeight) = (field.FlagsAt( bent.X, bent.Y ), field.ScapeHeight( worldX, worldY ));
+		var (word, bentHeight) = (field.FlagsAt( bent.X, bent.Y ), ground.ScapeHeight( worldX, worldY ));
 
-		Assert.IsFalse( field.IsStamped( bent.X, bent.Y ) );
-		field.ClearSplit( bent.X, bent.Y );
-		Assert.IsTrue( field.IsStamped( bent.X, bent.Y ), "a stamp holds it" );
+		Assert.IsFalse( ground.IsStamped( bent.X, bent.Y ) );
+		Assert.IsTrue( ground.Splits( bent.X, bent.Y ) );
+		ground.StampSplit( bent.X, bent.Y );
+		Assert.IsTrue( ground.IsStamped( bent.X, bent.Y ), "a stamp holds it" );
 
-		Assert.AreEqual( word & ~0x800, field.FlagsAt( bent.X, bent.Y ), "only the split flag goes" );
-		Assert.AreEqual( field.CornerPlaneAt( worldX, worldY ), field.ScapeHeight( worldX, worldY ), 1e-4f, "it stands on the near corner's plane" );
-		Assert.AreNotEqual( bentHeight, field.ScapeHeight( worldX, worldY ), 1e-3f, "which is not the bent cell's height" );
+		Assert.IsFalse( ground.Splits( bent.X, bent.Y ), "the split flag goes" );
+		Assert.AreEqual( word, field.FlagsAt( bent.X, bent.Y ), "the file's word is left as it was" );
+		Assert.AreEqual( field.CornerPlaneAt( worldX, worldY ), ground.ScapeHeight( worldX, worldY ), 1e-4f, "it stands on the near corner's plane" );
+		Assert.AreNotEqual( bentHeight, ground.ScapeHeight( worldX, worldY ), 1e-3f, "which is not the bent cell's height" );
+		Assert.AreEqual( bentHeight, field.ScapeHeight( worldX, worldY ), 1e-6f, "a field asked with no mask keeps the load's flags" );
 
-		field.RestoreSplit( bent.X, bent.Y );
+		// The callers that hold only the field (a person's feet, a marker's corner) reach the running park's mask through Current.
+		var current = ParkGround.Current;
+		SetCurrent( ground );
 
-		Assert.IsFalse( field.IsStamped( bent.X, bent.Y ), "ground again: no stamp holds it" );
-		Assert.AreEqual( word, field.FlagsAt( bent.X, bent.Y ) );
-		Assert.AreEqual( bentHeight, field.ScapeHeight( worldX, worldY ), 1e-6f );
+		try
+		{
+			Assert.AreEqual( field.CornerPlaneAt( worldX, worldY ), ParkGround.ScapeHeight( field, worldX, worldY ), 1e-4f, "the running park's field takes the mask" );
+			Assert.AreEqual( bentHeight, ParkGround.ScapeHeight( Landscape(), worldX, worldY ), 1e-6f, "another field has none" );
+		}
+		finally
+		{
+			SetCurrent( current );
+		}
 
-		var flatWord = field.FlagsAt( flat.X, flat.Y );
-		field.RestoreSplit( flat.X, flat.Y );
-		Assert.AreEqual( flatWord, field.FlagsAt( flat.X, flat.Y ), "a cell the load did not flag is not flagged by a restore" );
+		ground.UnstampSplit( bent.X, bent.Y );
 
-		field.ClearSplit( flat.X, flat.Y );
-		Assert.AreEqual( flatWord, field.FlagsAt( flat.X, flat.Y ), "clearing a cell without the flag changes nothing" );
+		Assert.IsFalse( ground.IsStamped( bent.X, bent.Y ), "ground again: no stamp holds it" );
+		Assert.IsTrue( ground.Splits( bent.X, bent.Y ) );
+		Assert.AreEqual( bentHeight, ground.ScapeHeight( worldX, worldY ), 1e-6f );
 
-		field.ClearSplit( -1, 0 );
-		field.ClearSplit( field.CellsX, 0 );
-		field.RestoreSplit( 0, field.CellsY );
+		ground.UnstampSplit( flat.X, flat.Y );
+		Assert.IsFalse( ground.Splits( flat.X, flat.Y ), "a cell the load did not flag is not flagged by a restore" );
+
+		ground.StampSplit( flat.X, flat.Y );
+		Assert.IsFalse( ground.Splits( flat.X, flat.Y ), "stamping a cell without the flag changes nothing" );
+
+		ground.StampSplit( -1, 0 );
+		ground.StampSplit( field.CellsX, 0 );
+		ground.UnstampSplit( 0, field.CellsY );
 	}
 
 	/// <summary>
@@ -127,11 +144,13 @@ public class ParkFootprintSplitTests
 		var field = Landscape();
 		var (bent, _) = TwoCells( field );
 
-		Assert.IsFalse( GroundOf( field, 0 ).StampSplit( bent.X, bent.Y ), "no tiles: no stamp" );
-		Assert.AreNotEqual( 0, field.FlagsAt( bent.X, bent.Y ) & 0x800, "the flag stays" );
+		var off = GroundOf( field, 0 );
+		Assert.IsFalse( off.StampSplit( bent.X, bent.Y ), "no tiles: no stamp" );
+		Assert.IsTrue( off.Splits( bent.X, bent.Y ), "the flag stays" );
 
-		Assert.IsTrue( GroundOf( field, 8 ).StampSplit( bent.X, bent.Y ), "tiles: stamped" );
-		Assert.AreEqual( 0, field.FlagsAt( bent.X, bent.Y ) & 0x800 );
+		var on = GroundOf( field, 8 );
+		Assert.IsTrue( on.StampSplit( bent.X, bent.Y ), "tiles: stamped" );
+		Assert.IsFalse( on.Splits( bent.X, bent.Y ) );
 	}
 
 	/// <summary>
@@ -156,7 +175,7 @@ public class ParkFootprintSplitTests
 
 		Assert.AreEqual( 0, cells, "no tiles: nothing blended" );
 		Assert.AreEqual( 0, blended.Count );
-		Assert.AreEqual( 0, field.FlagsAt( bent.X, bent.Y ) & 0x800, "but the cell is stamped" );
+		Assert.IsFalse( ground.Splits( bent.X, bent.Y ), "but the cell is stamped" );
 		CollectionAssert.AreEqual( new[] { bent }, stamped );
 	}
 
@@ -264,10 +283,12 @@ public class ParkFootprintSplitTests
 					}
 				}
 
-				ProceduralFloor.Blend( model, mesh, item.Shape, item.Shape.Width, item.Shape.Depth, everyCell, 0, footprint,
-					GroundOf( field, tileSize ), name => name, [], out _ );
+				var ground = GroundOf( field, tileSize );
 
-				var flagged = cells.Count( c => (field.FlagsAt( c.X, c.Y ) & 0x800) != 0 );
+				ProceduralFloor.Blend( model, mesh, item.Shape, item.Shape.Width, item.Shape.Depth, everyCell, 0, footprint,
+					ground, name => name, [], out _ );
+
+				var flagged = cells.Count( c => ground.Splits( c.X, c.Y ) );
 
 				Assert.AreEqual( tileSize == 0 ? cells.Count : cells.Count - entries, flagged, $"{item.Stem} at tile size {tileSize}: cells still flagged" );
 			}
@@ -315,9 +336,9 @@ public class ParkFootprintSplitTests
 		{
 			Assert.IsTrue( objects.Remove( 7 ) );
 
-			Assert.AreNotEqual( 0, field.FlagsAt( bent.X, bent.Y ) & 0x800, "its bent cell is given the flag back" );
-			Assert.AreEqual( 0, field.FlagsAt( flat.X, flat.Y ) & 0x800, "a cell the load never flagged has none to get back" );
-			Assert.AreEqual( 0, field.FlagsAt( other.X, other.Y ) & 0x800, "another thing's cell stays stamped" );
+			Assert.IsTrue( ground.Splits( bent.X, bent.Y ), "its bent cell is given the flag back" );
+			Assert.IsFalse( ground.Splits( flat.X, flat.Y ), "a cell the load never flagged has none to get back" );
+			Assert.IsFalse( ground.Splits( other.X, other.Y ), "another thing's cell stays stamped" );
 		}
 		finally
 		{
@@ -326,18 +347,15 @@ public class ParkFootprintSplitTests
 	}
 
 	/// <summary>
-	/// <b>A rebuilt ground keeps its heightfield</b>, with the cells a stamp has cleared: only a ground with none reads the file.
+	/// <b>A rebuilt ground keeps its heightfield</b>: only a ground with none reads the file.
 	/// </summary>
 	/// <remarks><b>Mutation:</b> <see cref="ParkGround.KeptOrRead"/> always reading fails here.</remarks>
 	[TestMethod]
 	public void ARebuiltGroundKeepsItsHeightfield()
 	{
 		var field = Landscape();
-		var (bent, _) = TwoCells( field );
-		field.ClearSplit( bent.X, bent.Y );
 
 		Assert.AreSame( field, ParkGround.KeptOrRead( field, () => throw new InvalidOperationException( "a second read" ) ) );
-		Assert.AreEqual( 0, field.FlagsAt( bent.X, bent.Y ) & 0x800 );
 
 		var first = Landscape();
 		Assert.AreSame( first, ParkGround.KeptOrRead( null, () => first ), "the first build reads it" );
@@ -370,7 +388,7 @@ public class ParkFootprintSplitTests
 		{
 			typeof( ParkQueues ).GetMethod( "TakeDown", Any )!.Invoke( queues, null );
 
-			Assert.AreNotEqual( 0, field.FlagsAt( bent.X, bent.Y ) & 0x800, "the cell is ground again" );
+			Assert.IsTrue( ground.Splits( bent.X, bent.Y ), "the cell is ground again" );
 			Assert.AreEqual( 0, queues.StampedCells );
 		}
 		finally
@@ -422,10 +440,10 @@ public class ParkFootprintSplitTests
 
 			Assert.AreEqual( 2, objects.RetileGround( 7, ( x, y ) => types[(x, y)] ) );
 
-			Assert.AreNotEqual( 0, field.FlagsAt( bent.X, bent.Y ) & 0x800, "type 0: ground again, bent again" );
-			Assert.AreEqual( 0, field.FlagsAt( third.X, third.Y ) & 0x800, "type 4: stays stamped" );
-			Assert.AreNotEqual( 0, field.FlagsAt( fourth.X, fourth.Y ) & 0x800, "type 5: ground again" );
-			Assert.AreEqual( 0, field.FlagsAt( flat.X, flat.Y ) & 0x800, "type 9: stays stamped" );
+			Assert.IsTrue( ground.Splits( bent.X, bent.Y ), "type 0: ground again, bent again" );
+			Assert.IsFalse( ground.Splits( third.X, third.Y ), "type 4: stays stamped" );
+			Assert.IsTrue( ground.Splits( fourth.X, fourth.Y ), "type 5: ground again" );
+			Assert.IsFalse( ground.Splits( flat.X, flat.Y ), "type 9: stays stamped" );
 			Assert.AreEqual( 2, objects.StampedCells, "the thing now holds the two body cells" );
 
 			Assert.AreEqual( 2, objects.RetileGround( 7, ( x, y ) => 0 ), "a second pass over type 0 gives the rest back" );
@@ -501,9 +519,9 @@ public class ParkFootprintSplitTests
 			var objects = new ParkObjects( "jungle", world, catalogue );
 
 			Assert.AreEqual( all.Length - 2, objects.StampedCells, "the two cells the file holds as ground are given back" );
-			Assert.IsFalse( field.IsStamped( ground0.X, ground0.Y ), "type 0: ground again" );
-			Assert.IsFalse( field.IsStamped( ground5.X, ground5.Y ), "type 5: ground again" );
-			Assert.IsTrue( all.Skip( 1 ).SkipLast( 1 ).All( cell => field.IsStamped( cell.X, cell.Y ) ), "every other cell stays stamped" );
+			Assert.IsFalse( ground.IsStamped( ground0.X, ground0.Y ), "type 0: ground again" );
+			Assert.IsFalse( ground.IsStamped( ground5.X, ground5.Y ), "type 5: ground again" );
+			Assert.IsTrue( all.Skip( 1 ).SkipLast( 1 ).All( cell => ground.IsStamped( cell.X, cell.Y ) ), "every other cell stays stamped" );
 		}
 		finally
 		{
@@ -577,8 +595,8 @@ public class ParkFootprintSplitTests
 			Assert.AreEqual( at, (placed.CellX, placed.CellY) );
 			Assert.IsTrue( outside.Length >= 4, $"the rock's table covers {outside.Length} cells beyond the typed footprint" );
 			Assert.IsTrue( outside.All( cell => state.Record( cell.X, cell.Y ).Type is <= 0 or 5 ), "which Stamp left as the map had them: ground" );
-			Assert.IsTrue( outside.All( cell => !field.IsStamped( cell.X, cell.Y ) ), "so the purchase's tile pass gave them back" );
-			Assert.IsTrue( typed.All( cell => !cells.Contains( cell ) || field.IsStamped( cell.X, cell.Y ) ), "the typed cells stay stamped" );
+			Assert.IsTrue( outside.All( cell => !ground.IsStamped( cell.X, cell.Y ) ), "so the purchase's tile pass gave them back" );
+			Assert.IsTrue( typed.All( cell => !cells.Contains( cell ) || ground.IsStamped( cell.X, cell.Y ) ), "the typed cells stay stamped" );
 			Assert.AreEqual( cells.Count - outside.Length, objects.StampedCells );
 		}
 		finally

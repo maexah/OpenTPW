@@ -232,8 +232,7 @@ public sealed class ParkGround : ModelEntity
 	}
 
 	/// <summary>
-	/// The heightfield, read once: a rebuild keeps the one it has, whose cells a built thing's footprint stamp has taken the split flag
-	/// off (<see cref="StampSplit"/>), where a second read would give every cell its load-time flag back.
+	/// The heightfield, read once: a rebuild keeps the one it has instead of reading the file again.
 	/// </summary>
 	internal static HeightfieldFile KeptOrRead( HeightfieldFile? kept, Func<HeightfieldFile> read ) => kept ?? read();
 
@@ -605,20 +604,49 @@ public sealed class ParkGround : ModelEntity
 
 	/// <summary>
 	/// The footprint stamp's write to a cell's live word (<c>FUN_00463060</c>, <c>0x0046352a</c>), which drops the split flag
-	/// <c>0x800</c> (<c>park-engine.md</c>, "The footprint stamp clears <c>0x800</c>"). The stamp runs only where the compositor is
-	/// on (<c>[0x007a1a8c] &amp; 0x4000</c>, <c>0x00463354</c>): here, where the ground has a tile size. Answers whether the cell was stamped.
+	/// <c>0x800</c> (<c>park-engine.md</c>, "The footprint stamp clears <c>0x800</c>"): the cell is held in <see cref="_stamped"/>,
+	/// and <see cref="Splits"/> answers false for it. The stamp runs only where the compositor is on (<c>[0x007a1a8c] &amp; 0x4000</c>,
+	/// <c>0x00463354</c>): here, where the ground has a tile size. Answers whether the cell was stamped; off the grid, nothing.
 	/// </summary>
 	public bool StampSplit( int x, int y )
 	{
 		if ( _tileSize <= 0 )
 			return false;
 
-		Heightfield.ClearSplit( x, y );
+		if ( x >= 0 && y >= 0 && x < Heightfield.CellsX && y < Heightfield.CellsY )
+			(_stamped ??= new bool[Heightfield.CellsX * Heightfield.CellsY])[(y * Heightfield.CellsX) + x] = true;
+
 		return true;
 	}
 
-	/// <summary>A cell put back to ground takes its load-time split flag again (<see cref="HeightfieldFile.RestoreSplit"/>).</summary>
-	public void UnstampSplit( int x, int y ) => Heightfield.RestoreSplit( x, y );
+	/// <summary>
+	/// A cell put back to ground takes its load-time split flag again, as the original's retile does (<c>FUN_0046df50</c>'s copy of
+	/// the private copy's word, <c>0x0046e031</c>..<c>0x0046e065</c>). Off the grid, nothing.
+	/// </summary>
+	public void UnstampSplit( int x, int y )
+	{
+		if ( _stamped is not null && x >= 0 && y >= 0 && x < Heightfield.CellsX && y < Heightfield.CellsY )
+			_stamped[(y * Heightfield.CellsX) + x] = false;
+	}
+
+	/// <summary>The cells a footprint stamp has taken since they were last ground, a row at a time, bent or not: the original's <c>0x200</c> cells. Null before the first.</summary>
+	private bool[]? _stamped;
+
+	/// <summary>Whether a footprint stamp holds a cell now.</summary>
+	public bool IsStamped( int x, int y ) => _stamped is not null && _stamped[(y * Heightfield.CellsX) + x];
+
+	/// <summary>Whether a cell's live word carries the split flag <c>0x800</c>: the load's, unless a stamp holds the cell.</summary>
+	public bool Splits( int x, int y ) => (Heightfield.FlagsAt( x, y ) & 0x800) != 0 && !IsStamped( x, y );
+
+	/// <summary><see cref="HeightfieldFile.ScapeHeight"/> with the cells this park's stamps hold.</summary>
+	public float ScapeHeight( float worldX, float worldY ) => Heightfield.ScapeHeight( worldX, worldY, _stamped );
+
+	/// <summary>
+	/// <see cref="ScapeHeight(float, float)"/> for a heightfield the running park may own: where <paramref name="field"/> is the
+	/// current ground's, its stamps apply; any other field answers with the load's flags.
+	/// </summary>
+	internal static float ScapeHeight( HeightfieldFile field, float worldX, float worldY )
+		=> Current is { } ground && ReferenceEquals( ground.Heightfield, field ) ? ground.ScapeHeight( worldX, worldY ) : field.ScapeHeight( worldX, worldY );
 
 	/// <summary>
 	/// <c>TileCache_CompositeCell</c> (<c>0x00572630</c>) for one cell of a built thing's floor (<c>ProceduralBase_BlendFloor</c>): cell (x, y)'s ground tile at the

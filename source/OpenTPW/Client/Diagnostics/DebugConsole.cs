@@ -1107,7 +1107,7 @@ public static class DebugConsole
 					break;
 				}
 
-				Reply( $"pin: guest {(int)Argument( 1 )} stands at ({Argument( 2 ):F3},{Argument( 3 ):F3}); stands {pinGround.ScapeHeight( Argument( 2 ), Argument( 3 ) ):F4}" );
+				Reply( $"pin: guest {(int)Argument( 1 )} stands at ({Argument( 2 ):F3},{Argument( 3 ):F3}); stands {ParkGround.ScapeHeight( pinGround, Argument( 2 ), Argument( 3 ) ):F4}" );
 				break;
 
 			// Sets the life of every balloon held - an instrument as `thirst` is, so that a balloon's running out
@@ -1649,19 +1649,20 @@ public static class DebugConsole
 
 				var (groundX, groundY) = (Argument( 1 ), Argument( 2 ));
 				var (cellX, cellY) = ((int)MathF.Floor( groundX / ground.CellSizeX ), (int)MathF.Floor( groundY / ground.CellSizeY ));
-				var cellFlags = cellX >= 0 && cellY >= 0 && cellX < ground.CellsX && cellY < ground.CellsY ? ground.FlagsAt( cellX, cellY ) : 0;
+				var cellFlags = cellX >= 0 && cellY >= 0 && cellX < ground.CellsX && cellY < ground.CellsY
+					? ground.FlagsAt( cellX, cellY ) & ~(ParkGround.Current!.IsStamped( cellX, cellY ) ? 0x800 : 0) : 0;
 
-				Reply( $"ground ({groundX:F3},{groundY:F3}) cell ({cellX},{cellY}) flags 0x{cellFlags:x4}: stands {ground.ScapeHeight( groundX, groundY ):F4} " +
+				Reply( $"ground ({groundX:F3},{groundY:F3}) cell ({cellX},{cellY}) flags 0x{cellFlags:x4}: stands {ParkGround.ScapeHeight( ground, groundX, groundY ):F4} " +
 					$"camera {ground.CameraHeight( groundX, groundY ):F4} bilinear {ground.HeightAtWorld( groundX, groundY ):F4}" );
 				break;
 
-			// Every cell's live flag word in the ground's heightfield, a row a line (y first, then the words from x = 0 in hex, a
-			// cell a footprint stamp holds starred), then the census: how many cells carry 0x800, how many the load flagged, how
-			// many of those a stamp has since cleared, and how many cells a stamp holds. Alexah's New Save in the original's live
-			// map: 589 flagged, 16 lost, 437 stamped (docs/exe/park-engine.md, "The footprint stamp clears 0x800"). `cellflags` alone
-			// prints the census only.
+			// Every cell's live flag word (y first, then the words from x = 0 in hex, a cell a footprint stamp holds starred: the
+			// stamp clears 0x800 in the original, ParkGround keeps it as a mask), then the census: how many cells carry 0x800 now, how
+			// many the load flagged, how many of those a stamp has since cleared, and how many cells a stamp holds. Alexah's New Save in
+			// the original's live map: 589 flagged, 16 lost, 437 stamped (docs/exe/park-engine.md, "The footprint stamp clears 0x800").
+			// `cellflags` alone prints the census only.
 			case "cellflags":
-				if ( ParkGround.Current?.Heightfield is not { } flagField )
+				if ( ParkGround.Current is not { Heightfield: { } flagField } flagGround )
 				{
 					Reply( "cellflags: only in a park" );
 					break;
@@ -1675,13 +1676,14 @@ public static class DebugConsole
 
 					for ( var column = 0; column < flagField.CellsX; ++column )
 					{
-						var word = flagField.FlagsAt( column, row );
-						var wasBent = flagField.BentAtLoad( column, row );
+						var wasBent = (flagField.FlagsAt( column, row ) & 0x800) != 0;
+						var held = flagGround.IsStamped( column, row );
+						var word = (ushort)(flagField.FlagsAt( column, row ) & ~(held ? 0x800 : 0));
 						flagged += (word & 0x800) != 0 ? 1 : 0;
 						bent += wasBent ? 1 : 0;
-						cleared += wasBent && (word & 0x800) == 0 ? 1 : 0;
-						stampHeld += flagField.IsStamped( column, row ) ? 1 : 0;
-						words.Add( word.ToString( "x4" ) + (flagField.IsStamped( column, row ) ? "*" : "") );
+						cleared += wasBent && held ? 1 : 0;
+						stampHeld += held ? 1 : 0;
+						words.Add( word.ToString( "x4" ) + (held ? "*" : "") );
 					}
 
 					if ( parts.Length > 1 )

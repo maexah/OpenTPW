@@ -629,7 +629,7 @@ public sealed class ParkBuildMarkers : ModelEntity
 	/// <c>FUN_0053ddd0</c> asks it after the shift (<c>FUN_004527f0</c>, <see cref="HeightfieldFile.ScapeHeight"/>).
 	/// </summary>
 	internal static float CornerGround( HeightfieldFile field, int x, int y, (float X, float Y) offset )
-		=> offset == (0f, 0f) ? field.HeightAt( x, y ) : field.ScapeHeight( (x * field.CellSizeX) + offset.X, (y * field.CellSizeY) + offset.Y );
+		=> offset == (0f, 0f) ? field.HeightAt( x, y ) : ParkGround.ScapeHeight( field, (x * field.CellSizeX) + offset.X, (y * field.CellSizeY) + offset.Y );
 
 	private Vertex Corner( HeightfieldFile field, int x, int y, Vector2 uv, int slot, float over, (float X, float Y) offset )
 	{

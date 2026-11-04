@@ -1285,7 +1285,7 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// nought with no ground loaded.
 	/// </summary>
 	internal static float StandsOn( HeightfieldFile? field, float x, float y )
-		=> field?.ScapeHeight( x, y ) ?? 0f;
+		=> field is null ? 0f : ParkGround.ScapeHeight( field, x, y );
 
 	/// <summary>
 	/// Where a ride is carrying this person, or null when none is.
