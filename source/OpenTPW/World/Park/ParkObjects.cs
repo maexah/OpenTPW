@@ -1061,6 +1061,11 @@ public sealed class ParkObjects : Entity
 	/// track's add-on flag, and the walk shows and hides its end caps.</summary>
 	public static bool IsTrackAddOn( ParkItemCatalogue.Item item ) => item.AddOnUpgradesId != 0 && item.AddOnUpgradeType == 1;
 
+	/// <summary>Whether the hover gives an object's cell no category, so its click opens nothing: an item fitting a ride
+	/// (<c>AddOn.UpgradesId</c>, <c>+0x284</c>) whose <c>AddOn.UpgradeType</c> (<c>+0x288</c>) is not 2 (<c>0x0048768d</c>,
+	/// jumping to <c>0x004878d3</c>). Every add-on Lost Kingdom ships is type 1.</summary>
+	public static bool OpensNoWindow( ParkItemCatalogue.Item item ) => item.AddOnUpgradesId != 0 && item.AddOnUpgradeType != 2;
+
 	/// <summary>An add-on's end caps as a park file's node words leave them: each side's cap node and whether its word's
 	/// hidden bit (<c>0x1</c>) is set. A side with no cap, or no word, is left out.</summary>
 	public static IEnumerable<(uint Side, int Node, bool Hidden)> SavedCaps( ModelFile file, IReadOnlyList<uint> words )

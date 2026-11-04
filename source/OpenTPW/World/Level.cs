@@ -2423,8 +2423,7 @@ public class Level
 				if ( ParkItemHeights.Owner( state, x, y ) is not { } owner )
 					return GroundArm.Silent;
 
-				if ( Catalogue is { } catalogue && catalogue.TryGet( owner.CatalogueId, out var item )
-					&& item.AddOnUpgradesId != 0 && item.AddOnUpgradeType != 2 )
+				if ( Catalogue is { } catalogue && catalogue.TryGet( owner.CatalogueId, out var item ) && ParkObjects.OpensNoWindow( item ) )
 					return GroundArm.Silent;
 
 				placed = owner;
@@ -2926,6 +2925,14 @@ public class Level
 
 		if ( placed != 0 )
 		{
+			// AN ADD-ON FITTING A RIDE HAS NO WINDOW: its cell's hover has no category (FUN_00486d90, 0x0048768d), and the click's
+			// switch on the category has no arm for none, so nothing opens, Ctrl's buy-another included. Its sale by itself is
+			// not a route either; the ride's bomb sells the ride (docs/exe/park-engine.md, "An add-on has no window and no sale of its own").
+			if ( ParkState is { } addOnState && addOnState.TryObject( placed, out var addOn )
+				&& Catalogue is { } addOnCatalogue && addOnCatalogue.TryGet( addOn.CatalogueId, out var addOnItem )
+				&& ParkObjects.OpensNoWindow( addOnItem ) )
+				return $"world click: nothing to do at ({cellX},{cellY}), '{addOnItem.Name}' fits a ride and has no window of its own";
+
 			// CTRL, WHATEVER SHIFT AND ALT ARE, PUTS ANOTHER OF IT IN THE HAND and opens no window: the original asks
 			// VK_CONTROL alone (0x00487ac0). Too dear, it plays the buy screen's refusal, cat_ui 0x1D (0x00487b56), and the
 			// hand stays empty (docs/exe/park-engine.md, "Ctrl+click buys another of a placed thing"). The lookups that fail

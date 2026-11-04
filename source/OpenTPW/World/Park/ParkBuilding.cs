@@ -521,8 +521,10 @@ public static class ParkBuilding
 		// after the destructor, whenever a saved layout is not being replayed).
 		Unimplemented.Report( "DEMOLISH_SOUND" );
 
-		// A track add-on's own arm of the demolisher (0x00528512..0x0052852d) is not read: here its cells are cleared as any
-		// thing's and its track cells keep their add-on flag, so no piece stands there again.
+		// The original has no route that sells an add-on by itself (docs/exe/park-engine.md, "An add-on has no window and no sale
+		// of its own"): its cells go with the track section it stands on. This sale is the console's alone; its cells are cleared as
+		// any thing's and its track cells keep their add-on flag, so no piece stands there again. The demolisher's per-cell tail
+		// (0x00528512..0x0052852d) clears the track record on a sale (third argument 0) and flag 0x10 on the track clear's re-entry (1).
 		if ( ParkTrackAddOn.Is( item ) )
 			Unimplemented.Report( "SALE_TRACK_ADD_ON" );
 
