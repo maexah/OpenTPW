@@ -30,14 +30,7 @@ public static class ParkRideWear
 	private const float Scale = 0.9f, Floor = 0.1f;
 
 	/// <summary>
-	/// A script's speed word (<c>+0xc0</c>), which no script here keeps: its thing's operating speed, which the
-	/// constructor pushes when above nought, or the loader's 50.
-	/// </summary>
-	public static int SpeedWord( ParkWorld.CatalogueObject placed )
-		=> placed.OperatingSpeed > 0 ? placed.OperatingSpeed : ParkScriptStates.LoaderSpeed;
-
-	/// <summary>
-	/// The wear of one turn. The speed over the item's most and the riders, held to the item's most, over it are
+	/// The wear of one turn, the speed being the script's word (<c>FUN_0055a330</c>, <c>0x004df758</c>; <see cref="RideScript.Speed"/>). The speed over the item's most and the riders, held to the item's most, over it are
 	/// each scaled to 0.1..1; one at or past its red line is moved half way to 1 (the capacity's red line is held
 	/// against a tenth of the riders, as the listing has it, <c>0x004df5c2</c>); their sum times the tier's rate,
 	/// halved. An item whose most is nought divides by it as the original's floats do.

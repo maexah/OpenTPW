@@ -936,7 +936,7 @@ public static class DebugConsole
 
 				foreach ( var script in scripted.Scheduler.Scripts.OrderBy( script => script.Id ) )
 					Reply( $"  script {script.Id} thing {script.ThingId} dir {script.Directory} name '{script.Name}' at {script.Position} "
-						+ $"parent {script.ParentId} child {script.ChildId} sound {script.SoundChildId}" );
+						+ $"parent {script.ParentId} child {script.ChildId} sound {script.SoundChildId} word {script.Speed} lastwait {script.LastWait}" );
 
 				break;
 
@@ -967,6 +967,29 @@ public static class DebugConsole
 				Reply( varScript.Set( parts[2], varValue )
 					? $"scriptvar: thing {varThing} {parts[2]} = {varValue}"
 					: $"scriptvar: thing {varThing}'s script declares no {parts[2]}" );
+				break;
+			}
+
+			// Writes the speed word of a thing's script (FUN_0055a300, which the ride window's speed control calls), reading it
+			// with no value: an instrument for the readers of the word (WAIT, the scream parameter, a bumper ride's performance) in a run
+			// with no window. It writes the script's word alone, where the window writes the thing's operating speed too.
+			case "scriptword":
+			{
+				var wordValue = 0;
+
+				if ( parts.Length < 2 || !int.TryParse( parts[1], out var wordThing )
+					|| (parts.Length > 2 && !int.TryParse( parts[2], out wordValue ))
+					|| ParkRides.Current is not { } wordRides || wordRides.ScriptFor( wordThing ) is not (var wordId and not 0)
+					|| wordRides.Scheduler.Find( wordId ) is not { } wordScript )
+				{
+					Reply( "scriptword: scriptword <thing> [value], for a thing running a script" );
+					break;
+				}
+
+				if ( parts.Length > 2 )
+					wordScript.Speed = wordValue;
+
+				Reply( $"scriptword: thing {wordThing} script {wordId} word is {wordScript.Speed}" );
 				break;
 			}
 

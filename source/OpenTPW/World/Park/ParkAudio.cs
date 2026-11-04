@@ -464,16 +464,10 @@ public sealed partial class ParkAudio : Entity
 	private static readonly int[] ScreamEffects = [0x47, 0x48, 0x49, 0x4a];
 
 	/// <summary>
-	/// The script speed the volume is averaged against - the engine's <c>+0xc0</c>, which its loader
-	/// sets to 50 and <b>no opcode ever writes</b>.
+	/// The speed word of a script nothing has written - the script creator's 50 (<c>0x00558c3c</c>), which the
+	/// scream functions below take where a caller names none. A script reads its own (<see cref="RideScript.Speed"/>,
+	/// Q155): the scream readings average the operand with it, where 50 is half the answer rather than an identity.
 	/// </summary>
-	/// <remarks>
-	/// <b>A constant rather than a field, and deliberately.</b> <see cref="RideScript"/> leaves the speed
-	/// word out because the dispatcher's <c>0.5 + 0.01 * speed</c> divisor is exactly 1 at 50, so a field
-	/// could never differ from one. That argument holds for <c>WAIT</c> and does NOT hold here: the
-	/// scream's volume is <c>(operand + speed) / 2</c>, where 50 is half the answer rather than an
-	/// identity. So the number is needed even though the field is not.
-	/// </remarks>
 	public const int ScriptSpeed = 50;
 
 	/// <summary>
@@ -481,7 +475,7 @@ public sealed partial class ParkAudio : Entity
 	/// (<c>0x00551241</c>..<c>0x00551265</c>). Its chain picks each later child's variation by it. It is no
 	/// loudness: a child's is its variation's own - see <see cref="PlayScream"/>.
 	/// </summary>
-	public static int ScreamVolume( int level ) => Math.Clamp( (level + ScriptSpeed) / 2, 0, 100 );
+	public static int ScreamVolume( int level, int speed = ScriptSpeed ) => Math.Clamp( (level + speed) / 2, 0, 100 );
 
 	/// <summary>Which sample a band asks for, or nought when the band is silent.</summary>
 	public static int ScreamEffectFor( int band ) => band switch
@@ -501,7 +495,7 @@ public sealed partial class ParkAudio : Entity
 	/// returning nought for any index it does not recognise. A level below nought cannot reach here
 	/// anyway, because the handler sends it to the band-only branch first.
 	/// </summary>
-	public static int ScreamGridIndex( int level ) => Math.Min( (level + ScriptSpeed) / 50, 3 );
+	public static int ScreamGridIndex( int level, int speed = ScriptSpeed ) => Math.Min( (level + speed) / 50, 3 );
 
 	/// <summary>
 	/// Which one-shot <c>SINGLESCREAM</c> plays, or nought when nothing does.
@@ -519,7 +513,7 @@ public sealed partial class ParkAudio : Entity
 	/// <c>Monkey.rse</c> passes 90 and <c>Totem.RSE</c> passes 100, landing on grid steps 2 and 3.
 	/// </para>
 	/// </summary>
-	public static int SingleScreamEffectFor( int band, int level )
+	public static int SingleScreamEffectFor( int band, int level, int speed = ScriptSpeed )
 	{
 		if ( band <= 0 )
 			return 0;
@@ -533,7 +527,7 @@ public sealed partial class ParkAudio : Entity
 				_ => 0x6d
 			};
 
-		var step = ScreamGridIndex( level );
+		var step = ScreamGridIndex( level, speed );
 
 		if ( step is < 0 or > 3 )
 			return 0;
@@ -769,7 +763,7 @@ public sealed partial class ParkAudio : Entity
 	/// <param name="level">The second operand, averaged with the script speed - see <see cref="ScreamVolume"/>.</param>
 	/// <param name="at">Where the ride stands. The engine takes this from the script's own thing.</param>
 	/// <returns>Whether anything started, which is what the script holds afterwards.</returns>
-	internal bool Scream( int scriptId, int band, int level, Vector3 at )
+	internal bool Scream( int scriptId, int band, int level, Vector3 at, int speed = ScriptSpeed )
 	{
 		// The handle is tested before anything else (FUN_00551130), so a refusal needs no sound device.
 		if ( _screams.LetGo( scriptId ) is { } refused )
@@ -790,13 +784,13 @@ public sealed partial class ParkAudio : Entity
 			return false;
 		}
 
-		Log.Info( $"Park audio: script {scriptId} screaming, band {band} effect {effect} "
-			+ $"parameter {ScreamVolume( level )} volume {ScreamChildVolume( effect, 0, level )} "
+		Log.Info( $"Park audio: script {scriptId} screaming, band {band} effect {effect} speed {speed} "
+			+ $"parameter {ScreamVolume( level, speed )} volume {ScreamChildVolume( effect, 0, level, speed )} "
 			+ $"at ({at.X:0.0},{at.Y:0.0},{at.Z:0.0})" );
 
 		// Its first child now if the listener is in range (else on the first pass that finds it so), the rest from
 		// OnUpdate, each on this ride's own clock.
-		_screams.Start( scriptId, effect, band, level, at, Time.Now );
+		_screams.Start( scriptId, effect, band, level, at, Time.Now, speed );
 
 		return true;
 	}
@@ -817,9 +811,9 @@ public sealed partial class ParkAudio : Entity
 	/// </remarks>
 	private Voice? PlayScream( ParkScreams.Chain chain, int variation )
 	{
-		var volume = ScreamChildVolume( chain.Effect, variation, chain.Level );
+		var volume = ScreamChildVolume( chain.Effect, variation, chain.Level, chain.Speed );
 
-		chain.Pitch = ScreamChildPitch( chain.Effect, variation, chain.Level );
+		chain.Pitch = ScreamChildPitch( chain.Effect, variation, chain.Level, chain.Speed );
 
 		if ( Unheard( chain.At ) )
 		{
@@ -845,9 +839,9 @@ public sealed partial class ParkAudio : Entity
 	/// that names the effect's parameter or else a draw between them (<see cref="Controlled"/>). Nought for a
 	/// variation the category has not got.
 	/// </summary>
-	internal int ScreamChildVolume( int effect, int variation, int level )
+	internal int ScreamChildVolume( int effect, int variation, int level, int speed = ScriptSpeed )
 		=> _kids?.VariationsOf( effect ) is { } headers && variation >= 0 && variation < headers.Count
-			? Controlled( headers[variation], 1, _kids.ParameterOf( effect ), ScreamVolume( level ), _screamRandom )
+			? Controlled( headers[variation], 1, _kids.ParameterOf( effect ), ScreamVolume( level, speed ), _screamRandom )
 			: 0;
 
 	/// <summary>
@@ -857,9 +851,9 @@ public sealed partial class ParkAudio : Entity
 	/// parameter or else a draw between them (<see cref="Controlled"/>). Nought for a variation the category
 	/// has not got.
 	/// </summary>
-	internal int ScreamChildPitch( int effect, int variation, int level )
+	internal int ScreamChildPitch( int effect, int variation, int level, int speed = ScriptSpeed )
 		=> _kids?.VariationsOf( effect ) is { } headers && variation >= 0 && variation < headers.Count
-			? Controlled( headers[variation], 2, _kids.ParameterOf( effect ), ScreamVolume( level ), _screamRandom )
+			? Controlled( headers[variation], 2, _kids.ParameterOf( effect ), ScreamVolume( level, speed ), _screamRandom )
 			: 0;
 
 	private readonly Random _screamRandom = new();
@@ -910,12 +904,12 @@ public sealed partial class ParkAudio : Entity
 	/// <see cref="SingleScreamEffectFor"/> for which one.
 	/// </summary>
 	/// <returns>Whether anything started.</returns>
-	internal bool SingleScream( int band, int level, Vector3 at )
+	internal bool SingleScream( int band, int level, Vector3 at, int speed = ScriptSpeed )
 	{
 		if ( !Audio.Ready || _kids is not { IsValid: true } )
 			return false;
 
-		var effect = SingleScreamEffectFor( band, level );
+		var effect = SingleScreamEffectFor( band, level, speed );
 
 		if ( effect == 0 )
 		{
@@ -930,7 +924,7 @@ public sealed partial class ParkAudio : Entity
 
 		_screamSamples.Add( voice.Name );
 
-		Log.Info( $"Park audio: single scream, band {band} level {level} effect {effect} "
+		Log.Info( $"Park audio: single scream, band {band} level {level} speed {speed} effect {effect} "
 			+ $"sample '{voice.Name}' volume {voice.Volume:0.0000} pitch {OneShotPitch} at ({at.X:0.0},{at.Y:0.0},{at.Z:0.0})" );
 
 		return true;
@@ -1114,20 +1108,21 @@ public sealed partial class ParkAudio : Entity
 	/// on it, so a replay keeps it. With none, no scream is held here to move (<see cref="Scream"/>).
 	/// </remarks>
 	/// <returns>Whether a scream was there to change.</returns>
-	internal bool ScreamLevel( int scriptId, int level )
+	internal bool ScreamLevel( int scriptId, int level, int speed = ScriptSpeed )
 	{
 		if ( _screams.Find( scriptId ) is not { } scream )
 			return false;
 
 		scream.Level = level;
+		scream.Speed = speed;
 
-		var parameter = ScreamVolume( level );
+		var parameter = ScreamVolume( level, speed );
 
 		if ( _kids?.VariationsOf( scream.Effect ) is { } headers && scream.Variation >= 0
 			&& scream.Variation < headers.Count && NamesOnVolume( headers[scream.Variation], _kids.ParameterOf( scream.Effect ) ) )
-			scream.Voice?.SetVolume( ChannelGain( ScreamChildVolume( scream.Effect, scream.Variation, level ) ) );
+			scream.Voice?.SetVolume( ChannelGain( ScreamChildVolume( scream.Effect, scream.Variation, level, speed ) ) );
 
-		Log.Info( $"Park audio: script {scriptId} scream level {level} -> parameter {parameter}" );
+		Log.Info( $"Park audio: script {scriptId} scream level {level} speed {speed} -> parameter {parameter}" );
 
 		return true;
 	}
@@ -1135,7 +1130,7 @@ public sealed partial class ParkAudio : Entity
 	/// <summary>What a script's scream is doing, for the <c>rides</c> census. A pure getter.</summary>
 	internal string ScreamState( int scriptId )
 		=> _screams.Find( scriptId ) is { } scream
-			? $"effect {scream.Effect} band {scream.Band} level {scream.Level} variation {scream.Variation + 1} "
+			? $"effect {scream.Effect} band {scream.Band} level {scream.Level} speed {scream.Speed} variation {scream.Variation + 1} "
 				+ $"sample '{scream.Sample}' pitch {scream.Pitch} plays {scream.Plays} next in {Math.Max( 0f, scream.NextAt - Time.Now ):0.00}s"
 				+ (scream.Voice is { Playing: true } ? "" : " (between)")
 				+ (scream.Away ? " away" : "")

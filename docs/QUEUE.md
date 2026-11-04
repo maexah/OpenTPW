@@ -587,29 +587,20 @@ filed the items that cite it.
   made-up run. Confirm (lane A): lay a two-click queue in both games and read the corner's counter (here `cell X Y`, there the
   saved record's `+8`, `parkfile.py`): predicted 1 before the button is pressed; press Backspace once and photograph the queue
   ending at the corner. Also: a sideshow's or feature's window, when built, must not offer the queue button.
-- [ ] **Q155. Every script's speed word is 50, where a placed thing's is its own (decoded in Q897).** Found by the
-  2026-09-26 staleness audit. The object constructor pushes the item's operating speed into its script (`FUN_0055a300`
-  at `0x004db534`), and the ride window's speed slider writes it (`FUN_004dd6e0`); `docs/exe/park.md`, "The clock, the
-  speed word, and WAIT". `RideScript` keeps no speed word: `WAIT`'s divisor is counted as `RIDE_SPEED_SCALES_WAITS`,
-  and `ParkAudio.ScriptSpeed` is a constant 50 in `ScreamVolume` and `ScreamGridIndex`, where the speed is half the
-  answer. `ParkScreamTests` calls the Belly Bounce's 35 "the real park's number", which holds only if its speed is 50.
-  Decoded (Q897, `park.md`, "What a loaded script holds"): a load puts the record's `+0xc0` back as the file holds it,
-  and the save's `mOperatingSpeed` never reaches the script (the two agree because every writer writes both); the
-  shipped park's Belly Bounce holds 60, so its screams' parameter is 40 (by the decode; the original's memory not read), not OpenTPW's 35, and its divisor 1.1. A speed changed by the window or an upgrade never reaches our bumper cars either, after a load or live (`ParkRides.cs:1688` binds the item's `InitSpeed` once; the original's performance reads the script word, `0x0055183b`). Keep the
-  word per script (`SavedScript.Speed`, `ParkScriptStates.cs:63`/`:77`, already reads it, a signed short in the exe, and the save writer already fills it from `ParkRideWear.SpeedWord`, `ParkRides.cs:1140`, `ParkScriptStates.Made.cs:72`; a bought thing's is its `InitSpeed` when above nought, a
-  `SPAWNCHILD` child's its parent's, the window's speed control and the repair's upgrade arm (`FUN_004df8f0`, `0x004dfabc`) write it) and read it in `WAIT`, the animation
-  triggers and the three scream readings (`STARTSCREAM`, `SINGLESCREAM`, `SCREAMLEVEL`); `park.md`'s table names the
-  other readers (the `TOUR` record's `+0x50`, `COAST`'s ride, the bounce sine, the walk placer, the wear, the scheduler's bumper-ride performance `0x0055183b`) - check each.
-  With a divisor of 1.1 a `WAITANIM` of a clip under 300 ms waits for weeks (`park.md`, "`WAITANIM` is NOT `TRIGANIM`
-  with a wait"): look for one in `Bouncy` first. `ParkScreamTests`' "35, the real park's number" and
-  `ParkAudio.ScriptSpeed`'s remark become wrong with the build. Confirm: `rides` showing the Belly Bounce's word 60
-  and `parameter 40` in its scream lines, against `q155/run2/`'s 35.
+- [ ] **Q155. The other readers of the speed word, and the play rate (decoded in Q897; Q875 built the word and its first readers).**
+  Found by the 2026-09-26 staleness audit. Q875 keeps the word per script and reads it in `WAIT`, the three scream readings, the
+  bumper ride's performance and the wear (`park.md`, "What a loaded script holds"). What reads the word and does not yet here:
+  the animation triggers (below), the scheduler's channel speed (`+0xe4`, below), the `TOUR` record's `+0x50` (`0x005517c0`, `FUN_0055d9b0`),
+  `COAST`'s ride (`0x005517e1` and `INITIALISE`'s `0x00554aab`, `FUN_0043b2b0`), the bounce riders' sine (`0x00557c03`, `ride-operation.md`,
+  "The bounce riders' height") and the walk placer's divisor (`0x0055823e`); check each against the files before building it. With a divisor
+  of 1.1 a `WAITANIM` of a clip under 300 ms waits for weeks (`park.md`, "`WAITANIM` is NOT `TRIGANIM` with a wait"): look for one in `Bouncy`
+  first. Confirm: the Belly Bounce's clips at their rate in the running game against the original's.
   From Q166: every trigger hands the divisor (`[ESP+0x14]`, 0.5 + 0.01 × speed, `0x00551cdc`) to the channel as its
   play rate - `TRIGANIM` `0x00552952`, `WAITANIM` `0x00552a9f`, `LOOPANIM` `0x00552be4`, `TRIGWAITANIM` `0x00552d2f`,
   `TRIGANIM_CH` `0x00553190`, `WAITANIM_CH` `0x00553325`, `LOOPANIM_CH` `0x00553465`, `TRIGWAITANIM_CH` `0x00553624` -
   where `StartAnimation` passes 1.0 (said at the site); the deadlines of `TRIGANIM` `0x005529ac`, `WAITANIM`
   `0x00552acd`, `TRIGWAITANIM` `0x00552d94`, `TRIGANIM_CH` `0x005531ee` and `TRIGWAITANIM_CH` `0x00553682` divide by
-  it, and none of these divisions is counted (`RIDE_SPEED_SCALES_WAITS` fires only from the ride window). The unbuilt
+  it, and none of these divisions is counted (the ride window's `RIDE_SPEED_SCALES_WAITS` count went with Q875's `WAIT`). The unbuilt
   `TRIGANIMSPEED` passes its rate / 1000 × the divisor (`0x00552f6e`), and its deadline, the length × 1000 / its rate,
   does not divide by it. The length a trigger answers does not depend on it (`FUN_00472f60`,
   `0x0047323e`..`0x00473258`).

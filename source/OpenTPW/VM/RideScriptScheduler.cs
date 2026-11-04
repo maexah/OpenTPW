@@ -362,6 +362,18 @@ public sealed class RideScriptScheduler
 				entry.Script.Turn( now );
 			}
 
+			// Due a turn or not, the visit pushes the script's speed word on: into its thing's bumper ride (0x00551844; a thing
+			// with none pushes nothing), then into its SPAWNCHILD child (0x00551888; a handle the list does not hold leaves
+			// the store to address 0xc0, which is not built).
+			if ( _entries.Contains( entry ) )
+			{
+				if ( entry.Script.TrackRide != 0 )
+					entry.Script.Bumpers?.PushSpeedWord( entry.Script.TrackRide, entry.Script.Speed );
+
+				if ( entry.Script.ChildId != 0 && Find( entry.Script.ChildId ) is { } child )
+					child.Speed = entry.Script.Speed;
+			}
+
 			// Due a turn or not, the engine then walks the script's effect list (0x005516f6 into 0x0055188f), and moves
 			// its sounds on the script's own eighth tick (0x00551a1c).
 			if ( entry.Script.Effects is { Count: > 0 } && _entries.Contains( entry ) )

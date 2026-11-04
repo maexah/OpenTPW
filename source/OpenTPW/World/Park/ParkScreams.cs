@@ -37,6 +37,9 @@ internal sealed class ParkScreams
 		/// <summary>What the script asked for; <c>SCREAMLEVEL</c> moves it under a scream already held.</summary>
 		public int Level;
 
+		/// <summary>The script's speed word when it asked (<c>STARTSCREAM</c> or <c>SCREAMLEVEL</c>): the other half of the average that is the chain's parameter 6.</summary>
+		public int Speed = ParkAudio.ScriptSpeed;
+
 		/// <summary>The variation the newest child played, zero-based; -1 before the first.</summary>
 		public int Variation = -1;
 
@@ -108,9 +111,9 @@ internal sealed class ParkScreams
 	internal Chain? Find( int scriptId ) => _chains.GetValueOrDefault( scriptId );
 
 	/// <summary>Starts a chain for a script, and makes its first child now, or, out of range, once it is in range.</summary>
-	internal Chain Start( int scriptId, int effect, int band, int level, Vector3 at, float now )
+	internal Chain Start( int scriptId, int effect, int band, int level, Vector3 at, float now, int speed = ParkAudio.ScriptSpeed )
 	{
-		var chain = new Chain { Effect = effect, Band = band, Level = level, At = at };
+		var chain = new Chain { Effect = effect, Band = band, Level = level, At = at, Speed = speed };
 
 		_chains[scriptId] = chain;
 
@@ -249,7 +252,7 @@ internal sealed class ParkScreams
 	private void Step( int scriptId, Chain chain, float now )
 	{
 		var variations = _variationsOf( chain.Effect );
-		var next = NextVariation( variations, chain.Variation, ParkAudio.ScreamVolume( chain.Level ), _random );
+		var next = NextVariation( variations, chain.Variation, ParkAudio.ScreamVolume( chain.Level, chain.Speed ), _random );
 
 		if ( next < 0 )
 			return;

@@ -143,8 +143,7 @@ public class ParkBumperCarsTests
 
 		Assert.AreEqual( (50, 10, 985, 11, 1050), (ride.Performance, ride.Thrust, ride.Friction, ride.TurnRate, ride.Restitution) );
 
-		table.Cars.BindSpeedWord( handle, 60 );
-		table.Cars.PushSpeedWords();
+		table.Cars.PushSpeedWord( handle, 60 );
 
 		Assert.AreEqual( (60, 10, 990, 11, 1060), (ride.Performance, ride.Thrust, ride.Friction, ride.TurnRate, ride.Restitution) );
 
@@ -242,8 +241,7 @@ public class ParkBumperCarsTests
 		var cars = table.Cars;
 		var ride = cars.RideOf( handle )!;
 
-		cars.BindSpeedWord( handle, 60 );
-		cars.PushSpeedWords();
+		cars.PushSpeedWord( handle, 60 );
 		cars.OpenForLoading( handle );
 
 		for ( var i = 0; i < 4; ++i )

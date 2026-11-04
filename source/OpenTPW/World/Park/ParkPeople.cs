@@ -3749,7 +3749,7 @@ public sealed partial class ParkPeople : Entity
 				// Whether it holds a scream (+0xd0), because the pause holds a scream's VOICE and not the script:
 				// a held park stops the VM one instruction short of STOPSCREAM, so "still screaming"
 				// and "gone quiet" have to be readable apart. A pure getter, so polling cannot perturb it.
-				+ $"running {script.Running} screaming {script.Screaming} "
+				+ $"running {script.Running} word {script.Speed} screaming {script.Screaming} "
 				// The longest critical section this script has run in one turn, against the cap that ends
 				// one where the original would hang.
 				+ $"critical {script.LongestCritical} "

@@ -30,14 +30,12 @@ namespace OpenTPW;
 /// </para>
 ///
 /// <para>
-/// <b>What this deliberately does not do yet: the SPEED word alone.</b> The original's object constructor
-/// (<c>FUN_004db090</c>, after the binder returns) pushes the item's own operating speed into the script's speed
-/// word (<c>FUN_0055a300</c>, field <c>+0xc0</c>) and its operating duration into variable 3, which is
-/// <see cref="RideVariables.VAR_DURATION"/>, logging "SPEED = %d" and "DUR = %d" as it does. <b>The duration is
-/// pushed</b> - from the save's own <c>mOperatingDuration</c>, beside the capacity, further down this file. The
-/// speed stays out, because <see cref="RideScript"/> keeps no speed word (<c>docs/QUEUE.md</c> Q155): it is the
-/// divisor <c>WAIT</c> scales by, exactly neutral only at the 50 the loader seeds, and the constructor pushes
-/// <c>Upgrades[0].InitSpeed</c> into it when that is above nought (<c>0x004db51c</c>..<c>0x004db534</c>).
+/// <b>The speed word is the script's own.</b> The original's object constructor (<c>FUN_004db090</c>, after the binder
+/// returns) pushes the item's own operating speed into the script's speed word (<c>FUN_0055a300</c>, field <c>+0xc0</c>,
+/// <see cref="RideScript.Speed"/>) when <c>Upgrades[0].InitSpeed</c> is above nought (<c>0x004db51c</c>..<c>0x004db534</c>) and its
+/// operating duration into variable 3, which is <see cref="RideVariables.VAR_DURATION"/>, logging "SPEED = %d" and "DUR = %d" as
+/// it does. Both are pushed here (<see cref="PushItemSpeed"/>; the duration beside the capacity, further down this file), and a load puts
+/// the file's word back over the item's (<see cref="Resume(RideScript, SavedScript, string, bool, ParkWorld)"/>).
 /// </para>
 ///
 /// <para>
@@ -100,6 +98,7 @@ public sealed class ParkRides : Entity
 		script.ThingId = placed.ThingId;
 		script.Set( ParkRideOperation.CapacityVariable, placed.OperatingCapacity );
 		script.Set( ParkRideOperation.DurationVariable, placed.OperatingDuration );
+		PushItemSpeed( script, item );
 
 		// <b>Nothing is resumed here, and that asymmetry with the load is deliberate.</b> This is the
 		// path a player takes by BUILDING the thing, which is the one moment its construction clip is meant
@@ -442,6 +441,7 @@ public sealed class ParkRides : Entity
 				// variable are two things that can drift.
 				script.Set( ParkRideOperation.CapacityVariable, placed.OperatingCapacity );
 				script.Set( ParkRideOperation.DurationVariable, placed.OperatingDuration );
+				PushItemSpeed( script, item );
 
 				// And where this script had got to when the park was saved, which is the whole of why a
 				// loaded park does not watch everything in it being built again. Started from its own first
@@ -996,6 +996,9 @@ public sealed class ParkRides : Entity
 		// a nameless script cannot be found by FINDSCRIPTRAND - see RideScript.TakeDeclaredName.
 		script.TakeDeclaredName();
 
+		// The word as the file holds it (FUN_005597a0 reads the record raw and writes no +0xc0 after it; docs/exe/park.md, "What a loaded script holds").
+		script.Speed = saved.Speed;
+
 		// A script whose saved array is a different length from the one it declares is not the script this
 		// record belongs to. Said rather than silently truncated, because the slots would still be written.
 		if ( saved.Variables.Length != script.Variables.Count )
@@ -1137,11 +1140,9 @@ public sealed class ParkRides : Entity
 
 			if ( _scripts.TryGetValue( placed.ThingId, out var handle ) && Scheduler.Find( handle ) is { } script )
 			{
-				var speed = ParkRideWear.SpeedWord( placed );
+				companions = MadeCompanionsOf( script, thing.Directory, loaded, Reading );
 
-				companions = MadeCompanionsOf( script, speed, thing.Directory, loaded, Reading );
-
-				var ownRecord = script.Made( Reading, speed, thing.Directory );
+				var ownRecord = script.Made( Reading, thing.Directory );
 
 				record = ownRecord with { Script = Linked( ownRecord.Script, script, loaded ) };
 				madeHandles.Add( handle );
@@ -1192,7 +1193,7 @@ public sealed class ParkRides : Entity
 				continue;
 			}
 
-			madeCompanions.AddRange( MadeCompanionsOf( parent, held.Speed, held.Directory, loaded, Reading ) );
+			madeCompanions.AddRange( MadeCompanionsOf( parent, held.Directory, loaded, Reading ) );
 		}
 
 		madeHandles.UnionWith( madeCompanions.Select( companion => companion.Script.Script.Handle ) );
@@ -1273,11 +1274,11 @@ public sealed class ParkRides : Entity
 
 	/// <summary>
 	/// The child and the sound child <paramref name="parent"/> made since the load, each written whole: the thing of a
-	/// child is its parent's and a sound child's is none, the speed word a child's is its parent's (<paramref name="speed"/>)
-	/// and a sound child's the loader's, and the folder is the parent's (97 of 97 children and 125 of 125 sound children in
+	/// child is its parent's and a sound child's is none, the speed word each one's own (a child's is its parent's by the
+	/// scheduler's copy, a sound child's the loader's), and the folder is the parent's (97 of 97 children and 125 of 125 sound children in
 	/// the 766 distinct park files on the desk). A link whose script the file already holds a record for is the load's, not made here.
 	/// </summary>
-	private List<ParkFileWriter.MadeCompanion> MadeCompanionsOf( RideScript parent, int speed, string directory, ParkWorld loaded,
+	private List<ParkFileWriter.MadeCompanion> MadeCompanionsOf( RideScript parent, string directory, ParkWorld loaded,
 		Func<float, uint> reading )
 	{
 		var found = new List<ParkFileWriter.MadeCompanion>();
@@ -1290,7 +1291,7 @@ public sealed class ParkRides : Entity
 			if ( child.ChildId != 0 || child.SoundChildId != 0 )
 				Unimplemented.Report( "SAVE_PARK_SCRIPT_MADE_SINCE_THE_LOAD" );
 
-			var made = child.Made( reading, sound ? ParkScriptStates.LoaderSpeed : speed, directory );
+			var made = child.Made( reading, directory );
 
 			found.Add( new ParkFileWriter.MadeCompanion( made with
 			{
@@ -1663,6 +1664,34 @@ public sealed class ParkRides : Entity
 	}
 
 	/// <summary>
+	/// The three operating numbers the ride window's controls write into a running script: capacity and duration as named variables
+	/// (<c>FUN_004dd7f0</c>, <c>FUN_004dd720</c>) and the speed as the script's word (<c>FUN_004dd6e0</c> through <c>FUN_0055a300</c>,
+	/// <c>0x004dd6f6</c>, at any value). Answers whether the thing has a running script.
+	/// </summary>
+	public bool SetOperating( int thingId, int speed, int capacity, int duration )
+	{
+		if ( ScriptFor( thingId ) is not (var id and not 0) || Scheduler.Find( id ) is not { } script )
+			return false;
+
+		script.Set( ParkRideOperation.CapacityVariable, capacity );
+		script.Set( ParkRideOperation.DurationVariable, duration );
+		script.Speed = speed;
+
+		return true;
+	}
+
+	/// <summary>
+	/// The object constructor's push of the item's operating speed into its script's speed word (<c>0x004db534</c>, <c>FUN_0055a300</c>),
+	/// made only when <c>Upgrades[0].InitSpeed</c> is above nought: otherwise the word stays the script creator's 50. A load puts the
+	/// file's word over it (<see cref="Resume(RideScript, SavedScript, string, bool, ParkWorld)"/>).
+	/// </summary>
+	private static void PushItemSpeed( RideScript script, ParkItemCatalogue.Item item )
+	{
+		if ( item.InitSpeed > 0 )
+			script.Speed = item.InitSpeed;
+	}
+
+	/// <summary>
 	/// What <c>BUMP</c> works on: the thing's track-ride handle and <c>mIsTrackRideValid</c>, and the park's bumper rides,
 	/// with the ride's arena put where the thing stands (<see cref="ParkBumperCars.ArenaCentre"/>).
 	/// </summary>
@@ -1683,17 +1712,13 @@ public sealed class ParkRides : Entity
 		var (x, z) = ParkBumperCars.ArenaCentre( item, placed.CellX, placed.CellY, placed.Angle );
 		cars.Place( placed.TrackRide, x, z );
 
-		// The speed word the object constructor pushes (0x004db534), which the scheduler then pushes into the ride's
-		// performance at each visit: the item's starting speed when over nought, else the script creator's 50.
-		// Deviation: this is bound once, so a speed the window or an upgrade changes, or the save holds, never reaches
-		// the cars where the original's performance reads the script word (0x0055183b; Q155, docs/exe/park.md).
-		var speedWord = item.InitSpeed > 0 ? item.InitSpeed : 50;
-		cars.BindSpeedWord( placed.TrackRide, speedWord );
+		// The speed word is the script's own (RideScript.Speed), which the scheduler pushes into the ride's performance at each visit
+		// (0x00551844; RideScriptScheduler.Advance). The constructor's push and a load's record have already set it.
 
 		// A kart or water ride has no record in the cars: its words are the track table's, placed at the place the
 		// placer handed the record (its arena's centre less the half cell the record adds).
 		ParkState.Current.TrackRides.PlaceKart( placed.TrackRide, x - (ParkBumperCars.CellUnits / 2), z - (ParkBumperCars.CellUnits / 2),
-			speedWord );
+			script.Speed );
 	}
 
 	/// <summary>
@@ -1707,7 +1732,6 @@ public sealed class ParkRides : Entity
 		{
 			ParkState.Current?.TrackRides.Cars.Tick();
 			Scheduler.Advance( MillisecondsAt( i ) );
-			ParkState.Current?.TrackRides.Cars.PushSpeedWords();
 
 			// The walks after the scripts, as the engine's order has them, but once a tick where the engine's
 			// FUN_00557ab0 runs once a frame past this loop (0x0054fa08): a deviation kept by Alexah's decision,

@@ -960,21 +960,8 @@ internal sealed class ParkObjectWindow : UiWindow
 		} );
 
 		// Into the running script as well, which is what makes the ride carry the new number rather
-		// than the window remembering it. Capacity and duration are named variables; speed is not.
-		if ( ParkRides.Current is { } rides && rides.ScriptFor( ThingId ) is var id and not 0
-			&& rides.Scheduler.Find( id ) is { } script )
-		{
-			script.Set( ParkRideOperation.CapacityVariable, capacity );
-			script.Set( ParkRideOperation.DurationVariable, duration );
-		}
-
-		// THE SPEED WORD IS A SEPARATE THING and deliberately not written. RideScript.Wait records that
-		// the engine divides every wait by 0.5 + 0.01 * speed, worked out afresh per instruction from the
-		// word at +0xc0, and leaves that division out. No opcode writes the word; the object constructor
-		// does, from outside the script system, and so does this panel: FUN_004dd6e0 writes it from this
-		// very slider. So moving speed here would re-time every WAIT in the script,
-		// which is a behaviour change too wide to make as a side effect of a slider.
-		Unimplemented.Report( "RIDE_SPEED_SCALES_WAITS" );
+		// than the window remembering it: capacity and duration as named variables, speed as the script's word.
+		ParkRides.Current?.SetOperating( ThingId, speed, capacity, duration );
 
 		Log.Info( $"Ride window: thing {ThingId} set to speed {speed}, capacity {capacity}, duration {duration}" );
 	}

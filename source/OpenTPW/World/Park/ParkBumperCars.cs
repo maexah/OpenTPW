@@ -184,12 +184,6 @@ public sealed class ParkBumperCars
 		/// <summary><c>+0x68</c>: how near a buoy a car has reached it.</summary>
 		public int ArrivalRadius { get; init; }
 
-		/// <summary>
-		/// The script's speed word, pushed into the performance at each of its scheduler visits (<c>0x00551844</c>);
-		/// null for a ride no script is bound to.
-		/// </summary>
-		public int? SpeedWord { get; internal set; }
-
 		/// <summary>The ring the arena's buoys make, as offsets from its centre, first to last (<c>+0xa8</c>, <c>+0xac</c>).</summary>
 		public IReadOnlyList<(int X, int Z)> Buoys { get; init; } = [];
 
@@ -432,26 +426,12 @@ public sealed class ParkBumperCars
 	}
 
 	/// <summary>
-	/// The scheduler's push of each bound script's speed word into its ride (<c>0x00551844</c>, every visit, whether
-	/// or not a turn ran) - called after each tick's scripts. <see cref="RideScript"/> keeps no speed word (Q155), so the
-	/// word is the one the object constructor would have pushed, kept on the record when the script is bound.
+	/// The scheduler's push of a script's speed word into its ride (<c>0x00551844</c>), made at every visit of a script whose
+	/// thing has a track ride, whether or not a turn ran: <see cref="SetPerformance"/> on the word, clamped there to 0-100
+	/// (<see cref="RideScriptScheduler.Advance"/>). The word is the script's own (<see cref="RideScript.Speed"/>, Q155), so a
+	/// speed the ride window or an upgrade writes reaches the ride on the next visit, and a loaded one starts at the file's.
 	/// </summary>
-	public void PushSpeedWords()
-	{
-		foreach ( var ride in _rides )
-		{
-			if ( ride?.SpeedWord is { } word && word != ride.Performance )
-				SetPerformance( ride.Handle, word );
-		}
-	}
-
-	/// <summary>Binds a ride's speed word - the constructor's push (<c>0x004db534</c>): the item's starting speed, or the loader's 50.</summary>
-	internal void BindSpeedWord( int handle, int word )
-	{
-		if ( RideOf( handle ) is { } ride )
-			ride.SpeedWord = word;
-	}
-
+	internal void PushSpeedWord( int handle, int word ) => SetPerformance( handle, word );
 
 	/// <summary>
 	/// Where a placed bumper ride's arena is centred, in the record's fixed point - <c>FUN_00529e10</c>: the anchor cell,

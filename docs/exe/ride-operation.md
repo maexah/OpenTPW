@@ -160,7 +160,7 @@ repair's bar at a fifth, then empty under the BROKEN DOWN sign (`q303/run-fix1/3
 
 | | The original | OpenTPW |
 |---|---|---|
-| The wear, every 64th sweep | `FUN_004df670` | built, `ParkRideOperation.WearByRunning`; the speed is the thing's `mOperatingSpeed`, or 50 at nought, as no script here keeps a speed word (Q155) |
+| The wear, every 64th sweep | `FUN_004df670` | built, `ParkRideOperation.WearByRunning`; the speed is the script's word (`RideScript.Speed`, `FUN_0055a330`; Q875) |
 | `VAR_WORN` under 20 | written 1 | built; what a ride's script does on it was not looked at |
 | Advisor message `0x42` under 10 | posted, and said on the same tick | built (Q305): `ParkAdvisorMessages.RideWornOut`, said a sweep on (`advisor-park.md`, "A ride about to break down") |
 | The breakdown request | every eighth sweep | built, `ParkRideOperation.WearAndAskToBreak` |

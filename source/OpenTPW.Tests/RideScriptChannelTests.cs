@@ -245,11 +245,11 @@ public class RideScriptChannelTests
 	{
 		var script = Running( Junspray(), Word( Opcode.END ) );
 
-		Assert.IsFalse( script.Made( _ => 0u, 50, "data\\levels\\jungle\\Features\\gates\\" ).HadATurn, "not yet run" );
+		Assert.IsFalse( script.Made( _ => 0u, "data\\levels\\jungle\\Features\\gates\\" ).HadATurn, "not yet run" );
 
 		script.Turn( 0f );
 
-		Assert.IsTrue( script.Made( _ => 0u, 50, "data\\levels\\jungle\\Features\\gates\\" ).HadATurn, "after its first turn" );
+		Assert.IsTrue( script.Made( _ => 0u, "data\\levels\\jungle\\Features\\gates\\" ).HadATurn, "after its first turn" );
 	}
 
 	/// <summary>

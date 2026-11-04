@@ -1050,6 +1050,85 @@ public class ParkScreamChainTests
 		}
 	}
 
+	/// <summary>A whole .RSE file of one <c>SCREAMLEVEL</c> and an <c>END</c>, to the layout <see cref="RideScriptFile"/> reads.</summary>
+	private static RideScriptFile ScreamLevelScript( int level )
+	{
+		using var memory = new System.IO.MemoryStream();
+		using var writer = new System.IO.BinaryWriter( memory );
+		int[] body = [unchecked( (int)(0x80000000u | (uint)Opcode.SCREAMLEVEL) ), level, unchecked( (int)(0x80000000u | (uint)Opcode.END) )];
+
+		writer.Write( System.Text.Encoding.ASCII.GetBytes( "RSSE" ) );
+		writer.Write( 0x00010F51 );
+		writer.Write( 0 );          // variable count
+		writer.Write( 8 );          // stack size
+		writer.Write( 50 );         // time slice
+		writer.Write( 0 );          // limbo records
+		writer.Write( 0 );          // bounce records
+		writer.Write( 0 );          // walk records
+		writer.Write( System.Text.Encoding.ASCII.GetBytes( "Pad Pad Pad Pad " ) );
+		writer.Write( body.Length );
+
+		foreach ( var word in body )
+			writer.Write( word );
+
+		writer.Write( 0 );          // string blob length
+		writer.Flush();
+
+		return new RideScriptFile( new System.IO.MemoryStream( memory.ToArray() ) );
+	}
+
+	/// <summary>
+	/// <b>A script's three scream readings take its own speed word</b> (Q155, <c>0x00555ed0</c>, <c>0x00555fb8</c>, <c>0x00555fea</c>):
+	/// <c>STARTSCREAM</c> starts its chain under the word and <c>SCREAMLEVEL</c> moves level and word together; <c>SINGLESCREAM</c> at level
+	/// 35 plays grid step 1 at the loader's 50 and step 2 at 70, a different effect with samples of its own.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> each of the three handlers' calls given no word; the chain not keeping it; <c>ScreamLevel</c> keeping the old one.</remarks>
+	[TestMethod]
+	public void AScriptsThreeScreamReadingsTakeItsOwnSpeedWord() => InAPark( "jungle", park =>
+	{
+		var scheduler = new RideScriptScheduler();
+		var script = new RideScript( ScreamLevelScript( 25 ) ) { Speed = 60 };
+
+		scheduler.Add( 5, script );
+		script.StartScreamAt( 5, 20, Here );
+
+		var chain = park.HeldScream( 5 )!;
+
+		Assert.AreEqual( (20, 60), (chain.Level, chain.Speed), "STARTSCREAM" );
+
+		script.Speed = 90;
+
+		for ( var tick = 0; tick < 9 && script.Running; ++tick )
+			scheduler.Advance( tick * 31f );
+
+		Assert.AreEqual( (25, 90), (chain.Level, chain.Speed), "SCREAMLEVEL moved the level and the word together" );
+
+		HashSet<string> Names( int effect ) => SamplesOf( effect ).SelectMany( set => set ).ToHashSet();
+
+		Voice Last()
+		{
+			lock ( Audio.Lock )
+				return Audio.Voices[^1];
+		}
+
+		var played = new List<string>();
+
+		foreach ( var speed in new[] { 50, 70 } )
+		{
+			script.Speed = speed;
+			Time.Now += 30f;
+			script.SingleScreamAt( 1, 35, Here );
+
+			var effect = ParkAudio.SingleScreamEffectFor( 1, 35, speed );
+
+			Assert.IsTrue( Names( effect ).Contains( Last().Name ), $"a word of {speed}: effect {effect}'s sample, not '{Last().Name}'" );
+			played.Add( Last().Name );
+		}
+
+		Assert.AreNotEqual( ParkAudio.SingleScreamEffectFor( 1, 35, 50 ), ParkAudio.SingleScreamEffectFor( 1, 35, 70 ), "two different effects, or this proves nothing" );
+		Assert.AreEqual( 2, played.Count );
+	} );
+
 	/// <summary>One frame through both clocks, held or not, as a level runs one.</summary>
 	private static void Frame( bool held, float seconds = 1f / 60f )
 	{

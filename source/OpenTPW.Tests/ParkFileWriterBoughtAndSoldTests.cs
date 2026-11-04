@@ -962,7 +962,7 @@ public class ParkFileWriterBoughtAndSoldTests
 			[new ParkRides.BoughtThing( new ParkWorld.MadeObject( madeObjects.Single( placed => placed.ThingId == bought.ThingId ), "A", "B" ), item.Width, item.Depth, "x" )], gone, state.BuiltItems )!;
 		var written = Written( things, out var body );
 		var modelHandle = written.ScriptStates.For( parentHandle )!.Value.ModelHandle;
-		var record = ParkScriptStates.MadeRecord( child.Made( rides.Readings!, ParkScriptStates.LoaderSpeed, "x" ) with { Thing = sound ? 0 : bought.ThingId },
+		var record = ParkScriptStates.MadeRecord( child.Made( rides.Readings!, "x" ) with { Thing = sound ? 0 : bought.ThingId },
 			sound ? 0 : modelHandle, written.ScriptStates.StructSize );
 		var spliced = written.ScriptStates.Splice( body, [record], [] );
 		var linked = new ParkWorld( spliced );
@@ -1044,6 +1044,33 @@ public class ParkFileWriterBoughtAndSoldTests
 
 		Assert.AreEqual( linkedTo != 0 ? linkedTo : childHandle, written.ScriptStates.For( parentHandle )!.Value.Child, "the link is the file's" );
 		Assert.IsNotNull( written.ScriptStates.For( childHandle ), "and so is the record" );
+	}
+
+	/// <summary>
+	/// The speed word a script holds is written (Q155): the shipped Belly Bounce's 60 comes back as loaded, and a word changed since (the
+	/// ride window's slider) is written over the file's, as a 16-bit field, while every other script keeps its own.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the word left the file's (<c>WrittenScript.Speed</c> not put); the script's word not read back at the load (<c>Resume</c>); the word written as the thing's operating speed.</remarks>
+	[TestMethod]
+	public void ASpeedWordChangedSinceTheLoadIsWrittenAndTheOthersKeepTheirs()
+	{
+		var rides = Bind( shipped );
+		var words = shipped.ScriptStates.Order.ToDictionary( handle => handle, handle => shipped.ScriptStates.For( handle )!.Value.Speed );
+		var bounce = words.Where( word => word.Value == 60 ).Select( word => word.Key ).Single();
+
+		Assert.AreEqual( 60, rides.Scheduler.Find( bounce )!.Speed, "the load puts back the word the file holds" );
+
+		var asLoaded = Resaved( shipped, rides );
+
+		Assert.IsTrue( words.All( word => asLoaded.ScriptStates.For( word.Key )!.Value.Speed == word.Value ), "unchanged, every record keeps its word" );
+
+		rides.Scheduler.Find( bounce )!.Speed = 80;
+
+		var changed = Resaved( shipped, rides );
+
+		Assert.AreEqual( 80, changed.ScriptStates.For( bounce )!.Value.Speed, "the window's new word" );
+		Assert.IsTrue( words.Where( word => word.Key != bounce ).All( word => changed.ScriptStates.For( word.Key )!.Value.Speed == word.Value ),
+			"and no other script's moved" );
 	}
 
 	/// <summary>The loaded park written as it runs: the file's own body under <paramref name="loaded"/>, its scripts and things as <paramref name="rides"/> has them, read back.</summary>
@@ -1153,6 +1180,9 @@ public class ParkFileWriterBoughtAndSoldTests
 
 		child.Effects!.Add( 1, node, StartableEffect, 1, child.Nodes!.EffectIndex( 1, node ) );
 
+		// One scheduler visit, which copies a parent's speed word into its child (0x00551888): the spawn's own visit does in the game.
+		rides.Scheduler.Advance( rides.LoadedAt + 31f );
+
 		var written = Resaved( loaded, rides );
 		var record = written.ScriptStates.For( reopened )!.Value;
 
@@ -1208,6 +1238,11 @@ public class ParkFileWriterBoughtAndSoldTests
 
 			child.Effects!.Add( 1, node, StartableEffect, 1, child.Nodes!.EffectIndex( 1, node ) );
 		}
+
+		// One scheduler visit, which copies a parent's speed word into its child (0x00551888): the spawn's own visit does in the game.
+		// Not for the sound child, which the copy skips and which a turn of the Hot Pot's script would end.
+		if ( !sound )
+			rides.Scheduler.Advance( rides.LoadedAt + 31f );
 
 		var kept = state.WrittenObjects( shipped, id => true, out var madeObjects, out var gone );
 		Assert.IsTrue( catalogue.TryGet( itemId, out var item ) );

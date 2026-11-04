@@ -118,11 +118,12 @@ public class ParkRideWearTests
 
 		var state = new ParkState( world );
 		var catalogue = new ParkItemCatalogue( Theme, data, instantAction );
-		var scripts = state.Objects.Where( thing => thing.IsVisitable || thing.IsToilet ).ToDictionary( thing => thing.ThingId, _ =>
+		var scripts = state.Objects.Where( thing => thing.IsVisitable || thing.IsToilet ).ToDictionary( thing => thing.ThingId, thing =>
 		{
 			using var script = data.OpenRead( "levels/jungle/rides/bouncy/bouncy.RSE" );
 
-			return new RideScript( new RideScriptFile( script ) );
+			// The word a load puts back, which the file's records hold equal to the thing's operating speed (Q155).
+			return new RideScript( new RideScriptFile( script ) ) { Speed = thing.OperatingSpeed > 0 ? thing.OperatingSpeed : 50 };
 		} );
 
 		var people = new ParkPeople( world, new ParkBalance( Theme, easyMode: true ), gateStatus: null, state,
@@ -168,6 +169,24 @@ public class ParkRideWearTests
 			Assert.AreEqual( 0, park.Item( Toilet ).WearAt( 0 ).Rate, "a toilet never wears by running" );
 		}, instantAction: false );
 	}
+
+	/// <summary>The wear takes the script's speed word (<c>FUN_0055a330</c>, <c>0x004df758</c>) and not the thing's operating speed: the word alone moved to 80, as the console's <c>scriptword</c> does.</summary>
+	/// <remarks><b>Mutation:</b> the wear given the thing's operating speed, or the loader's 50.</remarks>
+	[TestMethod]
+	public void TheWearTakesTheScriptsWordAndNotTheThings() => In( park =>
+	{
+		var item = park.Item();
+
+		Assert.IsTrue( park.Script.Set( ParkRideOperation.OnRideVariable, 5 ) );
+		park.Script.Speed = 80;
+		Assert.AreEqual( 60, park.Thing().OperatingSpeed, "the thing's own is not moved" );
+		Assert.IsFalse( park.Turn( 64 ) );
+
+		var wear = ParkRideWear.Of( 80, 5, item.MaxSpeed, item.MaxCapacity, item.WearAt( park.Thing().UpgradeLevel ) );
+
+		Assert.AreEqual( 100f - wear, park.Thing().StateOfRepair, 0.0001f );
+		Assert.AreNotEqual( 100f - 2.055f, park.Thing().StateOfRepair, 0.01f, "not the 60 the thing holds" );
+	} );
 
 	[TestMethod]
 	public void ARiddenBounceWearsOnEverySixtyFourthSweep() => In( park =>

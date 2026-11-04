@@ -115,12 +115,16 @@ public readonly record struct SavedWalkSlot( short WalkNode, short HeadNode, sho
 /// (<c>+0x0c</c>, <c>+0x14</c>, <c>+0x10</c>) as it stands: a handle, nought for none, or -1 to leave the file's
 /// (<see cref="ParkScriptStates.Put"/>).
 /// </para>
+///
+/// <para>
+/// <paramref name="Speed"/> is the speed word (<c>+0xc0</c>, a 16-bit field) as the script stands; null leaves the file's.
+/// </para>
 /// </summary>
 public readonly record struct WrittenScript( int Handle, int Position, int CallIndex, int HeapIndex, int Result,
 	int[] Stack, int[] Variables, uint WaitDeadline, uint AnimationDeadline, int LoopingKey, int AnimationMark,
 	uint TimerDeadline, SavedLimboSlot[]? Limbo, int InLimbo, SavedBounceSlot[]? Bounce, int Bouncing, int BounceBase,
 	int BounceNode, SavedWalkSlot[]? Walk, int[]? Heads, SavedEffect[]? Effects = null,
-	ParkParticles.Spawn?[]? Emitters = null, int Child = -1, int SoundChild = -1, int Parent = -1 );
+	ParkParticles.Spawn?[]? Emitters = null, int Child = -1, int SoundChild = -1, int Parent = -1, int? Speed = null );
 
 /// <summary>
 /// The <c>RSSE</c> module of a park save: every running script's program counter and variables.
@@ -584,7 +588,7 @@ public sealed partial class ParkScriptStates
 			ReadInt32At( start + (BounceNodeDword * 4) ), walk,
 			(ushort)ReadInt16At( start + ThingAt ), ReadInt32At( start + (ModelHandleDword * 4) ), effects,
 			ReadInt32At( start + (ChildDword * 4) ), ReadInt32At( start + (ParentDword * 4) ),
-			ReadInt32At( start + (SoundChildDword * 4) ), ReadInt32At( start + (SpeedDword * 4) ), directory );
+			ReadInt32At( start + (SoundChildDword * 4) ), (short)ReadInt32At( start + (SpeedDword * 4) ), directory );
 
 		if ( !_byHandle.TryAdd( handle, saved ) )
 			throw new InvalidDataException( $"two saved scripts both call themselves handle {handle}" );
@@ -613,7 +617,7 @@ public sealed partial class ParkScriptStates
 	/// <paramref name="body"/>, a copy of the payload this was read from: the struct's fields
 	/// <see cref="SavedScript"/> reads, and the stack, the variables, limbo, the bounce slots, the walk slots and
 	/// the head table where they lie, and the three link words where <see cref="WrittenScript"/> gives them. The
-	/// record's other bytes stay the file's: the name's offset, the speed word, the play rate, the body and the strings. The object list, the effects the
+	/// record's other bytes stay the file's: the name's offset, the play rate, the body and the strings. The object list, the effects the
 	/// script has started, is written where it holds as many records as the file's; one of another length is
 	/// <see cref="Splice"/>'s (<see cref="Relisted"/>).
 	///
@@ -657,6 +661,9 @@ public sealed partial class ParkScriptStates
 			PutInt32( body, at + (LoopingKeyDword * 4), script.LoopingKey );
 			PutInt32( body, at + (AnimationMarkDword * 4), script.AnimationMark );
 			PutInt32( body, at + (TimerDeadlineDword * 4), (int)script.TimerDeadline );
+
+			if ( script.Speed is { } speed )
+				PutInt16( body, at + (SpeedDword * 4), (short)speed );
 
 			if ( script.Child >= 0 )
 				PutInt32( body, at + (ChildDword * 4), script.Child );

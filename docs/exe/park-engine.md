@@ -3181,7 +3181,7 @@ when above nought, goes through the setter `FUN_004dd7f0` (`0x004db560`), which 
 start nought (the constructor's head), and each branch also pushes its value into the script. Earlier in the same
 constructor `mPricePerUse` (`+0x194`) is copied unclamped from `UsageInfo.InitPricePerUse` (`+0xe4`, `0x004db3ad`).
 OpenTPW builds all four fields (`ParkBuilding.Constructed`, Q171) and pushes the capacity and duration
-(`ParkRides.BindNew`); the speed's push is not built, as `RideScript` keeps no speed word (Q155). `+0x13c`, which supplies the base above,
+(`ParkRides.BindNew`); and pushes the speed into the script's word when `InitSpeed` is above nought (`ParkRides.PushItemSpeed`, Q875). `+0x13c`, which supplies the base above,
 is `UsageInfo.ExcitementLevel`: the compiled `.sam` schema puts it one slot before `InitCostOfGoods` (`+0x140`), in a
 UsageInfo group from `+0xc4` (`GoldenTicketCost`) through `+0x170` (`NumSimultAnims`) (`ride-operation.md`, "At the door"). `RIDE_EXCITEMENT_BAR` and
 `RIDE_RELIABILITY_BAR` stay counted until they are built.

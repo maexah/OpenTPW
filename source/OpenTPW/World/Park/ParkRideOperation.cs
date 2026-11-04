@@ -950,7 +950,7 @@ public sealed class ParkRideOperation
 		var riders = script[OnRideVariable];
 		var wear = riders == 0
 			? 0f
-			: ParkRideWear.Of( ParkRideWear.SpeedWord( thing ), riders, item.MaxSpeed, item.MaxCapacity, tier );
+			: ParkRideWear.Of( script.Speed, riders, item.MaxSpeed, item.MaxCapacity, tier );
 
 		var worn = thing with
 		{

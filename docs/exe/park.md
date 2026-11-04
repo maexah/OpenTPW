@@ -748,10 +748,18 @@ runs at the divisor 1.1, and its screams' parameter is `(20 + 60) / 2` = **40** 
 | `0x00558208`, `Walk_PlaceRider` | the divisor `0.5 + 0.01 × speed` again (`0x0055823e`..`0x0055824a`) |
 | `0x0055a341`, `FUN_0055a330` | a getter; its one caller is the wear, `FUN_004df670` (`0x004df758`) |
 
-OpenTPW keeps no word (Q155): `RideScript` divides by nothing, `ParkAudio.ScriptSpeed` is 50 in all three scream
-readings, and the wear takes the thing's `mOperatingSpeed`, or 50 at nought (`ParkRideWear.SpeedWord`); a bumper ride's performance
-takes its item's `InitSpeed`, or 50 at nought (`ParkRides.cs:1688`, `ParkBumperCars.BindSpeedWord`'s only caller),
-whatever the file or the window says. The other readers' use in OpenTPW was not checked here.
+**OpenTPW keeps the word (Q875)**: `RideScript.Speed`, 16 bits, 50 until written. A load puts the record's back (`ParkRides.Resume`), the
+constructor's push is `PushItemSpeed` (`BindNew`, and the load's bind before the record is read), the ride window's speed control writes
+it (`ParkRides.SetOperating`), and the scheduler copies a parent's into its child at every visit (`RideScriptScheduler.Advance`). Read: `WAIT`
+(`RideScript.DivisorOf`: `duration / (0.5 - speed x -0.01f)` with the divisor stored as a float and the quotient cut toward zero,
+`_ftol` at `0x00553801`, whose control word is round-toward-zero, so `WAIT 500` is 454 at 60), the three scream readings
+(`ParkAudio.ScreamVolume`, `ScreamGridIndex`; a held chain keeps the word it was asked under), the bumper ride's performance (the scheduler's
+push at every visit of a script whose thing has a track ride, `ParkBumperCars.PushSpeedWord`, which replaced the once-bound word) and the
+wear (`ParkRideOperation.WearByRunning`, the getter `FUN_0055a330`). The save writer writes the live word (`WrittenScript.Speed`). **Not read
+yet** (Q155): the animation triggers' rates and deadlines, the scheduler's channel speed, the `TOUR` record, `COAST`'s ride, the bounce
+riders' sine and the walk placer's divisor. Run off-screen (`q155-b16/run3/`), the shipped Belly Bounce reads word 60, its screams start at
+`parameter 40` (`speed 60`, level 20) where the constant 50 gave 35, its `WAIT 500` arms for 454 ms, and a bought Hot Pot's performance follows
+the word written (60 to 80 and back); the original's memory was not read for any of them.
 
 ### What a kept `GETTIME` reading is, and what a load does to it (Q181)
 

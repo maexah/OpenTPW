@@ -766,6 +766,9 @@ public sealed class RideScript
 	/// </summary>
 	public int NotImplemented { get; private set; }
 
+	/// <summary>The milliseconds the latest <c>WAIT</c> armed itself for (its duration over <see cref="DivisorOf"/>, cut), for the <c>scripts</c> census; nought before the first.</summary>
+	public int LastWait { get; private set; }
+
 	/// <summary>True while the script is sitting on a <c>WAIT</c> or <c>WAITANIM</c> not yet come due.</summary>
 	public bool Waiting => _waitUntil is not null;
 
@@ -807,6 +810,28 @@ public sealed class RideScript
 	/// the thing at <c>+0xac</c> (<c>0x0055470b</c>). Nought for a thing with none.
 	/// </summary>
 	public int TrackRide { get; set; }
+
+	private short _speed = ParkScriptStates.LoaderSpeed;
+
+	/// <summary>
+	/// The speed word, <c>+0xc0</c>, a signed 16-bit field: the script creator's 50 (<c>0x00558c3c</c>) until something
+	/// writes it - a load (as the file holds it), the object constructor, the ride window's speed control and the repair's
+	/// upgrade arm (<c>FUN_0055a300</c>), or the scheduler copying a parent's into its child (<c>0x00551888</c>).
+	/// <c>WAIT</c> and the three scream readings divide or average by it, and a bumper ride's performance is pushed from
+	/// it (docs/exe/park.md, "What a loaded script holds"). Held to 16 bits as the field is.
+	/// </summary>
+	public int Speed
+	{
+		get => _speed;
+		set => _speed = unchecked((short)value);
+	}
+
+	/// <summary>
+	/// The divisor the dispatcher's prologue works out afresh for every instruction from the speed word:
+	/// <c>0.5 - speed * -0.01</c>, stored as a 32-bit float (<c>0x00551cc3</c>..<c>0x00551ce8</c>; both constants are
+	/// floats, <c>0x00700fcc</c> and <c>0x00700fd0</c>). Exactly 1 at the loader's 50.
+	/// </summary>
+	internal static float DivisorOf( int speed ) => (float)(0.5 - (double)speed * -0.01f);
 
 	/// <summary>The thing's <c>mIsTrackRideValid</c>, <c>+0x2c</c> - what <c>BUMP 5</c> answers.</summary>
 	public int TrackRideValid { get; set; }
@@ -1256,7 +1281,7 @@ public sealed class RideScript
 				(short)slot.State, slot.Flags, slot.Facing ) )],
 			Heads: [.. _heads],
 			Effects: Effects?.Written(),
-			Emitters: WrittenEmitters() );
+			Emitters: WrittenEmitters(), Speed: Speed );
 	}
 
 	/// <summary>
@@ -1618,10 +1643,9 @@ public sealed class RideScript
 	/// "OpenTPW's writer, a thing bought and a thing sold"): <see cref="Written"/>, with what its loader took from
 	/// its <c>.RSE</c> file and the offset of its name.
 	/// </summary>
-	/// <param name="speed">The speed word, which no script here keeps: its thing's operating speed, or the loader's 50.</param>
 	/// <param name="directory">The folder it was loaded from, as the engine keeps it at <c>+0x38</c>.</param>
-	internal MadeScript Made( Func<float, uint> reading, int speed, string directory )
-		=> new( Written( reading ), ThingId, _file.Body, _file.StringBlob, _nameOffset, _file.TimeSlice, speed, directory, _hadATurn );
+	internal MadeScript Made( Func<float, uint> reading, string directory )
+		=> new( Written( reading ), ThingId, _file.Body, _file.StringBlob, _nameOffset, _file.TimeSlice, Speed, directory, _hadATurn );
 
 	/// <summary>
 	/// Whether it has had a turn: the engine sets its turn's budget, <c>+0x98</c>, from <c>+0x94</c> as each turn begins
@@ -3353,10 +3377,15 @@ public sealed class RideScript
 			return;
 		}
 
-		// The handle, or nought, goes over +0xd0 whatever came before (0x00555ee6): a refused second start
-		// leaves the script holding nothing, and its first scream playing on.
-		ParkAudio.Current?.Scream( Id, band, level, at );
+		StartScreamAt( band, level, at );
 	}
+
+	/// <summary>
+	/// The scream <c>STARTSCREAM</c> starts, from where the ride sounds: parameter 6 is the level averaged with this script's speed word
+	/// (<c>0x00555ed0</c>, <see cref="ParkAudio.ScreamVolume"/>). The handle, or nought, goes over +0xd0 whatever came before
+	/// (<c>0x00555ee6</c>): a refused second start leaves the script holding nothing, and its first scream playing on.
+	/// </summary>
+	internal void StartScreamAt( int band, int level, Vector3 at ) => ParkAudio.Current?.Scream( Id, band, level, at, Speed );
 
 	/// <summary>
 	/// <c>STOPSCREAM</c>: takes the scream down and forgets it - the engine's <c>Sound_StopFading</c>
@@ -3402,8 +3431,11 @@ public sealed class RideScript
 			return;
 		}
 
-		ParkAudio.Current?.SingleScream( band, level, at );
+		SingleScreamAt( band, level, at );
 	}
+
+	/// <summary>One scream at <paramref name="at"/>, its grid step the level plus this script's speed word over 50 (<c>0x00555fb8</c>, <see cref="ParkAudio.ScreamGridIndex"/>).</summary>
+	internal void SingleScreamAt( int band, int level, Vector3 at ) => ParkAudio.Current?.SingleScream( band, level, at, Speed );
 
 	/// <summary>
 	/// <c>SCREAMLEVEL</c>: moves the volume of the scream this script is already holding -
@@ -3429,7 +3461,7 @@ public sealed class RideScript
 			return;
 		}
 
-		ParkAudio.Current?.ScreamLevel( Id, Value( operands[0] ) );
+		ParkAudio.Current?.ScreamLevel( Id, Value( operands[0] ), Speed );
 	}
 
 	/// <summary>
@@ -4044,7 +4076,7 @@ public sealed class RideScript
 	/// same instruction runs again next turn, and the turn ends.
 	///
 	/// <para>
-	/// <b>The duration is added to the caller's clock unchanged.</b> It is milliseconds: the engine
+	/// <b>The duration is in milliseconds, added to the caller's clock.</b> The engine
 	/// adds the duration to the clock object at <c>0x785970</c>, whose chain
 	/// (<c>0x00402d70</c> -> <c>0x00402f10</c> -> <c>0x004030d0</c> -> <c>0x004033a0</c>) ends at a
 	/// source that falls back to <c>timeGetTime()</c> and scales its <c>QueryPerformanceCounter</c>
@@ -4054,12 +4086,12 @@ public sealed class RideScript
 	/// </para>
 	///
 	/// <para>
-	/// <b>The engine's speed scaling is absent.</b> The dispatcher divides the duration by
-	/// <c>0.5 + 0.01 * speed</c>, worked out afresh for every instruction from the script's speed word at
-	/// <c>+0xc0</c>. No opcode writes that word: the loader sets it to 50, where the divisor is exactly 1,
-	/// and the object constructor pushes the item's own operating speed in from outside the script system
-	/// (<c>docs/exe/park.md</c>, "The clock, the speed word, and WAIT"), so it is 50 only for a script
-	/// nothing binds. The ride window counts the missing division as <c>RIDE_SPEED_SCALES_WAITS</c>.
+	/// <b>The duration is divided by the speed word's divisor, then cut to a whole number.</b> The dispatcher divides
+	/// it (<c>FDIV</c> at <c>0x005537fd</c>) by <see cref="DivisorOf"/> and truncates the quotient (<c>_ftol</c>,
+	/// <c>0x00553801</c>) before adding it to the clock: <c>3000</c> waits <c>3000</c> at a word of 50 and <c>2727</c> at
+	/// 60. Only <c>WAIT</c> is scaled here; <c>WAITANIM</c> and the trigger deadlines divide too and do not yet
+	/// (Q155; the ride window counted the missing division as <c>RIDE_SPEED_SCALES_WAITS</c>, which this
+	/// replaces).
 	/// </para>
 	/// </summary>
 	private void Wait( float now, int duration, int length )
@@ -4070,7 +4102,8 @@ public sealed class RideScript
 			// already over costs the rest of the turn. Nothing shipped asks for one - every WAIT in the
 			// corpus names a positive duration - but WAITANIM, which shares this field, asks for
 			// exactly that.
-			_waitUntil = now + duration;
+			LastWait = (int)(duration / (double)DivisorOf( Speed ));
+			_waitUntil = now + LastWait;
 			Position -= length;
 			_budget = 0;
 			return;

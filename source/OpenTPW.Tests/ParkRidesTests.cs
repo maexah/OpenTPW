@@ -307,6 +307,91 @@ public class ParkRidesTests
 	}
 
 	/// <summary>A thing bought after a load is numbered past every saved script, from the saved next handle.</summary>
+	/// <summary>
+	/// A thing bought has its script's speed word pushed from its item's starting speed when that is above nought and the creator's 50
+	/// when it is not (the object constructor, <c>0x004db534</c>; Q155).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the push missing; the push made for an item of speed nought; the word left the loader's.</remarks>
+	[TestMethod]
+	[DataRow( 77, 77 )]
+	[DataRow( 0, 50 )]
+	[DataRow( -1, 50 )]
+	public void AThingBoughtTakesItsItemsStartingSpeedAsItsWordWhenAboveNought( int initSpeed, int word )
+	{
+		var rides = Bind( World(), Catalogue() );
+
+		Assert.IsTrue( Catalogue().TryGet( SecurityCamera, out var item ), "the jungle offers a camera" );
+
+		var placed = new ParkWorld.CatalogueObject( ThingId: 901, CatalogueId: SecurityCamera, RawX: 20 << 8, RawY: 12 << 8, Angle: 0 );
+
+		Assert.IsTrue( rides.BindNew( placed, item with { InitSpeed = initSpeed } ) );
+		Assert.AreEqual( word, rides.Scheduler.Find( rides.ScriptFor( 901 ) )!.Speed );
+	}
+
+	/// <summary>
+	/// A thing the load finds no record for (the script module spoiled, so everything starts from its own beginning) has its script made as the
+	/// object constructor makes it: the item's starting speed pushed into the word when above nought (<c>0x004db534</c>).
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the push missing on the load's path.</remarks>
+	[TestMethod]
+	public void AThingTheLoadFindsNoRecordForTakesItsItemsStartingSpeed()
+	{
+		var payload = Payload();
+		var at = Single( payload, BitConverter.ToUInt32( System.Text.Encoding.ASCII.GetBytes( "RSSE" ) ), _ => true );
+
+		payload[at] = (byte)'X';
+
+		var catalogue = Catalogue();
+		var world = new ParkWorld( payload );
+
+		Assert.IsNotNull( world.Save!.ScriptStates.Problem, "the module will not read" );
+		Assert.IsTrue( catalogue.TryGet( world.Objects.Single( thing => thing.ThingId == BellyBounceThing ).CatalogueId, out var item ) );
+		Assert.IsTrue( item.InitSpeed > 0, "or the push is not what this tells apart" );
+
+		var rides = Bind( world, catalogue );
+
+		Assert.AreEqual( item.InitSpeed, rides.Scheduler.Find( rides.ScriptFor( BellyBounceThing ) )!.Speed );
+	}
+
+	/// <summary>
+	/// The ride window's controls write a running script's capacity, duration and speed word together (<c>FUN_004dd7f0</c>, <c>FUN_004dd720</c>,
+	/// <c>FUN_004dd6e0</c>); a thing with no script answers false and writes nothing.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the word not written; the capacity or the duration written as the word.</remarks>
+	[TestMethod]
+	public void TheWindowsOperatingNumbersReachTheScriptAndTheSpeedIsItsWord()
+	{
+		var rides = Bind( World(), Catalogue() );
+		var bouncy = rides.Scheduler.Find( rides.ScriptFor( BellyBounceThing ) )!;
+
+		Assert.IsTrue( rides.SetOperating( BellyBounceThing, 33, 7, 9 ) );
+		Assert.AreEqual( 33, bouncy.Speed );
+		Assert.AreEqual( 7, bouncy[ParkRideOperation.CapacityVariable] );
+		Assert.AreEqual( 9, bouncy[ParkRideOperation.DurationVariable] );
+		Assert.IsFalse( rides.SetOperating( 99999, 1, 2, 3 ), "a thing with no script" );
+	}
+
+	/// <summary>
+	/// A load puts the file's word back over the item's: the Belly Bounce's record edited to 77, where its item's starting speed is not,
+	/// binds a script that holds 77 (<c>FUN_005597a0</c> reads the record raw, <c>docs/exe/park.md</c>, "What a loaded script holds").
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the record's word not read (the item's push would leave it at its 60).</remarks>
+	[TestMethod]
+	public void ALoadedScriptHoldsTheWordItsRecordHoldsAndNotItsItems()
+	{
+		var payload = Payload();
+		var clock = new ParkClock( payload ).Reading!.Value;
+		var script = Single( payload, clock + 63, at => at >= 0xa0
+			&& BitConverter.ToInt32( payload, at - 0xa0 + 0x08 ) == 3 && BitConverter.ToInt32( payload, at - 0xa0 + 0x3c ) == 46 ) - 0xa0;
+
+		Assert.AreEqual( 60, BitConverter.ToInt16( payload, script + 0xc0 ), "the shipped file's" );
+		BitConverter.GetBytes( (short)77 ).CopyTo( payload, script + 0xc0 );
+
+		var rides = Bind( new ParkWorld( payload ), Catalogue() );
+
+		Assert.AreEqual( 77, rides.Scheduler.Find( rides.ScriptFor( BellyBounceThing ) )!.Speed );
+	}
+
 	[TestMethod]
 	public void AThingBoughtAfterALoadTakesTheSavedNextHandle()
 	{
@@ -426,10 +511,12 @@ public class ParkRidesTests
 
 		Assert.IsNotNull( bouncy.WaitDeadline, "back on its WAIT 500" );
 
-		var armed = (bouncy.WaitDeadline!.Value - rides.LoadedAt - 500f) / 31f;
+		// Its word is 60, so the WAIT 500 waits 500 / 1.1 = 454 ms (Q155; the save's word, RideScript.DivisorOf).
+		var armed = (bouncy.WaitDeadline!.Value - rides.LoadedAt - 454f) / 31f;
 
+		Assert.AreEqual( 60, bouncy.Speed, "the word its save holds" );
 		Assert.IsTrue( armed >= 11f && armed <= 18f && armed == MathF.Floor( armed ),
-			$"round through word 43 to the next WAIT 500, armed on a turn from the 11th tick to the 18th, not {armed}" );
+			$"round through word 43 to the next WAIT 500 (454 ms at its word of 60), armed on a turn from the 11th tick to the 18th, not {armed}" );
 		Assert.IsFalse( channel.HasQueued, "and the LOOPANIM 2, 0 on the way queued nothing" );
 		Assert.AreEqual( 2, channel.AnimID, "the saved loop still playing" );
 		Assert.AreEqual( 1.1f, channel.Speed, 0.001f, "at its saved speed" );
