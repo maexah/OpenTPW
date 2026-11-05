@@ -979,8 +979,8 @@ the All Rides row in it. The box's lettering is smaller than the original's (`QU
 Tests: `ParkBoughtClosedTests`. A purchase closes the script and record, clears the nominee and raises the hoarding;
 the first joined measure opens it; a shop stays open; clearing the path at the tail measures nothing and closes
 nothing (status 22); a measure of a cut-off queue keeps the door, the riders and the nominee; an open request opens a
-cut-off ride (status 23 to 22); a loaded park keeps each ride's saved door. No test runs `ParkBuilding.Buy` itself
-(`QUEUE.md` Q211).
+cut-off ride (status 23 to 22); a loaded park keeps each ride's saved door. `ParkBuyWiringTests` (Q1029) runs a purchase through
+`ParkBuilding.Build`, the whole of a build under the console's `Buy`, which no test calls.
 
 **Running-game confirmation of the purchase:** a Belly Bounce bought at (57,23) reads `canload 0`, twelve Closed
 panels at progress 1 and "CLOSED: QUEUE NOT CONNECTED"; a queue cell joined to the path at (56,22) gives `canload 1`

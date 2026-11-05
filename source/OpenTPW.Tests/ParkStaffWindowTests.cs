@@ -842,6 +842,50 @@ public class ParkStaffWindowTests
 	}
 
 	/// <summary>
+	/// <b>A refused click of the track tool is silent beside a park screen, and heard otherwise</b>: the commit plays <c>0xaf</c>
+	/// ahead of its mode switch (<c>0x00524a6f</c>..<c>0x00524aae</c>, before <c>0x00524acd</c>), so it gates the track modes as
+	/// it does the path, queue and patrol modes. A kart ride's tool is armed, the balance is under the run's price, and a click
+	/// is made with and without the staff window up.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> <c>RunBuildMode</c> hands the track tool <c>true</c> for <c>pressReachedTheTool</c>; its track branch deleted.</remarks>
+	[TestMethod]
+	public void ARefusedTrackClickIsSilentBesideAParkScreen()
+	{
+		var level = Level.Current!;
+		var state = level.ParkState!;
+
+		typeof( Level ).GetProperty( nameof( Level.Balance ) )!.SetValue( level, new ParkBalance( "jungle", easyMode: true ) );
+		Assert.IsTrue( ParkTrackPieces.PieceCost( level, 1 ) > 0, "a run costs something, or the balance cannot refuse it" );
+
+		ParkTrackTool.Forget();
+		ParkTrackPieces.LayStation( state, 1, 30, 24, 0 );
+
+		var ride = new ParkWorld.CatalogueObject( state.NextThingId(), 1150, 30 << 8, 24 << 8, 0, TrackRide: state.TrackRides.Take( -4 ) );
+		state.AddObject( ride );
+
+		foreach ( var screen in new[] { false, true } )
+		{
+			if ( screen )
+				ParkStaffWindow.Open( _stack, Mechanic.ThingId );
+
+			_stack.Update();
+			Assert.AreEqual( screen, WindowStack.ParkScreenOpen );
+
+			state.SetBalance( 0 );
+			ParkBuildMode.ArmAt( ParkBuildMode.KartTrack, ride.ThingId, 34, 25 );
+			UiSounds.LastAsked = null;
+
+			var said = level.ClickWorldAt( 34, 29, 0 );
+
+			StringAssert.StartsWith( said, "world click: track: refused, " );
+			StringAssert.EndsWith( said, screen ? " - no sound, the press went to a park screen, the tool put away"
+				: " - sound 0xaf, no voice, the tool put away" );
+			Assert.AreEqual( screen ? null : 0xaf, UiSounds.LastAsked, "the track tool" );
+			Assert.AreEqual( ParkBuildMode.None, ParkBuildMode.Current );
+		}
+	}
+
+	/// <summary>
 	/// <b>Every path or queue click the red latch has not refused plays the laying sound <c>0x65</c></b>, before its arm
 	/// runs and wherever the press went (<c>0x005271ea</c>): the path tool's arming click on (62,18) and its run to (66,18),
 	/// the queue tool's run from the Belly Bounce's (49,22) that joins the path at (47,22), and a click on its anchor. The

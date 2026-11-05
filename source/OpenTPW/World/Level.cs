@@ -3020,7 +3020,7 @@ public class Level
 	/// (<see cref="UI.ParkShopWindow"/>) are built (the visitor's is
 	/// <see cref="UI.ParkVisitorWindow"/>, opened from the locator and the visitors list, and the staff member's
 	/// <see cref="UI.ParkStaffWindow"/>).
-	/// <b>A ride-class thing takes the original's three arms in its order</b> (<c>0x00486945</c> to <c>0x004869d4</c>, <c>docs/exe/park-engine.md</c>,
+	/// <b>A ride-class thing takes the original's three arms in its order</b> (<c>0x00486958</c> to <c>0x004869d4</c>, <c>docs/exe/park-engine.md</c>,
 	/// "An add-on has no window and no sale of its own"): an item whose <c>AddOn.UpgradeType</c> (<c>+0x288</c>) is 2 opens another
 	/// window (<c>FUN_004b6ae0</c>, unbuilt); else a thing whose <c>mUpgradeParent</c> (<c>+0x30</c>) is not nought opens that ride's own
 	/// window, and is not dispatched again; else an item that fits a ride (<c>AddOn.UpgradesId</c>, <c>+0x284</c>) opens nothing. The

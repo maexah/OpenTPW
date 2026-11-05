@@ -48,7 +48,7 @@ internal sealed class UiList : UiControl
 	/// </para>
 	/// <para>
 	/// <b><see cref="Depth"/> is how many rows it hangs under</b>: the original's list is a tree, a row added with an
-	/// insert-under (<c>FUN_0066403b</c>'s fourth argument, <see cref="AddUnder"/>) a child of that row, its name
+	/// insert-under (<c>FUN_0066403b</c>'s parent argument, <see cref="AddUnder"/>) a child of that row, its name
 	/// lettered <see cref="IndentStep"/> units further in for each level (<c>FUN_00663324</c>, <c>0x0066353f</c>). Nought for
 	/// every row of every other list.
 	/// </para>
@@ -410,7 +410,7 @@ internal sealed class UiList : UiControl
 	}
 
 	/// <summary>
-	/// Adds a row - <c>FUN_0066403b</c> with an insert-after of -1 - and answers where it went. On a sorted list
+	/// Adds a row - <c>FUN_0066403b</c> with no parent (-1), the head chain, - and answers where it went. On a sorted list
 	/// that is the original's sorted insert (<c>list+0x48 &amp; 0x10</c>): before the first row it
 	/// <see cref="SortsBefore"/>, so after every row equal to it, or at the end. Nothing already in the list
 	/// moves, re-sorts or is scrolled to, and the selection keeps its index. A list with no sort takes it at the end.
@@ -574,7 +574,7 @@ internal sealed class UiList : UiControl
 			$"\"{cells[0].Text}\" \"{(cells.Length > 1 ? cells[1].Text : null)}\" ({cells[0].TextColour.R},{cells[0].TextColour.G},{cells[0].TextColour.B})" ) );
 
 	/// <summary>
-	/// Sorts every row - <c>FUN_006628f4</c>: the first least row goes to the head, then each row from the third on
+	/// Sorts the head rows, each carrying its children in the order they stand - <c>FUN_006628f4</c>: the first least row goes to the head, then each row from the third on
 	/// is put before the first row it <see cref="SortsBefore"/>. So <b>equal rows keep the order they stood in</b>,
 	/// in either direction.
 	/// </summary>

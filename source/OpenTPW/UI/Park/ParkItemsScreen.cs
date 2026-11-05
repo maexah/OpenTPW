@@ -254,7 +254,7 @@ internal sealed class ParkItemsScreen : UiWindow
 			// A right click on the list moves the camera to the selected row's thing and closes the screen (0x00495584).
 			RowRightClicked = GoTo,
 
-			// A row's left click (0x400, 0x00495495) hands the row's thing to Thing_OpenWindow (0x004954ca); the window opens
+			// A row's left click (0x400, 0x00495495) hands the row's thing to Thing_OpenWindow (0x00486920, called at 0x004954ca); the window opens
 			// over this screen, which closes (a park screen at a time). An add-on's row opens its ride's.
 			Activated = thing => Level.Current?.OpenObjectWindow( thing ),
 			SortChanged = word => _sorts[_tab] = word,
@@ -371,7 +371,7 @@ internal sealed class ParkItemsScreen : UiWindow
 			foreach ( var placed in state.Objects )
 			{
 				if ( placed.IsPlaced && catalogue.TryGet( placed.CatalogueId, out var each )
-					&& each.UiType == tab.Index )
+					&& each.UiType == tab.Index && each.AddOnUpgradesId == 0 )
 				{
 					var owned = state.BuiltOf( placed.CatalogueId ).Standing;
 
@@ -400,7 +400,7 @@ internal sealed class ParkItemsScreen : UiWindow
 		}
 
 		// The rides tab then walks the add-ons (FUN_00481bc0( 0x2000 ), FUN_00482100: every thing whose item fits a ride, of
-		// any class), each through FUN_00493eb0.
+		// any class), each through 0x00493eb0.
 		if ( tab.Index == 0 )
 		{
 			foreach ( var placed in state.Objects )
@@ -410,7 +410,11 @@ internal sealed class ParkItemsScreen : UiWindow
 
 				var (figured, figuredItem) = FiguresFrom( placed, item, catalogue, state );
 
-				AddRow( chosen, tab, placed, item, figured, figuredItem, level, state, parent: placed.UpgradeParent );
+				// An add-on whose ride no longer stands is a head row with its own figures, as the original's nought slot
+				// (0x00493e66); only our counted SALE_TRACK_TEARDOWN leaves one behind.
+				var stands = state.TryObject( placed.UpgradeParent, out _ );
+
+				AddRow( chosen, tab, placed, item, figured, figuredItem, level, state, parent: stands ? placed.UpgradeParent : 0 );
 			}
 		}
 
@@ -419,7 +423,7 @@ internal sealed class ParkItemsScreen : UiWindow
 
 	/// <summary>
 	/// The thing an add-on's row takes its figures, colour and place from: the ride its <c>+0x30</c> names
-	/// (<c>FUN_00493eb0</c> reads it with <c>FUN_004e0df0</c> and hands it to <c>FUN_00493cd0</c> as its third argument; the
+	/// (<c>0x00493eb0</c> reads it with <c>FUN_004e0df0</c> and hands it to <c>FUN_00493cd0</c> as its third argument; the
 	/// rewrite <c>0x004955e0</c> and the colour callback <c>0x004959c0</c> make the same swap), else the thing itself.
 	/// </summary>
 	private static (ParkWorld.CatalogueObject, ParkItemCatalogue.Item) FiguresFrom( ParkWorld.CatalogueObject placed,

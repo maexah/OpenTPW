@@ -10,7 +10,7 @@ namespace OpenTPW.Tests;
 
 /// <summary>
 /// <b>An add-on's row in the all-items rides tab: its place and its figures</b> (Q1042). The rides tab adds a row for every
-/// add-on after the rides' own (<c>FUN_00481bc0( 0x2000 )</c>, <c>FUN_00482100</c>) through <c>FUN_00493eb0</c>, which hands
+/// add-on after the rides' own (<c>FUN_00481bc0( 0x2000 )</c>, <c>FUN_00482100</c>) through <c>0x00493eb0</c>, which hands
 /// <c>FUN_00493cd0</c> the add-on, the list and the ride its <c>+0x30</c> names: the row's name is the add-on's, its figures
 /// the ride's, and it is added UNDER the ride's row (<c>FUN_0066403b</c> with the ride's row index), one level in. Measured
 /// in the original on the New Save (Q1041, <c>q1041/orig/run1/c1-allitems.png</c>): DinoKarts, then Dino Karts Jump, Dino Karts
@@ -142,7 +142,7 @@ public class ParkItemsAddOnRowsTests
 
 	/// <summary>
 	/// <b>An add-on that names no ride is a head row of its own, with its own figures; one whose ride is no row adds nothing</b>
-	/// (<c>FUN_00493eb0</c>: a nought <c>+0x30</c> hands <c>FUN_00493cd0</c> no third argument; <c>0x00493e4a</c> adds nothing
+	/// (<c>0x00493eb0</c>: a nought <c>+0x30</c> hands <c>FUN_00493cd0</c> no third argument; <c>0x00493e4a</c> adds nothing
 	/// where <c>FUN_00664d2a</c> finds no row).
 	/// </summary>
 	/// <remarks><b>Mutations:</b> a no-ride add-on dropped; a missing ride's add-on added as a head row.</remarks>
@@ -156,6 +156,24 @@ public class ParkItemsAddOnRowsTests
 
 		Assert.AreEqual( 0, rows.Single( row => row.Id == lone ).Depth );
 		Assert.IsFalse( rows.Any( row => row.Id == orphan ), "the Drinks Shop (16) has no row on the rides tab" );
+	}
+
+	/// <summary>
+	/// <b>An add-on whose ride has been sold stays listed, as a head row with its own figures</b> (the original's nought table slot
+	/// takes <c>FUN_00493cd0</c>'s head-row arm, <c>0x00493e66</c>; ours' sale of a ride leaves its add-ons, <c>SALE_TRACK_TEARDOWN</c>).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the parent handed over whether or not the ride stands (the add-on dropped).</remarks>
+	[TestMethod]
+	public void AnAddOnWhoseRideWasSoldIsAHeadRowOfItsOwn()
+	{
+		var jump = StandAdd( 1500, 17, 21, 13 );
+
+		Assert.IsTrue( _state.RemoveObject( 13 ), "the ride sold" );
+
+		var rows = Rides( out _ ).Rows;
+
+		Assert.IsTrue( rows.Any( found => found.Id == jump ), "the add-on is still listed" );
+		Assert.AreEqual( 0, rows.Single( found => found.Id == jump ).Depth, "a head row" );
 	}
 
 	/// <summary>

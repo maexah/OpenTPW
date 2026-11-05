@@ -700,6 +700,7 @@ filed the items that cite it.
   predicate; neither shows the picture. Pick a member up in a running park (the staff window's PICK UP), photograph his
   cell on the desk with the pointer moved off it, and compare the same cell with him standing: the
   cell empty where he stood.
+- [ ] **Q1043. The all-items panel's top and its close button.** From Q1042's side-by-side (`q1042/side-by-side-order.png`): ours draws the panel's top black behind the four tabs where the original shows its green waves, and its close button a red cross where the original shows a green tick. Seen, not measured; find which picture each uses in the original (`hud.md`) before building.
 - [ ] **Q212. The ride window's other statuses. Decode first.** Found by the 2026-10-04 review (`u7-ride-door-6`,
   `-7`, `-9`, `-10`). `FUN_00485f60` answers (80/100/255) 5..9 for a ride waiting for an upgrade, `0xb`..`0xf` for a toilet's
   call to the handyman and `0x11`..`0x15` for a mechanic called (`+0x64`), `0x15` (UITEXT 385, "REPAIRS IN PROGRESS")
@@ -2977,8 +2978,8 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   Duplicates: `ParkLocator.OpenOnMember` copies `OpenOnVisitor`, where the original's is one function, `FUN_004b3f60`,
   branching on the type byte (`0x004b3f84`, table `0x004b4258`): make one `OpenOn( thing )`; and
   `ParkStaffWindow.DaysEmployed` is a third copy of the `( FileTimeOf( now ) - stamp ) / TicksPerDay` divide beside
-  `ParkState.DaysSinceStaffHired` and `DaysSinceObjectBuilt`: one `DaysSince( stamp, now )`. Their tests that miss their
-  bug are in Q211's run-review note.
+  `ParkState.DaysSinceStaffHired` and `DaysSinceObjectBuilt`: one `DaysSince( stamp, now )`. Their callers' tests are
+  written (Q1031; `docs/history/queue-done.md`, Q211).
   - **Note (fork watch 2026-10-16, `verify-ui-hud.md` H1):** the sideshow's and the ride's windows are decoded too
     (`hud.md`, "The shop, sideshow and ride windows"). Sideshow: price always, then chance of winning (`+0x190`, 0 to
     100) and prize (`+0x188`, 0 to 10000) only when `NonWinnableSideshow` (`+0x10c`) is 0, which no shipped `.sam`

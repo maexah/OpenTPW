@@ -10,7 +10,7 @@ namespace OpenTPW.Tests;
 
 /// <summary>
 /// <b>A row's left click in the all-items list opens its thing's window</b> (Q1041): the row's <c>0x400</c>
-/// (<c>FUN_00495360</c>, <c>0x00495495</c>) hands the row's thing to <c>Thing_OpenWindow</c> (<c>0x004954ca</c>), whose
+/// (<c>FUN_00495360</c>, <c>0x00495495</c>) hands the row's thing to <c>Thing_OpenWindow</c> (<c>0x00486920</c>, called at <c>0x004954ca</c>), whose
 /// ride-class arms are the add-on's other window (<c>+0x288</c> is 2), the ride its <c>mUpgradeParent</c> (<c>+0x30</c>) names,
 /// and nothing for an item fitting a ride that names none (<c>docs/exe/park-engine.md</c>, "An add-on has no window and no sale
 /// of its own"). Measured in the original under Proton on the New Save: a ride's row, a shop's, a sideshow's and a
@@ -159,7 +159,7 @@ public class ParkItemsRowClickTests
 	}
 
 	/// <summary>
-	/// <b>An add-on of upgrade type 2 opens another window, before its ride is looked at</b> (<c>0x00486945</c>,
+	/// <b>An add-on of upgrade type 2 opens another window, before its ride is looked at</b> (<c>0x00486958</c>,
 	/// <c>FUN_004b6ae0</c>): unbuilt, counted, and no ride window opens even when the thing names a ride.
 	/// </summary>
 	/// <remarks><b>Mutations:</b> the type 2 arm removed; the type tested after the parent.</remarks>

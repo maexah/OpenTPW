@@ -2420,7 +2420,7 @@ Decoded and measured 2026-10-06. **Every list whose flags `+0x48` hold `0x10` ke
 list records do (buy `0x91`, the rest `0x291`). The sort is two words on the list: the column `+0x168` and the
 direction `+0x16a` (0 ascending, 1 descending).
 
-- **The add is a sorted insert.** `FUN_0066403b` with an insert-after of -1 takes a free node, then walks from the
+- **The add is a sorted insert.** `FUN_0066403b` with no parent (-1), the head chain, takes a free node, then walks from the
   head until `FUN_00663edc( new, row )` answers 1 and links the new row before that one, or after the last. For a
   numeric column (type 1) that is `new < row` ascending and `row < new` descending, both strict, so **equal rows stand
   in the order they were added**. For a text column (type 0) it is 1 when the row's text is null, else
@@ -3909,7 +3909,7 @@ height"); the headings are framed (Q370, "The list headings' frames").
 
 Read 2026-11-05 (Q1042; the dump is `q1042/dump/`). The rides sub-builder `FUN_00494ec0` fills the list twice: `FUN_00481bc0( 0x80,
 0x00493e90 )` takes every thing of type 3 whose item's `AddOn.UpgradesId` (`+0x284`, `FUN_004e2710`) is nought and whose class
-(`+0x4ac`) is 0, each handed to `FUN_00493cd0( thing, record, 0 )`; then `FUN_00481bc0( 0x2000, 0x00493eb0 )` (`FUN_00482100`) takes every
+(`+0x4ac`) is 0, each handed to `FUN_00493cd0( thing, list, 0 )`; then `FUN_00481bc0( 0x2000, 0x00493eb0 )` (`FUN_00482100`) takes every
 thing of type 3 whose item's `+0x284` is NOT nought, of any class. **Every other tab's walk** (`FUN_00482040`) leaves those things out, so an
 add-on is on no other tab. The adder `0x00493eb0` reads the thing's `mUpgradeParent` (`+0x30`, `FUN_004e0df0`): non-zero, the ride's thing
 from the table is `FUN_00493cd0`'s third argument; nought, it has none (a head row with its own figures).
@@ -3917,7 +3917,7 @@ from the table is `FUN_00493cd0`'s third argument; nought, it has none (a head r
 **`FUN_00493cd0( thing, record, ride )`** letters the NAME of `thing` (`FUN_00486280`, the add-on's own) and every figure of `ride` where
 there is one (the ring `+0x1a8`'s customers, `FUN_004e0860`, `+0x44`, `+0x48`, `FUN_004dd6d0`; `0x00493cd3` to `0x00493e36`). With a ride,
 `FUN_00664d2a( list, ride )` answers the ride's row index in the display order, -1 when it has none (and then **nothing is added**,
-`0x00493e4a`), and `FUN_0066403b( cells, thing, index, 0 )` adds the row; **its fourth argument is the PARENT row**, not an insert-after:
+`0x00493e4a`), and `FUN_0066403b( cells, thing, index, 0 )` adds the row; **its parent argument (the third after the list) is the PARENT row**, not an insert-after:
 the list is a tree (a node's `+0` next sibling, `+4` its data, `+8` its first child, `+0xc` its parent, -2 free). The new node is its
 parent's first child, or goes into the child chain by the same sorted insert as a head row (`FUN_00663edc`, strictly before: the first
 sibling it sorts before, else the end, so after the equal ones). The display order is the pre-order (`FUN_00663a93`: the first child,

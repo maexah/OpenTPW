@@ -23,6 +23,7 @@ public class ParkHeldStaffFrameTests
 	{
 		TestRun.DeleteEvery<ParkGuestSprites>();
 		TestRun.DeleteEvery<ParkPeople>();
+		Unimplemented.Forget();
 	}
 
 	/// <summary>
