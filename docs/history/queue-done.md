@@ -12105,6 +12105,15 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   (FileFormats models.md). Built in `LobbyModel.TurnToFace` / `DrawnTurn`; `HeadOnRide` chooses by the drawn turn; the census prints `picture N`. Against three sets of the
   original's pauses of the same file: 31 of 31, 32 of 32, 29 of 29 pictures (was 13 of 32), Heads 2 to 5 within 5.5 degrees; the census's picture equals the original's sprite's
   in all. The Ape's 5 of 8 could not be paired (Q1008); the counted case left is Q1009. 14 mutations, 14 caught.
+- [x] **Q220. Tests for the wiring the effort audit found untested.** Found by the 2026-10-04 effort audit: seventeen
+  bugs put back left all 1,766 tests green. This piece wrote the tests for the car step's seating friction 7/10 and the
+  broken ride's 1000 and the car's turn (`ParkBumperCarStepTests`), `TowardsCamera` (made `internal static` over the
+  boat's rotation and the seat's matrix: `ParkBoatTowardsCameraTests`), the engine fade's 0.06 s
+  (`ParkCarSoundsTests`), `ParkObjectWindow`'s 30 days (`ParkCameraToThingTests`; its 4 s was already tested, and its two bugs
+  are seen to fail) and the buy list's features tab (`ParkBuyFeaturesTabTests`); 24 bugs put back, all fail a test
+  (`q220/mutate-run1.log`, `mutate-run2.log`). A thirty-first day in the ring cannot be told from thirty: it holds thirty.
+  What is left is Q1026. The calendar's day roll, month turn and year turn and their order are Q867 (done; the people and catalogue it hands the month's change are not asserted); the month turn's order (training, the bank, wages) is `ParkBankTests`.
+  `ParkRides.Resume`'s `MoveKeptReadings`, `BindNew`'s `RideNodes` and the walk leg's x/z form are Q868 (done).
 
 ## B. Docs and comments
 

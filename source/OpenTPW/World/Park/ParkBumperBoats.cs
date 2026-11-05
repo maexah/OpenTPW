@@ -336,11 +336,18 @@ public sealed class ParkBumperBoats : Entity
 	/// the node's own rotation - the inverse of the node, then the camera, that <c>FUN_0044b510</c> composes.
 	/// </summary>
 	private static System.Numerics.Vector3 TowardsCamera( Vector3 world, Boat boat, Seat seat )
+		=> TowardsCamera( world.GetSystemVector3(), boat.Model.PlacedRotation, seat.InModel );
+
+	/// <inheritdoc cref="TowardsCamera(Vector3, Boat, Seat)"/>
+	/// <param name="world">The camera's offset from the node in the world, z up.</param>
+	/// <param name="boatRotation">The boat's placed rotation.</param>
+	/// <param name="seatInModel">The seat node's own transform in the model; its translation is not used.</param>
+	internal static System.Numerics.Vector3 TowardsCamera( System.Numerics.Vector3 world, Quaternion boatRotation, Matrix4x4 seatInModel )
 	{
-		var unturned = System.Numerics.Vector3.Transform( world.GetSystemVector3(), Quaternion.Inverse( boat.Model.PlacedRotation ) );
+		var unturned = System.Numerics.Vector3.Transform( world, Quaternion.Inverse( boatRotation ) );
 		var model = new System.Numerics.Vector3( unturned.X, unturned.Z, unturned.Y );
 
-		var rotation = seat.InModel with { M41 = 0, M42 = 0, M43 = 0 };
+		var rotation = seatInModel with { M41 = 0, M42 = 0, M43 = 0 };
 
 		return Matrix4x4.Invert( rotation, out var inverse ) ? System.Numerics.Vector3.TransformNormal( model, inverse ) : model;
 	}

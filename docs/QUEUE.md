@@ -805,14 +805,15 @@ filed the items that cite it.
   across all 2,129 `.md2`, compare the stored normals with the computed ones, then read and use the stored ones. The
   FileFormats models page gets the count. Confirm: one ride and one shop photographed beside the original's under
   Proton, the same sun.
-- [ ] **Q220. Tests for the wiring the effort audit found untested.** Found by the 2026-10-04 effort audit: seventeen
-  bugs put back left all 1,766 tests green. The Hot Pot's `ParkBumperBoats.Put` and its drawn heading, the speed word's
-  placement wiring, the seating friction 7/10 and the broken ride's 1000, the car's turn, the engine fade's length,
-  `TowardsCamera`; `ParkGuestSprites.DrawBalloons` (the bob's rate and write-back); the camcorder's
-  `UseFirstPersonPictures` on enter and leave; `ParkObjectWindow`'s 30 days and 4 s; the buy list's features tab.
-  Write each test, put its bug back, see it fail (`AGENTS.md` rule 6). No game run.
-  The calendar's day roll, month turn and year turn and their order are Q867 (done; the people and catalogue it hands the month's change are not asserted); the month turn's order (training, the bank, wages) is `ParkBankTests`.
-  `ParkRides.Resume`'s `MoveKeptReadings`, `BindNew`'s `RideNodes` and the walk leg's x/z form are Q868 (done).
+- [ ] **Q1026. Tests for the rest of the wiring the effort audit found untested (the second piece of Q220).** From Q220.
+  Not yet tested, each wanting its bug put back and seen to fail (`AGENTS.md` rule 6), no game run: the Hot Pot's
+  `ParkBumperBoats.Put` (the position at 1/307.2 of a unit eased by `GameClock.PartialTick`, the heading eased by the turn
+  and its yaw `((heading - 0x100) & 0x1ff)` 512ths, the bob's four multiples; it needs a model, so pull the arithmetic out as
+  `Float` already is) and its drawn heading; the speed word's placement wiring (`PushSpeedWord` on a placed ride, the
+  ride's performance reaching its cars); `ParkGuestSprites.DrawBalloons` (the bob's rate, `Balloon.PlacementsPerSecond * Time.Delta`,
+  and the write-back of the placed position into the held balloon and the peep's last x and y; it draws through `WriteQuad`,
+  so it needs a built atlas or the loop pulled out); the camcorder's `ParkGuestSprites.UseFirstPersonPictures` on entering and
+  leaving first person (the atlas packed again with the `.FPC` or `.TPC` packs, the old atlas let go, the model built again).
 - [ ] **Q221. Eight leftovers from the effort audit, each dead by content today.** Found by the 2026-10-04 effort
   audit, each read in the listing. (1) `ParkScriptStates` reads the tick and next handle with `header > dword * 4`; it
   should be `>= (dword + 1) * 4`. (2) `ParkBuyScreen.Listed` applies two of the original's four filters: add the

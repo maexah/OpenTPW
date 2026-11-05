@@ -107,6 +107,32 @@ public class ParkCameraToThingTests
 		}
 	}
 
+	/// <summary>
+	/// <b>Users last month adds up the customers ring's last thirty finished days, and today's figure is not among them</b>
+	/// (<c>MOV EDI,0x1e</c> at <c>0x004ade83</c>): a ring of days 1 to 30 (the thirtieth the newest) reads 465 with 1000
+	/// customers so far today, not 464, not 1465.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> twenty-nine days; today's figure added; the oldest day of a full ring dropped. A thirty-first day cannot
+	/// be told: the ring holds thirty.</remarks>
+	[TestMethod]
+	public void UsersLastMonthAddsTheLastThirtyFinishedDaysAndNotToday()
+	{
+		var customers = _state.RingsFor( 13 ).Customers;
+
+		for ( var day = 1; day <= 30; ++day )
+		{
+			customers.Today = day;
+			customers.Roll();
+		}
+
+		customers.Today = 1000;
+
+		var window = new ParkObjectWindow( _stack, 13 );
+		var stats = window.Root.Children.Single( child => child.Id == 0x3e15 );
+
+		Assert.AreEqual( "465", stats.Children.Single( child => child.Id == 0x3e21 ).Text );
+	}
+
 	[TestCleanup]
 	public void PutItAllBack()
 	{

@@ -1,6 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 
 namespace OpenTPW.Tests;
 
@@ -201,6 +202,64 @@ public class ParkCarSoundsTests
 
 			Assert.AreEqual( -24 + 60 * 60 / 100, held.Pitch, "the next step pitched it again" );
 			Assert.IsTrue( held.Voice.Ending, "and it is still fading" );
+		}
+		finally
+		{
+			park?.Delete();
+			Entity.ApplyDeletions();
+
+			lock ( Audio.Lock )
+				Audio.Voices.RemoveAll( voice => !before.Contains( voice ) );
+
+			ready.SetValue( null, false );
+		}
+	}
+
+	/// <summary>
+	/// The engine's fade is sixty milliseconds long (<c>docs/exe/audio.md</c>, "The bumper arm's engine": the original's voice went
+	/// 135 ms after its fade began): the rate the voice falls at is its volume over 0.06 s.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> a fade of 0.6 s; a fade of nought (a hard stop, so no fade is under way).</remarks>
+	[TestMethod]
+	public void TheEnginesFadeIsSixtyMilliseconds()
+	{
+		FileSystem = GameData.Required();
+
+		var ready = typeof( Audio ).GetProperty( nameof( Audio.Ready ) )!;
+
+		Assert.IsFalse( Audio.Ready, "a test run has no audio device" );
+
+		List<Voice> before;
+
+		lock ( Audio.Lock )
+			before = [.. Audio.Voices];
+
+		ready.SetValue( null, true );
+
+		ParkAudio? park = null;
+
+		try
+		{
+			park = new ParkAudio( "jungle" );
+
+			var rides = park.Rides!;
+			var held = new ParkCarSounds.Held
+			{
+				Effect = 194, Header = rides.VariationsOf( 194 )[0], Keys = [(byte)rides.ParameterOf( 194 ), 16, 0, 0]
+			};
+
+			held.Voice = Audio.Play( rides.PickFrom( 194, 0 ), 0.68f, loop: true, position: Vector3.Zero )!;
+			Assert.IsNotNull( held.Voice );
+
+			new ParkCarSounds( new RideScriptScheduler() ).Fade( held );
+
+			var fields = BindingFlags.Instance | BindingFlags.NonPublic;
+			var volume = (float)typeof( Voice ).GetField( "_volume", fields )!.GetValue( held.Voice )!;
+			var rate = (float)typeof( Voice ).GetField( "_volumeRate", fields )!.GetValue( held.Voice )!;
+
+			Assert.IsTrue( held.Voice.Ending );
+			Assert.IsTrue( volume > 0f, "the voice has a volume to fade" );
+			Assert.AreEqual( 0.06f, volume / rate, 1e-4f, "seconds to silence" );
 		}
 		finally
 		{
