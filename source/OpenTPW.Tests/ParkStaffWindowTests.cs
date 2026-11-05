@@ -263,6 +263,45 @@ public class ParkStaffWindowTests
 	}
 
 	/// <summary>
+	/// <b>Opening a window with one already up builds nothing and the window stays on its member</b>
+	/// (<c>FUN_004b6080</c>), <b>but the advisor's <c>0xc0</c> is posted again</b>: a second member opened over the first leaves
+	/// one window, on the first, and the post is made a second time (the advisor's log line, <c>post message=192</c>).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> a second window built over the first; the post made only where the window was built.</remarks>
+	[TestMethod]
+	public void OpenWithTheWindowAlreadyUpStaysOnItsMemberAndPostsAgain()
+	{
+		using var clock = new SimulationClockScope();
+		var park = Level.Current!.ParkState!;
+		park.AdvisorMessages = new ParkAdvisorMessages( new SettingsFile( "Advisor/Advisor.sam" ), tutorial: () => true );
+		var posts = 0;
+		void Count( Logger.Level severity, string line ) => posts += line.Contains( "Park advisor: post message=192 " ) ? 1 : 0;
+		var first = Mechanic;
+		var second = _people.Staff.First( member => member != first );
+		Fence( first, Staff.WholeMapBottomLeft, Staff.WholeMapTopRight );
+
+		Logger.OnLog += Count;
+
+		try
+		{
+			ParkStaffWindow.Open( _stack, first.ThingId );
+			Assert.AreEqual( 1, posts, "told as the window was built" );
+			var window = Window!;
+
+			ParkStaffWindow.Open( _stack, second.ThingId );
+
+			Assert.AreEqual( 1, _stack.Windows.OfType<ParkStaffWindow>().Count(), "no second window" );
+			Assert.AreSame( window, Window, "the same window" );
+			Assert.AreEqual( first.ThingId, Window!.ThingId, "still on its member" );
+			Assert.AreEqual( 2, posts, "told again" );
+		}
+		finally
+		{
+			Logger.OnLog -= Count;
+		}
+	}
+
+	/// <summary>
 	/// <b>b_locate and Ctrl+S with the window up open the staff's locator on its member</b> (<c>FUN_004b3f60( member )</c>):
 	/// the panel out, the kind's button down, the strip on them and followed, the status in its corner, and the window
 	/// closed.
@@ -685,6 +724,57 @@ public class ParkStaffWindowTests
 		_stack.Close( Window! );
 		_stack.Update();
 		Assert.IsFalse( WindowStack.ParkScreenOpen );
+	}
+
+	/// <summary>
+	/// <b>A tool armed before the window opened refuses in silence beside it</b>: <see cref="Level.ClickWorldAt"/> hands the
+	/// click to the armed mode (<c>RunBuildMode</c>), which passes the press's reach on to the tool. The click that arms the path
+	/// tool itself (bare ground) runs the tool at another call, so only a tool armed first, by <see cref="ParkBuildMode.Arm"/> for the
+	/// path and <see cref="ParkPathBuilding.EditQueue"/> (the Belly Bounce's queue, 13) for the queue, reaches this one.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> <c>RunPath( cellX, cellY, true )</c> and <c>RunQueue( cellX, cellY, true )</c> at the <c>RunBuildMode</c> call.</remarks>
+	[TestMethod]
+	public void AToolArmedBeforeTheWindowOpenedRefusesInSilenceBesideIt()
+	{
+		var mechanic = Mechanic.ThingId;
+
+		foreach ( var screen in new[] { false, true } )
+		{
+			_stack.Update();
+			Assert.IsFalse( WindowStack.ParkScreenOpen, "no park screen yet" );
+
+			StringAssert.StartsWith( ParkPathBuilding.EditQueue( 13 ), "tool: laying queue for thing 13 from (49,22)" );
+
+			if ( screen )
+			{
+				ParkStaffWindow.Open( _stack, mechanic );
+				_stack.Update();
+			}
+
+			Assert.AreEqual( screen, WindowStack.ParkScreenOpen );
+			var sound = screen ? "no sound, the press went to a park screen" : "sound 0xaf, no voice";
+
+			UiSounds.LastAsked = null;
+			Assert.AreEqual( $"world click: queue: nothing laid - (49,18) is type 7, which queue may not be laid over, so the queue tool is put away - {sound}",
+				Level.Current!.ClickWorldAt( 52, 18, 0 ), "the queue tool, armed first" );
+			Assert.AreEqual( screen ? null : 0xaf, UiSounds.LastAsked );
+
+			// The path tool is armed after the queue's click put its tool away, the window already up or not.
+			ParkBuildMode.Arm( ParkBuildMode.Path );
+			UiSounds.LastAsked = null;
+			Assert.AreEqual( $"world click: path: nothing laid - (43,16) is outside the park, so the path tool is put away - {sound}",
+				Level.Current!.ClickWorldAt( 43, 16, 0 ), "the path tool, armed first" );
+			Assert.AreEqual( screen ? null : 0xaf, UiSounds.LastAsked );
+			Assert.AreEqual( ParkBuildMode.None, ParkBuildMode.Current );
+
+			if ( screen )
+			{
+				_stack.Close( Window! );
+				_stack.Update();
+			}
+		}
+
+		UiSounds.LastAsked = null;
 	}
 
 	/// <summary>

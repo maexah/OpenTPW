@@ -92,6 +92,41 @@ public class ParkLocatorTests
 		ParkGadgetPressTests.Settle( _gadget );
 	}
 
+	/// <summary>The park front end's own shortcut handler for a row, on this stack and gadget.</summary>
+	private void ShortcutRow( UiWindow? front, int row )
+	{
+		var frontEnd = RuntimeHelpers.GetUninitializedObject( typeof( ParkFrontEnd ) );
+		var flags = BindingFlags.Instance | BindingFlags.NonPublic;
+		typeof( ParkFrontEnd ).GetField( "_stack", flags )!.SetValue( frontEnd, _stack );
+		typeof( ParkFrontEnd ).GetField( "_gadget", flags )!.SetValue( frontEnd, _gadget );
+		typeof( ParkFrontEnd ).GetMethod( "ShortcutKey", flags )!.Invoke( frontEnd, [front, row] );
+		ParkGadgetPressTests.Settle( _gadget );
+	}
+
+	/// <summary>
+	/// <b>Ctrl+V with a visitor's window up opens the visitors' locator on its guest</b> (<c>FUN_004b3f60( [0x007cc418] )</c>, the
+	/// front end's row 14) and the window closes; with none up it opens on nobody (<c>FUN_004b4280</c>).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the shortcut ignoring the visitor's window; the window left up.</remarks>
+	[TestMethod]
+	public void CtrlVOverTheVisitorsWindowOpensOnItsGuest()
+	{
+		var guest = AGuest();
+		ParkVisitorWindow.Open( _stack, guest );
+		var window = _stack.Windows.OfType<ParkVisitorWindow>().Single();
+		Assert.AreEqual( guest, window.ThingId );
+
+		ShortcutRow( window, 14 );
+
+		Assert.AreEqual( (ParkLocator.Kind.Visitors, guest, true), (Locator.Open, Locator.Actor, Locator.Following) );
+		Assert.IsFalse( _stack.Windows.OfType<ParkVisitorWindow>().Any(), "the window closed" );
+
+		Fold();
+		ShortcutRow( null, 14 );
+
+		Assert.AreEqual( (ParkLocator.Kind.Visitors, 0), (Locator.Open, Locator.Actor), "none up: on nobody" );
+	}
+
 	/// <summary>Escape over an open locator, and the arm's slide in run to its end.</summary>
 	private bool Fold()
 	{

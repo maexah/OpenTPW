@@ -12648,3 +12648,29 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `+0x284` arm (it would open the add-on's own ride window), so the click must route through the original's three arms
   (`park-engine.md`, "An add-on has no window and no sale of its own"). By the code only; not run in the original.
   **Done (2026-11-05):** run in the original, every tab's row opens its thing's window and an add-on's row its ride's; `ParkItemsScreen` answers `Activated`, `Level.OpenObjectWindow` takes the three arms (`ParkItemsRowClickTests`, `docs/exe/park-engine.md`).
+- [x] **Q211. Tests that run the callers, not the helpers.** Found by the 2026-10-04 review: fifteen bugs put back
+  left all 1,764 tests green. Its fifteen are done but one: Q1029 wrote the tests (`ParkBuyWiringTests`,
+  `ParkHoardingWiringTests`, `AdvisorParkResponseTests`, `LevelActiveWarningTests`, `FreshParkFixedObjectsTests`,
+  `ParkArrivalStartTests`, two in `ProfilePreservationTests` and the asserts of `ArchiveDamageTests`), and Q1030 holds
+  `SetupParticles` before `SetupParkEntities`. Write each test, put its bug back, see it fail (`AGENTS.md` rule 6). No game run.
+  From the run review (2026-10-17): more callers whose tests stop at the helper (the first, `ParkBuildMarkers`' strip
+  `Over` and vertex count, was Q892; the second, `CameraLensTests`' lobby angle, Q893; the third, `ParkStaffCellListTests`'
+  relink, Q894).
+  `Level.cs`'s hand-over of the gadget's locator to the level (Q444) is reached by no test (`ParkLocatorTests` sets
+  `level.Locator` by hand); build the test level through `ParkFrontEnd`, or add its deletion to Q444's mutations as
+  caught by the game alone. `ParkStaffWindowTests`' refused-sound test (Q442) reaches the path and queue refusals beside a
+  park screen by clicks the game refuses (`Level.WorldClick` returns on `KeptFromThePark`), so `RunPath( cellX, cellY, true )`
+  at the `RunBuildMode` call survives: arm the tool before the window opens (`ParkBuildMode.Arm( ParkBuildMode.Path )`; the
+  queue by `ParkPathBuilding.EditQueue( 13 )`), then click, reword the summary to "armed", and put that bug back.
+  `Level.cs` hands `state.RandomSeed` to `ParkFileWriter.Running` with no test on the wiring (Q443; `q443/mutations.py` declares
+  `LV` and uses it for no mutant): take the argument out and the suite passes; assert the written header's seed.
+  The person windows (Q430 to Q432): Ctrl+V over the visitor's window (`ParkFrontEnd`'s case 14 branch; drive the action,
+  assert the locator is on the guest and the window closed, put the branch back out); `Level.ClickWorldAt` with a staff
+  thing (deleting its branch survives every test); `ParkStaffWindow.Open` with the window already up (it stays on its
+  member and posts `0xc0` again); and PICK UP's "not drawn", shown by the census predicate alone (the draw loop's
+  `InTheHand` skip in `ParkGuestSprites` survives; show his cell on screen).
+  Done: Q1029 (the fifteen), Q1030 (the particle order, filed) and Q1031 (this paragraph's callers: `LevelHandOverTests`
+  for Q444's locator and Q443's seed, `AToolArmedBeforeTheWindowOpenedRefusesInSilenceBesideIt` for Q442's path call,
+  `CtrlVOverTheVisitorsWindowOpensOnItsGuest`, `OpenWithTheWindowAlreadyUpStaysOnItsMemberAndPostsAgain` and
+  `ParkHeldStaffFrameTests`; the queue call of Q442 and the staff click of Q431 were already caught, `q1031/baseline.out`).
+  What is left, a picked-up member's cell looked at on screen, is Q1032.
