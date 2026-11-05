@@ -981,8 +981,8 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// position. The head stands where the node is drawn this frame (<see cref="ParkObjects.TryDrawnNodeOn"/>): on the
 	/// tentacle a morph has moved, or carried by the arm a clip turns. The picture is chosen by the turn the node is drawn with
 	/// (<see cref="ParkObjects.TryDrawnNodeTurnOn"/>): turned to its morphing face where its record carries <c>0x40000</c>, else its
-	/// rest turn inside its nearest mesh as that mesh is drawn (a clip on a node between them is not carried, counted as the head is
-	/// hung, <see cref="RideScript.Heads"/>); by the stored matrix where the thing is not drawn.
+	/// rest turn inside its nearest mesh as that mesh is drawn (every head in the game hangs on a mesh and no clip turns the head's own
+	/// node, <c>RideNodesTests.NoClipTurnsAHeadNodeOrOneBetweenItAndItsMesh</c>); by the stored matrix where the thing is not drawn.
 	/// </summary>
 	internal static (Vector3 At, int Frame, System.Numerics.Vector3 Towards)? HeadOnRide( ParkPeople? people, int thingId )
 	{

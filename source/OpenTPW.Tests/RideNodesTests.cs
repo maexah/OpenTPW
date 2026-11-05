@@ -594,5 +594,88 @@ public class RideNodesTests
 		players.Advance( 9000 );
 		Agree( "5 s into Endm3" );
 	}
-}
 
+	/// <summary>A model, or null for a member that is a clip: <see cref="ModelFile"/> refuses one (the clips share the extension).</summary>
+	private static ModelFile? ReadModelOrNull( Stream stream )
+	{
+		try
+		{
+			return new ModelFile( stream );
+		}
+		catch ( InvalidDataException )
+		{
+			return null;
+		}
+	}
+
+	/// <summary>
+	/// <b>No clip of the game turns a ride head's node, or one between it and its mesh</b> (Q1009), which is what
+	/// <see cref="ParkGuestSprites.HeadOnRide"/> relies on in choosing a head's picture by its rest turn inside the mesh it hangs on. Over every
+	/// model of the four themes' ride and feature archives that has a head node (80, each theme's ferry and the gokarts' four included) and
+	/// every clip beside it (<c>&lt;stem&gt;*.MD2</c>), each head node's parent is a mesh, so no node stands between a head and its mesh, and the
+	/// only track any clip has on a head node is a visibility track: 84 of them (80 in clips <c>c</c>, 4 in the ferries' <c>m1</c>), none a turn, a move, a
+	/// scale, a route or a morph. The heads are the run of ids from 1, as <see cref="RideNodes.HeadCount"/> counts them (the engine stops at the first gap).
+	/// </summary>
+	[TestMethod]
+	public void NoClipTurnsAHeadNodeOrOneBetweenItAndItsMesh()
+	{
+		string[] themes = ["jungle", "fantasy", "hallow", "space"];
+		var (models, heads, visibility) = (0, 0, 0);
+		var others = new System.Collections.Generic.List<string>();
+
+		foreach ( var theme in themes )
+		{
+			foreach ( var wad in Directory.GetFiles( Path.Combine( GameDir.Data, "levels", theme ), "*.wad", SearchOption.AllDirectories ) )
+			{
+				var directory = Path.GetRelativePath( GameDir.Data, Path.ChangeExtension( wad, null ) ).Replace( '\\', '/' );
+				var members = _data.GetFiles( directory ).Select( Path.GetFileName ).OfType<string>().Where( name => name.EndsWith( ".md2", System.StringComparison.OrdinalIgnoreCase ) ).ToArray();
+
+				foreach ( var member in members )
+				{
+					using var stream = _data.OpenReadOrNull( $"{directory}/{member}" );
+					var model = stream == null ? null : ReadModelOrNull( stream );
+
+					if ( model == null || model.Meshes.Count == 0 || model.FindNode( 1, RideNodes.HeadSpace ) < 0 )
+						continue;
+
+					++models;
+
+					var stem = Path.GetFileNameWithoutExtension( member );
+					var headNodes = new System.Collections.Generic.List<int>();
+
+					for ( var id = 1; model.FindNode( id, RideNodes.HeadSpace ) is var node and >= 0; ++id )
+					{
+						headNodes.Add( node );
+						Assert.IsTrue( model.Nodes[node].ParentIndex >= 0 && model.Nodes[node].ParentIndex < model.Meshes.Count,
+							$"{directory}/{member}: head {id} hangs on a mesh, with no node between" );
+					}
+
+					heads += headNodes.Count;
+
+					foreach ( var clipName in members.Where( name => name != member && name.StartsWith( stem, System.StringComparison.OrdinalIgnoreCase ) ) )
+					{
+						using var clipStream = _data.OpenReadOrNull( $"{directory}/{clipName}" );
+
+						if ( clipStream == null )
+							continue;
+
+						var clip = new AnimationFile( clipStream );
+
+						visibility += clip.VisibilityTracks.Count( track => headNodes.Contains( track.TargetIndex ) );
+
+						others.AddRange( clip.RotationTracks.Where( track => headNodes.Contains( track.TargetIndex ) ).Select( _ => $"{directory}/{clipName} turns" ) );
+						others.AddRange( clip.PositionTracks.Where( track => headNodes.Contains( track.TargetIndex ) ).Select( _ => $"{directory}/{clipName} moves" ) );
+						others.AddRange( clip.ScaleTracks.Where( track => headNodes.Contains( track.TargetIndex ) ).Select( _ => $"{directory}/{clipName} scales" ) );
+						others.AddRange( clip.PathTracks.Where( track => headNodes.Contains( track.TargetIndex ) ).Select( _ => $"{directory}/{clipName} routes" ) );
+						others.AddRange( clip.MorphTracks.Where( track => headNodes.Contains( track.TargetIndex ) ).Select( _ => $"{directory}/{clipName} morphs" ) );
+					}
+				}
+			}
+		}
+
+		CollectionAssert.AreEqual( System.Array.Empty<string>(), others, "no clip turns, moves, scales, routes or morphs a head node" );
+		Assert.AreEqual( 80, models, "the models with heads" );
+		Assert.AreEqual( 84, visibility, "the visibility tracks on a head node: the one track a head node has" );
+		Assert.AreEqual( 792, heads, "the head nodes read" );
+	}
+}

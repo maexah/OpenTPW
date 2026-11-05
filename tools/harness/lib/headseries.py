@@ -3,7 +3,7 @@
 The stock park, paused, ITEM bought at (41,22) (default 1109, Mumbo; NAME is the word its `rides` line carries, default Mumbo), its queue
 joined to the path at (43,21), five guests sent to it; once `heads 5/N` (five riders, N the ride's capacity) and running (or after 120 s), the park is paused and saved (<outdir>/Q848.TPWS,
 which the original loads with original/loadfile.sh) and then, still paused:
-    series (default)   `step STEP` and `rides` COUNT times (env Q848_STEP, Q848_COUNT; 3 and 450; Q848_DELAY, seconds waited before the guests are admitted, 0: another wait, another set of heads aboard): series.json holds, a sample each, the ride's first
+    series (default)   `step STEP` and `rides` COUNT times (env Q848_STEP, Q848_COUNT; 3 and 450; Q848_CAMERA, the camera line, default "430 237 90 0" (Q1009: "430 240 90 0" is the eye of q917's pauses); Q848_DELAY, seconds waited before the guests are admitted, 0: another wait, another set of heads aboard): series.json holds, a sample each, the ride's first
                        channel (role, clip, frame, length) and each head's name, kind, drawn place (x, depth, height), rest place and node (the census's leading number)
     --save-role R      (Q917) a bought ride's park: polls until its first channel is in role R at frames 5 to 30, then pauses (about 0.8 s, some 23 frames, later) and
                        saves; the role is read again after the pause and the run stops if the channel has left R. Not with --load (nothing is saved then). The riders
@@ -38,7 +38,7 @@ try:
         shutil.copy(LOAD, WROTE)
         read, _, _ = load(2 if OFFSCREEN else 1)   # off-screen the list runs oldest first, the autosave then this file; the row is the file's place in the list: off-screen the private folder held an autosave, row 2; the desktop's held none on 2026-11-04, row 1; the assert below stops a wrong row
         assert read.endswith(NAME + ".TPWS"), f"loaded {read}, not the file asked for"
-        reply("camera 430 237 90 0", 0.5)
+        reply("camera " + os.environ.get("Q848_CAMERA", "430 237 90 0"), 0.5)
     else:
         got = " ".join(reply(f"buy {ITEM} 41 22 0", 2.5, 9)); print("  buy:", got[:200])
         m_ = re.search(r"built as thing (\d+)", got); tid = int(m_.group(1)) if m_ else -1
@@ -48,7 +48,7 @@ try:
         for i in range(5):
             l = " ".join(reply("admit 43 21", 1.0, 0)); m_ = re.search(r"admit: guest (\d+)", l)
             if m_: reply(f"send {m_.group(1)} {tid}", 1.0, 0)
-        reply("camera 430 237 90 0", 0.5)
+        reply("camera " + os.environ.get("Q848_CAMERA", "430 237 90 0"), 0.5)
         ok = False
         for i in range(120):
             time.sleep(1.0); l = ride()

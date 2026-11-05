@@ -102,18 +102,18 @@ def census(log):
 
 
 def samples(log):
-    """Every `rides` census line of a headseries run: [{role, frame, heads: {name: {rest, turn, at}}}], where `at` is the drawn place in the model's axes (y up)."""
+    """Every `rides` census line of a headseries run: [{role, entry, frame, heads: {name: {rest, turn, at}}}], where `at` is the drawn place in the model's axes (y up)."""
     out = []
     pat = re.compile(r"'(Head\w+)' \w+ \([^)]*\) model [^\[]*?drawn \w+ \(([-\d.]+),([-\d.]+),([-\d.]+)\) matrix \[([^\]]*)\](?: drawnturn \[([^\]]*)\])?")
     for line in open(log, errors="replace"):
-        c = re.search(r"channels \[0:role (\d+) entry \d+ frame ([\d.]+)/", line)
+        c = re.search(r"channels \[0:role (\d+) entry (\d+) frame ([\d.]+)/", line)
         if not c or "matrix [" not in line:
             continue
         heads = {}
         for m in pat.finditer(line):
             x, y, z = float(m.group(2)), float(m.group(3)), float(m.group(4))
             heads[m.group(1)] = {"rest": [float(v) for v in m.group(5).split()], "turn": [float(v) for v in m.group(6).split()] if m.group(6) else None, "at": [x, z, y]}
-        out.append({"role": int(c.group(1)), "frame": float(c.group(2)), "heads": heads})
+        out.append({"role": int(c.group(1)), "entry": int(c.group(2)), "frame": float(c.group(3)), "heads": heads})
     return out
 
 
@@ -150,7 +150,7 @@ def main():
             seen_ours = picture(into_node(cam, ours))
             # This game at the same channel frame (nearest sample of the same role in any loop of the clip), its drawn turn at its drawn place.
             key = next((k for k in (name, f"Head{int(name[4:]):02d}", f"Head{int(name[4:])}") if any(k in x["heads"] for x in series)), name)   # the census spells Head1 and Head02
-            near = min((x for x in series if x["role"] == int(a["role"]) and key in x["heads"]), key=lambda x: abs(x["frame"] - a["frame"]), default=None)
+            near = min((x for x in series if x["role"] == int(a["role"]) and x["entry"] == int(a["clip"]) and key in x["heads"]), key=lambda x: abs(x["frame"] - a["frame"]), default=None)
             seen_turn, turn_angle, gap = None, None, None
             if near and near["heads"][key]["turn"]:
                 h = near["heads"][key]

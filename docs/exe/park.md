@@ -1227,8 +1227,12 @@ draw that never finds the free slot stops after 65,536 tries and takes the first
 where the engine would hang; a head follows its nearest mesh, where the engine poses every node of the tree, which
 Q915 answered for a clip that turns a dummy past the meshes (`NodePoser.Drives( clip, meshCount )`: Mumbo's `jm_dum` carries the ring of heads); and a head's picture is chosen by the turn the node is drawn with (Q1003): on a
 morphing face with `0x40000`, `FaceAnchor_TurnToFace`'s above; otherwise its rest turn inside its nearest mesh as that mesh is drawn,
-so a clip that turns the head's node or one between it and the mesh is not carried (`RIDER_HEAD_TURN_AT_REST`, counted for a head
-`RideNodes.FindHead` finds on a clip-driven ancestor). Confirmed in the game (`q190/run2`, `run3`): a bought Mumbo, 43
+which a clip that turned the head's node or one between it and the mesh would not carry; none does (Q1009, measured over the 80 models of the four themes' ride and
+feature archives that have a head node, `RideNodesTests.NoClipTurnsAHeadNodeOrOneBetweenItAndItsMesh`: every head node's parent is a mesh, so no node stands between,
+and the only track any clip has on a head node is a visibility track, 84 of them, the clips `c` and the ferry's `m1`; the Sun God, Rocky Racers, Twister and Eruption
+included; their meshes' own clips are posed as any mesh's are). The Crazy Ape's role 5 and 6 heads (`OnAMesh`, the arm `m_arm` and `m_arm1` posed by
+`MeshRotator`/`NodePoser`) against the original's stored matrices at the same role, clip entry and frame (`q917/orig/all.jsonl`, `headresidual.py --interp`): 19 pairs
+within 0.84 degrees, the picture the same in 15 of 15 (Q1009). Confirmed in the game (`q190/run2`, `run3`): a bought Mumbo, 43
 census lines with heads equal to riders from 0/5 to 5/5 and back, each head at the drawn node to 0.1; the shots show
 heads at the tentacles while it is full and none when it is empty. Then on the tentacles as they move (`q190/follow1`):
 in a go each of Mumbo's five heads was drawn on its face and its height moved 5.0 to 8.3 units with its tentacle, the
