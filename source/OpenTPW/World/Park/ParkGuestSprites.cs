@@ -1166,17 +1166,7 @@ public sealed class ParkGuestSprites : ModelEntity
 
 			// With no walk, the balloon stays where it was.
 			if ( people.WalkFor( peep.ThingId ) is { } walk && cellX > 0f && cellY > 0f )
-			{
-				var placed = Balloon.Place( walk.Previous, walk.Position, alpha, cellX, cellY, peep.ThingId, _bobPhase,
-					peep.BalloonLastX, peep.BalloonLastY );
-
-				(held.X, held.Y, held.Height) = (placed.X, placed.Y, placed.Height);
-				(peep.BalloonLastX, peep.BalloonLastY) = (placed.LastX, placed.LastY);
-
-				// The shared phase counts every placement, on the frame clock here (Balloon.PlacementsPerSecond). Whether
-				// the original's per-frame placement runs while a park's menu has paused its clock is not traced.
-				(_bobPhase, _bobCount) = Balloon.AdvanceBob( _bobPhase, _bobCount, Balloon.PlacementsPerSecond * Time.Delta );
-			}
+				(_bobPhase, _bobCount) = PlaceHeld( peep, held, walk.Previous, walk.Position, alpha, cellX, cellY, _bobPhase, _bobCount, Time.Delta );
 
 			used = DrawBalloon( used, held, bank, field );
 		}
@@ -1185,6 +1175,23 @@ public sealed class ParkGuestSprites : ModelEntity
 			used = DrawBalloon( used, letGo, bank, field );
 
 		return used;
+	}
+
+	/// <summary>
+	/// One held balloon's placement: <see cref="Balloon.Place"/> over the guest's walk, written into the balloon and into the guest's last
+	/// x and y (<c>mLastPosX</c>, <c>mLastPosY</c>), then the shared bob counted on by the placements this frame's <paramref name="delta"/> holds
+	/// (<see cref="Balloon.PlacementsPerSecond"/> of them a second, on the frame clock here: whether the original's per-frame placement runs
+	/// while a park's menu has paused its clock is not traced). Answers the bob's phase and count after.
+	/// </summary>
+	internal static (int Phase, float Count) PlaceHeld( Peep peep, Balloon held, FixedVector previous, FixedVector position, float alpha,
+		float cellX, float cellY, int phase, float count, float delta )
+	{
+		var placed = Balloon.Place( previous, position, alpha, cellX, cellY, peep.ThingId, phase, peep.BalloonLastX, peep.BalloonLastY );
+
+		(held.X, held.Y, held.Height) = (placed.X, placed.Y, placed.Height);
+		(peep.BalloonLastX, peep.BalloonLastY) = (placed.LastX, placed.LastY);
+
+		return Balloon.AdvanceBob( phase, count, Balloon.PlacementsPerSecond * delta );
 	}
 
 	/// <summary>

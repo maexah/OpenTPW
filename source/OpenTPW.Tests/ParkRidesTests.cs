@@ -419,6 +419,46 @@ public class ParkRidesTests
 		Assert.AreEqual( word, state.TrackRides.KartOf( handle )!.Performance, "the kart's performance is the script's word" );
 	}
 
+	/// <summary>
+	/// A Hot Pot bound through <see cref="ParkRides"/> is wired to its cars: the script holds the park's bumper rides and its track handle,
+	/// the ride's arena is put where the thing stands, and the scheduler's next visit pushes the script's word into the ride's performance
+	/// and the four values lerped from it (<c>BindTrackRide</c>, <c>0x00551844</c>, <c>FUN_00545180</c>). The word 80 gives a thrust of 8 + 4 × 80 / 100,
+	/// 11, and a friction of 960 + 50 × 80 / 100, 1000, where the template's 50 gives 10 and 985.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> <c>script.Bumpers</c> not set (the push never arrives); <c>cars.Place</c> not called; the arena put at the anchor cell.</remarks>
+	[TestMethod]
+	public void AHotPotBoundThroughTheRidesIsPushedItsScriptsWordAtTheNextVisit()
+	{
+		var world = World();
+		var catalogue = Catalogue();
+		var state = new ParkState( world );
+		var handle = state.TrackRides.Take( -1 );
+		var placed = new ParkWorld.CatalogueObject( ThingId: 901, CatalogueId: 1140, RawX: 57 << 8, RawY: 23 << 8, Angle: 90 ) with { TrackRide = handle };
+
+		Assert.IsTrue( catalogue.TryGet( 1140, out var item ), "the jungle offers the Hot Pot" );
+
+		var scheduler = new RideScriptScheduler();
+		var script = new RideScript( new RideScriptFile( data.OpenRead( "levels/jungle/rides/bumper/bumper.RSE" ) ) ) { Speed = 80 };
+		var bind = typeof( ParkRides ).GetMethod( "BindTrackRide", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static )!;
+
+		var ride = state.TrackRides.Cars.RideOf( handle )!;
+
+		Assert.AreEqual( (50, 10, 985), (ride.Performance, ride.Thrust, ride.Friction), "the template's, until a script pushes" );
+
+		bind.Invoke( null, [script, placed, item, scheduler] );
+		scheduler.Add( 1, script );
+
+		var (x, z) = ParkBumperCars.ArenaCentre( item, 57, 23, 90 );
+
+		Assert.AreSame( state.TrackRides.Cars, script.Bumpers, "the script holds the park's bumper rides" );
+		Assert.AreEqual( handle, script.TrackRide );
+		Assert.AreEqual( (x, z), (ride.CentreX, ride.CentreZ), "the arena where the thing stands" );
+
+		scheduler.Advance( 0f );
+
+		Assert.AreEqual( (80, 11, 1000), (ride.Performance, ride.Thrust, ride.Friction), "the word, pushed and lerped" );
+	}
+
 	/// <summary>A thing bought after a load is numbered past every saved script, from the saved next handle.</summary>
 	[TestMethod]
 	public void AThingBoughtAfterALoadTakesTheSavedNextHandle()

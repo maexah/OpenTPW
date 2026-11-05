@@ -12597,3 +12597,11 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   clips turn such a node (`NodePoser`, the clips' tracks). Beside it, the Crazy Ape's heads in its OnAMesh clips (role 5, drawn by the same rest-in-mesh turn, their parent a
   mesh no morph poses there) against `q917/orig/pauses.jsonl`, once `headframe.py` pairs by the role's clip entry as well as the frame (it pairs by role and frame alone; role 5
   holds seven clips, so `q1003/headframe-ape2-role5.txt`'s 1 of 7 is not a measure). Build only if a turn is missing.
+- [x] **Q1026. Tests for the rest of the wiring the effort audit found untested (the second piece of Q220).** Done
+  (`q1026/PREDICTION.txt`): 15 tests, 14 of them needing no game. `ParkBumperBoats.Put` is split into `Placement` (the height under the four
+  corners about the eased place, plus the bob, and the yaw turned the other way), `Eased` (the position at 1/3072 of a cell to a unit, the
+  heading eased by the turn and truncated), `BobOf` (the four multiples 6, 4, 3, 5) and `Yaw` (`(heading - 0x100) & 0x1ff`), which
+  `Put` calls and applies to the model; `DrawBalloons`' per-balloon half is `ParkGuestSprites.PlaceHeld` (the write-back into the balloon and the
+  peep's last x and y, the bob counted on by `Balloon.PlacementsPerSecond * delta`); a Hot Pot bound through `ParkRides` holds the park's cars and
+  is pushed its script's word at the next visit (needs the game). 39 bugs put back with `mutate.py`; the account is in STATUS.md.
+  `UseFirstPersonPictures` is Q1027.

@@ -804,15 +804,13 @@ filed the items that cite it.
   across all 2,129 `.md2`, compare the stored normals with the computed ones, then read and use the stored ones. The
   FileFormats models page gets the count. Confirm: one ride and one shop photographed beside the original's under
   Proton, the same sun.
-- [ ] **Q1026. Tests for the rest of the wiring the effort audit found untested (the second piece of Q220).** From Q220.
-  Not yet tested, each wanting its bug put back and seen to fail (`AGENTS.md` rule 6), no game run: the Hot Pot's
-  `ParkBumperBoats.Put` (the position at 1/307.2 of a unit eased by `GameClock.PartialTick`, the heading eased by the turn
-  and its yaw `((heading - 0x100) & 0x1ff)` 512ths, the bob's four multiples; it needs a model, so pull the arithmetic out as
-  `Float` already is) and its drawn heading; the speed word's placement wiring (`PushSpeedWord` on a placed ride, the
-  ride's performance reaching its cars); `ParkGuestSprites.DrawBalloons` (the bob's rate, `Balloon.PlacementsPerSecond * Time.Delta`,
-  and the write-back of the placed position into the held balloon and the peep's last x and y; it draws through `WriteQuad`,
-  so it needs a built atlas or the loop pulled out); the camcorder's `ParkGuestSprites.UseFirstPersonPictures` on entering and
-  leaving first person (the atlas packed again with the `.FPC` or `.TPC` packs, the old atlas let go, the model built again).
+- [ ] **Q1027. Test the camcorder's `ParkGuestSprites.UseFirstPersonPictures` (the third piece of Q220).** It builds a `Texture` through
+  the Vulkan `Device` (`BuildAtlas`), so no unit test reaches it. Either put the atlas behind a seam (a function that is handed the pictures and
+  answers the regions, so a test's stand-in counts the packs asked for) and test: entering first person asks for each flagged bank's `.FPC`,
+  leaving asks for the `.TPC`s again, the old atlas is let go after the new one is made, a model already built is built again, and a call that
+  changes nothing (same mode, no park, no theme) packs nothing; or confirm it in a running game by the census line `Guests: N sprite banks packed,
+  M from .FPC` on each side of a camcorder enter and leave, with the mutations put back in a copy and the run repeated. Each with its bug put back
+  and seen to fail (`AGENTS.md` rule 6).
 - [ ] **Q221. Eight leftovers from the effort audit, each dead by content today.** Found by the 2026-10-04 effort
   audit, each read in the listing. (1) `ParkScriptStates` reads the tick and next handle with `header > dword * 4`; it
   should be `>= (dword + 1) * 4`. (2) `ParkBuyScreen.Listed` applies two of the original's four filters: add the

@@ -493,30 +493,57 @@ public sealed class ParkBumperBoats : Entity
 		var field = ParkGround.Current?.Heightfield;
 		var cellX = field?.CellSizeX ?? 10f;
 		var cellY = field?.CellSizeY ?? 10f;
-		var ease = Math.Clamp( GameClock.PartialTick, 0f, 1f ) - 1f;
-
-		var x = (car.X + car.VelocityX * ease) / ParkBumperCars.CellUnits * cellX;
-		var y = (car.Z + car.VelocityZ * ease) / ParkBumperCars.CellUnits * cellY;
-
-		// The original passes this as the third of the angles it turns the model by, its heading eased back by its turn,
-		// truncated to a whole 512th (0x00546409..0x00546439).
-		var heading = car.Heading - (int)(car.Turn * -ease);
-
 		var radius = state.TrackRides.Cars.RideOf( car.Ride )?.CarRadius ?? car.Radius;
 		var last = boat.Height;
 
-		var height = Float( x, y, heading, radius, cellX, cellY, ( cornerX, cornerY ) => _scene.Under( cornerX, cornerY, state, field, last ) );
-
-		// Each corner bobs on its own multiple of the phase, 6, 4, 3 and 5 (0x0054658c..0x005466c0); the height is
-		// the four's average, so a quarter of their bobs.
-		if ( (car.Flags & ParkBumperCars.CarFlags.Bobs) != 0 )
-			height += (Bob( car.Phase, 6, ease ) + Bob( car.Phase, 4, ease ) + Bob( car.Phase, 3, ease ) + Bob( car.Phase, 5, ease )) * BobScale * 0.25f;
-
-		var yaw = ((heading - 0x100) & 0x1ff) * (MathF.Tau / 512f);
+		var (at, turn, height) = Placement( car, GameClock.PartialTick, cellX, cellY, radius,
+			( cornerX, cornerY ) => _scene.Under( cornerX, cornerY, state, field, last ) );
 
 		boat.Height = height;
-		boat.Model.SetTransform( new Vector3( x, y, height ), Quaternion.CreateFromAxisAngle( System.Numerics.Vector3.UnitZ, -yaw ) );
+		boat.Model.SetTransform( at, turn );
 	}
+
+	/// <summary>
+	/// What <see cref="Put"/> sets a boat to: where its car floats (<see cref="Eased"/>), at the height under its four corners
+	/// (<see cref="Float"/>) and its bob (<see cref="BobOf"/>), turned about the up axis by <see cref="Yaw"/> the other way round.
+	/// </summary>
+	internal static (Vector3 At, Quaternion Turn, float Height) Placement( ParkBumperCars.Car car, float partialTick, float cellX, float cellY,
+		int radius, Func<float, float, float> under )
+	{
+		var (x, y, heading, ease) = Eased( car, partialTick, cellX, cellY );
+		var height = Float( x, y, heading, radius, cellX, cellY, under ) + BobOf( car, ease );
+
+		return (new Vector3( x, y, height ), Quaternion.CreateFromAxisAngle( System.Numerics.Vector3.UnitZ, -Yaw( heading ) ), height);
+	}
+
+	/// <summary>
+	/// Where a car floats in the world, and the ease its bob uses: the position at 1/307.2 of a unit
+	/// (<see cref="ParkBumperCars.CellUnits"/> to a cell) eased back along the velocity by <paramref name="partialTick"/> held to 0..1, less one
+	/// (between -1 and 0), and the heading eased back by its turn, truncated to a whole 512th - the third of the angles the original
+	/// turns the model by (<c>0x00546409</c>..<c>0x00546439</c>).
+	/// </summary>
+	internal static (float X, float Y, int Heading, float Ease) Eased( ParkBumperCars.Car car, float partialTick, float cellX, float cellY )
+	{
+		var ease = Math.Clamp( partialTick, 0f, 1f ) - 1f;
+
+		var x = (car.X + car.VelocityX * ease) / ParkBumperCars.CellUnits * cellX;
+		var y = (car.Z + car.VelocityZ * ease) / ParkBumperCars.CellUnits * cellY;
+		var heading = car.Heading - (int)(car.Turn * -ease);
+
+		return (x, y, heading, ease);
+	}
+
+	/// <summary>
+	/// The height a car's bob adds: each of the four corners bobs on its own multiple of the phase, 6, 4, 3 and 5
+	/// (<c>0x0054658c</c>..<c>0x005466c0</c>), and the height is the four's average, so a quarter of their bobs; none for a car that does not bob.
+	/// </summary>
+	internal static float BobOf( ParkBumperCars.Car car, float ease )
+		=> (car.Flags & ParkBumperCars.CarFlags.Bobs) == 0
+			? 0f
+			: (Bob( car.Phase, 6, ease ) + Bob( car.Phase, 4, ease ) + Bob( car.Phase, 3, ease ) + Bob( car.Phase, 5, ease )) * BobScale * 0.25f;
+
+	/// <summary>The yaw a heading turns the model by: <c>((heading - 0x100) &amp; 0x1ff)</c> 512ths of a turn, in radians.</summary>
+	internal static float Yaw( int heading ) => ((heading - 0x100) & 0x1ff) * (MathF.Tau / 512f);
 
 	/// <summary>
 	/// The height a car stands at before its bob: the average of the scene's under its four corners, which stand the
