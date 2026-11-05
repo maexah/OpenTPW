@@ -374,6 +374,8 @@ public sealed class ParkGuestSprites : ModelEntity
 		var placed = new List<(int Type, int Bank, int First, int Count, SpriteBankFile File)>();
 		var fromFirstPerson = new List<string>();
 
+		PackedFromFirstPerson = 0;
+
 		foreach ( var key in BanksToPack( _people.Select( p => p.Sprite ), _counts ) )
 		{
 			var folder = FolderFor( key.Type, themeName );
@@ -421,6 +423,7 @@ public sealed class ParkGuestSprites : ModelEntity
 		foreach ( var (type, bank, first, count, file) in placed )
 			_banks[(type, bank)] = new Loaded( file, regions[first..(first + count)] );
 
+		PackedFromFirstPerson = fromFirstPerson.Count;
 		Log.Info( $"Guests: {placed.Count} sprite banks packed, {fromFirstPerson.Count} from .FPC, {pictures.Count - 1} pictures" +
 			(fromFirstPerson.Count > 0 ? $" ({string.Join( ", ", fromFirstPerson )})" : "") );
 	}
@@ -1270,6 +1273,15 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// </summary>
 	private (int Kind, int Bank) LookOf( ParkPeople? people, ParkWorld.Person person, ParkWorld.Sprite sprite )
 		=> LookOf( people, _counts, person, sprite );
+
+	/// <summary>How many banks the last load packed from their <c>.FPC</c> (the census line's "from .FPC").</summary>
+	internal int PackedFromFirstPerson { get; private set; }
+
+	/// <summary>The atlas region of the white square the debug dash is drawn from, or null when nothing is packed.</summary>
+	internal Region? PlainRegion => _plain;
+
+	/// <summary>The atlas regions of a packed bank's pictures, in the bank's order, or null when it is not packed.</summary>
+	internal Region[]? PicturesAt( int kind, int bank ) => _banks.TryGetValue( (kind, bank), out var loaded ) ? loaded.Pictures : null;
 
 	/// <summary>A packed bank by its kind and its number among the kind's, or null when it is not packed.</summary>
 	internal SpriteBankFile? BankAt( int kind, int bank ) => _banks.TryGetValue( (kind, bank), out var loaded ) ? loaded.Bank : null;

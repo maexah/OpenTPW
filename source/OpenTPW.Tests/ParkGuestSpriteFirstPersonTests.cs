@@ -137,7 +137,9 @@ public class ParkGuestSpriteFirstPersonTests
 				Packed.Add( pictures.Select( picture => picture.Width ).ToArray() );
 				Events.Add( $"pack {Packed.Count}" );
 
-				return (new Atlas( this, Packed.Count ), new ParkGuestSprites.Region[pictures.Count]);
+				// One region each, in order; the width is the picture's index, so a region misplaced shows.
+				return (new Atlas( this, Packed.Count ), Enumerable.Range( 0, pictures.Count )
+					.Select( index => new ParkGuestSprites.Region( 0f, 0f, 1f, 1f, 100 + index, 0, 0, 0 ) ).ToArray());
 			},
 			( pool, _ ) => Events.Add( $"models over {((Atlas)pool.Atlas!).Number}" ) );
 	}
@@ -287,6 +289,47 @@ public class ParkGuestSpriteFirstPersonTests
 		last.UseFirstPersonPictures( true );
 
 		Assert.AreEqual( then + 1, left.Events.Count( e => e.StartsWith( "models" ) ), "a model that exists is built again, with nobody to draw" );
+	}
+
+	/// <summary>
+	/// The census counts the banks packed from their <c>.FPC</c>: none for a park's top view, one (the flagged kids bank, not the
+	/// balloon bank that has a <c>.FPC</c> beside it) inside first person, none again after leaving.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the count ignores the bank's flag; the count ignores the mode.</remarks>
+	[TestMethod]
+	public void TheCensusCountsOnlyTheFlaggedBanksPackedFromFirstPerson()
+	{
+		var pool = Pool( new Seen() );
+
+		Assert.AreEqual( 0, pool.PackedFromFirstPerson );
+
+		pool.UseFirstPersonPictures( true );
+		Assert.AreEqual( 1, pool.PackedFromFirstPerson );
+
+		pool.UseFirstPersonPictures( false );
+		Assert.AreEqual( 0, pool.PackedFromFirstPerson );
+	}
+
+	/// <summary>
+	/// The regions the atlas answers go where the pool puts them: the white square is the last, and each bank gets the
+	/// slice of its own pictures in order. The stand-in's region <c>i</c> has width <c>100 + i</c>: the kids bank (3 pictures in
+	/// first person) is regions 0..2, the balloon bank 3, the square 4.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the plain region is the first; a bank's slice starts one late or one early.</remarks>
+	[TestMethod]
+	public void EachBankAndTheWhiteSquareGetTheirOwnRegionsOfThePack()
+	{
+		var pool = Pool( new Seen() );
+
+		Assert.AreEqual( 103, pool.PlainRegion!.Value.Width, "top view: kids 0..1, balloons 2, square 3" );
+		CollectionAssert.AreEqual( new[] { 100, 101 }, pool.PicturesAt( 0, 0 )!.Select( r => r.Width ).ToArray() );
+		CollectionAssert.AreEqual( new[] { 102 }, pool.PicturesAt( Balloon.SpriteKind, 0 )!.Select( r => r.Width ).ToArray() );
+
+		pool.UseFirstPersonPictures( true );
+
+		Assert.AreEqual( 104, pool.PlainRegion!.Value.Width );
+		CollectionAssert.AreEqual( new[] { 100, 101, 102 }, pool.PicturesAt( 0, 0 )!.Select( r => r.Width ).ToArray() );
+		CollectionAssert.AreEqual( new[] { 103 }, pool.PicturesAt( Balloon.SpriteKind, 0 )!.Select( r => r.Width ).ToArray() );
 	}
 
 	/// <summary>

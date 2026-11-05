@@ -535,7 +535,7 @@ public sealed class ParkBumperBoats : Entity
 
 	/// <summary>
 	/// The height a car's bob adds: each of the four corners bobs on its own multiple of the phase, 6, 4, 3 and 5
-	/// (<c>0x0054658c</c>..<c>0x005466c0</c>), and the height is the four's average, so a quarter of their bobs; none for a car that does not bob.
+	/// (<c>0x005467e3</c>..<c>0x005468e6</c>), and the height is the four's average, so a quarter of their bobs; none for a car that does not bob.
 	/// </summary>
 	internal static float BobOf( ParkBumperCars.Car car, float ease )
 		=> (car.Flags & ParkBumperCars.CarFlags.Bobs) == 0

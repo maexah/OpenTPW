@@ -938,8 +938,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00546225` | FUN_00545890 with every entry taken: the read through a null entry | OpenTPW/World/Park/ParkTrackRideTable.cs  |
 | `0x00546409` | | OpenTPW/World/Park/ParkBumperBoats.cs  |
 | `0x00546439` | | OpenTPW/World/Park/ParkBumperBoats.cs  |
-| `0x0054658c` | | OpenTPW/World/Park/ParkBumperBoats.cs  |
-| `0x005466c0` | | OpenTPW/World/Park/ParkBumperBoats.cs  |
+| `0x005467e3` | | OpenTPW/World/Park/ParkBumperBoats.cs  |
+| `0x005468e6` | | OpenTPW/World/Park/ParkBumperBoats.cs  |
 | `0x0054760f` | | OpenTPW/World/Park/ParkBumperCars.cs  |
 | `0x005478fc` | | OpenTPW/World/Park/ParkBumperCars.cs  |
 | `0x00548499` | | OpenTPW/World/Park/ParkBumperCars.cs  |
