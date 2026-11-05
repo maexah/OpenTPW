@@ -2,10 +2,14 @@
 """apply.py [--revert] - route every default `new Random()` of the product through SweepHook (scratch, never committed).
 
 Q1023 (docs/TOOLING.md, "A test's flake found by setting its generators from outside"). Run from the repo root.
-Copies SweepHook.cs into source/OpenTPW/ and ZSweepScratch.cs into source/OpenTPW.Tests/, and edits the 17 default
-generators the park's audio, weather, sea, staff and peeps make (a line that has moved stops the script with an
-AssertionError, so an edit never half applies). `--revert` restores the edited files with git and deletes the two copies.
-Build, then run.sh. Commit nothing while it is applied: the edits are the sweep's, not the product's.
+Copies SweepHook.cs into source/OpenTPW/ and ZSweepScratch.cs into source/OpenTPW.Tests/, and edits the 19 default
+generators the park's audio, weather, sea, staff and peeps make, and the 3 `Random.Shared` draws (the lobby's lightning and
+camera wander, the VM's RAND), routed through `SweepHook.Shared` (a line that has moved stops the script with an
+AssertionError, so an edit never half applies). Build, then run.sh. Commit nothing while it is applied: the edits are the
+sweep's, not the product's.
+
+`--revert` runs `git checkout --` on the edited product files: it DISCARDS any other uncommitted edit in them. Never run it
+with a product change of your own unstaged in those files (commit or stash it first), and revert before the item's commit.
 """
 import os, shutil, subprocess, sys
 
@@ -27,10 +31,11 @@ EDITS = [
 		("_rideRandom = rideRandom ?? new Random();", "_rideRandom = rideRandom ?? SweepHook.Make( \"RideRandom\" );")]),
 	("World/Park/PeepBehaviour.cs", [("_random = random ?? new Random();", "_random = random ?? SweepHook.Make( \"PeepBehaviour\" );")]),
 ]
+SHARED = [("VM/Handlers/Misc.cs", "System.Random.Shared"), ("World/LobbyCameraMode.cs", "Random.Shared"), ("World/Lobby/LobbyWeather.cs", "Random.Shared")]
 COPIES = [("SweepHook.cs", P + "SweepHook.cs"), ("ZSweepScratch.cs", "source/OpenTPW.Tests/ZSweepScratch.cs")]
 
 if "--revert" in sys.argv:
-	subprocess.check_call(["git", "checkout", "--"] + [P + f for f, _ in EDITS])
+	subprocess.check_call(["git", "checkout", "--"] + [P + f for f, _ in EDITS] + [P + f for f, _ in SHARED])
 	for _, dest in COPIES:
 		if os.path.exists(dest):
 			os.remove(dest)
@@ -43,6 +48,10 @@ for f, subs in EDITS:
 		assert old in text, f"{f}: {old!r} not found"
 		text = text.replace(old, new)
 	texts[f] = text
+for f, old in SHARED:
+	text = open(P + f).read()
+	assert old in text, f"{f}: {old!r} not found"
+	texts[f] = text.replace(old, "SweepHook.Shared")
 for f, text in texts.items():
 	open(P + f, "w").write(text)
 for src, dest in COPIES:
