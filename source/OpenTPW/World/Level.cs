@@ -2652,7 +2652,7 @@ public class Level
 
 	/// <summary>
 	/// Backspace - the game table's row 5, handler <c>0x0040bda0</c>. With the path tool armed it takes up
-	/// the last run laid, with the track tool the last run of track, refunded; with nothing armed and an empty
+	/// the last run laid, with the queue tool the last queue run, stepped (<c>ParkPathBuilding.UndoQueueRun</c>), with the track tool the last run of track, refunded; with nothing armed and an empty
 	/// hand it takes one press of the clear off the path under the pointer. One body, shared with the console's <c>backspace</c>.
 	/// </summary>
 	internal string BackspaceKey()

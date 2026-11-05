@@ -46,6 +46,7 @@ Only the item just landed is here. Every earlier item's account is in `docs/hist
 
 ## Numbers (take counts fresh; these go stale within a day)
 
+- Linux, 2026-11-05, review fixes group N (`capped.sh`; four tests added, needing the game; after Q1043): with the game, 5249 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5251; with no game named, 2269 passed, 0 failed, 2982 skipped.
 - Linux, 2026-11-05, Q1043 (`capped.sh`; two tests added, needing the game; after Q1039): with the game, 5245 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5247; with no game named, 2269 passed, 0 failed, 2978 skipped.
 - Linux, 2026-11-05, Q1039 (`capped.sh`; sixteen tests added, needing the game; after Q1044): with the game, 5243 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5245; with no game named, 2269 passed, 0 failed, 2976 skipped.
 - Linux, 2026-11-05, Q1044 (`capped.sh`; ten tests added, needing no game; after Q860): with the game, 5227 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5229; with no game named, 2269 passed, 0 failed, 2960 skipped.

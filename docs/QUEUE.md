@@ -696,6 +696,17 @@ filed the items that cite it.
   counts `STAFF_PICKED_UP_PREVIEW` (ParkPeople.cs) and keeps the plain arrow. Counted since Q432, never queued. Decode first whether type 6 shares the carried
   figure's sprite path (`0x0046c480` / `0x0046c730`, Q40's fork-watch note H2, which is `STAFF_CARRY_PREVIEW`'s item) or has its own; fold into Q40 if it does.
   Listed in `docs/DOES-NOT.md` beside `STAFF_CARRY_PREVIEW`.
+- [ ] **Q1046. The queue tool's unanchored click (Q860's second read).** In the original an unanchored click in mode 3 first asks
+  `FUN_00535670( 3 )` of the cell (`0x00527297`..`0x005272a5`; anchors nothing when it answers 1, not decoded), then empties
+  the pending list (`0x005272be` `FUN_0052fbd0`), pushes the click (`0x005272cd` `FUN_0052fbf0`), anchors, resets the click
+  counter (`0x00527316`) and lays nothing. `ParkPathBuilding.RunQueue` has no such arm: `ParkBuildMode.Arm` sets the anchor to
+  (-1,-1) but leaves the list, so the console's `tool queue` and EditQueue's EDIT_QUEUE_WITH_NO_ENTRANCE arm push the first
+  click onto a stale list, and a later Backspace can pop into it and clear a line between unrelated cells. Decode
+  `FUN_00535670( 3 )` at `0x00527297` first, then build the arm as RunPath's (lines ~900-910) and test it.
+- [ ] **Q1047. The queue tool's third-click advisor `0xd6` (pre-existing).** The click counter `[0x8186dc]` is shared by modes 1 and 3
+  (`0x0052732f`..`0x0052736d`): it counts every anchored click and posts advisor `0xd6` at the third; its only reset is the
+  unanchored first click. `RunQueue` now counts `QUEUE_TOOL_ADVISOR_MESSAGE_0xD6` at the third click (rule 4); build the advisor
+  post itself with the path tool's `PATH_TOOL_ADVISOR_MESSAGE_0xD6`, and the reset with the unanchored arm above.
 - [ ] **Q1018. The original's bolt is updated a second time in some frames, 4 to 6 ms after the first.** Found by Q1044's poll (`q1044/orig/run1/a-load.log`, `run2/a-load.log`): of the poll lines, 209 (run 1) and 156 (run 2) show `FUN_0057ff60` called again with `dt` at `+0x9d9c` of 4 to 6 ms, after 997 and 567 of 25 ms or more: about one frame in five. Each call takes the clock's ms since the last call off every bolt and draws it with its own `rand()` (`0x0057ee30`). Not decoded: who calls it a second time (`0x00576dab`'s caller, or another), and whether the second call draws the bolt again, an additive second quad in the same frame that would make such a frame brighter than its one polled grey says. Ours draws one grey a frame and ages a bolt once. Decode first (`watch.sh` on `+0x9d9c`'s writers; `boltpoll.py`, `boltaim.py`), then film with `record.sh` and read whether a frame with a short second call is brighter.
 - [ ] **Q212. The ride window's other statuses. Decode first.** Found by the 2026-10-04 review (`u7-ride-door-6`,
   `-7`, `-9`, `-10`). `FUN_00485f60` answers (80/100/255) 5..9 for a ride waiting for an upgrade, `0xb`..`0xf` for a toilet's

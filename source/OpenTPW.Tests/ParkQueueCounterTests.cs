@@ -223,6 +223,92 @@ public class ParkQueueCounterTests
 		Assert.AreEqual( 0, At( park, 24, 3 ).OverlapCounter, "its counter too" );
 	}
 
+	/// <summary>
+	/// <b>A click on the anchor lays its cell only while the list holds the tool's first cell alone</b>
+	/// (<c>0x005273c7</c>..<c>0x005273cf</c>): then the node is re-stamped, +1, and pushed (<c>0x005273df</c>). After a run
+	/// the click lays nothing (<c>0x00527528</c>), so the run's fresh end keeps its nought. Both put the tool away.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> laying on every anchor click leaves (20,7) at 1.</remarks>
+	[TestMethod]
+	public void AClickOnTheAnchorLaysOnlyBeforeTheFirstRun()
+	{
+		var (park, _) = Placed();
+
+		ParkPathBuilding.RunQueue( 20, 7 );
+		StringAssert.Contains( ParkPathBuilding.RunQueue( 20, 7 ), "put away" );
+
+		Assert.AreEqual( 0, At( park, 20, 7 ).OverlapCounter, "two entries pending, so the click laid nothing" );
+		Assert.AreEqual( 1, At( park, 20, 10 ).OverlapCounter, "the node keeps the first run's 1 alone" );
+		CollectionAssert.AreEqual( new[] { (20, 10), (20, 7) }, ParkBuildMode.Pending.ToArray(), "nothing pushed" );
+		Assert.AreEqual( ParkBuildMode.None, ParkBuildMode.Current );
+	}
+
+	/// <summary>The placer's node clicked at once: one entry pending, so the node is laid again, +1, and pushed.</summary>
+	[TestMethod]
+	public void AClickOnTheNodeAtOnceRestampsIt()
+	{
+		var (park, _) = Placed();
+
+		StringAssert.Contains( ParkPathBuilding.RunQueue( 20, 10 ), "put away" );
+
+		Assert.AreEqual( 1, At( park, 20, 10 ).OverlapCounter );
+		CollectionAssert.AreEqual( new[] { (20, 10), (20, 10) }, ParkBuildMode.Pending.ToArray() );
+	}
+
+	/// <summary>
+	/// <b>A run that ends on its own queue stamps that last cell too</b> (<c>0x00534584</c> -> <c>FUN_005346d0</c>): it is
+	/// queue already, so it gains 1.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> linking the end cell without the lay's already-queue arm leaves (20,8) at 0.</remarks>
+	[TestMethod]
+	public void ARunEndingOnItsOwnQueueAddsOneToItsEndCell()
+	{
+		var (park, _) = Placed();
+
+		ParkPathBuilding.RunQueue( 20, 8 );
+		ParkBuildMode.ArmAt( ParkBuildMode.Queue, 77, 23, 8 );
+		ParkBuildMode.ClearPending();
+		ParkBuildMode.Push( 23, 8 );
+
+		Assert.AreEqual( 0, At( park, 20, 8 ).OverlapCounter );
+		StringAssert.Contains( ParkPathBuilding.RunQueue( 20, 8 ), "ended on its own queue at (20,8)" );
+		Assert.AreEqual( 1, At( park, 20, 8 ).OverlapCounter );
+	}
+
+	/// <summary>
+	/// <b>Backspace measures the queue again</b> (<c>0x0052ffec</c>), read at the call itself, and <b>a removed cell whose owner's
+	/// cell is bare gives nothing back</b>.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> deleting the RemeasureQueue call in UndoQueueRun leaves the list empty; treating every owner as typed refunds the price.</remarks>
+	[TestMethod]
+	public void BackspaceMeasuresAgainAndABareOwnerGivesNoRefund()
+	{
+		var (park, state) = Placed();
+		var told = new System.Collections.Generic.List<int>();
+
+		ParkPathBuilding.RunQueue( 20, 7 );
+		state.QueueRemeasured = id => told.Add( id );
+		ParkPathBuilding.UndoQueueRun();
+
+		CollectionAssert.Contains( told, 77, "the queue was measured again" );
+
+		var balance = state.Balance;
+
+		var bare = Enumerable.Range( 0, 128 ).Select( x => (X: x, Y: 3) ).First( at => At( park, at.X, at.Y ).Type == CellEdge.Nothing && at.X > 26 );
+
+		state.SetRecord( 24, 3, At( park, 24, 3 ) with
+		{
+			Type = ParkRideChoice.QueueCellType,
+			Neighbours = 0x11,
+			OverlapCounter = 0,
+			ParentId = (ushort)MapStep.CellId( bare.X, bare.Y )
+		} );
+
+		Assert.IsTrue( ParkPathBuilding.ClearQueueCell( state, park, 24, 3, stepped: true, out var refund ) );
+		Assert.AreEqual( 0, refund, "its owner's cell is bare" );
+		Assert.AreEqual( balance, state.Balance );
+	}
+
 	private static int Times( string what )
 		=> Unimplemented.Summary.FirstOrDefault( entry => entry.What == what ).Times;
 }

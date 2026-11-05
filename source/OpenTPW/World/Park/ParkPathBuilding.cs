@@ -303,16 +303,36 @@ public static class ParkPathBuilding
 		var (fromX, fromY) = ParkBuildMode.Anchor;
 		var (toX, toY) = ParkBuildMode.SnapToAxis( clickX, clickY );
 
-		// Clicking the anchor lays the one cell there - already queue, so only its links are renewed - and
-		// puts the tool away, with the advisor's message for a queue left unjoined.
+		// Not built: the original's unanchored click (0x005272be..0x00527316) asks FUN_00535670( 3 ) of the cell, empties the
+		// pending list, pushes the click and resets the counter; here an unanchored click goes on to push onto whatever list
+		// an earlier session left, so a later Backspace can pop into it.
+		// The click counter is shared with the path tool (0x0052732f..0x0052736d): the third anchored click posts advisor
+		// 0xd6, counted here until it is built.
+		if ( ++ParkBuildMode.Clicks == 3 )
+			Unimplemented.Report( "QUEUE_TOOL_ADVISOR_MESSAGE_0xD6" );
+
+		// Clicking the anchor lays its one cell (re-stamped, +1) only while the list holds the tool's first cell alone
+		// (0x005273c7..0x005273cf; the target is pushed first, 0x005273df). After a run, or the queue button's walk, the
+		// click lays nothing (0x00527528) and only measures the queue again (0x00527541). Either way the tool is put away,
+		// with the advisor's message for a queue left unjoined.
 		if ( toX == fromX && toY == fromY )
 		{
 			LayingSound( "queue", clickX, clickY );
-			LayQueue( fromX, fromY, serves, fromX, fromY, lastOfRun: false, firstOfRun: true );
+
+			var laysTheAnchor = ParkBuildMode.Pending.Count == 1;
+
+			if ( laysTheAnchor )
+			{
+				ParkBuildMode.Push( toX, toY );
+				LayQueue( fromX, fromY, serves, fromX, fromY, lastOfRun: false, firstOfRun: true );
+			}
+			else
+				state.RemeasureQueue( serves );
+
 			ParkBuildMode.Disarm();
 			Unimplemented.Report( "QUEUE_MODE_ADVISOR_MESSAGE_0x151" );
 
-			return $"queue: clicked the anchor ({fromX},{fromY}) - the queue tool is put away";
+			return $"queue: clicked the anchor ({fromX},{fromY}){(laysTheAnchor ? "" : " after a run, so nothing is laid")} - the queue tool is put away";
 		}
 
 		// What the preview showed is what the click does: any red square and nothing is laid.
@@ -352,8 +372,9 @@ public static class ParkPathBuilding
 
 			if ( marker == MarkerEnd && step == strip.Count - 1 && state.TryObject( serves, out var own ) )
 			{
-				LinkQueueCell( state, park, x, y, atX, atY, MapStep.CellId( own.CellX, own.CellY ), own, firstOfRun: false );
-				RetileAround( state, park, x, y );
+				// The stamp pass reaches the last cell too (FUN_00536100 -> 0x00534584 -> FUN_005346d0): it is queue already,
+				// so it gains 1 as the anchor does (0x005346f5).
+				LayQueue( x, y, serves, atX, atY, lastOfRun: true, rebuild: false, firstOfRun: false );
 				state.RemeasureQueue( serves );
 				ParkSurfaces.Rebuild();
 				ParkBuildMode.Disarm();

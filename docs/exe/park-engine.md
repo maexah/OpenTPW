@@ -5967,8 +5967,11 @@ too).**
   when P is reached it has lost its link toward T and is no corner: its 1 becomes 0 and **P stays, the end of the
   queue as it was before that click** (C5: B kept, mask `0x40`, the first line untouched). In the original the apply at P is
   skipped in mode 3 when P's cell is type 1 (`0x0052ff9a`..`0x0052ffaa`). The run applies the line (`FUN_00536100( 0x32, T -> P )`,
-  called by hand); the key's route to it is read, not run (`0x0052f340`, `0x00525f3a`, `0x00525f63`). With P at nought,
-  which is what OpenTPW's lay leaves, P goes too and its own neighbour loses its bit (C6').
+  called by hand); the key's route to it is read, not run (`0x0052f340`, `0x00525f3a`, `0x00525f63`). With P at nought
+  (what OpenTPW's lay left before Q860), P goes too and its own neighbour loses its bit (C6'). The anchor click lays (and
+  stamps) only while the list holds one entry (`0x005273c7`); after a run it lays nothing and measures the queue again
+  (`0x00527528`). A run's last cell, if it is queue already, gains 1 too (the stamp pass is the whole line, `0x00534584` ->
+  `FUN_005346d0`).
 
 OpenTPW (Q860): the lay's "Already queue" arm (`ParkPathBuilding.LayQueue`) adds 1 to the counter, as the path arm does;
 `LiftQueue` (the console's `delqueue`, an unstepped clear) removes a queue cell whatever it holds and needs no change.
