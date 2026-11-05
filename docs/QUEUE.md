@@ -642,8 +642,9 @@ filed the items that cite it.
 - [ ] **Q158. Four park-screen readouts are stand-ins; each is counted where it is drawn (Q865).** Found by the 2026-09-26 staleness
   audit (`AGENTS.md` rule 4). `ParkObjectWindow`'s scrap row letters the build price as money (row 449, "$ 500"), where `FUN_004e2400`
   scales it by the age bucket's percentage (`FUN_004e2290`: `percent x +0x1b8 / 100`, the original's "$ 250"), `SCRAP_VALUE_DEPRECIATION`, counted
-  where something is sold, at the shop window's scrap row and at the object window's. The percentage is the item's four-year
-  `ScrapValueYear1`..`4` (not yet read from `ItemDescriptionFile`) picked by the age, 100 only under 30 days with no customer yet.
+  where something is sold, at the shop window's scrap row and at the object window's. The percentage is built since Q1052
+  (`ParkScrap.Percent`, `ItemDescriptionFile.ScrapValueAt`: the item's four-year `ScrapValueYear1`..`4` picked by the age, 100 only under 30 days with no customer yet); the row
+  and the sales that still count `SCRAP_VALUE_DEPRECIATION` are Q1054's.
   (The object window's Age row is built: UITEXT 433, "{P8} days".) `ParkEntryPriceScreen`'s heading
   `0x4f3af` is empty, and its remark says "left empty and counted"; the original titles it with the name of the thing
   at world `+0x1da732`, `mParkGates` (`ParkWorld`), and its help row 191 reads "Park name - left-click to edit", so
@@ -697,16 +698,16 @@ filed the items that cite it.
   (`0x0052732f`..`0x0052736d`): it counts every anchored click and posts advisor `0xd6` at the third; its only reset is the
   unanchored first click. `RunQueue` now counts `QUEUE_TOOL_ADVISOR_MESSAGE_0xD6` at the third click (rule 4); build the advisor
   post itself with the path tool's `PATH_TOOL_ADVISOR_MESSAGE_0xD6`, and the reset with the unanchored arm above.
-- [ ] **Q1052. A queue cell's refund is the original's percentage of its price (Q1038's find).** In the original Backspace on the stock Belly Bounce's queue gives back
-  37 a cell, +111 for each three-cell press (`q1038/orig/run1/t4-bs1-trace.txt`, `t5-bs2-trace.txt`, `t6-bs3-trace.txt`: the balance read every 0.1 s, a step at the key and none
-  before), where the lay charged 75 a cell (225 at the click, `t3-west-trace.txt`); ours refunds 75 a cell (+225 a press, `q1038/ours/runA.out`; `QUEUE_REFUND_DEPRECIATION`,
-  counted 9 times in that run, `ParkPathBuilding.ClearQueueCell` and `LiftQueue`). 37 is 75 x 50 / 100 truncated a cell, `FUN_004e2290`'s per-age percentage (`park-engine.md`,
-  "DEMOLISH refunds"): 100 only under 30 days with no customer, else the item's first-year figure, and the stock ride has had customers. Not decoded: where the clear applies
-  it (the instruction in `FUN_005367a0`'s queue arm or its caller), which thing's percentage (the owner's, cell 2996 here), and the figure. Build it with Q158's age and
-  customers (`ScrapValueYear1`..`4`, not yet read from `ItemDescriptionFile`); confirm a ride bought just now (expect 75 a cell, the 100 arm) beside the stock ride's 37.
 - [ ] **Q1053. A sideshow's or feature's window, when built, must not offer the queue button (Q1038's tail).** The queue button is the ride window's (`FUN_004af200( 0 )`,
   `park-engine.md`, "Editing a queue"). Not checked in the original: the stock park holds no sideshow to open, and the windows are unbuilt (Q31b, Q960, Q961). When one is
   built, open a bought sideshow's window in the original and read whether it has the button.
+- [ ] **Q1054. The scrap percentage is built but its other readers still use the whole price (Q1052's tail).** `ParkScrap.Percent( now, built, customers, tier, item )` answers `FUN_004e2290`, and only
+  the queue cell's refund calls it. Three places still take the build price and count `SCRAP_VALUE_DEPRECIATION`: `ParkBuilding.Sell`'s refund (`price * percent / 100`,
+  `FUN_004dd0a0`), `ParkTrackTool.Remove`'s per-piece refund (`ParkTrackTool.cs`, the "scrap percentage" comment) and the object and shop windows' scrap row (`FUN_004e2400`: percent x `+0x1b8` / 100, `ParkObjectWindow`, `ParkShopWindow`).
+  The original shows the figure: Mumbo with 8 users and 19 days reads `Scrap value $ 500`, with none and 4 days `$ 1000` (`q1052/orig/run3/21-window.png`, `run4/09-window.png`); ours' window letters `$ 1000`
+  for both. Call `ParkScrap.Percent` with the thing's `Built`, `RingsFor( thing ).NumCustomers` and `UpgradeLevel`, and confirm a sale's balance step and the window's figure beside the original's.
+  Also counted: a queue cell whose owner ride cannot be found refunds its whole price (`QUEUE_REFUND_OWNER_NOT_FOUND`, `ParkPathBuilding.QueueRefund`; `FUN_004d99e0` answers thing nought there and the
+  original reads whatever thing nought holds), not met in play.
 - [ ] **Q1018. The original's bolt is updated a second time in some frames, 4 to 6 ms after the first.** Found by Q1044's poll (`q1044/orig/run1/a-load.log`, `run2/a-load.log`): of the poll lines, 209 (run 1) and 156 (run 2) show `FUN_0057ff60` called again with `dt` at `+0x9d9c` of 4 to 6 ms, after 997 and 567 of 25 ms or more: about one frame in five. Each call takes the clock's ms since the last call off every bolt and draws it with its own `rand()` (`0x0057ee30`). Not decoded: who calls it a second time (`0x00576dab`'s caller, or another), and whether the second call draws the bolt again, an additive second quad in the same frame that would make such a frame brighter than its one polled grey says. Ours draws one grey a frame and ages a bolt once. Decode first (`watch.sh` on `+0x9d9c`'s writers; `boltpoll.py`, `boltaim.py`), then film with `record.sh` and read whether a frame with a short second call is brighter.
 - [ ] **Q212. The ride window's other statuses. Decode first.** Found by the 2026-10-04 review (`u7-ride-door-6`,
   `-7`, `-9`, `-10`). `FUN_00485f60` answers (80/100/255) 5..9 for a ride waiting for an upgrade, `0xb`..`0xf` for a toilet's

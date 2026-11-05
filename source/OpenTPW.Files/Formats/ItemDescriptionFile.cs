@@ -689,6 +689,22 @@ public sealed partial class ItemDescriptionFile
 	public int WearRateAt( int tier )
 		=> _wearRate[tier] ?? _category?.WearRateAt( tier ) ?? 0;
 
+	/// <summary>
+	/// What a scrapped object of tier <paramref name="tier"/> is worth in its <paramref name="year"/>th year, as a
+	/// percentage of its price - <c>Upgrades[tier].ScrapValueYear1</c>..<c>4</c>, descriptor <c>+0x188</c>,
+	/// <c>+0x18c</c>, <c>+0x190</c> and <c>+0x194</c> plus <c>tier * 0x40</c> (<c>FUN_004e2290</c>). Nought where neither the
+	/// item nor its category states one; a tier or year outside 0..2 and 1..4 answers nought.
+	/// </summary>
+	public int ScrapValueAt( int tier, int year )
+		=> (uint)tier < Tiers && year is >= 1 and <= ScrapYears
+			? _scrapValue[(tier * ScrapYears) + year - 1] ?? _category?.ScrapValueAt( tier, year ) ?? 0
+			: 0;
+
+	/// <summary>The years the scrap table covers: <c>ScrapValueYear1</c>..<c>4</c>.</summary>
+	public const int ScrapYears = 4;
+
+	private readonly int?[] _scrapValue = new int?[Tiers * ScrapYears];
+
 	private int? _buildPrice;
 
 	private int? _researchCost;
@@ -889,6 +905,56 @@ public sealed partial class ItemDescriptionFile
 
 				case "Upgrades[0].CostOfResearch":
 					_researchCost = Number( line );
+					break;
+
+				// What a scrapped object is worth by its age: ScrapValueAt.
+
+				case "Upgrades[0].ScrapValueYear1":
+					_scrapValue[0] = Number( line );
+					break;
+
+				case "Upgrades[0].ScrapValueYear2":
+					_scrapValue[1] = Number( line );
+					break;
+
+				case "Upgrades[0].ScrapValueYear3":
+					_scrapValue[2] = Number( line );
+					break;
+
+				case "Upgrades[0].ScrapValueYear4":
+					_scrapValue[3] = Number( line );
+					break;
+
+				case "Upgrades[1].ScrapValueYear1":
+					_scrapValue[4] = Number( line );
+					break;
+
+				case "Upgrades[1].ScrapValueYear2":
+					_scrapValue[5] = Number( line );
+					break;
+
+				case "Upgrades[1].ScrapValueYear3":
+					_scrapValue[6] = Number( line );
+					break;
+
+				case "Upgrades[1].ScrapValueYear4":
+					_scrapValue[7] = Number( line );
+					break;
+
+				case "Upgrades[2].ScrapValueYear1":
+					_scrapValue[8] = Number( line );
+					break;
+
+				case "Upgrades[2].ScrapValueYear2":
+					_scrapValue[9] = Number( line );
+					break;
+
+				case "Upgrades[2].ScrapValueYear3":
+					_scrapValue[10] = Number( line );
+					break;
+
+				case "Upgrades[2].ScrapValueYear4":
+					_scrapValue[11] = Number( line );
 					break;
 
 				case "Upgrades[1].CostOfResearch":

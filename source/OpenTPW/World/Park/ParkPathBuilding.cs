@@ -171,6 +171,29 @@ public static class ParkPathBuilding
 		=> level?.Balance?.Int( QueueCellCostKey, QueueCellCostFallback ) ?? QueueCellCostFallback;
 
 	/// <summary>
+	/// What the clear of one queue cell gives back - the arm's <c>price * FUN_004e2290( owner ) / 100</c>, an unsigned
+	/// divide that truncates (<c>0x00536a7f</c>..<c>0x00536aa8</c>; <c>docs/exe/park-engine.md</c>, "DEMOLISH refunds" and "Editing a queue"). The
+	/// percentage is the scrap value of the ride the cell belongs to (<see cref="ParkScrap.Percent"/>), the stock ride's
+	/// 50 (a cell of 75 gives 37) once it has had a customer or is a month old, and 100 for one just bought.
+	/// </summary>
+	/// <remarks>
+	/// Where no ride can be found for the cell (<c>FUN_004d99e0</c> would answer thing nought and the original reads
+	/// garbage), the whole price is given back and the gap counted, rather than a percentage invented.
+	/// </remarks>
+	public static int QueueRefund( ParkState state, ParkWorld.MapCell cell, int price )
+	{
+		if ( Level.Current is { Catalogue: { } catalogue }
+			&& state.TryObject( OwnerOf( state, cell ), out var owner )
+			&& catalogue.TryGet( owner.CatalogueId, out var item ) )
+			return (int)((uint)(price * ParkScrap.Percent( state.CalendarNow, owner.Built, state.RingsFor( owner.ThingId ).NumCustomers,
+				owner.UpgradeLevel, item )) / 100);
+
+		Unimplemented.Report( "QUEUE_REFUND_OWNER_NOT_FOUND" );
+
+		return price;
+	}
+
+	/// <summary>
 	/// Lays one cell of queue for a named object, entered from <paramref name="fromX"/>,
 	/// <paramref name="fromY"/>.
 	///
@@ -1656,11 +1679,10 @@ public static class ParkPathBuilding
 			if ( !ownerTyped )
 				continue;
 
-			// The refund is scaled by a per-age percentage, FUN_004e2290, which nothing here keeps.
-			Unimplemented.Report( "QUEUE_REFUND_DEPRECIATION" );
+			var gave = QueueRefund( state, cell, price );
 
-			state.Deposit( price );
-			refunded += price;
+			state.Deposit( gave );
+			refunded += gave;
 		}
 
 		return refunded;
@@ -1762,10 +1784,7 @@ public static class ParkPathBuilding
 		if ( !ownerTyped )
 			return true;
 
-		// The refund is scaled by a per-age percentage, FUN_004e2290, which nothing here keeps.
-		Unimplemented.Report( "QUEUE_REFUND_DEPRECIATION" );
-
-		refund = QueueCost( Level.Current );
+		refund = QueueRefund( state, cell, QueueCost( Level.Current ) );
 		state.Deposit( refund );
 
 		return true;
@@ -1796,12 +1815,7 @@ public static class ParkPathBuilding
 		if ( (cell.Flags & NoModify) != 0 )
 			return $"delqueue: ({cellX},{cellY}) is marked NOMODIFY - the level owns that cell";
 
-		// The percentage the original scales a refund by is per-item, per-build-state and per-age, and
-		// nothing here keeps a thing's age in those units - the same gap ParkBuilding.Sell records. So
-		// this gives the cell back in full, which is right the moment it was laid.
-		Unimplemented.Report( "QUEUE_REFUND_DEPRECIATION" );
-
-		var refund = QueueCost( level );
+		var refund = QueueRefund( state, cell, QueueCost( level ) );
 		var owner = OwnerOf( state, cell );
 
 		Unlink( state, park, cellX, cellY );

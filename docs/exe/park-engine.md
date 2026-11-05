@@ -5997,8 +5997,20 @@ list's third entry pops, the stepped clear runs over (51,22)..(49,22), all three
 anchor (52,22), pending 2; a fourth press leaves one entry and changes no cell; a list left with one entry takes nothing back. Ours does the same cell for cell.
 **The lay costs 75 a cell** (the balance fell 225 at the click of a three-cell run, over two path cells and one bare, read every 0.1 s: `orig/run1/t3-west-trace.txt`), **and
 Backspace refunds 37 a cell, not 75: +111 for each three-cell press** (`t4-bs1-trace.txt`, `t5-bs2-trace.txt`, `t6-bs3-trace.txt`: 87283 to 87394, 87404 to 87515, 87525 to
-87636), the scrap percentage of "DEMOLISH refunds" above; 37 is 75 x 50 / 100 truncated a cell, and the stock ride has had customers. Ours gives 75 a cell
-(`QUEUE_REFUND_DEPRECIATION`, counted; Q1052). **A click on the anchor with a run laid** puts the tool away (mode 0, anchor -1), lays and charges nothing and leaves
+87636), the scrap percentage of "DEMOLISH refunds" above; 37 is 75 x 50 / 100 truncated a cell, and the stock ride has had customers.
+**The queue arm's refund, decoded in Ghidra (Q1052)**: `FUN_005367a0`'s type 3 arm, stepped (`0x00536a37`..`0x00536aa8`) or forced (`0x00536acc`..`0x00536b5b`), finds the
+owner's thing, `FUN_004d99e0` on the owner table entry `[0x007cf83c] + 0x294 + owner * 0x44` (the first thing of type 3 in its chain; skipped when the entry's `+8` is
+nought, `0x00536a2e`), and credits `FUN_0052fb40() * FUN_004e2290( thing ) / 100` through `FUN_004d0190`: an unsigned divide that truncates (`0x51eb851f`, `shr 5`), the
+price `[0x0081ea14]` (75). The percentage is the **owner ride's**, with its own age (`+0x18`), customers (`+0x1a0`) and tier (`+0x50`): **100 only under 30 days
+old with no customer** (`0x004e2390`), else the tier's first-year figure when under a year, then the second, third and fourth (`+0x188`, `+0x18c`, `+0x190`, `+0x194`, plus tier
+x `0x40`). The age is `__alldiv` toward nought (`0x11ed178c6c000` a year, `0x1792f8648000` thirty days, in 100-nanosecond units), so a stamp in the future up to a year ahead
+is year 0, and one further ahead reaches the fourth year's figure.
+**Both arms read in the running original, on the same ride** (Mumbo, item 1109, bought in ours at (41,22) and saved as a park file the original loads, `q1052/orig/`):
+with its queue **joined** to the path guests rode it at once, and its window read **Users last month 8, Age 19 days, Scrap value $ 500** (`run3/21-window.png`; a run of two
+cells laid north of its node and taken up by Backspace: 87132 to 86982 and back to 87056, +74, 37 a cell, `run3/trace.txt`); with the queue **left unjoined** (no guest
+reaches it) the window read **Users last month 0, Age 4 days, Scrap value $ 1000** (`run4/09-window.png`) and the same run laid and taken up went 87112 to 86962 and
+back to 87112, **+150, 75 a cell** (`run4/trace.txt`). Ours, the stock ride: +111 on each of three presses (`q1052/ours/runA.out`); the bought Mumbo (`queue` and
+`delqueue`, `runN.out`): +75 with no customer, +37 once it had five. Built: `ParkScrap.Percent`, `ParkPathBuilding.QueueRefund`. **A click on the anchor with a run laid** puts the tool away (mode 0, anchor -1), lays and charges nothing and leaves
 the list as it is, the click counter `[0x008186dc]` one higher (`run2/b3-anchorclick.txt`). **A run onto a cell of the ride's own queue is refused**: the click on
 (49,22) from (46,22) (a run east over the paths (47,22), (48,22)) and the click on (49,23) from (49,25) each put the tool away, lay nothing and leave every counter as it was,
 the second showing the "no" cursor and "$ 0" in the preview (`run3/c5-east.txt`, `run4/d3-ownqueue.txt`, `d3-hover.png`); so the stamp's +1 on a run's last cell never meets a

@@ -165,8 +165,18 @@ public sealed class ParkItemCatalogue
 		// Where in its entry cell a guest stands to board and where in its exit cell one is put down, as fractions of the
 		// cell - ItemDescriptionFile.EntryCellStandPosX and ExitCellAppearPosX. See ParkRidePoint.
 		float EntryCellStandPosX = 0f, float EntryCellStandPosY = 0f,
-		float ExitCellAppearPosX = 0f, float ExitCellAppearPosY = 0f )
+		float ExitCellAppearPosX = 0f, float ExitCellAppearPosY = 0f,
+
+		// What a scrapped object is worth by its age, tier by tier and year by year (tier * 4 + year - 1) -
+		// ItemDescriptionFile.ScrapValueAt. See ScrapValueAt and ParkScrap.
+		IReadOnlyList<int>? ScrapValues = null )
 	{
+		/// <summary>A tier's scrap percentage for its <paramref name="year"/>th year (1..4) - <see cref="ItemDescriptionFile.ScrapValueAt"/>; nought where none is stated.</summary>
+		public int ScrapValueAt( int tier, int year )
+			=> ScrapValues is { } values && (uint)tier < ItemDescriptionFile.Tiers && year is >= 1 and <= ItemDescriptionFile.ScrapYears
+				? values[(tier * ItemDescriptionFile.ScrapYears) + year - 1]
+				: 0;
+
 		/// <summary>The byte of a cell a guest is put down at on this item's exit when the thing stands turned <paramref name="angle"/> - <see cref="ParkRidePoint.Bytes"/>.</summary>
 		public (byte X, byte Y) ExitPointBytes( int angle ) => ParkRidePoint.Bytes( ExitCellAppearPosX, ExitCellAppearPosY, angle );
 
@@ -441,7 +451,9 @@ public sealed class ParkItemCatalogue
 					OverwritePriority: description.OverwritePriority, FatigueEffect: description.FatigueEffect,
 					RequiresTeleport: description.RequiresTeleport,
 					EntryCellStandPosX: description.EntryCellStandPosX, EntryCellStandPosY: description.EntryCellStandPosY,
-					ExitCellAppearPosX: description.ExitCellAppearPosX, ExitCellAppearPosY: description.ExitCellAppearPosY );
+					ExitCellAppearPosX: description.ExitCellAppearPosX, ExitCellAppearPosY: description.ExitCellAppearPosY,
+					ScrapValues: [.. Enumerable.Range( 0, ItemDescriptionFile.Tiers * ItemDescriptionFile.ScrapYears )
+						.Select( at => description.ScrapValueAt( at / ItemDescriptionFile.ScrapYears, (at % ItemDescriptionFile.ScrapYears) + 1 ) )] );
 
 			return true;
 		}

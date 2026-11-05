@@ -941,8 +941,8 @@ demolisher only while the red-cell latch `DAT_00816d48` is clear.
 pops and the debit, and `ClearQueueLine` one run under force; each pop measures the queue through
 `ParkState.RemeasureQueue`. Counted, not built: the advisor `0xcb` posts, one from the demolisher's mode 3 and one
 from each call's re-arm (`QUEUE_DRAIN_ADVISOR_0xCB`); the
-per-age percentage, on the refunds (`QUEUE_REFUND_DEPRECIATION`) and on the debit (`QUEUE_DRAIN_DEBIT_DEPRECIATION`,
-`0x00527fe8`); a run over anything but queue or bare ground
+per-age percentage, on the debit (`QUEUE_DRAIN_DEBIT_DEPRECIATION`, `0x00527fe8`; the refunds take it since Q1052,
+`ParkScrap.Percent`, `park-engine.md`, "Editing a queue"); a run over anything but queue or bare ground
 (`QUEUE_DRAIN_CLEARS_ANOTHER_KIND`); and a walk past a thousand cells, which the original's never gives up
 (`QUEUE_END_WALK_UNBOUNDED`). **Open:** whether the advisor's `0xcb` posts are heard (message `0xcb` is response 422, sample 392, the queue
 builder's help: `advisor-park.md`). The bank's `+0x114` is `mWithdrawalsEnabled`, 1 in every offline park ("The cost

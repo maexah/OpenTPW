@@ -12753,3 +12753,11 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   model's, all nought; 2,351 are a script's and equal `0.5 + 0.01 x` its saved word (words 50, 60, 75, 80; 2,317 bit for bit with `RideScript.ChannelSpeedOf`, the other 34 one ulp below it at word 60, which other
   original files hold exactly); the 20 that do not are in files saved just after a purchase. Done: with nothing queued
   the writer writes the live `DeferredSpeed` when it is not nought and keeps the file's when it is. Seen off-screen only (lane B); the original not run.
+- [x] **Q1052. A queue cell's refund is the original's percentage of its price (Q1038's find).** In the original Backspace on the stock Belly Bounce's queue gives back
+  37 a cell, +111 for each three-cell press (`q1038/orig/run1/t4-bs1-trace.txt`, `t5-bs2-trace.txt`, `t6-bs3-trace.txt`: the balance read every 0.1 s, a step at the key and none
+  before), where the lay charged 75 a cell (225 at the click, `t3-west-trace.txt`); ours refunded 75 a cell (+225 a press, `q1038/ours/runA.out`; `QUEUE_REFUND_DEPRECIATION`,
+  counted 9 times in that run, `ParkPathBuilding.ClearQueueCell` and `LiftQueue`). **Built (Q1052):** the queue arm of `FUN_005367a0` credits `price * FUN_004e2290( owner ride ) / 100`
+  (`park-engine.md`, "Editing a queue"); `ParkScrap.Percent` is the percentage (100 only under 30 days with no customer, else the tier's year figure; `ItemDescriptionFile.ScrapValueAt`,
+  `ParkItemCatalogue.Item.ScrapValueAt`) and `ParkPathBuilding.QueueRefund` is the refund at all three sites (a stepped press, `LiftQueue`, the drain's forced clear). Read in the running original on one
+  ride, Mumbo: with customers (Users last month 8, 19 days, Scrap value $ 500) 37 a cell, with none (0 users, 4 days, $ 1000) 75 a cell; ours the same, and the stock ride's three presses +111 each
+  (`q1052/PREDICTION.txt`).
