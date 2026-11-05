@@ -626,4 +626,109 @@ public class UiListTests
 		Assert.AreEqual( 100, list.Children.OfType<ParkObjectWindow.UiStatBar>().First().Rect.Left, "made again in the new column" );
 		Assert.AreEqual( 2, list.Children.OfType<ParkObjectWindow.UiStatBar>().Count() );
 	}
+
+	/// <summary>A name-sorted list of the shape the all-items rides tab uses, to hang rows under rows.</summary>
+	private static UiList TreeList()
+	{
+		var list = new UiList { RowArea = new UiRect( 0, 0, 100, 440 ), Columns = [(0, 100)], TextColumns = [true] };
+
+		list.Build();
+		list.SetSort( 1 );
+
+		return list;
+	}
+
+	private static string[] Marked( UiList list ) => list.Rows.Select( row => $"{new string( '>', row.Depth )}{row.Name}" ).ToArray();
+
+	/// <summary>
+	/// <b>A row added under a row is its child</b> (<c>FUN_0066403b</c>'s insert-under, the all-items rides tab's add-ons
+	/// under their ride): it stands straight after its parent, one level in, among its parent's children in the list's sort
+	/// (before the first it sorts before, after the equal ones), and a row added to the head stands among the head rows
+	/// alone, past a parent's children. A parent that is not in the list takes nothing.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> a child added at the end of the list; a child compared with the head rows; a child's depth left
+	/// at nought; the head insert comparing children; an equal child put before the one standing; a missing parent
+	/// answered with a row.
+	/// </remarks>
+	[TestMethod]
+	public void ARowAddedUnderARowStandsAmongItsParentsChildrenInTheSort()
+	{
+		var list = TreeList();
+
+		list.Add( new UiList.Row( 1, "Bravo", 0 ) );
+		list.Add( new UiList.Row( 2, "Delta", 0 ) );
+
+		Assert.AreEqual( 1, list.AddUnder( new UiList.Row( 11, "Zulu", 0 ), 1 ), "the first child straight under its parent" );
+		Assert.AreEqual( 1, list.AddUnder( new UiList.Row( 12, "Alpha", 0 ), 1 ), "before the child it sorts before" );
+		Assert.AreEqual( 2, list.AddUnder( new UiList.Row( 13, "Mike", 0 ), 1 ), "between the two" );
+		Assert.AreEqual( 3, list.AddUnder( new UiList.Row( 14, "Mike", 0 ), 1 ), "after the equal one, before the next" );
+		Assert.AreEqual( 5, list.AddUnder( new UiList.Row( 15, "Zulu", 0 ), 1 ), "an equal child after the one standing, at the chain's end" );
+
+		// Charlie stands among the head rows alone: after Bravo's whole chain, before Delta, whatever its children's names.
+		Assert.AreEqual( 6, list.Add( new UiList.Row( 3, "Charlie", 0 ) ) );
+		Assert.AreEqual( 8, list.AddUnder( new UiList.Row( 16, "Aaa", 0 ), 2 ), "a child of the last head row" );
+		Assert.AreEqual( -1, list.AddUnder( new UiList.Row( 17, "Nobody's", 0 ), 99 ), "no parent row, none added" );
+
+		CollectionAssert.AreEqual( new[]
+		{
+			"Bravo", ">Alpha", ">Mike", ">Mike", ">Zulu", ">Zulu", "Charlie", "Delta", ">Aaa"
+		}, Marked( list ) );
+		CollectionAssert.AreEqual( new[] { 1, 12, 13, 14, 11, 15, 3, 2, 16 }, list.Rows.Select( row => row.Id ).ToArray(),
+			"the earlier of two equal children first" );
+	}
+
+	/// <summary>
+	/// <b>A heading's click sorts the head rows, each with its children</b> (<c>FUN_006628f4</c> walks the head chain alone):
+	/// the children stay in the order they stood in, in either direction, where a sort of every row would turn them.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> every row sorted as one; the children left behind when their parent moves.</remarks>
+	[TestMethod]
+	public void AHeadingsClickMovesAParentWithItsChildrenAndLeavesTheirOrder()
+	{
+		var list = TreeList();
+
+		list.Add( new UiList.Row( 1, "Bravo", 0 ) );
+		list.Add( new UiList.Row( 2, "Delta", 0 ) );
+		list.AddUnder( new UiList.Row( 11, "Zulu", 0 ), 1 );
+		list.AddUnder( new UiList.Row( 12, "Alpha", 0 ), 1 );
+		list.AddUnder( new UiList.Row( 13, "Mike", 0 ), 2 );
+
+		list.HeadingClicked( 0 );
+
+		CollectionAssert.AreEqual( new[] { "Delta", ">Mike", "Bravo", ">Alpha", ">Zulu" }, Marked( list ), "descending: Alpha before Zulu still" );
+
+		list.HeadingClicked( 0 );
+
+		CollectionAssert.AreEqual( new[] { "Bravo", ">Alpha", ">Zulu", "Delta", ">Mike" }, Marked( list ) );
+	}
+
+	/// <summary>
+	/// <b>A child's name is lettered <see cref="UiList.IndentStep"/> units in for each level</b> (<c>FUN_0065c672( depth * 0x14, 0 )</c>
+	/// on the name's label): the head rows' names keep the cell's whole rectangle.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the step not applied; the step applied to every row; the cell kept for a row that is later a head row.</remarks>
+	[TestMethod]
+	public void AChildsNameStandsInByTheIndentStep()
+	{
+		var list = TreeList();
+
+		list.Add( new UiList.Row( 1, "Bravo", 0 ) );
+		list.Add( new UiList.Row( 2, "Delta", 0 ) );
+		list.AddUnder( new UiList.Row( 11, "Alpha", 0 ), 2 );
+
+		var parent = list.Children.OfType<UiControl>().First( cell => cell.Text == "Bravo" );
+		var child = list.Children.OfType<UiControl>().First( cell => cell.Text == "Alpha" );
+
+		Assert.IsNull( parent.TextRect, "a head row's name has the whole cell" );
+		Assert.AreEqual( 0x14, UiList.IndentStep );
+		Assert.AreEqual( child.Rect.Left + UiList.IndentStep, child.TextRect!.Value.Left );
+		Assert.AreEqual( child.Rect.Right, child.TextRect!.Value.Right );
+
+		// Sorted the other way the third slot, which lettered the child, letters Bravo: a head row again.
+		list.HeadingClicked( 0 );
+
+		Assert.AreEqual( "Bravo", child.Text );
+		Assert.IsNull( child.TextRect, "the cell that lettered a child keeps no indent for a head row" );
+	}
 }

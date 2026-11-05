@@ -12682,3 +12682,7 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `CtrlVOverTheVisitorsWindowOpensOnItsGuest`, `OpenWithTheWindowAlreadyUpStaysOnItsMemberAndPostsAgain` and
   `ParkHeldStaffFrameTests`; the queue call of Q442 and the staff click of Q431 were already caught, `q1031/baseline.out`).
   What is left, a picked-up member's cell looked at on screen, is Q1032.
+- [x] **Q1042. All-items list: an add-on's row, its place and figures.** From Q1000 (VERIFY-2 lead C). The original's rides tab adds a
+  row for every add-on (`FUN_00481bc0( 0x2000 )`, `FUN_00482100`) through `0x00493eb0`, after its ride's row and with the
+  RIDE's figures (`FUN_00493cd0`, parent in `esi`); ours lists every placed UiType-0 object with its own figures in the
+  list's sort (`ParkItemsScreen.cs`). Read in the listing, not run: compare in both games with a Tunnel placed. Measured in the original (Q1041, `q1041/orig/run1/c1-allitems.png`, New Save with a Tunnel put down): the rides list is DinoKarts, then its add-ons indented one step under it, one row an add-on (the file's Tunnel and the put-down's, two Tunnel rows), each with the ride's figures.

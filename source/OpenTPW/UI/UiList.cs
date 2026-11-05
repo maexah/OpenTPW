@@ -46,9 +46,18 @@ internal sealed class UiList : UiControl
 	/// columns hold more than one. Without it a numeric column's number is <see cref="Value"/>, and the tick-box
 	/// column's <see cref="State"/>.
 	/// </para>
+	/// <para>
+	/// <b><see cref="Depth"/> is how many rows it hangs under</b>: the original's list is a tree, a row added with an
+	/// insert-under (<c>FUN_0066403b</c>'s fourth argument, <see cref="AddUnder"/>) a child of that row, its name
+	/// lettered <see cref="IndentStep"/> units further in for each level (<c>FUN_00663324</c>, <c>0x0066353f</c>). Nought for
+	/// every row of every other list.
+	/// </para>
 	/// </remarks>
 	internal readonly record struct Row( int Id, string Name, int Value, int State = 0,
-		IReadOnlyList<string>? Values = null, UiColour? Colour = null, IReadOnlyList<int>? Numbers = null );
+		IReadOnlyList<string>? Values = null, UiColour? Colour = null, IReadOnlyList<int>? Numbers = null, int Depth = 0 );
+
+	/// <summary>How far in a child row's name stands for each level it is under, in virtual units: <c>FUN_0065c672( depth * 0x14, 0 )</c> (<c>FUN_00663324</c>).</summary>
+	internal const int IndentStep = 0x14;
 
 	private readonly List<Row> _rows = [];
 
@@ -409,7 +418,8 @@ internal sealed class UiList : UiControl
 	/// </summary>
 	internal int Add( Row row )
 	{
-		var at = _sortColumn < 0 ? _rows.Count : _rows.FindIndex( standing => SortsBefore( row, standing ) );
+		// Only the head chain is compared: a row under another stands in its parent's chain (AddUnder).
+		var at = _sortColumn < 0 ? _rows.Count : _rows.FindIndex( standing => standing.Depth == 0 && SortsBefore( row, standing ) );
 
 		if ( at < 0 )
 			at = _rows.Count;
@@ -420,6 +430,38 @@ internal sealed class UiList : UiControl
 		Refresh();
 
 		return at;
+	}
+
+	/// <summary>
+	/// Adds a row as a child of another - <c>FUN_0066403b</c> with the insert-under of the parent's row index
+	/// (<c>FUN_00664d2a</c> of its thing), and answers where it went, or -1 where the parent is not in the list (the
+	/// original's adder then adds nothing, <c>0x00493e4a</c>). The child chain is sorted as the head chain is: before the
+	/// first child it <see cref="SortsBefore"/>, else after the last (so after every child equal to it); the first child
+	/// stands straight under the parent. The children of the row's own are left where they stand, as nothing here moves.
+	/// </summary>
+	internal int AddUnder( Row row, int parentId )
+	{
+		var parent = _rows.FindIndex( standing => standing.Id == parentId );
+
+		if ( parent < 0 )
+			return -1;
+
+		var depth = _rows[parent].Depth + 1;
+		var end = parent + 1;
+		var at = -1;
+
+		for ( ; end < _rows.Count && _rows[end].Depth >= depth; ++end )
+		{
+			if ( at < 0 && _rows[end].Depth == depth && _sortColumn >= 0 && SortsBefore( row, _rows[end] ) )
+				at = end;
+		}
+
+		_rows.Insert( at < 0 ? end : at, row with { Depth = depth } );
+		FirstRow();
+		SettleTop();
+		Refresh();
+
+		return at < 0 ? end : at;
 	}
 
 	/// <summary>
@@ -523,7 +565,7 @@ internal sealed class UiList : UiControl
 		var numbered = _sortColumn >= 0 && !(_sortColumn < TextColumns.Length && TextColumns[_sortColumn]);
 
 		return $"sort {SortWord}, {_rows.Count} rows: " + string.Join( ", ",
-			_rows.Select( row => $"{row.Id} {row.Name} {(numbered ? NumberOf( row, _sortColumn ) : row.Value)}" ) );
+			_rows.Select( row => $"{row.Id}{(row.Depth > 0 ? $"^{row.Depth}" : "")} {row.Name} {(numbered ? NumberOf( row, _sortColumn ) : row.Value)}" ) );
 	}
 
 	/// <summary>What each slot with a row letters, its first two cells and their colour as (R,G,B), for the screens' log lines.</summary>
@@ -538,16 +580,31 @@ internal sealed class UiList : UiControl
 	/// </summary>
 	private void Sort()
 	{
-		var standing = _rows.ToArray();
+		// The sort walks the head chain alone (FUN_006628f4 follows each row's next link from the head): a row's children
+		// travel with it, in the order they stand in.
+		var groups = new List<List<Row>>();
+
+		foreach ( var row in _rows )
+		{
+			if ( row.Depth == 0 || groups.Count == 0 )
+				groups.Add( [] );
+
+			groups[^1].Add( row );
+		}
 
 		_rows.Clear();
 
-		foreach ( var row in standing )
-		{
-			var at = _rows.FindIndex( placed => SortsBefore( row, placed ) );
+		var sorted = new List<List<Row>>();
 
-			_rows.Insert( at < 0 ? _rows.Count : at, row );
+		foreach ( var group in groups )
+		{
+			var at = sorted.FindIndex( placed => SortsBefore( group[0], placed[0] ) );
+
+			sorted.Insert( at < 0 ? sorted.Count : at, group );
 		}
+
+		foreach ( var group in sorted )
+			_rows.AddRange( group );
 	}
 
 	/// <summary>
@@ -708,6 +765,11 @@ internal sealed class UiList : UiControl
 				cell.TextColour = colour;
 
 			cells[0].Text = row.Name;
+
+			// A child's name stands IndentStep units in for each level (FUN_0065c672( depth * 0x14, 0 )), the text's own rectangle moved.
+			cells[0].TextRect = row.Depth > 0
+				? new UiRect( cells[0].Rect.Left + (row.Depth * IndentStep), cells[0].Rect.Top, cells[0].Rect.Right, cells[0].Rect.Bottom )
+				: null;
 
 			// Every column after the name takes its own text where the row supplies one, which is what
 			// lets a five-column staff list and a six-column visitor list exist at all. Where it does

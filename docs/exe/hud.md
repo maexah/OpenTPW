@@ -3905,6 +3905,41 @@ bars 0.532, 0.505, 0.485 (`q368/side-by-side.png`); main's build (`run-control2`
 sort, the name rising (Q374, below). The rows' font and height are the factory's (Q377, "The rows' font and
 height"); the headings are framed (Q370, "The list headings' frames").
 
+#### An add-on's row: a child of its ride's row, with the ride's figures (Q1042)
+
+Read 2026-11-05 (Q1042; the dump is `q1042/dump/`). The rides sub-builder `FUN_00494ec0` fills the list twice: `FUN_00481bc0( 0x80,
+0x00493e90 )` takes every thing of type 3 whose item's `AddOn.UpgradesId` (`+0x284`, `FUN_004e2710`) is nought and whose class
+(`+0x4ac`) is 0, each handed to `FUN_00493cd0( thing, record, 0 )`; then `FUN_00481bc0( 0x2000, 0x00493eb0 )` (`FUN_00482100`) takes every
+thing of type 3 whose item's `+0x284` is NOT nought, of any class. **Every other tab's walk** (`FUN_00482040`) leaves those things out, so an
+add-on is on no other tab. The adder `0x00493eb0` reads the thing's `mUpgradeParent` (`+0x30`, `FUN_004e0df0`): non-zero, the ride's thing
+from the table is `FUN_00493cd0`'s third argument; nought, it has none (a head row with its own figures).
+
+**`FUN_00493cd0( thing, record, ride )`** letters the NAME of `thing` (`FUN_00486280`, the add-on's own) and every figure of `ride` where
+there is one (the ring `+0x1a8`'s customers, `FUN_004e0860`, `+0x44`, `+0x48`, `FUN_004dd6d0`; `0x00493cd3` to `0x00493e36`). With a ride,
+`FUN_00664d2a( list, ride )` answers the ride's row index in the display order, -1 when it has none (and then **nothing is added**,
+`0x00493e4a`), and `FUN_0066403b( cells, thing, index, 0 )` adds the row; **its fourth argument is the PARENT row**, not an insert-after:
+the list is a tree (a node's `+0` next sibling, `+4` its data, `+8` its first child, `+0xc` its parent, -2 free). The new node is its
+parent's first child, or goes into the child chain by the same sorted insert as a head row (`FUN_00663edc`, strictly before: the first
+sibling it sorts before, else the end, so after the equal ones). The display order is the pre-order (`FUN_00663a93`: the first child,
+else the next sibling, else the parent's next). The refresh `FUN_00663324` letters a visible row's column 0 after
+`FUN_0065c672( depth * 0x14, 0 )`, depth being the parents above it: **a child's name stands 20 virtual units in per level**. The
+two-second rewrite `FUN_004955e0` (`0x004956bf`) and the row colour callback `0x004959c0` (`0x00495a3e`, the closed status
+`FUN_00485f60( thing, 2 )`) swap to the ride the same way. **A heading's click** (`FUN_006628f4`) walks the head chain alone (its next
+links; the rest of it by `FUN_00663c11( n, -1 )`), so a parent moves with its children and **the children are never re-sorted**.
+
+Measured in the original under Proton (the New Save, the key `a`, real clicks): the rides list reads DinoKarts, then Dino Karts Jump, Dino
+Karts Tunnel and (after the put-down) a second Tunnel one level in, each with DinoKarts' figures (12 users on all four rows with the put-down Tunnel,
+`q1041/orig/run1/c1-allitems.png`; 7 on all three on a fresh start, `q1042/orig/run1/a1-rides.png`); the name
+starts 9 pixels right of the ride's on the 1024-wide frame (the D of DinoKarts at 138, of Dino at 147), against 10 for 20 of the 2048
+units. The Name heading once reversed the head rows (Tom Tom Twister first, then DinoKarts) and left the children Jump, Tunnel
+(`q1042/orig/run1/a2-name-once.png`; a re-sort of them would put Tunnel first).
+
+**OpenTPW** (Q1042): `UiList.Row.Depth`, `UiList.AddUnder` (the child chain's sorted insert; -1 and nothing added where the parent has no row),
+`UiList.IndentStep` (0x14, the name cell's `TextRect` moved), `Sort` by head row with its children behind it; `ParkItemsScreen.Show` takes
+the rides tab's head rows from the items whose `AddOnUpgradesId` is nought (every tab does) and then each add-on through `AddRow`, the
+ride's `UpgradeParent` giving the figures, the colour and the parent row. Read in the code and not run in either game: a closed ride's
+add-on's row colour, a row's removal, and a heading click on a figure column (the children share their ride's figures there).
+
 #### The miscellaneous tab: a row an object, and each tab's sort
 
 Read 2026-10-15 (Q374). The miscellaneous sub-builder `FUN_00495110` fills through `FUN_00481bc0( 0x400, 0x004941e0 )`:

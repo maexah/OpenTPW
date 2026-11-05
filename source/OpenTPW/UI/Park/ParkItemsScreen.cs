@@ -386,25 +386,75 @@ internal sealed class ParkItemsScreen : UiWindow
 			return;
 		}
 
+		// Every tab's first walk takes the things whose item fits no ride (AddOn.UpgradesId, +0x284, nought), by class
+		// (FUN_00482040, and the rides' walk 0x80 in FUN_00481bc0).
 		foreach ( var placed in state.Objects )
 		{
 			if ( !placed.IsPlaced || !catalogue.TryGet( placed.CatalogueId, out var item )
-				|| item.UiType != tab.Index )
+				|| item.UiType != tab.Index || item.AddOnUpgradesId != 0 )
 			{
 				continue;
 			}
 
-			var numbers = NumbersOf( tab.Index, placed, item, state );
-			var name = ParkObjectNames.NameOf( item );
+			AddRow( chosen, tab, placed, item, placed, item, level, state, parent: 0 );
+		}
 
-			chosen.Add( new UiList.Row( placed.ThingId, name, 0, Values: ValuesOf( tab, numbers ),
-				Colour: ParkClosedStatus.Colour( ParkClosedStatus.For( level.Park, placed, item.TrackType ) ),
-				Numbers: numbers ) );
+		// The rides tab then walks the add-ons (FUN_00481bc0( 0x2000 ), FUN_00482100: every thing whose item fits a ride, of
+		// any class), each through FUN_00493eb0.
+		if ( tab.Index == 0 )
+		{
+			foreach ( var placed in state.Objects )
+			{
+				if ( !placed.IsPlaced || !catalogue.TryGet( placed.CatalogueId, out var item ) || item.AddOnUpgradesId == 0 )
+					continue;
 
-			Log.Info( $"Items list: tab {_tab}, row {placed.ThingId} {name}: {Census( numbers )}" );
+				var (figured, figuredItem) = FiguresFrom( placed, item, catalogue, state );
+
+				AddRow( chosen, tab, placed, item, figured, figuredItem, level, state, parent: placed.UpgradeParent );
+			}
 		}
 
 		LogOrder( chosen );
+	}
+
+	/// <summary>
+	/// The thing an add-on's row takes its figures, colour and place from: the ride its <c>+0x30</c> names
+	/// (<c>FUN_00493eb0</c> reads it with <c>FUN_004e0df0</c> and hands it to <c>FUN_00493cd0</c> as its third argument; the
+	/// rewrite <c>0x004955e0</c> and the colour callback <c>0x004959c0</c> make the same swap), else the thing itself.
+	/// </summary>
+	private static (ParkWorld.CatalogueObject, ParkItemCatalogue.Item) FiguresFrom( ParkWorld.CatalogueObject placed,
+		ParkItemCatalogue.Item item, ParkItemCatalogue catalogue, ParkState state )
+		=> placed.UpgradeParent != 0 && state.TryObject( placed.UpgradeParent, out var ride )
+			&& catalogue.TryGet( ride.CatalogueId, out var rideItem )
+			? (ride, rideItem)
+			: (placed, item);
+
+	/// <summary>
+	/// One row: <paramref name="placed"/>'s own name and the figures and colour of <paramref name="figured"/>
+	/// (<c>FUN_00493cd0</c>: the name of its first argument, everything else of its third where there is one), a head row
+	/// where <paramref name="parent"/> is nought and otherwise a child of that thing's row, added only if the row stands.
+	/// </summary>
+	private void AddRow( UiList chosen, Tab tab, ParkWorld.CatalogueObject placed, ParkItemCatalogue.Item item,
+		ParkWorld.CatalogueObject figured, ParkItemCatalogue.Item figuredItem, Level level, ParkState state, int parent )
+	{
+		var numbers = NumbersOf( tab.Index, figured, figuredItem, state );
+		var name = ParkObjectNames.NameOf( item );
+
+		var row = new UiList.Row( placed.ThingId, name, 0, Values: ValuesOf( tab, numbers ),
+			Colour: ParkClosedStatus.Colour( ParkClosedStatus.For( level.Park, figured, figuredItem.TrackType ) ),
+			Numbers: numbers );
+
+		if ( parent == 0 )
+		{
+			chosen.Add( row );
+		}
+		else if ( chosen.AddUnder( row, parent ) < 0 )
+		{
+			Log.Info( $"Items list: tab {_tab}, row {placed.ThingId} {name}: its ride {parent} has no row, none added" );
+			return;
+		}
+
+		Log.Info( $"Items list: tab {_tab}, row {placed.ThingId} {name}{(parent != 0 ? $" under {parent}" : "")}: {Census( numbers )}" );
 	}
 
 	/// <summary>The rows in the order they stand, after a fill and a heading's click, and the row picked.</summary>
@@ -497,7 +547,9 @@ internal sealed class ParkItemsScreen : UiWindow
 			if ( catalogue == null || !catalogue.TryGet( placed.CatalogueId, out var item ) )
 				continue;
 
-			var numbers = NumbersOf( tab.Index, placed, item, state );
+			// An add-on's row is rewritten with its ride's figures (0x004955e0 swaps to the ride at 0x004956bf).
+			var (figured, figuredItem) = FiguresFrom( placed, item, catalogue, state );
+			var numbers = NumbersOf( tab.Index, figured, figuredItem, state );
 
 			list.Replace( index, row with { Values = ValuesOf( tab, numbers ), Numbers = numbers } );
 			++rewritten;
