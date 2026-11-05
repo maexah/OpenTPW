@@ -574,20 +574,18 @@ filed the items that cite it.
 - [ ] **Q155. The other readers of the speed word, and the play rate (decoded in Q897; Q875 built the word and its first readers).**
   Found by the 2026-09-26 staleness audit. Q875 keeps the word per script and reads it in `WAIT`, the three scream readings, the
   bumper ride's performance and the wear (`park.md`, "What a loaded script holds"). What reads the word and does not yet here:
-  the animation triggers (below; Q876 counts them), the scheduler's channel speed (`+0xe4`, below; `SCHEDULER_CHANNEL_SPEED`), the `TOUR` record's `+0x50` (`0x005517c0`, `FUN_0055d9b0`; `TOUR` is itself unbuilt and counted),
+  the animation triggers' deadlines (below; Q1060; the triggers' play rate is built, Q1039), the scheduler's channel speed (`+0xe4`, below; `SCHEDULER_CHANNEL_SPEED`), the `TOUR` record's `+0x50` (`0x005517c0`, `FUN_0055d9b0`; `TOUR` is itself unbuilt and counted),
   `COAST`'s ride (`0x005517e1` and `INITIALISE`'s `0x00554aab`, `FUN_0043b2b0`; `COAST_RIDE_SPEED`), the bounce riders' sine (`0x00557c03`, `ride-operation.md`,
   "The bounce riders' height") and the walk placer's divisor (`0x0055823e`) (both `WALK_RIDER_SPEED_DIVISOR`); check each against the files before building it. With a divisor
   of 1.1 a `WAITANIM` of a clip under 300 ms waits for weeks in the original, and waits one turn here by Alexah's decision (2026-11-04; counted `WAITANIM_SPEED_WRAP`; `park.md`, "`WAITANIM` is NOT `TRIGANIM` with a wait"). Confirm: the Belly Bounce's clips at their rate in the running game against the original's.
   From Q166: every trigger hands the divisor (`[ESP+0x14]`, 0.5 + 0.01 × speed, `0x00551cdc`) to the channel as its
-  play rate - `TRIGANIM` `0x00552952`, `WAITANIM` `0x00552a9f`, `LOOPANIM` `0x00552be4`, `TRIGWAITANIM` `0x00552d2f`,
+  play rate (built in Q1039: `RideScript.StartAnimation` passes `DivisorOf( Speed )`, where it passed 1.0) - `TRIGANIM` `0x00552952`, `WAITANIM` `0x00552a9f`, `LOOPANIM` `0x00552be4`, `TRIGWAITANIM` `0x00552d2f`,
   `TRIGANIM_CH` `0x00553190`, `WAITANIM_CH` `0x00553325`, `LOOPANIM_CH` `0x00553465`, `TRIGWAITANIM_CH` `0x00553624` -
-  where `StartAnimation` passes 1.0 (said at the site); the deadlines of `TRIGANIM` `0x005529ac`, `WAITANIM`
+  of which the six built ones (all but the two unused `_CH` waits) hand it; the deadlines of `TRIGANIM` `0x005529ac`, `WAITANIM`
   `0x00552acd`, `TRIGWAITANIM` `0x00552d94`, `TRIGANIM_CH` `0x005531ee` and `TRIGWAITANIM_CH` `0x00553682` divide by
-  it, and Q876 counts them where they are reached at a divisor other than 1 (`ANIM_TRIGGER_SPEED_RATE` at every start with a model,
-  `ANIM_TRIGGER_SPEED_DEADLINE` at `TRIGANIM`, `TRIGWAITANIM` and `TRIGANIM_CH`; the ride window's `RIDE_SPEED_SCALES_WAITS` count went with
+  it, and Q876 counts them where they are reached at a divisor other than 1 (Q1060 builds them; `ANIM_TRIGGER_SPEED_DEADLINE` at `TRIGANIM`, `TRIGWAITANIM` and `TRIGANIM_CH`; the ride window's `RIDE_SPEED_SCALES_WAITS` count went with
   Q875's `WAIT`). `WAITANIM` is built in the original's order (`RideScript.AnimationWait`: `fdiv`
-  `0x00552acd`, `_ftol`, unsigned compare with 300 at `0x00552ad6`; at word 60 a 400 ms clip waits 300, a 1000 ms clip 636), with the
-  deadline's play rate still to build; a clip under 300 ms waits one turn here where the original waits days (Alexah's decision, 2026-11-04;
+  `0x00552acd`, `_ftol`, unsigned compare with 300 at `0x00552ad6`; at word 60 a 400 ms clip waits 300, a 1000 ms clip 636), a clip under 300 ms waits one turn here where the original waits days (Alexah's decision, 2026-11-04;
   `WAITANIM_SPEED_WRAP`, counted by Q876). The speed push of an upgrade's completion (`0x004dfabc`, when the new tier's `InitSpeed` is above nought)
   is counted `RIDE_UPGRADE_COMPLETION` and unbuilt: build it with that item or here. The scheduler's channel speed and `COAST`'s ride are counted (`SCHEDULER_CHANNEL_SPEED`, `COAST_RIDE_SPEED`); the channel speed also reaches a loop already playing when the ride window changes the word, which the original replays at the new divisor and this at its old speed; whether a Lost Kingdom coaster reaches `COAST` here is unchecked. The unbuilt
   `TRIGANIMSPEED` passes its rate / 1000 × the divisor (`0x00552f6e`), and its deadline, the length × 1000 / its rate,
@@ -597,8 +595,16 @@ filed the items that cite it.
   `(0.5 + 0.01 × speed) × +0xe4 / 1000` into every channel's queued speed `+0x30` (`0x00551789`), which a promotion
   and a loop's replay start at; OpenTPW's promotion keeps the speed the clip was queued at. `TRIGANIMSPEED` leaves its rate
   there (jungle `Gates` 4000). The Easymode Belly Bounce was saved looping at 1.1, and OpenTPW's second trigger at its
-  word 43 (`park.md`, "Where OpenTPW's animation state parts from the engine's", difference 4) replaces it at 1.0. With a divisor other than 1, a clip under 300 ms or no model makes
+  word 43 (`park.md`, "Where OpenTPW's animation state parts from the engine's", difference 4) replaces it at 1.1 since Q1039. With a divisor other than 1, a clip under 300 ms or no model makes
   `WAITANIM`'s qword sum wrap `+0xa0` (`park.md`, "`WAITANIM` is NOT `TRIGANIM` with a wait").
+- [ ] **Q1060. The three trigger deadlines divide by the divisor (Q155's third piece, `ANIM_TRIGGER_SPEED_DEADLINE`).** From Q1039.
+  `TRIGANIM` (`0x005529a7`..`0x005529b5`: `fild [+0x48]`, `fdiv [ESP+0x14]` at `0x005529ac`, `__ftol` at `0x0067a830`, plus the clock), `TRIGWAITANIM` (`0x00552d94`)
+  and `TRIGANIM_CH` (`0x005531ee`) arm `WAIT4ANIM`'s deadline at the clock plus the floored length divided by the divisor, cut toward zero;
+  the length the trigger stores for the script (`+0x48`, the destination) stays undivided. Here the deadline is the whole length
+  (`RideScript.CountUndividedDeadline`), counted at a divisor other than 1. Build it in `TriggerAnimation`, `TriggerAnimationOn` and
+  `TriggerAndWaitForAnimation` the way `WAITANIM`'s (`AnimationWait`) is built, with the float divisor and `_ftol`'s cut, and drop the count.
+  At the Belly Bounce's 1.1 a 1000 ms clip arms 909. Confirm: a `WAIT4ANIM` after a `TRIGANIM` in a script at word 60 (`scriptword`
+  on a thing whose script does one; `unimplemented` for the count before and after), predicted first.
 - [ ] **Q156. The staff screen's two happiness meters (decoded in Q898: they fill from the left).** Found by the 2026-09-26 staleness
   audit. Nothing is left to build: the original paints each meter with its stat-bar skin alone and fills it from the left
   (`hud.md`, "What paints the all-staff meters"), and this game has drawn them so since Q369 (`ParkStaffScreen.Meter`, a

@@ -6,9 +6,9 @@ using System.Text;
 namespace OpenTPW.Tests;
 
 /// <summary>
-/// The animation triggers read the script's speed divisor (play rate, deadline) and this game does not yet (docs/QUEUE.md Q155): a
-/// trigger at a divisor other than 1 counts as <c>ANIM_TRIGGER_SPEED_RATE</c> (with a model, the rate it hands the channel) and
-/// <c>ANIM_TRIGGER_SPEED_DEADLINE</c> (the <c>WAIT4ANIM</c> deadline of <c>TRIGANIM</c>, <c>TRIGWAITANIM</c> and the <c>_CH</c> one); a
+/// The animation triggers read the script's speed divisor twice (docs/QUEUE.md Q155): as the play rate they hand the channel, which is built (Q1039:
+/// <c>TheRateATriggerHandsTheChannelIsTheDivisor</c> and the tests after it), and as the divisor of the deadline, which is not: a trigger at a divisor other
+/// than 1 counts as <c>ANIM_TRIGGER_SPEED_DEADLINE</c> (the <c>WAIT4ANIM</c> deadline of <c>TRIGANIM</c>, <c>TRIGWAITANIM</c> and the <c>_CH</c> one); a
 /// <c>WAITANIM</c> whose length-less-300 is negative (a clip under 300 ms or no model) counts <c>WAITANIM_SPEED_WRAP</c>, the one turn it waits here where the
 /// engine's unsigned sum waits days. At the word 50 none count.
 /// </summary>
@@ -65,7 +65,7 @@ public class AnimTriggerSpeedCountTests
 		return script;
 	}
 
-	/// <summary>A model-less trigger arms a deadline, so it counts the deadline and not the rate (the rate goes only to a channel).</summary>
+	/// <summary>A model-less trigger arms a deadline, so it counts the deadline (the rate goes only to a channel).</summary>
 	[TestMethod]
 	[DataRow( 50, 0 )]
 	[DataRow( 60, 1 )]
@@ -76,7 +76,6 @@ public class AnimTriggerSpeedCountTests
 		Trigger( Opcode.TRIGANIM, speed, 5, 0, 0 );
 
 		Assert.AreEqual( counted, Times( "ANIM_TRIGGER_SPEED_DEADLINE" ), $"a word of {speed}" );
-		Assert.AreEqual( 0, Times( "ANIM_TRIGGER_SPEED_RATE" ), "no model, no channel to hand a rate to" );
 
 		Unimplemented.Forget();
 	}
@@ -94,14 +93,13 @@ public class AnimTriggerSpeedCountTests
 		Unimplemented.Forget();
 	}
 
-	/// <summary>A <c>LOOPANIM</c> arms no deadline and has no model to hand a rate to here: nothing is counted.</summary>
+	/// <summary>A <c>LOOPANIM</c> arms no deadline: nothing is counted.</summary>
 	[TestMethod]
 	public void ALoopWithNoModelCountsNothing()
 	{
 		Trigger( Opcode.LOOPANIM, 60, 5, 0 );
 
 		Assert.AreEqual( 0, Times( "ANIM_TRIGGER_SPEED_DEADLINE" ) );
-		Assert.AreEqual( 0, Times( "ANIM_TRIGGER_SPEED_RATE" ) );
 
 		Unimplemented.Forget();
 	}
@@ -120,33 +118,109 @@ public class AnimTriggerSpeedCountTests
 		Unimplemented.Forget();
 	}
 
-	/// <summary>
-	/// With a model, the rate is counted at every trigger of a script at a divisor other than 1, a loop included, once for each start: the
-	/// Gates' <c>TRIGANIM</c>, <c>LOOPANIM</c> and <c>WAITANIM</c> are three starts and 60 counts three, 50 counts none.
-	/// </summary>
-	[TestMethod]
-	[DataRow( 50, 0 )]
-	[DataRow( 60, 3 )]
-	public void WithAModelEveryStartCountsItsRate( int speed, int counted )
+	private static RideScript WithLights( int speed, int channels, int[] body )
 	{
 		FileSystem = GameData.Required();
 
 		Unimplemented.Forget();
 
-		var script = new RideScript( Build( 1,
-			Word( Opcode.TRIGANIM ), 0, 0, 0,
-			Word( Opcode.LOOPANIM ), 0, 0,
-			Word( Opcode.WAITANIM ), 0, 0,
-			Word( Opcode.END ) ) )
+		return new RideScript( Build( 1, [.. body, Word( Opcode.END )] ) )
 		{
 			Speed = speed,
-			Animations = RideAnimations.Load( "levels/jungle/features/gates", "gates", FileSystem )
+			Animations = RideAnimations.Load( "levels/jungle/features/lights", "lights", FileSystem, channels )
 		};
+	}
 
-		for ( var tick = 0; tick < 5; ++tick )
-			script.Turn( 1000f + tick * 31 );
+	/// <summary>
+	/// On the Lights' 333 ms clip (role 5), every start hands the channel the divisor <c>0.5 + 0.01 x</c> the word as its play rate (<c>0x00552952</c>, <c>0x00552aa4</c>, <c>0x00552bea</c>, <c>0x00552d3c</c>, <c>0x00553190</c>,
+	/// <c>0x00553471</c>): 1 at the word 50, 1.1 at the Belly Bounce's 60, 0.9 at 40, 1.3 at 80 and 0.5 at 0 - the six handlers built, the
+	/// plain and the <c>_CH</c> ones (<c>TRIGWAITANIM</c> triggers through the same call). A word of 50 hands exactly 1, which a play rate stuck at 1 and one inverted (0.5 - 0.01 x) agree on, so 60 is the row that tells them apart.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the 1 back in <c>StartAnimation</c> fails every row but 50; the divisor inverted fails 60, 40, 80 and 0; the speed word read as the constant 50 fails every row but 50.</remarks>
+	[TestMethod]
+	[DataRow( Opcode.TRIGANIM, 50, 1f )]
+	[DataRow( Opcode.TRIGANIM, 60, 1.1f )]
+	[DataRow( Opcode.TRIGANIM, 40, 0.9f )]
+	[DataRow( Opcode.TRIGANIM, 80, 1.3f )]
+	[DataRow( Opcode.TRIGANIM, 0, 0.5f )]
+	[DataRow( Opcode.TRIGWAITANIM, 60, 1.1f )]
+	[DataRow( Opcode.TRIGWAITANIM, 50, 1f )]
+	[DataRow( Opcode.LOOPANIM, 60, 1.1f )]
+	[DataRow( Opcode.LOOPANIM, 40, 0.9f )]
+	[DataRow( Opcode.WAITANIM, 60, 1.1f )]
+	[DataRow( Opcode.WAITANIM, 80, 1.3f )]
+	[DataRow( Opcode.WAITANIM, 50, 1f )]
+	public void TheRateATriggerHandsTheChannelIsTheDivisor( Opcode opcode, int speed, float rate )
+	{
+		var script = WithLights( speed, 1, opcode is Opcode.TRIGANIM or Opcode.TRIGWAITANIM ? [Word( opcode ), 5, 0, 0] : [Word( opcode ), 5, 0] );
 
-		Assert.AreEqual( counted, Times( "ANIM_TRIGGER_SPEED_RATE" ), $"a word of {speed}" );
+		script.Turn( 1000f );
+
+		Assert.AreEqual( rate, script.Animations!.Channel( 0 )!.Speed, 1e-6f, $"{opcode} at a word of {speed}" );
+
+		Unimplemented.Forget();
+	}
+
+	/// <summary>The <c>_CH</c> triggers hand the same rate to the channel they name, each on its own, and leave the first channel as it was.</summary>
+	[TestMethod]
+	[DataRow( Opcode.TRIGANIM_CH, 60, 1.1f )]
+	[DataRow( Opcode.TRIGANIM_CH, 40, 0.9f )]
+	[DataRow( Opcode.LOOPANIM_CH, 60, 1.1f )]
+	[DataRow( Opcode.LOOPANIM_CH, 40, 0.9f )]
+	public void ATriggerOnAChannelHandsThatChannelTheRate( Opcode opcode, int speed, float rate )
+	{
+		var script = WithLights( speed, 2, opcode == Opcode.TRIGANIM_CH ? [Word( opcode ), 5, 0, 0, 1] : [Word( opcode ), 5, 0, 1] );
+
+		script.Turn( 1000f );
+
+		Assert.AreEqual( rate, script.Animations!.Channel( 1 )!.Speed, 1e-6f, $"{opcode}: the channel named" );
+		Assert.IsTrue( script.Animations.Channel( 0 )!.IsIdle, "channel nought was not started" );
+
+		Unimplemented.Forget();
+	}
+
+	/// <summary>A loop that runs out starts again at the rate it was started with, not at 1 (the restart passes the channel's own speed).</summary>
+	[TestMethod]
+	public void ALoopRestartsAtTheRateItWasStartedWith()
+	{
+		var script = WithLights( 60, 1, [Word( Opcode.LOOPANIM ), 5, 0] );
+
+		script.Turn( 1000f );
+		script.Animations!.Advance( 1500 );
+
+		var channel = script.Animations.Channel( 0 )!;
+
+		Assert.IsTrue( (channel.Flags & AnimTimeControl.LoopFlag) != 0, "still looping" );
+		Assert.AreEqual( 1.1f, channel.Speed, 1e-6f );
+		Assert.IsTrue( channel.AnimFrame < channel.TotalAnimFrames, "restarted, so mid-clip and not past its end" );
+
+		Unimplemented.Forget();
+	}
+
+	/// <summary>
+	/// A trigger that finds the channel busy queues the clip at the rate it was triggered with (<c>FUN_004732a0</c>'s queue arm, <c>+0x30</c>), which the promotion then starts it at:
+	/// the first script at the word 50 plays at 1, a second at 60 queues 1.1 behind it.
+	/// </summary>
+	[TestMethod]
+	public void AQueuedTriggerKeepsTheRateItWasMadeAt()
+	{
+		var first = WithLights( 50, 1, [Word( Opcode.TRIGANIM ), 5, 0, 0] );
+		var second = new RideScript( Build( 1, Word( Opcode.TRIGANIM ), 5, 0, 0, Word( Opcode.END ) ) ) { Speed = 60, Animations = first.Animations };
+
+		first.Turn( 1000f );
+		second.Turn( 1000f );
+
+		var channel = first.Animations!.Channel( 0 )!;
+
+		Assert.AreEqual( 1f, channel.Speed, 1e-6f, "the clip playing" );
+		Assert.IsTrue( channel.HasQueued, "the second waits its turn" );
+		Assert.AreEqual( 1.1f, channel.DeferredSpeed, 1e-6f, "at the rate it was triggered with" );
+
+		// The first clip (333 ms at 1) has run out by 1400 ms: the promotion starts the queued one at 1.1 (0x004738a3).
+		first.Animations.Advance( 1400 );
+
+		Assert.IsFalse( channel.HasQueued, "promoted" );
+		Assert.AreEqual( 1.1f, channel.Speed, 1e-6f, "and playing at the rate it was queued with" );
 
 		Unimplemented.Forget();
 	}

@@ -4498,12 +4498,11 @@ public sealed class RideScript
 		if ( Animations is null )
 			return 0;
 
-		// 1.0, where every triggering handler pushes the script's speed divisor (0x00552952), 0.5 + 0.01 x
-		// the speed word: the divisor 1 at the word 50 a script is made with, and a deviation at any other
-		// word, the Belly Bounce's 60 among them (docs/QUEUE.md Q155), counted as ANIM_TRIGGER_SPEED_RATE. It is the play rate alone; the
-		// length answered does not read it.
-		if ( DivisorOf( Speed ) != 1f )
-			Unimplemented.Report( "ANIM_TRIGGER_SPEED_RATE" );
+		// The play rate is the script's speed divisor, 0.5 + 0.01 x the speed word, where every triggering handler pushes the dispatcher's
+		// [ESP+0x14] as the channel's speed (0x00552952, 0x00552aa4, 0x00552bea, 0x00552d3c, 0x00553190, 0x00553471; docs/exe/park.md, "The animation
+		// opcodes"): 1 at the word 50 a script is made with, 1.1 at the Belly Bounce's 60. It is the play rate alone; the length answered
+		// does not read it, and the deadline that divides by it is counted (ANIM_TRIGGER_SPEED_DEADLINE).
+		var rate = DivisorOf( Speed );
 
 		//
 		// A clip starts at this tick's own instant, where the engine stamps a fresh start with the frame's
@@ -4511,7 +4510,7 @@ public sealed class RideScript
 		// running k ticks is (k-1-i) x 31ms in at that frame's sweep here and nought there. A DELIBERATE
 		// deviation, kept by Alexah's decision so a clip's timing does not hang on the frame rate; it shows
 		// only when a frame runs more than one tick (docs/exe/park.md, difference 6).
-		return Animations.Trigger( role, entry, flags, 1f, (int)now, channel );
+		return Animations.Trigger( role, entry, flags, rate, (int)now, channel );
 	}
 
 	/// <summary>
