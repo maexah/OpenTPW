@@ -1013,8 +1013,7 @@ and a clip triggered in any but the last of them met the difference; 3 s later t
 So it is reached at a hitch (a first load, a stall), not in steady play at this frame rate.
 
 On the same fields and unbuilt: `TRIGANIMSPEED` arms `+0xa4` and sets `+0xa8`, and OpenTPW counts it, so jungle `Gates`
-@80 passes its `WAIT4ANIM` about 0.1 to 0.3 s early and its clip at four times the speed is not played; and every
-trigger's deadline divides by the speed divisor (Q155).
+@80 passes its `WAIT4ANIM` about 0.1 to 0.3 s early and its clip at four times the speed is not played. The `TRIGANIM`, `TRIGWAITANIM` and `TRIGANIM_CH` deadlines divide by the speed divisor (Q1060, `RideScript.TriggerDeadline`); `TRIGWAITANIM_CH`'s would too and is unbuilt.
 
 **Measured in the game before Q174b** (the build before any change, with a throwaway instrument that keeps the engine's
 `+0xa4`/`+0xa8` beside OpenTPW's, seeded from the save, and counts where the two decide apart; silent, the stock jungle

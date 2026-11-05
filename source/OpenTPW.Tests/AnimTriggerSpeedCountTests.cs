@@ -16,6 +16,8 @@ namespace OpenTPW.Tests;
 [DoNotParallelize]
 public class AnimTriggerSpeedCountTests
 {
+	private static int Var( int index ) => unchecked( (int)(0x40000000u | (uint)index) );
+
 	private static int Word( Opcode opcode ) => unchecked( (int)(0x80000000u | (uint)opcode) );
 
 	private static RideScriptFile Build( int variableCount, params int[] body )
@@ -68,7 +70,7 @@ public class AnimTriggerSpeedCountTests
 	/// <summary>
 	/// A trigger's deadline is the floored length divided by the divisor and cut toward zero (<c>0x005529ac</c>, <c>0x00552d94</c>, <c>0x005531ee</c>): at the word 60
 	/// (divisor 1.1) a length of 1000 arms 909 and one of 300 arms 272; at 40 (0.9) 1000 arms 1111; at 80 (1.3) 769; at 20 (0.7) 500 arms 714; at 0 (0.5) 1000 arms 2000;
-	/// at 50 the length itself. A divisor read the wrong way round (0.5 - 0.01 x) or a deadline left whole fails every row but 50.
+	/// at 50 the length itself. A divisor read the wrong way round (0.5 - 0.01 x) or a deadline left whole fails every row but 50 and 0.
 	/// </summary>
 	[TestMethod]
 	[DataRow( 60, 1000, 909 )]
@@ -102,6 +104,31 @@ public class AnimTriggerSpeedCountTests
 		Assert.AreEqual( armed, script.LastAnimationDeadline, $"{opcode} at a word of {speed}" );
 		Assert.AreEqual( 1000f + armed, script.AnimationDeadline, $"{opcode}: the deadline WAIT4ANIM reads" );
 		Assert.AreEqual( 0, Times( "ANIM_TRIGGER_SPEED_DEADLINE" ), "nothing is counted any more" );
+
+		Unimplemented.Forget();
+	}
+
+	/// <summary>
+	/// A <c>WAIT4ANIM</c> after a model-less <c>TRIGANIM</c> at the word 60 (the floored 300 arms 272, <c>0x005538eb</c> compares it) holds the script at the clock
+	/// plus 271 and lets it on at plus 272; the undivided 300 would still hold it at plus 272.
+	/// </summary>
+	[TestMethod]
+	public void AWaitAfterATriggerIsHeldForTheDividedDeadline()
+	{
+		var script = new RideScript( Build( 1, [Word( Opcode.TRIGANIM ), 5, 0, 0, Word( Opcode.WAIT4ANIM ), Word( Opcode.COPY ), Var( 0 ), 7, Word( Opcode.END )] ) ) { Speed = 60 };
+
+		script.Turn( 1000f );
+
+		Assert.AreEqual( 1272f, script.AnimationDeadline, "armed at the clock plus 272" );
+		Assert.AreEqual( 0, script.Variables[0], "held on the first turn" );
+
+		script.Turn( 1271f );
+
+		Assert.AreEqual( 0, script.Variables[0], "held at the clock plus 271" );
+
+		script.Turn( 1272f );
+
+		Assert.AreEqual( 7, script.Variables[0], "passed at the clock plus 272" );
 
 		Unimplemented.Forget();
 	}

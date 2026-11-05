@@ -36,7 +36,7 @@ public class BoltEnvelopeTests
 	}
 
 	/// <summary>
-	/// <b>A grey past 255 is packed unclamped and wraps to near black:</b> 256..319 gives R = G = (g - 256) | 1 and
+	/// <b>A grey past 255 is packed unclamped and wraps to near black:</b> 256..318 gives R = G = (g - 256) | 1 and
 	/// B = g - 256; 0..255 is neutral.
 	/// </summary>
 	/// <remarks><b>Mutations:</b> the sum clamped to 255; B taking the | 1; the wrap's red and green not taking it; a 6-bit wrap.</remarks>

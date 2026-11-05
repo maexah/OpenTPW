@@ -57,7 +57,7 @@ internal sealed class BoltSlots
 
 	/// <summary>
 	/// The colour <paramref name="slot"/> is drawn in this frame, 0 to 1 a channel, times <paramref name="fade"/>: its grey is
-	/// the next draw's (<paramref name="rand"/>, the game's <c>rand()</c>) when <paramref name="redraw"/> is set or it has none
+	/// the next draw's (<paramref name="rand"/>, a 15-bit draw of Lightning's own generator, standing for the CRT's <c>rand()</c>, 0x0067b5c0) when <paramref name="redraw"/> is set or it has none
 	/// yet, else the last one kept. The channels are the grey's own, neutral, with no tint.
 	/// </summary>
 	public Vector3 Draw( int slot, int rand, bool redraw, float fade )

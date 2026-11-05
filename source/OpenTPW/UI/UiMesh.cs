@@ -61,9 +61,14 @@ internal sealed class UiMesh
 	// Dead by CODE: nothing calls it.
 	public int PartCount => _parts.Length;
 
+	/// <summary>Told every name <see cref="Get"/> is asked for, before the cache answers; a test's way to read what a screen wears without a graphics device.</summary>
+	internal static Action<string>? MeshAsked;
+
 	/// <summary>A mesh by name - "b_login" for ui/b_login.md2 - loaded once. Null, and a warning, if it will not load.</summary>
 	public static UiMesh? Get( string name )
 	{
+		MeshAsked?.Invoke( name );
+
 		if ( Loaded.TryGetValue( name, out var mesh ) )
 			return mesh;
 

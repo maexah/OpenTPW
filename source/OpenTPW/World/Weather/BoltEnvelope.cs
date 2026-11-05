@@ -25,7 +25,7 @@ internal static class BoltEnvelope
 
 	/// <summary>
 	/// The word the bolt is packed in (0x0057ef4f..0x0057ef61), as the original packs it: not clamped, so a grey of 256
-	/// to 319 loses its high bit into the alpha and the colour wraps to near black, R = G = (g - 256) | 1, B = g - 256.
+	/// to 318 loses its high bit into the alpha and the colour wraps to near black, R = G = (g - 256) | 1, B = g - 256.
 	/// </summary>
 	public static uint Pack( int grey )
 	{
@@ -36,7 +36,7 @@ internal static class BoltEnvelope
 		return word;
 	}
 
-	/// <summary>The bolt's colour in bytes for a life left and a draw of the game's <c>rand()</c>.</summary>
+	/// <summary>The bolt's colour in bytes for a life left and a 15-bit draw standing for the CRT's <c>rand()</c> (0x0067b5c0), whose <c>&amp; 63</c> the grey takes.</summary>
 	public static (byte R, byte G, byte B) Colour( int lifeMs, int rand )
 	{
 		var word = Pack( Base( lifeMs ) + (rand & 63) );

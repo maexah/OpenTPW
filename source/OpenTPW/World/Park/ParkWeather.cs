@@ -176,8 +176,8 @@ public sealed class ParkWeather : Entity
 
 	/// <param name="savedWindDirection">As the public constructor's.</param>
 	/// <param name="drawn">Whether it makes the rain and the bolt that draw it; a weather that draws nothing needs no device.</param>
-	/// Dead by CODE with <paramref name="drawn"/> false: only ParkFileWriterTests and ParkWeatherFreshTests pass it.
 	/// <param name="balance">The balance file to read; null reads the level's own (a test hands one over).</param>
+	/// <remarks>Dead by CODE with <paramref name="drawn"/> false: only ParkFileWriterTests, ParkWeatherFreshTests and ParkWeatherBoltTests pass it.</remarks>
 	internal ParkWeather( float? savedWindDirection, bool drawn, ParkBalance? balance = null )
 	{
 		Current = this;

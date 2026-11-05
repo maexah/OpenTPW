@@ -81,15 +81,17 @@ public class ParkItemsPicturesTests
 
 	/// <summary>
 	/// <b>The screen puts those pictures where the stream does</b>: the big control, the tab group with none, the close button the
-	/// tick. What a control is made to wear is read from the names the screen asked <see cref="UiMesh.Get"/> for as it was built
+	/// tick. What a control is made to wear is read from the names the screen asked for as it was built (and, through <see cref="UiMesh.MeshAsked"/>, every name anything in it asked <see cref="UiMesh.Get"/> for)
 	/// (a graphics device is needed to load the picture itself).
 	/// </summary>
-	/// <remarks><b>Mutations:</b> the backdrop's name on the tab group instead; <c>b_exit</c> on the close button; <c>!frame</c> on the big control.</remarks>
+	/// <remarks><b>Mutations:</b> the backdrop's name on the tab group instead (also put back as the old <c>Mesh = UiMesh.Get( "list_all" )</c> line, not through the seam); <c>b_exit</c> on the close button; <c>!frame</c> on the big control.</remarks>
 	[TestMethod]
 	public void EachControlWearsTheMeshTheStreamGivesIt()
 	{
 		var asked = new List<(int Id, string Name)>();
+		var everyName = new List<string>();
 		ParkItemsScreen.PictureAsked = ( id, name ) => asked.Add( (id, name) );
+		UiMesh.MeshAsked = name => everyName.Add( name );
 
 		try
 		{
@@ -98,10 +100,12 @@ public class ParkItemsPicturesTests
 		finally
 		{
 			ParkItemsScreen.PictureAsked = null;
+			UiMesh.MeshAsked = null;
 		}
 
 		Assert.AreEqual( ParkItemsScreen.BackdropMesh, asked.Single( x => x.Id == 0x12c4b8 ).Name, "the big control" );
 		Assert.AreEqual( ParkItemsScreen.CloseMesh, asked.Single( x => x.Id == -2 ).Name, "the close button" );
 		Assert.IsFalse( asked.Any( x => x.Id == 0x12c4b9 ), "the tab group has no mesh in the stream" );
+		Assert.AreEqual( 1, everyName.Count( x => x == ParkItemsScreen.BackdropMesh ), "list_all is asked for once, by the big control, from anywhere in the screen" );
 	}
 }

@@ -31,7 +31,7 @@ namespace OpenTPW;
 /// is the weather's.
 ///
 /// Each live bolt is drawn in the grey of <see cref="BoltEnvelope"/>: a saw-tooth of 192 to 255 every 500 ms of the
-/// life it has left, plus a draw of the game's <c>rand()</c> each frame, packed as the original packs it, so a sum past
+/// life it has left, plus a 15-bit draw of Lightning's own generator each frame, standing for the CRT's <c>rand()</c> (0x0067b5c0), whose <c>&amp; 63</c> the grey takes,, packed as the original packs it, so a sum past
 /// 255 wraps to near black. The bolt is cut at the frame its life left reaches nought, with no fade. Up to sixteen are
 /// alive at once (<see cref="BoltSlots"/>). Its shape stays one quad, nine wide (Q1035).
 /// </summary>
@@ -164,6 +164,8 @@ public sealed class Lightning : WeatherSprites
 			{
 				Flash = 0f;
 				DebugOpacity = 0f;
+				DebugLifeLeft = 0f;
+				DebugColour = (0, 0, 0);
 				Upload( 0 );
 			}
 
@@ -187,7 +189,7 @@ public sealed class Lightning : WeatherSprites
 			var stutter = 0.55f + (0.45f * MathF.Abs( MathF.Sin( bolt.AgeSeconds * 47f ) ));
 			flash = MathF.Max( flash, life * life * stutter );
 
-			// One draw of the game's rand() a bolt a frame, as the original takes it, a paused menu's frames too (the
+			// One draw a bolt a frame (Lightning's own generator, standing for the CRT's rand() at 0x0067b5c0), as the original takes it, a paused menu's frames too (the
 			// original redraws a held bolt in a fresh grey each frame). Only the debug console's held frame clock keeps
 			// the last grey, so a paused or stepped frame is repeatable.
 			var fade = NearCameraFade( bolt.Ground, bolt.Top );

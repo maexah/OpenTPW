@@ -1811,7 +1811,7 @@ use; its riders stand where ours do; its held channels read `0x4` where it had l
 model records `0x8` on the six things a guest may be offered where ours held the first file's nought, which is
 why a held channel now keeps the file's word and the hoarding goes out as it stands. Its bounce riders' sprites
 are on program 66, picture set 2, where OpenTPW's rider stands (program 90) and is written so (Q52's note); its
-Belly Bounce loops clip 1 at speed 1.1 where ours loops clip 0 at 1.0 (Q155; the speed alone is the script's divisor in ours since Q1039).
+Belly Bounce loops clip 1 at speed 1.1 where ours loops clip 0 at 1.0 (Q155; the 1.0 was the trigger's constant rate, which hands the script's divisor, 1.1 at word 60, since Q1039; the clip difference is not re-checked).
 
 **Predictions wrong, mine:** the script's counter at the save is 46 (it stands on 46 or on 100, its two turn
 ends); a wait reads nought to 1000 (one stands up to a sweep overdue: -89 and -120 were written); the next
