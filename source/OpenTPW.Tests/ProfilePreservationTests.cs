@@ -226,6 +226,45 @@ public class ProfilePreservationTests
 	}
 
 	/// <summary>
+	/// <see cref="Players.Load"/> itself, before anyone is selected (Q1029, from Q211): a gms.dat that will not open is given the
+	/// read-only stand-in (<c>ReadWhole</c> false, so a save over it first copies it aside) and is not a missing file; a folder
+	/// with no gms.dat is given a blank whole profile and is flagged missing. <c>Select</c> would mark the first unread anyway.
+	/// </summary>
+	[TestMethod]
+	public void LoadGivesAFileThatWouldNotOpenTheReadOnlyStandIn()
+	{
+		if ( OperatingSystem.IsWindows() )
+		{
+			Assert.Inconclusive( "the open failure is staged with Unix file modes" );
+			return;
+		}
+
+		File.WriteAllBytes( Profile, Written( new PlayerFile { KeysGiven = 19 } ) );
+		File.SetUnixFileMode( Profile, UnixFileMode.None );
+
+		var players = new Players();
+		players.Load();
+
+		var player = players[0]!;
+		Assert.IsFalse( player.File.ReadWhole, "the stand-in is not what the file holds" );
+		Assert.IsFalse( player.FileMissing, "a file that is there is not a new player" );
+		Assert.AreEqual( 0, player.File.KeysGiven );
+	}
+
+	[TestMethod]
+	public void LoadGivesAFolderWithNoFileABlankWholeProfileFlaggedMissing()
+	{
+		Assert.IsFalse( File.Exists( Profile ) );
+
+		var players = new Players();
+		players.Load();
+
+		var player = players[0]!;
+		Assert.IsTrue( player.File.ReadWhole, "a new player is written like any other" );
+		Assert.IsTrue( player.FileMissing );
+	}
+
+	/// <summary>
 	/// A profile that read whole, then a selection whose reload will not open the file: what is held is not what the file
 	/// holds, so a file that opens later is copied aside before the held profile is written over it.
 	/// </summary>

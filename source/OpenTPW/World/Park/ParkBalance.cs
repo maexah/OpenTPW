@@ -93,6 +93,9 @@ public sealed class ParkBalance
 		}
 	}
 
+	/// <summary>Sets one key over what the stack read: a unit test's way to a balance the shipped files do not hold.</summary>
+	internal void Set( string key, string value ) => _values[key] = value;
+
 	public string? this[string key] => _values.TryGetValue( key, out var value ) ? value : null;
 
 	public int Int( string key, int fallback = 0 )

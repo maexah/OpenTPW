@@ -83,22 +83,32 @@ internal sealed class ParkRideHoarding : ModelEntity
 	private void Fill()
 	{
 		_texture = _state.Texture;
-		for ( var i = 0; i < _panels.Length; ++i )
+		Fill( _vertices, _panels, _heights, _state );
+	}
+
+	/// <summary>
+	/// Writes the eight vertices of each panel (two sides of four corners, the upper two first) from the progress state:
+	/// the upper corners stand the panel's height over the ground at their end, the lower ones on it with the V
+	/// <see cref="RideHoardingState.Panel"/> slides up, and every vertex wears the state's texture.
+	/// </summary>
+	internal static void Fill( Vertex[] vertices, RideHoardingGeometry.Panel[] panels, float[] heights, RideHoardingState state )
+	{
+		for ( var i = 0; i < panels.Length; ++i )
 		{
-			var p = _panels[i];
-			var (height, lowerV) = _state.Panel( i, _panels.Length );
+			var p = panels[i];
+			var (height, lowerV) = state.Panel( i, panels.Length );
 			for ( var side = 0; side < 2; ++side )
 			for ( var corner = 0; corner < 4; ++corner )
 			{
 				var end = corner & 1;
 				var at = end == 0 ? p.A : p.B;
 				var upper = corner < 2;
-				_vertices[i * 8 + side * 4 + corner] = new Vertex
+				vertices[i * 8 + side * 4 + corner] = new Vertex
 				{
-					Position = new Vector3( at.X, at.Y, _heights[i * 2 + end] + (upper ? height : 0f) ),
+					Position = new Vector3( at.X, at.Y, heights[i * 2 + end] + (upper ? height : 0f) ),
 					Normal = (Vector3)(side == 0 ? p.Normal : -p.Normal),
 					TexCoords = new Vector2( end, upper ? 1f : lowerV ),
-					TexIndex = _texture
+					TexIndex = state.Texture
 				};
 			}
 		}

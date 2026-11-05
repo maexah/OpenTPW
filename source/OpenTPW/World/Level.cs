@@ -3274,13 +3274,12 @@ public class Level
 		if ( _windows is not { } showing )
 			return;
 
-		var active = showing.Windows.LastOrDefault( window => !window.Hidden && !window.PutAway );
-
-		if ( active is UI.ParkObjectWindow activeRide )
-			activeRide.DrawStatus();
-		else if ( active is UI.ParkShopWindow activeShop )
-			activeShop.DrawStatus();
+		DrawActiveWarning( showing.Windows );
 	}
+
+	/// <summary>The status box of the topmost window that is neither hidden nor put away, if that window has one.</summary>
+	internal static void DrawActiveWarning( IReadOnlyList<UI.UiWindow> windows )
+		=> (windows.LastOrDefault( window => !window.Hidden && !window.PutAway ) as UI.IStatusBox)?.DrawStatus();
 
 	/// <summary>
 	/// The frame's end, after the world: the HUD, the depth cleared, the windows' model previews, the active warning, the

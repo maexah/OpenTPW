@@ -25,7 +25,7 @@ namespace OpenTPW.UI;
 /// step the window in the original (<c>0x0048d200</c>) and reach no object window here (Q547).
 /// </para>
 /// </summary>
-internal sealed class ParkShopWindow : UiWindow
+internal sealed class ParkShopWindow : UiWindow, IStatusBox
 {
 	/// <summary>The special ingredients' words, the boot's table <c>INGREDIENT</c> (<c>[0x0078ba8c]</c>).</summary>
 	internal const string IngredientTable = "Language/English/INGREDIENT.str";
@@ -745,7 +745,7 @@ internal sealed class ParkShopWindow : UiWindow
 	internal void HoldPreview( float? angle ) => _model?.Hold( angle );
 
 	/// <summary>The status box over the model, which the overlay pass draws after the HUD.</summary>
-	internal void DrawStatus() => _status.Draw();
+	public void DrawStatus() => _status.Draw();
 
 	protected internal override void Update()
 	{

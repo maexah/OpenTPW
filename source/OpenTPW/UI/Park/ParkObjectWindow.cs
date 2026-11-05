@@ -34,7 +34,7 @@ namespace OpenTPW.UI;
 /// (<see cref="Commit"/>), all but what the speed word does to the script's waits.
 /// </para>
 /// </summary>
-internal sealed class ParkObjectWindow : UiWindow
+internal sealed class ParkObjectWindow : UiWindow, IStatusBox
 {
 	/// <summary>The bottom row of verbs, left to right, exactly as the stream lays them out.</summary>
 	private static readonly (int Id, int Help, string? Mesh, string What)[] Verbs =
@@ -639,7 +639,7 @@ internal sealed class ParkObjectWindow : UiWindow
 	internal void HoldPreview( float? angle ) => _model?.Hold( angle );
 
 	/// <summary>The status box must cover the model, which the overlay pass draws after the HUD.</summary>
-	internal void DrawStatus() => _broken.Draw();
+	public void DrawStatus() => _broken.Draw();
 
 	/// <summary>
 	/// Puts the red line where the item says it falls, as a fraction of the track.

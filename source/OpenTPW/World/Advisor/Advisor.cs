@@ -302,8 +302,13 @@ public sealed class Advisor : Entity
 		(_light, _lightStrength) = AdvisorModel.LightFor( null, 0, lit: false );
 	}
 
-	/// <summary>The advisor of <see cref="Advisor(bool)"/>: nothing loaded, nothing played.</summary>
-	internal static Advisor WithoutModels() => new( withoutModels: true );
+	/// <summary>The advisor of <see cref="Advisor(bool)"/>: nothing loaded, nothing played. With <paramref name="clipMilliseconds"/>
+	/// the clips last as it says, where a model would have measured them.</summary>
+	internal static Advisor WithoutModels( Func<int, int>? clipMilliseconds = null )
+		=> new( withoutModels: true ) { _clipMilliseconds = clipMilliseconds };
+
+	/// <summary>How long a clip lasts where no model is loaded to say: a unit test's (<see cref="WithoutModels"/>); null in the game.</summary>
+	private Func<int, int>? _clipMilliseconds;
 
 	/// <summary>UI particle channel 0, which a clip word's flags and the end of a line set and empty.</summary>
 	internal UI.UiParticleChannel Glints => _glints;
@@ -862,7 +867,7 @@ public sealed class Advisor : Entity
 	/// whichever model the line plays on, and the lobby's otherwise (<c>Advisor_ResetState</c> fills the table once).
 	/// </summary>
 	private int ClipMilliseconds( int clip )
-		=> clip == StartClip ? 0 : (_themeFigure ?? _figure)?.ClipMilliseconds( clip ) ?? 0;
+		=> clip == StartClip ? 0 : _clipMilliseconds?.Invoke( clip ) ?? (_themeFigure ?? _figure)?.ClipMilliseconds( clip ) ?? 0;
 
 	/// <summary>Plays his clips one after another and moves his mouth - Advisor_Update's other half.</summary>
 	private void Animate()

@@ -106,8 +106,11 @@ public sealed class FreshPark : IParkInitialState
 	}
 
 	private static ParkWorld.CatalogueObject FixedObject( ParkItemCatalogue catalogue, string stem, int id, int next )
+		=> FixedObject( catalogue.All.First( item => item.Stem.Equals( stem, StringComparison.OrdinalIgnoreCase ) ), id, next );
+
+	/// <summary>One of the two fixed objects, as the object constructor seeds it from its item (<c>FUN_004db090</c>).</summary>
+	internal static ParkWorld.CatalogueObject FixedObject( ParkItemCatalogue.Item item, int id, int next )
 	{
-		var item = catalogue.All.First( item => item.Stem.Equals( stem, StringComparison.OrdinalIgnoreCase ) );
 		return new( id, item.Id, 128, 128, 0, EntryPos: 1, NextObject: (ushort)next, RideScript: id - 10,
 			State: 3, TopLeft: 1, CanLoad: 1, ExitPos: 1, IsTrackRideValid: 1,
 			OperatingCapacity: item.InitCapacity, OperatingDuration: item.InitDuration,

@@ -706,13 +706,10 @@ filed the items that cite it.
   formula, not from the code. Confirm: a ride bought on sloping ground, closed, photographed with `hoardings`; then
   the same panels beside the original's under Proton (their height, which rises first, where the sign sits).
 - [ ] **Q211. Tests that run the callers, not the helpers.** Found by the 2026-10-04 review: fifteen bugs put back
-  left all 1,764 tests green. Nothing runs `ParkBuilding.Buy` (taking `BindOperation` out of `Build`); `ParkObjects`'
-  hoarding gate, its saved-slot `Restore`, `ParkRideHoarding.Fill`'s sliding V, the panels' `OrderBy`, the `+ 0.1`
-  truncation; `Advisor.PlayParkResponse` (its `Busy` guard, the end clip's length); `SayOnlyOnce`'s `history.Said`;
-  `Level`'s `DrawStatus`; `SetupParticles` before `SetupParkEntities`; `FreshPark`'s goods and chance on the two fixed
-  objects; the prankery id's `& 0xffff`; the cash's `Math.Max( 0, ... )`; `Players.Load`'s read-only stand-in. And
-  `ArchiveDamageTests.EveryInstalledWadEntryStillDecodes` prints its hash and count without asserting either. Write
-  each test, put its bug back, see it fail (`AGENTS.md` rule 6). No game run.
+  left all 1,764 tests green. Its fifteen are done but one: Q1029 wrote the tests (`ParkBuyWiringTests`,
+  `ParkHoardingWiringTests`, `AdvisorParkResponseTests`, `LevelActiveWarningTests`, `FreshParkFixedObjectsTests`,
+  `ParkArrivalStartTests`, two in `ProfilePreservationTests` and the asserts of `ArchiveDamageTests`), and Q1030 holds
+  `SetupParticles` before `SetupParkEntities`. Write each test, put its bug back, see it fail (`AGENTS.md` rule 6). No game run.
   From the run review (2026-10-17): more callers whose tests stop at the helper (the first, `ParkBuildMarkers`' strip
   `Over` and vertex count, was Q892; the second, `CameraLensTests`' lobby angle, Q893; the third, `ParkStaffCellListTests`'
   relink, Q894).
@@ -729,6 +726,14 @@ filed the items that cite it.
   thing (deleting its branch survives every test); `ParkStaffWindow.Open` with the window already up (it stays on its
   member and posts `0xc0` again); and PICK UP's "not drawn", shown by the census predicate alone (the draw loop's
   `InTheHand` skip in `ParkGuestSprites` survives; show his cell on screen).
+- [ ] **Q1030. `SetupParticles` before `SetupParkEntities`, tested.** From Q211 (Q1029 did the other fourteen of the
+  2026-10-04 review's fifteen bugs). `Level`'s park branch sets the particle system up first because
+  `SetupParkEntities` reads `ParticleSystem.Current` (`Catalogue.RegisterParticleEffects`, `ParkPlacedObjects.Start`,
+  `TakeParticleDensity`); swapping the two calls (`q1029/mutations.py`, `m11`) left every test green, and the park branch is
+  reached only by `new Level( ..., Scene.Park )`, which builds models and textures on a graphics device. Either give the
+  scene setup a seam the way Q1027 gave the guest atlas one (the three steps handed in, and `ParticleSystem.Current` asserted
+  non-null where the entities step starts), or confirm it in a running game off-screen: the log's particle line before the
+  catalogue's effects line, with the swap put back and the order seen to flip.
 - [ ] **Q212. The ride window's other statuses. Decode first.** Found by the 2026-10-04 review (`u7-ride-door-6`,
   `-7`, `-9`, `-10`). `FUN_00485f60` answers (80/100/255) 5..9 for a ride waiting for an upgrade, `0xb`..`0xf` for a toilet's
   call to the handyman and `0x11`..`0x15` for a mechanic called (`+0x64`), `0x15` (UITEXT 385, "REPAIRS IN PROGRESS")

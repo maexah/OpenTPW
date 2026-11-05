@@ -48,7 +48,7 @@ public static class ParkBuilding
 	/// What one build did: the line to show, the thing it made, the queue cell laid before it, and whether the
 	/// cell refused it the way the original's preview reddens one.
 	/// </summary>
-	private readonly record struct Built( string Answer, int ThingId = 0, (int X, int Y)? QueueNode = null,
+	internal readonly record struct Built( string Answer, int ThingId = 0, (int X, int Y)? QueueNode = null,
 		bool HasQueue = false, int TrackType = 0, bool Refused = false, int AddOnFor = 0 );
 
 	/// <summary>A test's stand-in for <see cref="ParkObjects.PlaceNow"/>, which wants a graphics device: answers whether the
@@ -72,7 +72,7 @@ public static class ParkBuilding
 	/// </summary>
 	/// <param name="addOnFor">For a track add-on, the thing id of the ride it is put down on, the builder's object
 	/// (<c>[0x008186ac]</c>); nought names none, and then every track cell of it refuses.</param>
-	private static Built Build( ParkState state, IParkInitialState park, ParkItemCatalogue catalogue, ParkObjects? objects,
+	internal static Built Build( ParkState state, IParkInitialState park, ParkItemCatalogue catalogue, ParkObjects? objects,
 		ParkRides? rides, int catalogueId, int cellX, int cellY, int angle, int addOnFor = 0 )
 	{
 		if ( !catalogue.TryGet( catalogueId, out var item ) )

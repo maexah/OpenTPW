@@ -441,8 +441,15 @@ public class ArchiveDamageTests
 			}
 		}
 		hashes.Sort( StringComparer.Ordinal );
-		Console.WriteLine( "Decoded corpus SHA256: " + Convert.ToHexString( SHA256.HashData( Encoding.UTF8.GetBytes( string.Concat( hashes ) ) ) ) );
+		var corpus = Convert.ToHexString( SHA256.HashData( Encoding.UTF8.GetBytes( string.Concat( hashes ) ) ) );
+		Console.WriteLine( "Decoded corpus SHA256: " + corpus );
 		Console.WriteLine( $"Decoded {count} entries in {archives.Length} installed WAD archives." );
+
+		// The disc's own 312 archives (docs/WORKS.md, "A WAD archive is read from its file"): a change to the decode, or an
+		// entry it skips or reads differently, moves one of the three.
+		Assert.AreEqual( 312, archives.Length, "the installed archives" );
+		Assert.AreEqual( 13392, count, "the entries decoded" );
+		Assert.AreEqual( "6CBD6C2291CDD2731B19898FC4535CE195AC62CC2B17E18ECC0D76F140AB1077", corpus, "the decoded corpus's hash" );
 		Console.WriteLine( $"GetData over the corpus: {decodeTicks * 1000.0 / System.Diagnostics.Stopwatch.Frequency:F0} ms, {decodeBytes / 1048576.0:F1} MB allocated for {decodedBytes / 1048576.0:F1} MB decoded." );
 	}
 }
