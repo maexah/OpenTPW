@@ -891,11 +891,11 @@ Read from the listing of `testme.exe` (fork watch 2026-10-19, `verify-other-b.md
 original (Q1037, `q1037/orig/run1`)**: Lost Kingdom's island, a player picked, the nearest island's lightning mask held at 63 so the game's own
 roll (`0x005e0f58`: `(island[+0x5c] & rand) == 1`, the bolt at `island[+0x3c]`) struck, filmed at 30 fps: 13 strikes in 26 s and 13 flash frames, each one
 frame after its strike's first read and no other (a strike inside a live bolt's 0.5 s flashes again), the picture's mean up 21..28 grey levels for
-that one frame. **The flash inverts the 3D scene (sky, sea, island, flyers, the bolt) and not the UI drawn after it** (the panel, the key and its
+that one frame. **The flash inverts the 3D scene (sky, sea, island, flyers, the key's sparkles) and not what is drawn after it:** the bolt (white over the inverted scene, `f036.png`) and the UI (the panel, the key and its
 text, the version). Lost Kingdom's island never strikes by itself (its `LIGHTNING` is 0; only Hallow's, 63, does). The flash is the **lobby's alone**: the park's bolt (`0x00512b4c` calling `0x00580320`) never sets it, so Lost
 Kingdom's park has none (Q715).
 
-- The flag is the byte `[this+4]` of the flash object; its one writer is `0x0057dc70` (`MOV [ECX+4], 1`), whose one
+- The flag is the dword `[this+4]` of the flash object; its one writer is `0x0057dc70` (`MOV [ECX+4], 1`), whose one
   caller is `0x005e110b`, right after the lobby camera update's bolt call (`0x005e1100`, `CALL 0x00580320`). No data pointer to
   `0x0057dc70`, `0x0057ed50` or `0x0057ee30` exists in the image.
 - `0x0057ee30` calls `0x0057ed50` only while `[this+4]` is non-zero. `0x0057ed50` clears the flag (`0x0057ed59`), builds a quad

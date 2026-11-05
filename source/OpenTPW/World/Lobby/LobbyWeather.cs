@@ -51,7 +51,14 @@ public sealed class LobbyWeather : Entity
 	private readonly Rain _rain = new();
 	private readonly Lightning _lightning = new();
 
-	public LobbyWeather() => Current = this;
+	/// <summary>Draws a bolt at an island's origin for a lifetime in seconds; the park's weather has the same seam, so a test runs a strike without a renderer.</summary>
+	internal Action<Vector3, float> StrikeBolt { get; set; }
+
+	public LobbyWeather()
+	{
+		Current = this;
+		StrikeBolt = ( origin, lifetime ) => _lightning.Strike( origin, lifetime );
+	}
 
 	protected override void OnDelete()
 	{
@@ -84,11 +91,13 @@ public sealed class LobbyWeather : Entity
 	/// screen: every lit model multiplies by the sun's colour, so that is what makes a strike light
 	/// the scene rather than just draw a bright rectangle in it.
 	///
-	/// The sky itself does not flash. It is what the distance hazes toward, so lifting it toward
+	/// The sky itself is not lifted. It is what the distance hazes toward, so lifting it toward
 	/// white lifts the haze with it - and the sky can only reach white by clipping each of its
 	/// layers separately against the framebuffer, while the haze reaches it exactly, so the two
 	/// arrive at different colours and the horizon shows for as long as the strike lasts. The
-	/// original does not flash its sky either; its flash is a renderer flag on lit geometry.
+	/// original's flash is one frame in which the whole 3D scene, sky included, is drawn inverted
+	/// (<c>docs/exe/lobby.md</c>, "The lobby's bolt inverts the screen for one frame"), and its sun does not
+	/// rise while a bolt lives. Deviation (Q1050): the sun lift below has no counterpart in the original.
 	///
 	/// SKYCOLOUR does not paint the sky - it tints one of its four cloud layers, and the horizon
 	/// stays the blue its texture paints whatever the park asks for. See <see cref="Sky"/>.
@@ -117,6 +126,7 @@ public sealed class LobbyWeather : Entity
 
 		var flash = _lightning.Flash;
 
+		// Deviation (Q1050): the original's island holds its grey across a live bolt; this lifts the sun.
 		if ( Level?.SunLight is { } sun )
 			sun.Color = Vector3.One * (1f + (flash * Lightning.MaxFlash));
 	}
@@ -147,7 +157,8 @@ public sealed class LobbyWeather : Entity
 	/// </summary>
 	private void Strike( Vector3 islandOrigin )
 	{
-		_lightning.Strike( islandOrigin, BoltLifetime );
+		StrikeBolt( islandOrigin, BoltLifetime );
+		Unimplemented.Report( "LOBBY_BOLT_FLASH" ); // 0x005e110b sets the one-frame inversion flag after the lobby's bolt call; Q1050
 		LobbyAudio.Current?.Thunder();
 	}
 }

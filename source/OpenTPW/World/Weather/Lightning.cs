@@ -46,7 +46,7 @@ public sealed class Lightning : WeatherSprites
 	private const float GroundSpread = 50f;
 	private const float LeanSpread = 10f;
 
-	/// <summary>How much the strike lifts the scene's lighting at its brightest.</summary>
+	/// <summary>How much the strike lifts the scene's lighting at its brightest. A deviation (Q1050): the original lifts nothing.</summary>
 	public const float MaxFlash = 1.35f;
 
 	/// <summary>
@@ -81,8 +81,8 @@ public sealed class Lightning : WeatherSprites
 
 	/// <summary>
 	/// 0 when nothing is happening, rising to 1 at the peak of a strike. Read by
-	/// <see cref="LobbyWeather"/> to flash the sun and the sky along with the bolt. It keeps its own curve, a fade over
-	/// the bolt's lifetime with a stutter, which is not the bolt's grey (Q715's ground for the lobby's lift).
+	/// <see cref="LobbyWeather"/> to lift the sun along with the bolt, a deviation the original does not make (Q1050). It keeps
+	/// its own curve, a fade over the bolt's lifetime with a stutter, which is not the bolt's grey.
 	/// </summary>
 	public float Flash { get; private set; }
 
