@@ -662,6 +662,53 @@ public class ParkRidesTests
 	}
 
 	/// <summary>
+	/// <b>A channel with nothing queued comes back with the file's queued speed too</b> (Q1063): the engine's load
+	/// copies <c>+0x30</c> for every channel (<c>0x00464c05</c>..<c>0x00464c17</c>), and a loop that replays before the
+	/// script's first due visit starts at it. From a copy of the shipped park with the Belly Bounce's channel given a
+	/// queued speed of 0.7 (its script's divisor is 1.1, the shipped file's own value) and no queued role, and every
+	/// other channel left as the file holds it.
+	/// </summary>
+	[TestMethod]
+	public void AChannelWithNothingQueuedKeepsTheFilesQueuedSpeed()
+	{
+		var payload = Payload();
+		var clock = new ParkClock( payload ).Reading!.Value;
+		var channel = Single( payload, clock - 1376, at => at >= 12 && BitConverter.ToInt32( payload, at - 12 + 4 ) == 2 ) - 12;
+
+		Assert.AreEqual( ParkThingStates.NoRole, BitConverter.ToInt32( payload, channel + 28 ), "the shipped file queues nothing there" );
+		BitConverter.GetBytes( 0.7f ).CopyTo( payload, channel + 40 );
+
+		var rides = Bind( new ParkWorld( payload ), Catalogue() );
+		var player = rides.Scheduler.Find( rides.ScriptFor( BellyBounceThing ) )!.Animations!.Channel( 0 )!;
+
+		Assert.IsFalse( player.HasQueued, "nothing is queued" );
+		Assert.AreEqual( 0.7f, player.DeferredSpeed, "and the speed the file held is there" );
+		Assert.AreEqual( 2, player.AnimID, "behind the saved loop, still playing" );
+	}
+
+	/// <summary>
+	/// The same on a channel that was running nothing: the speed does not wait for a clip, since the engine's copy is
+	/// whatever the channel holds. The Belly Bounce's channel saved idle (the sentinel role) with 0.7 queued, and a
+	/// scriptless model's channel, which the shipped file saves at nought, holding nought.
+	/// </summary>
+	[TestMethod]
+	public void AnIdleChannelKeepsTheFilesQueuedSpeedToo()
+	{
+		var payload = Payload();
+		var clock = new ParkClock( payload ).Reading!.Value;
+		var channel = Single( payload, clock - 1376, at => at >= 12 && BitConverter.ToInt32( payload, at - 12 + 4 ) == 2 ) - 12;
+
+		BitConverter.GetBytes( ParkThingStates.NoRole ).CopyTo( payload, channel + 4 );
+		BitConverter.GetBytes( 0.7f ).CopyTo( payload, channel + 40 );
+
+		var rides = Bind( new ParkWorld( payload ), Catalogue() );
+		var player = rides.Scheduler.Find( rides.ScriptFor( BellyBounceThing ) )!.Animations!.Channel( 0 )!;
+
+		Assert.IsTrue( player.IsIdle, "saved running nothing" );
+		Assert.AreEqual( 0.7f, player.DeferredSpeed, "and it holds the file's speed" );
+	}
+
+	/// <summary>
 	/// <b>A load whose model states will not read keeps its scripts' loops fresh.</b> With the channel module's
 	/// leading tag spoiled, no channel is put back, so every model starts idle; the Belly Bounce's waits still come
 	/// back, but its looping key does not, so its <c>LOOPANIM 2, 0</c> at word 43 starts the loop again rather than

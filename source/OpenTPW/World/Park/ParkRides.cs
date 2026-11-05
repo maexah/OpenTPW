@@ -817,8 +817,12 @@ public sealed class ParkRides : Entity
 
 			// What was queued behind it, which the next advance promotes when the clip ends; the engine copies the
 			// queue whatever the channel holds, and an idle one's waits for a trigger to start something first.
+			// The speed comes back even where nothing is queued (0x00464c05..0x00464c17 copies +0x30 for every channel): a loop
+			// that replays before the script's first due visit starts at it (0x0047380a).
 			if ( channel.QueuedRole != ParkThingStates.NoRole )
 				players.Channel( index )?.Queue( channel.QueuedRole, channel.QueuedEntry, channel.QueuedFlags, channel.QueuedSpeed );
+			else
+				players.Channel( index )?.WriteQueuedSpeed( channel.QueuedSpeed );
 
 			// The sentinel is the engine's own "this channel was running nothing", and it is the common
 			// case: of the 163 channels the shipped park saves, 148 hold it, and none holds a queue.
@@ -1444,8 +1448,9 @@ public sealed class ParkRides : Entity
 	{
 		// What is queued behind it; with nothing queued the engine leaves the last queue's clip and flags behind,
 		// which a channel here does not keep, so the file's stay. Its speed is the last write the scheduler made
-		// (RideScript.WriteChannelSpeeds, Q1061), which the engine saves as it stands; nought here means no write
-		// since the load or since a promotion, and the file's stays (docs/exe/saves.md, "OpenTPW's writer, the objects", a model).
+		// (RideScript.WriteChannelSpeeds, Q1061), which the engine saves as it stands; a load puts the file's speed back (Resume, Q1063),
+		// so nought here means a promotion since the last write or a made channel no visit has reached, and the file's stays
+		// (docs/exe/saves.md, "OpenTPW's writer, the objects", a model).
 		var queued = channel.HasQueued
 			? (Role: channel.DeferredAnimID, Entry: channel.DeferredSubAnim, Flags: channel.DeferredFlags, Speed: channel.DeferredSpeed)
 			: (Role: ParkThingStates.NoRole, Entry: file.QueuedEntry, Flags: file.QueuedFlags,

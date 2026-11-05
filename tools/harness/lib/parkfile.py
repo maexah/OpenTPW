@@ -60,6 +60,8 @@
                       3 or 9 or littered, share = littered x 100 // walked, nought with none) (Q417; `-L` prints it)
     litter_set(src, dst, cells, kind=1)   a copy of a file with mLitter (the cell's +29) written on each (x, y) of cells,
                       the sprite handle (+35) left as it is: litter neither game draws, which the advisor's rows 8 and 9 read
+    channel_set(src, dst, item, channel, offset, fmt, value)   a copy of a file with one field of one animation channel's
+                      44-byte record written over (queued speed 40), packed again as thing_set packs it; answers the old value (Q1063)
     thing_set(src, dst, thing, offset, fmt, value)   a copy of a file with one field of one thing's record written
                       over and the block packed again; answers the old value (Q325)
     ring_set(src, dst, [(thing, ring, days, today)])   a copy of a file with objects' day rings (OBJECT_RINGS: customers,
@@ -265,6 +267,24 @@ def thing_set(src, dst, thing, offset, fmt, value):
     data = open(src, 'rb').read(); assert data[0x60d:0x611] == b'BILZ'
     p = Park(src); b = bytearray(zlib.decompress(data[0x629:])); assert bytes(b) == bytes(p.b)
     at = p.at(thing) + offset; was = struct.unpack_from(fmt, b, at)[0]; struct.pack_into(fmt, b, at, value)
+    packed = zlib.compress(bytes(b), 9); head = bytearray(data[:0x629])
+    struct.pack_into('<II', head, 0x611, len(b), 0x629 - 0x60d + len(packed))
+    open(dst, 'wb').write(bytes(head) + packed); return was
+def channel_set(src, dst, item, channel, offset, fmt, value):
+    """A copy of a park file with one field of one animation channel written over: the FIRST ride-system model record of catalogue
+    item `item`, its channel number `channel`, the 44-byte record's `offset` (the file's: role 4, queued role 28, queued entry 32,
+    queued flags 36, queued speed 40) in `struct` format `fmt`, the BILZ block packed again as thing_set packs it. Answers the
+    value it replaced. A jungle file's header alone is known (Q1063: the Belly Bounce, item 1100, queued speed 0.7)."""
+    import zlib
+    data = open(src, 'rb').read(); assert data[0x60d:0x611] == b'BILZ'
+    p = Park(src); b = bytearray(zlib.decompress(data[0x629:])); assert bytes(b) == bytes(p.b)
+    g, hdr, recs = rsys.walk(p)
+    for r in recs or []:
+        if not r: continue
+        at, ch, base = r
+        if struct.unpack_from('<I', b, at + 1)[0] == item and channel < ch: break
+    else: raise SystemExit(f"channel_set: no model record of item {item} with channel {channel}")
+    at = base + 44 * channel + offset; was = struct.unpack_from(fmt, b, at)[0]; struct.pack_into(fmt, b, at, value)
     packed = zlib.compress(bytes(b), 9); head = bytearray(data[:0x629])
     struct.pack_into('<II', head, 0x611, len(b), 0x629 - 0x60d + len(packed))
     open(dst, 'wb').write(bytes(head) + packed); return was
