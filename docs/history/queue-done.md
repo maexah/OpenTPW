@@ -12122,6 +12122,14 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   Fries at 180, the Ice Cream's Y at 270): change `Bytes` to cut them to float too, pin 270 and 180 (0.4f first slot) in
   `ParkRidePointTests`, and put it back to see them fail. If it is 53 or 64, say so in `ride-operation.md` and drop the
   remark at the site.
+- [x] **Q1030. `SetupParticles` before `SetupParkEntities`, tested.** Done (`q1030/PREDICTION.txt`: P1 to P6 held): `Level.SetUpPark( particles, entities, hud )` is the seam (the park branch hands in the three steps; `SetupParticles` is `internal`), and `LevelParkSetupOrderTests` records the order and, with the game, runs the real `SetupParticles` first and asserts `ParticleSystem.Current` and its library where the entities step starts. 6 bugs put back with `mutate.py`: 4 fail (the seam's swap, the particles step not run, the HUD before the entities or not run); 2 survive and are covered by the game alone (the constructor handing the steps in swapped; the null check after the seam). Off-screen, the park's entry logs the catalogue's effects and the park file's density with the order right and logs neither with either swap put back. From Q211 (Q1029 did the other fourteen of the
+  2026-10-04 review's fifteen bugs). `Level`'s park branch sets the particle system up first because
+  `SetupParkEntities` reads `ParticleSystem.Current` (`Catalogue.RegisterParticleEffects`, `ParkPlacedObjects.Start`,
+  `TakeParticleDensity`); swapping the two calls (`q1029/mutations.py`, `m11`) left every test green, and the park branch is
+  reached only by `new Level( ..., Scene.Park )`, which builds models and textures on a graphics device. Either give the
+  scene setup a seam the way Q1027 gave the guest atlas one (the three steps handed in, and `ParticleSystem.Current` asserted
+  non-null where the entities step starts), or confirm it in a running game off-screen: the log's particle line before the
+  catalogue's effects line, with the swap put back and the order seen to flip.
 
 ## B. Docs and comments
 

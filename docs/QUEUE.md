@@ -699,14 +699,6 @@ filed the items that cite it.
   reads the mesh with the most (`0x0046a82c`). Port both, and write the test's expected value from the executable's
   formula, not from the code. Confirm: a ride bought on sloping ground, closed, photographed with `hoardings`; then
   the same panels beside the original's under Proton (their height, which rises first, where the sign sits).
-- [ ] **Q1030. `SetupParticles` before `SetupParkEntities`, tested.** From Q211 (Q1029 did the other fourteen of the
-  2026-10-04 review's fifteen bugs). `Level`'s park branch sets the particle system up first because
-  `SetupParkEntities` reads `ParticleSystem.Current` (`Catalogue.RegisterParticleEffects`, `ParkPlacedObjects.Start`,
-  `TakeParticleDensity`); swapping the two calls (`q1029/mutations.py`, `m11`) left every test green, and the park branch is
-  reached only by `new Level( ..., Scene.Park )`, which builds models and textures on a graphics device. Either give the
-  scene setup a seam the way Q1027 gave the guest atlas one (the three steps handed in, and `ParticleSystem.Current` asserted
-  non-null where the entities step starts), or confirm it in a running game off-screen: the log's particle line before the
-  catalogue's effects line, with the swap put back and the order seen to flip.
 - [ ] **Q1032. A picked-up member's cell, photographed.** From Q211. `ParkHeldStaffFrameTests` shows the draw loop writes no
   quad for the member in the hand (`ParkGuestSprites.WriteTheFrame`), and `PickUpPutsTheMemberInTheHand` shows the census
   predicate; neither shows the picture. Pick a member up in a running park (the staff window's PICK UP), photograph his

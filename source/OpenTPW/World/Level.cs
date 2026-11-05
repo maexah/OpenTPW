@@ -230,9 +230,11 @@ public class Level
 
 		if ( kind == Scene.Park )
 		{
-			SetupParticles();
-			SetupParkEntities();
-			SetupParkHud();
+			SetUpPark( SetupParticles, SetupParkEntities, SetupParkHud );
+
+			// The steps made these; a step handed in that did not would leave the park without its sun or its HUD.
+			if ( SunLight is null || Hud is null )
+				throw new InvalidOperationException( "A park's set-up steps did not make its sun and its HUD." );
 
 			return;
 		}
@@ -240,6 +242,19 @@ public class Level
 		SetupEntities();
 		SetupParticles();
 		SetupHud();
+	}
+
+	/// <summary>
+	/// A park's three set-up steps in the order they must run: the particle system first, because the entities step
+	/// reads <see cref="ParticleSystem.Current"/> (<see cref="Catalogue.RegisterParticleEffects"/>,
+	/// <see cref="ParkPlacedObjects.Start"/>, <see cref="TakeParticleDensity"/>), then the entities, then the HUD. The
+	/// steps are handed in so a test can see the order without a graphics device, which the constructor needs.
+	/// </summary>
+	internal static void SetUpPark( Action particles, Action entities, Action hud )
+	{
+		particles();
+		entities();
+		hud();
 	}
 
 	[MemberNotNull( nameof( SunLight ) )]
@@ -1589,7 +1604,7 @@ public class Level
 	/// it). It shows only after a graphics quality changed mid-run, whose RESTART GAME is left out
 	/// (<see cref="OptionsScreen"/>): here the next level takes the new quality's density.
 	/// </summary>
-	private static void SetupParticles()
+	internal static void SetupParticles()
 	{
 		var density = 1024;
 		var detail = DetailFile;
