@@ -3005,7 +3005,11 @@ public class Level
 	/// (<see cref="UI.ParkShopWindow"/>) are built (the visitor's is
 	/// <see cref="UI.ParkVisitorWindow"/>, opened from the locator and the visitors list, and the staff member's
 	/// <see cref="UI.ParkStaffWindow"/>).
-	/// The original's <c>+0x30</c> (an add-on's ride) and <c>+0x284</c> arms (<c>0x00486978</c>) are not built; no player reaches them here (the world click is guarded), the all-items row's would (<c>docs/exe/park-engine.md</c>, "An add-on has no window and no sale of its own").
+	/// <b>A ride-class thing takes the original's three arms in its order</b> (<c>0x00486945</c> to <c>0x004869d4</c>, <c>docs/exe/park-engine.md</c>,
+	/// "An add-on has no window and no sale of its own"): an item whose <c>AddOn.UpgradeType</c> (<c>+0x288</c>) is 2 opens another
+	/// window (<c>FUN_004b6ae0</c>, unbuilt); else a thing whose <c>mUpgradeParent</c> (<c>+0x30</c>) is not nought opens that ride's own
+	/// window, and is not dispatched again; else an item that fits a ride (<c>AddOn.UpgradesId</c>, <c>+0x284</c>) opens nothing. The
+	/// world click never hands it a type 1 add-on (the hover gives its cell no category); the all-items list's row does.
 	/// </summary>
 	internal void OpenObjectWindow( int thingId )
 	{
@@ -3039,8 +3043,44 @@ public class Level
 			return;
 		}
 
-		// One window, retargeted - the original keeps the shown thing in a global rather than opening a
-		// second copy, which is what makes the two arrows work the way they do.
+		if ( item.AddOnUpgradeType == 2 )
+		{
+			// 0x004b6ae0: the window of [0x007cc3e0]. Lost Kingdom has no such item (space's zob2 is the one).
+			Unimplemented.Report( "ADD_ON_UPGRADE_TYPE_2_WINDOW" );
+			Log.Info( $"Object window: '{item.Name}' is an upgrade type 2 add-on, whose window is not built" );
+			return;
+		}
+
+		// The ride the add-on fits: its window, 0x004af980 on the thing 0x007cfb90 holds for the id, with no second dispatch.
+		if ( placed.UpgradeParent != 0 )
+		{
+			if ( state.TryObject( placed.UpgradeParent, out _ ) )
+			{
+				Log.Info( $"Object window: '{item.Name}' (thing {thingId}) opens the window of its ride, thing {placed.UpgradeParent}" );
+				ShowRideWindow( windows, placed.UpgradeParent );
+			}
+			else
+				Log.Info( $"Object window: '{item.Name}' (thing {thingId}) fits thing {placed.UpgradeParent}, which is not standing" );
+
+			return;
+		}
+
+		// An item that fits a ride and names none opens nothing.
+		if ( item.AddOnUpgradesId != 0 )
+		{
+			Log.Info( $"Object window: '{item.Name}' (thing {thingId}) fits a ride and names none: nothing opens" );
+			return;
+		}
+
+		ShowRideWindow( windows, thingId );
+	}
+
+	/// <summary>
+	/// The ride window for one thing - one window, retargeted: the original keeps the shown thing in a global rather than opening a
+	/// second copy, which is what makes the two arrows work the way they do.
+	/// </summary>
+	private static void ShowRideWindow( WindowStack windows, int thingId )
+	{
 		foreach ( var open in windows.Windows )
 		{
 			if ( open is ParkObjectWindow already )

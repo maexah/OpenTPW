@@ -194,16 +194,10 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
 - [ ] **Q1007. A seated rider's sound on raised ground, in both games (Q1005's "less the ground").** From Q1005. The Bouncy Dino stands on ground 0.0 in ours; in the original `+0xe8` (the draw's height) equalled `+0x8c`, which is ground 0.0 or the sprite's `+0xc4` flag `0x1000000` (not read), and ours subtracts 0.0, so a rider's put-off height "less the ground" (`0x004f9e91`, ours' `PutOffPoint`) is not told from the point itself. Wanted: a ride with riders aboard on ground above nought (a bought ride whose queue joins a path over raised ground, or the Bouncy Dino moved onto a slope with its queue connected; the stock plateau, cells (40..64, 58), has no path to a queue) and the same sale in both games: the original's `+0xc4` and `+0xe8` less `+0x8c` against the ground there (`groundheight.py`), ours' log's z against the node less the ground.
 
 - [ ] **Q946. A person's first step from the entry and from the exit, and the stand point's consumer.** From Q945; its exit-point piece is Q873 (done). Left: (1) the board step routes a guest to the stand point (`FUN_004dedf0( 0 )`, then `FUN_004fa5f0`, state 13, `ride-operation.md`, "The boarding chain, end to end"); ours sends them at the entry cell (`PeepBehaviour.SendTo`) and nothing reads `ParkItemCatalogue.Item.StandPointBytes`, which is built and pinned and unused; build the target from it once (2) is measured. (2) Measure a rider's first step from the entry and from the exit in both games (the first sprite place after the put-down and after the board, polled in the original under Proton, `puffpoll.py`'s sprite table; the same in ours): the original's side needs the original running. (3) The Spray and the Kiosk's till (Q611) is read at the put-down's place, which is now the item's point, not the cell's middle: Q611's numbers ((525, 305) at the Spray, (435, 305) at the Kiosk in ours) have moved with it, re-take them before building Q611.
-- [ ] **Q1041. All-items list: a row's left click opens its thing's window.** From Q1000 (VERIFY-2 lead B). `ParkItemsScreen` sets no
-  `Activated`, so every row's left click counts `LIST_ROW_ACTIVATED_UNANSWERED` (`UiList`); the original's handler
-  `FUN_00495360` posts the row's thing to `Thing_OpenWindow` on message `0x400` (`0x004954ca`). For an add-on's row that
-  is the add-on's ride's window (the `+0x30` arm, `0x00486983`..`0x004869d4`); `Level.OpenObjectWindow` has no `+0x30` or
-  `+0x284` arm (it would open the add-on's own ride window), so the click must route through the original's three arms
-  (`park-engine.md`, "An add-on has no window and no sale of its own"). By the code only; not run in the original.
 - [ ] **Q1042. All-items list: an add-on's row, its place and figures.** From Q1000 (VERIFY-2 lead C). The original's rides tab adds a
   row for every add-on (`FUN_00481bc0( 0x2000 )`, `FUN_00482100`) through `0x00493eb0`, after its ride's row and with the
   RIDE's figures (`FUN_00493cd0`, parent in `esi`); ours lists every placed UiType-0 object with its own figures in the
-  list's sort (`ParkItemsScreen.cs`). Read in the listing, not run: compare in both games with a Tunnel placed.
+  list's sort (`ParkItemsScreen.cs`). Read in the listing, not run: compare in both games with a Tunnel placed. Measured in the original (Q1041, `q1041/orig/run1/c1-allitems.png`, New Save with a Tunnel put down): the rides list is DinoKarts, then its add-ons indented one step under it, one row an add-on (the file's Tunnel and the put-down's, two Tunnel rows), each with the ride's figures.
 - [ ] **Q802. What Q800 left for a person or a machine it did not have.** From Q800 (run 13, lane A). Done by the
   coordinator (2026-10-29): `opentpw.maintainer` set in `~/repos/OpenTPW-laneB`, and the Saturday audit runs
   `python3 tools/check_docs_paths.py`. The Linux quick start is marked "tested on the maintainer's Linux machine only"
@@ -1674,10 +1668,9 @@ filed the items that cite it.
   add-on's body cell does nothing (the hover gives its cell no category, `AddOn.UpgradesId` non-zero and `AddOn.UpgradeType` 1) and a click on its track
   cell arms the track tool; the world click hands `Thing_OpenWindow` no type-1 add-on (a type-2 one opens `[0x007cc3e0]`'s window, `0x004b6ae0`, and
   returns before the `+0x30` test at `0x00486978`; no Lost Kingdom item is type 2). The `+0x30` arm, which opens the
-  add-on's ride's window, is reached from the all-items list's add-on row (`0x004954ca`, by the code), whose left click
-  ours counts for every row (`LIST_ROW_ACTIVATED_UNANSWERED`) (`docs/exe/park-engine.md`, "An add-on has no window and no sale of its own"). Ours opened a ride window for the Tunnel and now opens nothing
+  add-on's ride's window, is reached from the all-items list's add-on row (`0x004954ca`), which ours built in Q1041 (measured in both games; `docs/exe/park-engine.md`, "An add-on has no window and no sale of its own"). Ours opened a ride window for the Tunnel and now opens nothing
   (`ParkObjects.OpensNoWindow`, `ParkAddOnClickTests`). What is left of this item is the other themes' type-2 add-on (space's `zob2`, 3502, on 3109):
-  its click would open the window of `[0x007cc3e0]` (`0x004b6ae0`), not read here.
+  its click would open the window of `[0x007cc3e0]` (`0x004b6ae0`), not read here; ours counts it, `ADD_ON_UPGRADE_TYPE_2_WINDOW` (Q1041).
 - [ ] **Q514. The hover's rows over a track and type `0x15`.** From Q478 (`park-engine.md`, "The rows over a queue and
   an object", "The arms that post nothing"): ours posts the empty row and counts `HOVER_TRACK_CELL_CATEGORY` (track types
   11 and 16, and 12 under a parent not 25) and `HOVER_TYPE_15_ROW` (map type `0x15`). Type `0x15` is read: category 6,

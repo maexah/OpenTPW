@@ -1325,8 +1325,7 @@ clears the stamp; a slider's thumb keeps its press too and leaves the stamp alon
 The original's selected row is the one last hovered, so there a click that misses every row activates that one, and so
 it does here, as every list follows the pointer (Q376). A `UiList` made without the flag would count its miss,
 `LIST_CLICK_MISS_SELECTION_NOT_UNDER_POINTER`; no screen's is. A screen that answers no activation is counted,
-`LIST_ROW_ACTIVATED_UNANSWERED`: the all-items list (the visitors' and all-staff lists answer it), whose row opens the
-row's thing's window in the original (`0x004954ca`). The game menu's rows, the lobby's player slots and Quit Game answer `LeftClicked` and
+`LIST_ROW_ACTIVATED_UNANSWERED`: no screen leaves it now (the all-items list's row opens the row's thing's window, `0x004954ca`, Q1041; the visitors' and all-staff lists answer it too). The game menu's rows, the lobby's player slots and Quit Game answer `LeftClicked` and
 `RightClicked`, the preview `LeftClicked`, and a slider's track pages towards a click of either button
 (`UiSlider.LeftClickedAt`, `RightClickedAt`), where it paged on the press. The console's `click` makes the click a
 short press would. Not built: a list's column message `0x404`, which no screen answers; the middle button; a

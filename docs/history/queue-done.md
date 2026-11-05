@@ -12641,3 +12641,10 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `ArchiveDamageTests.EveryInstalledWadEntryStillDecodes` asserts its count and hash. Seams for them are in the commit;
   32 mutants fail a test (`q1029/mutations2.py`). `SetupParticles` before `SetupParkEntities` is Q1030. No game run
   (Q211 says so). **Done 2026-11-05.**
+- [x] **Q1041. All-items list: a row's left click opens its thing's window.** From Q1000 (VERIFY-2 lead B). `ParkItemsScreen` sets no
+  `Activated`, so every row's left click counts `LIST_ROW_ACTIVATED_UNANSWERED` (`UiList`); the original's handler
+  `FUN_00495360` posts the row's thing to `Thing_OpenWindow` on message `0x400` (`0x004954ca`). For an add-on's row that
+  is the add-on's ride's window (the `+0x30` arm, `0x00486983`..`0x004869d4`); `Level.OpenObjectWindow` has no `+0x30` or
+  `+0x284` arm (it would open the add-on's own ride window), so the click must route through the original's three arms
+  (`park-engine.md`, "An add-on has no window and no sale of its own"). By the code only; not run in the original.
+  **Done (2026-11-05):** run in the original, every tab's row opens its thing's window and an add-on's row its ride's; `ParkItemsScreen` answers `Activated`, `Level.OpenObjectWindow` takes the three arms (`ParkItemsRowClickTests`, `docs/exe/park-engine.md`).

@@ -253,6 +253,10 @@ internal sealed class ParkItemsScreen : UiWindow
 
 			// A right click on the list moves the camera to the selected row's thing and closes the screen (0x00495584).
 			RowRightClicked = GoTo,
+
+			// A row's left click (0x400, 0x00495495) hands the row's thing to Thing_OpenWindow (0x004954ca); the window opens
+			// over this screen, which closes (a park screen at a time). An add-on's row opens its ride's.
+			Activated = thing => Level.Current?.OpenObjectWindow( thing ),
 			SortChanged = word => _sorts[_tab] = word,
 
 			// Every sub-builder's FUN_006636b2( 0, 0 ): the name is sorted as text.
