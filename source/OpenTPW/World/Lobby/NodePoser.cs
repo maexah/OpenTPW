@@ -169,8 +169,12 @@ public sealed class NodePoser : IChannelPosed
 				if ( !Holds( node ) || track.Rotations.Length == 0 )
 					continue;
 
-				// Sampled as MeshRotator samples it, held at the first key before that key's frame, where the engine's key
-				// search answers nought and skips the track (Anim_FindKey) - not the original's, not measured here.
+				// Before the first key's frame the engine's key search (Anim_FindKey, 0x00470b60, the keys at or before the
+				// frame's truncation) answers nought and the track is skipped (0x00471c56): the node keeps the turn it holds,
+				// the rest after a change of clip, the last key of the pass before when the clip comes round (docs/exe/park.md, FUN_00471860).
+				if ( (int)frame < track.FrameIndices[0] )
+					continue;
+
 				var at = _local[node].Translation;
 				var turned = Matrix4x4.CreateFromQuaternion( track.Sample( frame ) ) * _restTurnInverse[node] * _rest[node];
 

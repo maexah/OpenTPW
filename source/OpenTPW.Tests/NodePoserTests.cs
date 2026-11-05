@@ -201,6 +201,120 @@ public class NodePoserTests
 	}
 
 	/// <summary>
+	/// <b>Before a rotation track's first key the node keeps the turn it holds</b> (<c>FUN_00471860</c>, <c>0x00471c56</c>: the key search
+	/// answers nought and the track is skipped). The leaf rests turned 5 degrees about z, is keyed from frame 14 at 10 and then 30 degrees:
+	/// a first play at frame 5 leaves it at its rest (5), a pass that comes round to frame 5 again leaves it where the last key put it (30), and a
+	/// change of clip that puts it back leaves it at the rest again; frame 13.9 is still before the key, frame 14 is the key itself.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the first key held before its frame (10, as <c>MeshRotator</c> does); the skip tested on the rounded frame
+	/// (13.9 would be the key); the track skipped up to and including its first frame (frame 14 would keep the held turn).</remarks>
+	[TestMethod]
+	public void BeforeARotationTracksFirstKeyTheNodeKeepsTheTurnItHolds()
+	{
+		static float Z( Matrix4x4 local ) => MathF.Round( MathF.Atan2( local.M12, local.M11 ) * 180f / MathF.PI, 1 );
+
+		var rest = Matrix4x4.CreateRotationZ( 5f * MathF.PI / 180f ) * Matrix4x4.CreateTranslation( 3, 4, 5 );
+		var poser = new NodePoser( [rest, Matrix4x4.Identity], [1, -1], 0 );
+		var clip = Clip();
+
+		clip.RotationTracks.Add( new()
+		{
+			TargetIndex = 0,
+			FrameIndices = [14, 40],
+			Rotations = [Quaternion.CreateFromAxisAngle( Vector3.UnitZ, 10f * MathF.PI / 180f ), Quaternion.CreateFromAxisAngle( Vector3.UnitZ, 30f * MathF.PI / 180f )],
+			CurveIds = [AnimationFile.RotationTrack.NoCurve, AnimationFile.RotationTrack.NoCurve]
+		} );
+
+		poser.Pose( clip, 5 );
+		Assert.AreEqual( 5f, Z( poser.Local( 0 ) ), "a first play, before the first key: the rest" );
+
+		poser.Pose( clip, 13.9f );
+		Assert.AreEqual( 5f, Z( poser.Local( 0 ) ), "frame 13.9 is before the key at 14" );
+
+		poser.Pose( clip, 14 );
+		Assert.AreEqual( 10f, Z( poser.Local( 0 ) ), "the first key itself" );
+
+		poser.Pose( clip, 60 );
+		Assert.AreEqual( 30f, Z( poser.Local( 0 ) ), "the last key" );
+
+		poser.Pose( clip, 5 );
+		Assert.AreEqual( 30f, Z( poser.Local( 0 ) ), "the clip comes round: the last key of the pass before, not the first key and not the rest" );
+		Near( new( 3, 4, 5 ), poser.Local( 0 ).Translation, "its place is the rest's" );
+
+		poser.Rest( clip, null );
+		poser.Pose( clip, 5 );
+		Assert.AreEqual( 5f, Z( poser.Local( 0 ) ), "after a change of clip that puts the node back: the rest" );
+	}
+
+	/// <summary>
+	/// <b>Mumbo's leaf holds the last key of the pass before until frame 14</b> (Q1004): <c>jm_leaf</c> is keyed from frame 14 in <c>m</c>, <c>e</c> and <c>s</c>,
+	/// its first key its rest turn and its last key 3.74 degrees from it (the rows [0.99945 0.00003 -0.03307] [-0.00118 0.99939 -0.03483]
+	/// [0.03305 0.03485 0.99885]), and the original's leaf, polled live, stood at those rows through the first 14 frames of a pass that came after
+	/// another (<c>q1004/orig/</c>). Read from the game's own <c>mumbo.wad</c>.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the first key held before its frame; the track posed from frame 0.</remarks>
+	[TestMethod]
+	public void MumbosLeafKeepsThePassBeforesLastKeyUntilFrame14()
+	{
+		var data = GameData.Required();
+		var item = new ParkItemCatalogue( "jungle", data ).All.Single( item => item.Stem == "mumbo" );
+		using var modelStream = new System.IO.MemoryStream( data.ReadAllBytes( $"{item.Directory}/{item.Stem}.MD2" ) );
+		var model = new ModelFile( modelStream );
+		var leaf = model.Nodes.FindIndex( node => node.Name == "jm_leaf" );
+		var clips = new System.Collections.Generic.Dictionary<string, AnimationFile>();
+
+		foreach ( var suffix in new[] { "m", "e", "s" } )
+		{
+			using var clipStream = new System.IO.MemoryStream( data.ReadAllBytes( $"{item.Directory}/{item.Stem}{suffix}.MD2" ) );
+			clips[suffix] = new AnimationFile( clipStream );
+		}
+
+		static float[] Rows( Matrix4x4 m ) => [m.M11, m.M12, m.M13, m.M21, m.M22, m.M23, m.M31, m.M32, m.M33];
+
+		float[] last = [0.99945f, 0.00003f, -0.03307f, -0.00118f, 0.99939f, -0.03483f, 0.03305f, 0.03485f, 0.99885f];
+		float[] first = [0.99905f, -0.04362f, 0f, 0.04362f, 0.99905f, 0f, 0f, 0f, 1f];
+
+		void Is( float[] expected, Matrix4x4 actual, string what )
+		{
+			var rows = Rows( actual );
+
+			for ( var i = 0; i < 9; ++i )
+				Assert.AreEqual( expected[i], rows[i], 0.002f, $"{what}: element {i}" );
+		}
+
+		var restPoser = new NodePoser( model );
+
+		Is( first, restPoser.Local( leaf ), "the leaf's rest turn is the first key" );
+
+		foreach ( var (suffix, clip) in clips )
+		{
+			Assert.AreEqual( 14, clip.RotationTracks.Single( track => track.TargetIndex == leaf ).FrameIndices[0], $"{suffix}'s first key" );
+
+			var poser = new NodePoser( model );
+
+			poser.Pose( clip, clip.DeclaredLastFrame );
+			Is( last, poser.Local( leaf ), $"{suffix} at its end" );
+
+			foreach ( var frame in new[] { 0f, 7f, 13.9f } )
+			{
+				poser.Pose( clip, frame );
+				Is( last, poser.Local( leaf ), $"{suffix} comes round, frame {frame}" );
+			}
+
+			poser.Pose( clip, 14 );
+			Is( first, poser.Local( leaf ), $"{suffix} at frame 14, the first key" );
+		}
+
+		// A change of clip from m to e: both turn the leaf, so the engine puts nothing back (FUN_00472310) and e's first frames keep m's last turn.
+		var changed = new NodePoser( model );
+
+		changed.Pose( clips["m"], 150 );
+		changed.Rest( clips["m"], clips["e"] );
+		changed.Pose( clips["e"], 3 );
+		Is( last, changed.Local( leaf ), "m to e: the leaf is left as m ended" );
+	}
+
+	/// <summary>
 	/// <see cref="LobbyModel.Pose"/> sends a clip through the tree by <see cref="NodePoser.Drives(AnimationFile, int)"/> with the model's mesh
 	/// count, not by the mesh-blind <see cref="NodePoser.Drives(AnimationFile)"/>. A <c>LobbyModel</c> needs the graphics device to be made,
 	/// so the wiring is read from the source, as <c>ParkCoasterPylonsTests</c> reads its own.

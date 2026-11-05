@@ -67,6 +67,14 @@ public static class DebugConsole
 	/// <summary>The length of one axis row of a matrix.</summary>
 	private static float AxisLength( float x, float y, float z ) => MathF.Sqrt( (x * x) + (y * y) + (z * z) );
 
+	/// <summary>A row made unit, as <c>[x y z]</c>.</summary>
+	private static string UnitRow( float x, float y, float z )
+	{
+		var length = AxisLength( x, y, z );
+
+		return length > 0f ? $"[{x / length:F5} {y / length:F5} {z / length:F5}]" : "[0 0 0]";
+	}
+
 	private static void Record( float delta )
 	{
 		_frames[_frameIndex] = delta * 1000.0;
@@ -2878,8 +2886,9 @@ public static class DebugConsole
 						+ $"flags 0x{meshesChannel.Flags:x}, bound {meshesPlayers!.BoundOn( 0 )}") );
 
 				// `meshes THING axes`: each node's own axis lengths as the node tree last posed them, for a scale track's
-				// keys against the original's (modelnodes.py --axes reads its nodes' +0x10 rows).
-				if ( parts.Length > 2 && parts[2] == "axes" )
+				// keys against the original's (modelnodes.py --axes reads its nodes' +0x10 rows). `rows` adds each node's three
+				// rows made unit, its turn as last posed, for a rotation key's held turn (Q1004; leafpoll.py reads the same rows).
+				if ( parts.Length > 2 && parts[2] is "axes" or "rows" )
 				{
 					for ( var node = 0; node < meshesModel.Source.Nodes.Count; ++node )
 					{
@@ -2888,6 +2897,7 @@ public static class DebugConsole
 
 						Reply( $"  node {node} {name} axes ({AxisLength( local.M11, local.M12, local.M13 ):F4}, "
 							+ $"{AxisLength( local.M21, local.M22, local.M23 ):F4}, {AxisLength( local.M31, local.M32, local.M33 ):F4})"
+							+ (parts[2] == "rows" ? $" rows {UnitRow( local.M11, local.M12, local.M13 )} {UnitRow( local.M21, local.M22, local.M23 )} {UnitRow( local.M31, local.M32, local.M33 )}" : "")
 							+ (meshesModel.PosedLocal( node ) is null ? " rest" : "") );
 					}
 				}

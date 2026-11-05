@@ -191,9 +191,10 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   clips turn such a node (`NodePoser`, the clips' tracks). Beside it, the Crazy Ape's heads in its OnAMesh clips (role 5, drawn by the same rest-in-mesh turn, their parent a
   mesh no morph poses there) against `q917/orig/pauses.jsonl`, once `headframe.py` pairs by the role's clip entry as well as the frame (it pairs by role and frame alone; role 5
   holds seven clips, so `q1003/headframe-ape2-role5.txt`'s 1 of 7 is not a measure). Build only if a turn is missing.
-- [ ] **Q1004. The `jm_leaf` first key in Mumbo's `m`, `e` and `s` clips (frame 14, `0x00471c56`).** From Q947 and Q940's second piece. Measure the key in the original and in
-  ours, then build the skip in `NodePoser.Pose`. From Q940: the original keeps the node's turn until the first key (`0x00471c56`), about 3.7 degrees from the last
-  (unmeasured here); `NodePoser` holds the first key (`docs/exe/park.md`, `FUN_00471860`); the build depends on the decode.
+- [ ] **Q1010. `MeshRotator` holds a first key before its frame; Mumbo's `c` clip (`jm_leaf`, frame 12).** From Q1004. A clip that turns meshes alone is posed by `MeshRotator`, whose `AnimationFile.RotationTrack.Sample` holds the
+  first key before it; the original skips the track (`0x00471c56`) and the node keeps the turn it holds (`park.md`, `FUN_00471860`). By a scan of the 153 such clips (`q1004/keyscan-meshonly.out`) 8 tracks start past frame 0 and
+  one has a first key off the node's rest turn: Mumbo's `c`, `jm_leaf` at frame 12, 3.74 degrees (its first and last key are one turn; the rest is the other). Measure it in the original first (when does Mumbo play `c`, and what
+  does the leaf hold before frame 12: `leafpoll.py` on a ride in that clip), then build the same skip in `MeshRotator.Pose` with the held turn kept as `NodePoser` keeps it.
 
 - [ ] **Q1007. A seated rider's sound on raised ground, in both games (Q1005's "less the ground").** From Q1005. The Bouncy Dino stands on ground 0.0 in ours; in the original `+0xe8` (the draw's height) equalled `+0x8c`, which is ground 0.0 or the sprite's `+0xc4` flag `0x1000000` (not read), and ours subtracts 0.0, so a rider's put-off height "less the ground" (`0x004f9e91`, ours' `PutOffPoint`) is not told from the point itself. Wanted: a ride with riders aboard on ground above nought (a bought ride whose queue joins a path over raised ground, or the Bouncy Dino moved onto a slope with its queue connected; the stock plateau, cells (40..64, 58), has no path to a queue) and the same sale in both games: the original's `+0xc4` and `+0xe8` less `+0x8c` against the ground there (`groundheight.py`), ours' log's z against the node less the ground.
 
