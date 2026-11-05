@@ -686,7 +686,6 @@ filed the items that cite it.
   formula, not from the code. Confirm: a ride bought on sloping ground, closed, photographed with `hoardings`; then
   the same panels beside the original's under Proton (their height, which rises first, where the sign sits).
 - [ ] **Q1043. The all-items panel's top and its close button.** From Q1042's side-by-side (`q1042/side-by-side-order.png`): ours draws the panel's top black behind the four tabs where the original shows its green waves, and its close button a red cross where the original shows a green tick. Seen, not measured; find which picture each uses in the original (`hud.md`) before building.
-- [ ] **Q1034. The lobby's bolt, seen in a frame.** From Q152. Its off-screen run struck with the camera on the player-select view (no island current, so the strike lands at the world origin over open sea and no bolt is in shot), so the lobby's 0.5 s is proved by the census alone (`life=0.500`, flash 0.000 from 0.51 s). Strike with the camera on an island, frames every 100 ms, and photograph it on the desk (rule 6). The whole-frame lift of the lobby is not a usable metric: after `freeze` it still carries 15 to 30 grey levels for a second, in the bolt-free control too (`q152/run-control1`, `run-fix5`), so find what moves (the flyers, the sky's ease, a glow) before measuring the bolt there.
 - [ ] **Q1035. The bolt's shape is the PC's own, and OpenTPW draws one quad.** From Q152's note (fork review 2, 2026-10-16, `verify-audio-lips-video.md` lead 3): the constructor (`0x0057d2ab`..`0x0057d2e9`) sets roughness 0.6, a stop test of 6 ± 2, a ribbon half-width of 1.3 /
   (depth + 1) in screen units and branch odds of 9 in 512; the midpoint step is `0x0057e4b0` (its offset is not
   perpendicular: it uses |mid|², and its cross term is × 0.0), the branch heading `0x0057e810`, the colour pulse
@@ -704,6 +703,7 @@ filed the items that cite it.
   Run the original's bolt first (`record.sh`, a park strike: what a near-black frame looks like under its blend state,
   whether the clock stops when paused), then build the envelope, the slots and the grey, each with its bug put back,
   and photograph ours beside it. The bolt's shape is Q1035.
+- [ ] **Q1037. The lobby's bolt, photographed on the desk.** From Q1034, whose frames are lavapipe's (lane B, off-screen); rule 6 asks the desk's. Island 0, `attract off`, `settle`, `freeze`, `pause`, `near` says `axisDist=-` (nothing has struck), `strike`, `step 6` and shoot at ages 0.1, 0.2 and 0.3 s (`q1034/confirm2.py` gives the lift; the column should stand at about x 790..830 of a 1280 x 720 frame, behind the player panel, `q1034/compare-fix-control.png`), then the original's lobby bolt on the same island under Proton (`TOOLING.md`, "The original under Proton") for the brightness and the width.
 - [ ] **Q212. The ride window's other statuses. Decode first.** Found by the 2026-10-04 review (`u7-ride-door-6`,
   `-7`, `-9`, `-10`). `FUN_00485f60` answers (80/100/255) 5..9 for a ride waiting for an upgrade, `0xb`..`0xf` for a toilet's
   call to the handyman and `0x11`..`0x15` for a mechanic called (`+0x64`), `0x15` (UITEXT 385, "REPAIRS IN PROGRESS")
