@@ -682,7 +682,8 @@ filed the items that cite it.
   perpendicular: it uses |mid|², and its cross term is × 0.0), the branch heading `0x0057e810`, the colour pulse
   `0x0057ee30`, whose grey can pass 255 and wrap to near black. `Lightning.cs` draws one quad 9 wide. Decode first
   (the shape against a run of the original's bolt, `record.sh`), then build the jagged ribbon and its branches.
-- [ ] **Q1037. The lobby's bolt, photographed on the desk.** From Q1034, whose frames are lavapipe's (lane B, off-screen); rule 6 asks the desk's. Island 0, `attract off`, `settle`, `freeze`, `pause`, `near` says `axisDist=-` (nothing has struck), `strike`, `step 6` and shoot at ages 0.1, 0.2 and 0.3 s (`q1034/confirm2.py` gives the lift; the column should stand at about x 790..830 of a 1280 x 720 frame, behind the player panel, `q1034/compare-fix-control.png`), then the original's lobby bolt on the same island under Proton (`TOOLING.md`, "The original under Proton") for the brightness and the width.
+  - **Note (Q1037, 2026-11-05):** measured on the desk, ours' column is a soft pale band, half-peak width 27 px of a 1280 x 720 frame with a white core 12..14 px wide (pixels whose smallest channel is over 215), reaching 255; the original's lobby bolt (`q1037/orig/run1/fr/f033.png`, 1024 x 768) is a jagged white ribbon with branches, core 4 px median over its rows, with a pale glow beside it. Both reach 255 and both go near-black on the wrapped frames.
+- [ ] **Q1050. The lobby's strike inverts the 3D scene for one frame, and ours does not (Q715's film, made; folds Q715).** From Q1037 (`q1037/orig/run1`, `q1037/side-by-side-lobby-bolt.png`). The original's lobby, Lost Kingdom's island, filmed at 30 fps while its own roll struck (`tools/harness/original/lobbystrike.py`): 13 strikes in 26 s and 13 flash frames, each one frame after its strike's first read (`orig/run1/bolt.log` against `means.txt`; a strike inside a live bolt's 0.5 s flashes again, frames 36 and 42 inside the strike at 26), and no other frame moves: the picture's mean rises 21..28 grey levels for one frame and falls back. The flash inverts the 3D scene (sky, sea, island, flyers, the bolt) and not the UI drawn after it (the panel, the key, its text, the version): `orig/run1/fr/f027.png`. Ours' frame mean moves at most 1.4 across a strike: no inversion, and no `LOBBY_BOLT_FLASH` count either (`Unimplemented.Report`, rule 4: still unwritten, a gap since Q715). Build `Unimplemented.Report( "LOBBY_BOLT_FLASH" )` first, then the quad as `lobby.md`, "The lobby's bolt inverts the screen for one frame", and Q715's note read it (key 0.001, state `0x9a1`, after the queued entries of key above 0.001, before the bolts and rain, before the UI), once per lobby bolt call (`0x005e1100`, flag `0x0057dc70`; a park's bolt has none). Confirm as Q1037 did: `strike`, `step`, the whole-picture mean per frame, and a frame, beside `orig/run1`.
 - [ ] **Q1045. The figure of a picked-up member at the pointer (`STAFF_PICKED_UP_PREVIEW`).** The type-6 mode's sprite (vtable `0x006fea70`;
   `docs/exe/hud.md`, "The person's windows"): the original hangs a figure of the picked-up member at the pointer (`q1032/orig/a-2-pickup.png`); ours
   counts `STAFF_PICKED_UP_PREVIEW` (ParkPeople.cs) and keeps the plain arrow. Counted since Q432, never queued. Decode first whether type 6 shares the carried
@@ -3431,19 +3432,6 @@ state machine.
 - [ ] **Q80. Two tests the lobby audit asked for (plan item 13, the rest).** A save round trip against a real
   game-written file (it wants a sitting with the original to make one), and `LobbyScript` over the four shipped island
   scripts. Sound categories are covered by `SoundCategoryTests`.
-- [ ] **Q715. The lobby's bolt inverts the screen for one frame (low priority: the lobby, not Lost Kingdom's park).** From
-  the fork watch, 2026-10-19 (`verify-other-b.md` M1; `lobby.md`, "The lobby's bolt inverts the screen for one frame").
-  The park's bolt has none, so only the lobby is affected. After the lobby bolt's call the original sets a flag, and the next
-  frame draws a white full-screen quad through INVDESTCOLOR/ZERO blending (1 - destination) once. Not traced: the state
-  word's path to the blend states, and no run of the original has shown the frame (the fork's capture saw none either), so
-  film the original's lobby in a storm (`record.sh`) before building, and count the unbuilt flash `LOBBY_BOLT_FLASH` (rule 4) until it is. Pairs
-  with Q152 (the bolt's lifetime).
-  - **Note (fork watch 2026-10-25, verify-all.md M1):** the order is read: the flush `0x00582ad0` sorts descending (`0x005829e0`) unless the device word
-    carries `0x20000000` with `0xc` (`0x00566c22` can set it; the reference install's park word, `0x1444100`, lacks it; the lobby's
-    word is not measured). The bolts (state `0x200d52`) and the drops key 0, the invert quad 0.001 (state `0x9a1`), and none
-    of these three states carries `0x3000`, so all are queued: the quad is drawn before the bolts and rain. Build: draw the quad
-    after every queued entry whose key is above 0.001 and before the key-0 bolts and rain; what is drawn at submit (`0x3000`) comes
-    before the flush and is inverted. Not proven: the keys of translucent meshes and the sky, and the bolt in play (the film above).
 - [ ] **Q721. Each lobby island and gate turned by its ISLAND heading.** From the upstream look, 2026-10-19
   (`verify-sound-ui.md` L2). The island constructor `0x005dfa60` stores `island[+0x14]` = the ISLAND line's heading field
   x pi / 180, hands that radian value twice to `FUN_005d8380` (the isle's model instance `[island+4]`, then the gate's

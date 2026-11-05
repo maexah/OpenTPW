@@ -887,8 +887,12 @@ each isle as its first choice (`LobbyIsland.OnUpdate`): four for each lobby buil
 
 ## The lobby's bolt inverts the screen for one frame (fork watch 2026-10-19)
 
-Read from the listing of `testme.exe`; no game run, and not seen in play (fork watch 2026-10-19, `verify-other-b.md` M1, the
-confirmed part). The flash is the **lobby's alone**: the park's bolt (`0x00512b4c` calling `0x00580320`) never sets it, so Lost
+Read from the listing of `testme.exe` (fork watch 2026-10-19, `verify-other-b.md` M1, the confirmed part), and **seen in the running
+original (Q1037, `q1037/orig/run1`)**: Lost Kingdom's island, a player picked, the nearest island's lightning mask held at 63 so the game's own
+roll (`0x005e0f58`: `(island[+0x5c] & rand) == 1`, the bolt at `island[+0x3c]`) struck, filmed at 30 fps: 13 strikes in 26 s and 13 flash frames, each one
+frame after its strike's first read and no other (a strike inside a live bolt's 0.5 s flashes again), the picture's mean up 21..28 grey levels for
+that one frame. **The flash inverts the 3D scene (sky, sea, island, flyers, the bolt) and not the UI drawn after it** (the panel, the key and its
+text, the version). Lost Kingdom's island never strikes by itself (its `LIGHTNING` is 0; only Hallow's, 63, does). The flash is the **lobby's alone**: the park's bolt (`0x00512b4c` calling `0x00580320`) never sets it, so Lost
 Kingdom's park has none (Q715).
 
 - The flag is the byte `[this+4]` of the flash object; its one writer is `0x0057dc70` (`MOV [ECX+4], 1`), whose one
