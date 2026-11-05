@@ -10,7 +10,7 @@ original game under Proton beside it. Each file's docstring (or its opening comm
 |---|---|
 | `lib/` | Shared by every task: the run scaffold (`parkrun.py`, which `exec`s `gamedrive.py`), the park-file reader (`parkfile.py`), `mutate.py`, `stryker.sh`, the frame and sound measures, and `paths.py` / `paths.sh`. |
 | `original/` | Drives the original game under Proton: `original.sh` starts and stops it, `tpwmem.py` reads its memory at Ghidra addresses, `gmove.py` moves its pointer, `record.sh` films it, `watch.sh` finds who writes an address. |
-| `dotnet/` | Seven small C# readers built on `OpenTPW.Files`: `wadcat` (a wad's entries), `wct2raw` (a texture to raw RGBA), `rselisting` (a ride script's listing), and `cliptracks`, `hfsamplers`, `normdump` and `walkriders` (`docs/TOOLING.md`). |
+| `dotnet/` | Seven small C# readers built on `OpenTPW.Files`: `wadcat` (a wad's entries), `wct2raw` (a texture to raw RGBA), `rselisting` (a ride script's listing), and `cliptracks`, `hfsamplers`, `normdump` and `walkriders` (`docs/TOOLING.md`); beside them `seedsweep/`, which is not a reader but the scratch that sweeps a test's default generators over seeds (`apply.py`, `run.sh`; it edits the product until `--revert`). |
 
 Everything here runs on **Linux with X11** (or XWayland). Nothing here is part of the build or the tests.
 
