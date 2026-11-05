@@ -39,6 +39,9 @@ public class MeshRotator
 	private readonly int[][] _descendants;
 	private readonly int[] _motionEnds;
 
+	/// <summary>The raw key each mesh was last posed from, which a node-tree poser takes over (<see cref="TakeHeld"/>); null where none stands.</summary>
+	private readonly Quaternion?[] _held;
+
 	private int _current;
 	private float _elapsed;
 
@@ -55,6 +58,7 @@ public class MeshRotator
 		_restInverses = BuildRestInverses( localTransforms );
 		_baseOffsets = offsets.Select( offset => offset.GetSystemVector3() ).ToArray();
 		_descendants = BuildDescendants( parentIndices );
+		_held = new Quaternion?[entities.Length];
 
 		_baseInverses = new Matrix4x4[baseTransforms.Length];
 		for ( int i = 0; i < baseTransforms.Length; ++i )
@@ -126,11 +130,17 @@ public class MeshRotator
 			if ( target < 0 || target >= _entities.Length )
 				continue;
 
+			// Before the first key's frame the engine's key search answers nought and the track is skipped (0x00471c56): the
+			// node keeps the turn it holds (docs/exe/park.md, FUN_00471860), as NodePoser.Pose keeps it - the rest on a model
+			// just built (Mumbo's `c`, whose leaf stands at rest until frame 12, Q1010).
+			if ( track.Rotations.Length == 0 || (int)frame < track.FrameIndices[0] )
+				continue;
+
 			// Same Y/Z swap the meshes go through; that swap flips handedness, so the rotation
 			// is conjugated too.
-			// Not the original's: before a track's first key the engine skips it (0x00471c56) and the node keeps the turn it
-			// holds; Sample holds the first key (Mumbo's `c`, Q1010).
 			var q = track.Sample( frame );
+
+			_held[target] = q;
 			var rotation = Matrix4x4.CreateFromQuaternion( new Quaternion( q.X, q.Z, q.Y, -q.W ) );
 
 			// The keyframe is the orientation the mesh should hold rather than a turn to add to
@@ -224,7 +234,12 @@ public class MeshRotator
 	/// Which meshes the change shows and hides is not this class's: <see cref="LobbyModel.ShownAtRest"/> and <see cref="LobbyModel.HiddenAtBind"/>.
 	/// </para>
 	/// </summary>
-	public void Rest( AnimationFile outgoing )
+	/// <param name="incoming">
+	/// The clip about to play, whose own rotation tracks the engine leaves as <paramref name="outgoing"/> left them (the
+	/// channel mask of <c>FUN_00472310</c>, as <see cref="NodePoser.Rest"/>): a mesh both clips turn keeps its turn, which the
+	/// incoming one holds until its track's first key.
+	/// </param>
+	public void Rest( AnimationFile outgoing, AnimationFile? incoming = null )
 	{
 		foreach ( var track in outgoing.RotationTracks )
 		{
@@ -233,10 +248,32 @@ public class MeshRotator
 			if ( target < 0 || target >= _entities.Length )
 				continue;
 
+			if ( incoming != null && incoming.RotationTracks.Exists( other => other.TargetIndex == target ) )
+				continue;
+
+			_held[target] = null;
 			_entities[target].LinearTransform = _baseTransforms[target];
 
 			foreach ( var child in _descendants[target] )
 				_entities[child].LinearTransform = _baseTransforms[child];
+		}
+	}
+
+	/// <summary>
+	/// The turns this rotator's last poses left on its meshes, each mesh with the raw key it was posed from, handed over once: a model
+	/// has one matrix a node, where a clip that turns meshes alone is posed here and one that moves the node tree by a
+	/// <see cref="NodePoser"/> (Mumbo's <c>c</c>, then <c>m</c>), so the poser takes up the turn the clip before left or its first pose
+	/// would put the node back to rest, where the original's holds it (<see cref="NodePoser.Pose"/>).
+	/// </summary>
+	internal IEnumerable<(int Node, Quaternion Key)> TakeHeld()
+	{
+		for ( int node = 0; node < _held.Length; ++node )
+		{
+			if ( _held[node] is { } key )
+			{
+				_held[node] = null;
+				yield return (node, key);
+			}
 		}
 	}
 

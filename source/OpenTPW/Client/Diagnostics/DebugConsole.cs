@@ -2887,7 +2887,8 @@ public static class DebugConsole
 
 				// `meshes THING axes`: each node's own axis lengths as the node tree last posed them, for a scale track's
 				// keys against the original's (modelnodes.py --axes reads its nodes' +0x10 rows). `rows` adds each node's three
-				// rows made unit, its turn as last posed, for a rotation key's held turn (Q1004; leafpoll.py reads the same rows).
+				// rows made unit, its turn as last posed, for a rotation key's held turn (Q1004; leafpoll.py reads the same rows), and, for a mesh, the
+				// rows its entity is drawn with (`drawn`, or `none` before any pose): a clip that turns meshes alone is posed onto the entities, not into the tree (Q1010).
 				if ( parts.Length > 2 && parts[2] is "axes" or "rows" )
 				{
 					for ( var node = 0; node < meshesModel.Source.Nodes.Count; ++node )
@@ -2898,7 +2899,11 @@ public static class DebugConsole
 						Reply( $"  node {node} {name} axes ({AxisLength( local.M11, local.M12, local.M13 ):F4}, "
 							+ $"{AxisLength( local.M21, local.M22, local.M23 ):F4}, {AxisLength( local.M31, local.M32, local.M33 ):F4})"
 							+ (parts[2] == "rows" ? $" rows {UnitRow( local.M11, local.M12, local.M13 )} {UnitRow( local.M21, local.M22, local.M23 )} {UnitRow( local.M31, local.M32, local.M33 )}" : "")
-							+ (meshesModel.PosedLocal( node ) is null ? " rest" : "") );
+							+ (meshesModel.PosedLocal( node ) is null ? " rest" : "")
+							+ (parts[2] == "rows" && node < meshesModel.Entities.Length
+								? " drawn " + (meshesModel.Entities[node].LinearTransform is { } drawn
+									? $"{UnitRow( drawn.M11, drawn.M12, drawn.M13 )} {UnitRow( drawn.M21, drawn.M22, drawn.M23 )} {UnitRow( drawn.M31, drawn.M32, drawn.M33 )}" : "none")
+								: "") );
 					}
 				}
 

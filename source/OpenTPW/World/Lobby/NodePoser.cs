@@ -150,6 +150,22 @@ public sealed class NodePoser : IChannelPosed
 		Compose();
 	}
 
+	/// <summary>
+	/// Puts node <paramref name="node"/>'s turn to the orientation <paramref name="key"/> names, as a rotation key does (its own turn
+	/// taken out first, its place kept), without composing the tree: the turn a <see cref="MeshRotator"/> pose left, taken up where a
+	/// clip that moves the tree follows it (<see cref="LobbyModel.Pose"/>).
+	/// </summary>
+	internal void Keep( int node, Quaternion key )
+	{
+		if ( !Holds( node ) )
+			return;
+
+		var turned = Matrix4x4.CreateFromQuaternion( key ) * _restTurnInverse[node] * _rest[node];
+
+		turned.Translation = _local[node].Translation;
+		_local[node] = turned;
+	}
+
 	/// <summary>Poses every track <paramref name="clip"/> carries at <paramref name="frame"/>, then the whole tree.</summary>
 	public void Pose( AnimationFile clip, float frame )
 	{
@@ -176,11 +192,7 @@ public sealed class NodePoser : IChannelPosed
 				if ( (int)frame < track.FrameIndices[0] )
 					continue;
 
-				var at = _local[node].Translation;
-				var turned = Matrix4x4.CreateFromQuaternion( track.Sample( frame ) ) * _restTurnInverse[node] * _rest[node];
-
-				turned.Translation = at;
-				_local[node] = turned;
+				Keep( node, track.Sample( frame ) );
 			}
 		}
 

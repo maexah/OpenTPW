@@ -936,6 +936,13 @@ public sealed class LobbyModel : IChannelPosed
 			// Kingdom model plays one on a channel below a clip that moves nodes (the Inca Totem's are channels 1 to 3).
 			var poser = Poser();
 
+			// What a clip that turned meshes alone left stands in the tree before this clip is posed (MeshRotator.TakeHeld).
+			if ( Rotator != null )
+			{
+				foreach ( var (node, key) in Rotator.TakeHeld() )
+					poser.Keep( node, key );
+			}
+
 			poser.Pose( animation, frame );
 			PlacePosed( Entities, poser, _scale, _placedRotation, _placedOrigin );
 		}
@@ -1072,7 +1079,7 @@ public sealed class LobbyModel : IChannelPosed
 	/// </remarks>
 	public void Rest( AnimationFile outgoing, AnimationFile? incoming = null )
 	{
-		Rotator?.Rest( outgoing );
+		Rotator?.Rest( outgoing, incoming );
 
 		foreach ( var animator in Animators )
 			animator.Rest();
