@@ -5,7 +5,7 @@ using NeoVeldrid;
 
 namespace OpenTPW;
 
-public partial class Texture : Asset
+public partial class Texture : Asset, IPictureAtlas
 {
 	public SamplerType SamplerType { get; private set; } = SamplerType.AnisotropicRepeat;
 

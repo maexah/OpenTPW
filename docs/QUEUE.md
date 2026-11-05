@@ -804,13 +804,11 @@ filed the items that cite it.
   across all 2,129 `.md2`, compare the stored normals with the computed ones, then read and use the stored ones. The
   FileFormats models page gets the count. Confirm: one ride and one shop photographed beside the original's under
   Proton, the same sun.
-- [ ] **Q1027. Test the camcorder's `ParkGuestSprites.UseFirstPersonPictures` (the third piece of Q220).** It builds a `Texture` through
-  the Vulkan `Device` (`BuildAtlas`), so no unit test reaches it. Either put the atlas behind a seam (a function that is handed the pictures and
-  answers the regions, so a test's stand-in counts the packs asked for) and test: entering first person asks for each flagged bank's `.FPC`,
-  leaving asks for the `.TPC`s again, the old atlas is let go after the new one is made, a model already built is built again, and a call that
-  changes nothing (same mode, no park, no theme) packs nothing; or confirm it in a running game by the census line `Guests: N sprite banks packed,
-  M from .FPC` on each side of a camcorder enter and leave, with the mutations put back in a copy and the run repeated. Each with its bug put back
-  and seen to fail (`AGENTS.md` rule 6).
+- [ ] **Q1028. Confirm in a running game that the camcorder's first-person switch still packs and draws as before (after Q1027's seam).** Q1027
+  moved the atlas and the model-making behind `GuestArt` and its tests stand in for both, so the real `BuildAtlas` and `MakeModels` calls from
+  `UseFirstPersonPictures` have not been run since. Off-screen: a park, the camcorder entered and left (the console's way in; `ParkCamcorderCameraMode`),
+  the census line `Guests: N sprite banks packed, M from .FPC` before, inside and after (M above 0 inside only), and a frame in each of the
+  three states with people drawn.
 - [ ] **Q221. Eight leftovers from the effort audit, each dead by content today.** Found by the 2026-10-04 effort
   audit, each read in the listing. (1) `ParkScriptStates` reads the tick and next handle with `header > dword * 4`; it
   should be `>= (dword + 1) * 4`. (2) `ParkBuyScreen.Listed` applies two of the original's four filters: add the

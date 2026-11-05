@@ -138,7 +138,7 @@ public sealed class ParkGuestSprites : ModelEntity
 	private string? _themeName;
 	private IParkInitialState? _park;
 
-	private Texture? _atlas;
+	private IPictureAtlas? _atlas;
 	private Region? _plain;
 	private Vertex[] _vertices = [];
 
@@ -303,8 +303,15 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// they wear now (<see cref="LookOf"/>).
 	/// </param>
 	public ParkGuestSprites( string themeName, IParkInitialState? park, ParkSpriteBanks? banks = null )
+		: this( themeName, park, banks, OnTheDevice )
+	{
+	}
+
+	/// <param name="art">What the pool asks of the graphics device; a test hands in a stand-in that counts (<see cref="GuestArt"/>).</param>
+	internal ParkGuestSprites( string themeName, IParkInitialState? park, ParkSpriteBanks? banks, GuestArt art )
 	{
 		_counts = banks;
+		_art = art;
 
 		if ( park == null )
 			return;
@@ -329,6 +336,33 @@ public sealed class ParkGuestSprites : ModelEntity
 		if ( _people.Count > 0 && _atlas != null )
 			Build();
 	}
+
+	/// <summary>
+	/// The two things the pool asks of the graphics device: the pictures packed into one atlas, and the models drawn over it.
+	/// <see cref="OnTheDevice"/> is the game's; a test hands in a stand-in that counts the packs, so that how a switch into
+	/// first person asks for them is reached without a device.
+	/// </summary>
+	/// <param name="Pack">Packs the pictures into an atlas, and answers it with where each picture sits (one region each, in order).</param>
+	/// <param name="Show">Makes the pool's models over its current atlas from the quads' indices (<see cref="Build"/>).</param>
+	internal sealed record GuestArt(
+		Func<List<SpritePicture>, (IPictureAtlas Atlas, Region[] Regions)> Pack,
+		Action<ParkGuestSprites, uint[]> Show );
+
+	private static readonly GuestArt OnTheDevice = new(
+		pictures =>
+		{
+			var atlas = BuildAtlas( pictures, out var regions );
+			return (atlas, regions);
+		},
+		( pool, indices ) => pool.MakeModels( indices ) );
+
+	private readonly GuestArt _art;
+
+	/// <summary>Whether <see cref="Build"/> has made the models once, which the switch to and from first person then makes again.</summary>
+	private bool _modelsMade;
+
+	/// <summary>The atlas the pool draws from now, or null before anything is packed; for a test of the switch.</summary>
+	internal IPictureAtlas? Atlas => _atlas;
 
 	/// <summary>
 	/// Reads each bank a sprite in this park wears, and packs their pictures into one texture. Banks are
@@ -380,7 +414,8 @@ public sealed class ParkGuestSprites : ModelEntity
 		// material or a shader that can do without a texture.
 		pictures.Add( new SpritePicture( 4, 4, 2, 2, [.. Enumerable.Repeat( (byte)255, 4 * 4 * 4 )] ) );
 
-		_atlas = BuildAtlas( pictures, out var regions );
+		var (atlas, regions) = _art.Pack( pictures );
+		_atlas = atlas;
 		_plain = regions[^1];
 
 		foreach ( var (type, bank, first, count, file) in placed )
@@ -421,7 +456,7 @@ public sealed class ParkGuestSprites : ModelEntity
 		Load( _themeName, _park );
 
 		// A model already built still samples the old atlas, so it is built again before that atlas goes.
-		if ( _atlas != null && (TranslucentModel != null || _people.Count > 0) )
+		if ( _atlas != null && (_modelsMade || _people.Count > 0) )
 			Build();
 
 		old?.Delete();
@@ -545,9 +580,16 @@ public sealed class ParkGuestSprites : ModelEntity
 		// behind. The heads, bubbles and balloons drawn here share the word: their sprite flags are not read for 0x80000
 		// either, nor their pictures' texture flags. Two-sided because a quad turned to face the camera can end up wound
 		// either way.
+		_art.Show( this, indices );
+		_modelsMade = true;
+	}
+
+	/// <summary>The models over the atlas (<see cref="Build"/>): the people's, and their shadows'.</summary>
+	private void MakeModels( uint[] indices )
+	{
 		var material = new Material( PeopleShader, PeopleMaterial );
 
-		material.Set( "Color", _atlas! );
+		material.Set( "Color", (Texture)_atlas! );
 
 		// The model this replaces is let go with its buffers and material; Delete defers the release past frames in flight.
 		TranslucentModel?.Delete();
@@ -595,7 +637,7 @@ public sealed class ParkGuestSprites : ModelEntity
 
 		var firstPerson = kind == ParkPersonShadows.Kind.FirstPersonOwnPicture;
 		var material = new Material( PeopleShader, ShadowMaterialFor( kind ) );
-		material.Set( "Color", firstPerson ? _atlas! : _silhouette ??= new Texture( ParkPersonShadows.Silhouette ) );
+		material.Set( "Color", firstPerson ? (Texture)_atlas! : _silhouette ??= new Texture( ParkPersonShadows.Silhouette ) );
 
 		_shadowModel = new Model( _shadowVertices, indices, material );
 		_shadowModel.EnableFrequentUpdates( _shadowVertices );
