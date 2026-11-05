@@ -1,0 +1,1 @@
+(function(){var s;try{s=JSON.parse(localStorage.getItem("otpw.prefs.v1")||"{}")||{}}catch{return}var t=document.documentElement;s.easyRead&&t.classList.add("easy-read"),(s.easyRead||s.stopMotion)&&t.classList.add("still"),s.font==="dyslexic"&&t.classList.add("font-dyslexic"),s.font==="system"&&t.classList.add("font-system"),s.paper&&t.classList.add("paper-cream")})();

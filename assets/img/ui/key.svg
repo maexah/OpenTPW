@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+	<!-- The golden key of the key hunt: a round bow with a hole, a short stem and two teeth. Drawn for this site. -->
+	<g transform="rotate(-38 24 24)" stroke="#7a4a00" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+		<path d="M21 20.5h22v7h-4v6h-5v-6h-3v4h-5v-4h-5z" fill="#eca204"/>
+		<circle cx="14" cy="24" r="10.5" fill="#fce807"/>
+		<circle cx="11.5" cy="24" r="3.6" fill="#7a4a00" stroke="none"/>
+		<path d="M9 17.5c2.5-2.6 6.5-3.2 9.6-1.4" fill="none" stroke="#fff" stroke-width="2"/>
+	</g>
+</svg>
