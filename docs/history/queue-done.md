@@ -12614,3 +12614,8 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   one lies beside it), leaving asks for the `.TPC`s again, the old atlas goes after the new one is packed and the models built over it, a model
   already built (a pool whose last person went home) is built again, and a call that changes nothing packs nothing. 23 bugs put back with
   `mutate.py`: 21 fail a test and the 2 that survive are one equivalence (the guard's theme and park tests are set together). The account is in STATUS.md.
+- [x] **Q1028. Confirm in a running game that the camcorder's first-person switch still packs and draws as before (after Q1027's seam).** Done (`q1028/PREDICTION.txt`: P4 missed once, cause found; the rest held). Q1027
+  moved the atlas and the model-making behind `GuestArt` and its tests stand in for both, so the real `BuildAtlas` and `MakeModels` calls from
+  `UseFirstPersonPictures` have not been run since. Off-screen: a park, the camcorder entered and left (the console's way in; `ParkCamcorderCameraMode`),
+  the census line `Guests: N sprite banks packed, M from .FPC` before, inside and after (M above 0 inside only), and a frame in each of the
+  three states with people drawn.
