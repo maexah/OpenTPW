@@ -421,6 +421,16 @@ public sealed class RideAnimations
 		=> Channel( index )?.ClearQueue();
 
 	/// <summary>
+	/// Writes <paramref name="speed"/> into every channel's queued speed - <c>FUN_00474020</c>, which walks the model's channels (count at
+	/// <c>model+0xe</c>, stride <c>0x38</c>) and stores at <c>+0x30</c> in each, queue or no queue.
+	/// </summary>
+	public void WriteQueuedSpeed( float speed )
+	{
+		foreach ( var channel in _channels )
+			channel.WriteQueuedSpeed( speed );
+	}
+
+	/// <summary>
 	/// Brings every channel up to <paramref name="now"/> and deals with any that has reached the end of its
 	/// clip - the timebase half of <c>FUN_004735d0</c>.
 	///
@@ -483,8 +493,9 @@ public sealed class RideAnimations
 			// A loop is expressed as starting the same clip again rather than as rewinding it, which is
 			// what carries the overshoot across the join. Not the original's: its restart in view passes 0x1 alone
 			// (0x00473840..0x00473848), so it puts back and hides as a start does; this passes 0x8 (Q661).
+			// The replay starts at the queued speed unless that is nought, then at the channel's own (0x0047380a..0x00473823).
 			StartOn( channel, channel.AnimID, channel.SubAnim,
-				AnimTimeControl.LoopFlag | AnimTimeControl.KeepShownFlag, channel.Speed, now );
+				AnimTimeControl.LoopFlag | AnimTimeControl.KeepShownFlag, channel.DeferredSpeed == 0f ? channel.Speed : channel.DeferredSpeed, now );
 
 			return;
 		}

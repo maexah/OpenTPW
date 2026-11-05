@@ -362,9 +362,8 @@ public sealed class RideScriptScheduler
 				entry.Script.Turn( now );
 
 				// After a turn of a script with a model the engine writes (0.5 + 0.01 x speed) x +0xe4 / 1000 into every
-				// channel's queued speed (0x00551748, 0x00551789); a channel here keeps the speed it was queued at (docs/QUEUE.md Q155).
-				if ( entry.Script.Animations is not null && RideScript.DivisorOf( entry.Script.Speed ) != 1f )
-					Unimplemented.Report( "SCHEDULER_CHANNEL_SPEED" );
+				// channel's queued speed (0x00551748, 0x00551789), which a promotion and a loop's replay start at.
+				entry.Script.WriteChannelSpeeds();
 			}
 
 			// Due a turn or not, the visit pushes the script's speed word on: into its thing's bumper ride (0x00551844; a thing

@@ -345,13 +345,13 @@ public class AnimTriggerSpeedCountTests
 	}
 
 	/// <summary>
-	/// The scheduler's visit and <c>COAST</c>'s initialise hand a script's speed word to a ride (<c>0x005517e1</c>, <c>0x00554aab</c>) and, after a turn of a
-	/// script with a model, to its channels (<c>0x00551789</c>); none is built, so each counts at a divisor other than 1 and not at 50.
+	/// <c>COAST</c>'s initialise and the scheduler's visit hand a script's speed word to a ride (<c>0x005517e1</c>, <c>0x00554aab</c>); none is built, so each counts at a
+	/// divisor other than 1 and not at 50. The scheduler's write into the channels (<c>0x00551789</c>) is built (Q1061) and counts nothing at any word.
 	/// </summary>
 	[TestMethod]
-	[DataRow( 50, 0, 0 )]
-	[DataRow( 60, 2, 1 )]
-	public void TheSchedulersAndCoastsReadsOfTheSpeedWordCountAtADivisorOtherThanOne( int speed, int coast, int channel )
+	[DataRow( 50, 0 )]
+	[DataRow( 60, 2 )]
+	public void CoastsReadsOfTheSpeedWordCountAtADivisorOtherThanOne( int speed, int coast )
 	{
 		FileSystem = GameData.Required();
 
@@ -370,7 +370,160 @@ public class AnimTriggerSpeedCountTests
 		scheduler.Advance( 1000f );
 
 		Assert.AreEqual( coast, Times( "COAST_RIDE_SPEED" ), "the initialise and the visit" );
-		Assert.AreEqual( channel, Times( "SCHEDULER_CHANNEL_SPEED" ) );
+		Assert.AreEqual( 0, Times( "SCHEDULER_CHANNEL_SPEED" ), "built: the channels hold the rate" );
+
+		Unimplemented.Forget();
+	}
+
+	/// <summary>A scheduler holding one script (id 1, due on its first tick and then every eighth) that waits a long while, on the Lights' model.</summary>
+	private static (RideScriptScheduler Scheduler, RideScript Script) Waiting( int speed, int channels, params int[] before )
+	{
+		var script = WithLights( speed, channels, [.. before, Word( Opcode.WAIT ), 100000] );
+		var scheduler = new RideScriptScheduler();
+
+		scheduler.Add( 1, script );
+
+		return (scheduler, script);
+	}
+
+	/// <summary>
+	/// After a due turn of a script with a model the scheduler writes <c>(0.5 - 0.01 x word) x 1000 x 0.001</c> into <b>every</b> channel's queued speed
+	/// (<c>0x0055174f</c>..<c>0x00551789</c>, <c>FUN_00474020</c>), a queue or none: 1 at the word 50, 1.1 at 60, 0.9 at 40, 0.5 at 0, 1.3 at 80.
+	/// </summary>
+	[TestMethod]
+	[DataRow( 50, 1f )]
+	[DataRow( 60, 1.1f )]
+	[DataRow( 40, 0.9f )]
+	[DataRow( 80, 1.3f )]
+	[DataRow( 0, 0.5f )]
+	public void ADueTurnWritesTheRateIntoEveryChannel( int speed, float rate )
+	{
+		var (scheduler, script) = Waiting( speed, 3 );
+
+		for ( int i = 0; i < 3; ++i )
+			Assert.AreEqual( 0f, script.Animations!.Channel( i )!.DeferredSpeed, "before any turn" );
+
+		scheduler.Advance( 1000f );
+
+		for ( int i = 0; i < 3; ++i )
+			Assert.AreEqual( rate, script.Animations!.Channel( i )!.DeferredSpeed, 1e-6f, $"channel {i} at a word of {speed}" );
+
+		Assert.AreEqual( 0, Times( "SCHEDULER_CHANNEL_SPEED" ), "nothing is counted" );
+
+		Unimplemented.Forget();
+	}
+
+	/// <summary>Only a due visit writes: id 1 is due at ticks 1, 9, 17..., so the word moved after the first tick shows in the channels at the ninth and not before.</summary>
+	[TestMethod]
+	public void OnlyADueVisitWrites()
+	{
+		var (scheduler, script) = Waiting( 50, 2 );
+		var channel = script.Animations!.Channel( 1 )!;
+
+		scheduler.Advance( 1000f );
+
+		Assert.AreEqual( 1f, channel.DeferredSpeed, 1e-6f, "tick 1" );
+
+		script.Speed = 60;
+
+		for ( int tick = 2; tick <= 8; ++tick )
+		{
+			scheduler.Advance( 1000f );
+
+			Assert.AreEqual( 1f, channel.DeferredSpeed, 1e-6f, $"tick {tick}: not due" );
+		}
+
+		scheduler.Advance( 1000f );
+
+		Assert.AreEqual( 1.1f, channel.DeferredSpeed, 1e-6f, "tick 9: due" );
+
+		Unimplemented.Forget();
+	}
+
+	/// <summary>A script with no model has no channels to write: nothing is written, counted or thrown.</summary>
+	[TestMethod]
+	public void AScriptWithNoModelWritesNothing()
+	{
+		Unimplemented.Forget();
+
+		var script = new RideScript( Build( 1, Word( Opcode.WAIT ), 100000, Word( Opcode.END ) ) ) { Speed = 60 };
+		var scheduler = new RideScriptScheduler();
+
+		scheduler.Add( 1, script );
+		scheduler.Advance( 1000f );
+
+		Assert.AreEqual( 0, Times( "SCHEDULER_CHANNEL_SPEED" ) );
+		Assert.IsNull( script.Animations );
+
+		Unimplemented.Forget();
+	}
+
+	/// <summary>
+	/// A loop's replay starts at the queued speed unless that is nought (<c>0x0047380a</c>..<c>0x00473823</c>): a loop started at the word 50 plays at 1, the ride window moves
+	/// the word to 60, and after the next due visit the loop runs out and starts again at 1.1, where the channel's own speed was 1. At the word 50 throughout it replays at 1.
+	/// </summary>
+	[TestMethod]
+	[DataRow( 60, 1.1f )]
+	[DataRow( 40, 0.9f )]
+	[DataRow( 50, 1f )]
+	public void ALoopReplaysAtTheRateTheWordHasMovedTo( int moved, float replay )
+	{
+		var (scheduler, script) = Waiting( 50, 1, Word( Opcode.LOOPANIM ), 5, 0 );
+		var channel = script.Animations!.Channel( 0 )!;
+
+		scheduler.Advance( 1000f );
+
+		Assert.AreEqual( 1f, channel.Speed, 1e-6f, "started at the word 50" );
+
+		script.Speed = moved;
+
+		for ( int tick = 2; tick <= 9; ++tick )
+			scheduler.Advance( 1000f );
+
+		Assert.AreEqual( 1f, channel.Speed, 1e-6f, "the clip is still the one that started at 1" );
+
+		script.Animations.Advance( 1500 );
+
+		Assert.IsTrue( (channel.Flags & AnimTimeControl.LoopFlag) != 0, "still looping" );
+		Assert.AreEqual( replay, channel.Speed, 1e-6f, $"the replay after the word moved to {moved}" );
+
+		Unimplemented.Forget();
+	}
+
+	/// <summary>
+	/// A queued clip is promoted at the queued speed, which the scheduler's write has replaced (<c>0x00473874</c> pushes <c>+0x30</c>): queued at 1.1 by a trigger at the word 60, the
+	/// word moved to 40 and one due visit later it starts at 0.9, not at the 1.1 it was queued with.
+	/// </summary>
+	[TestMethod]
+	public void APromotionStartsAtTheRateTheLastDueVisitWrote()
+	{
+		var first = WithLights( 50, 1, [Word( Opcode.TRIGANIM ), 5, 0, 0] );
+
+		first.Turn( 1000f );
+
+		var second = new RideScript( Build( 1, Word( Opcode.TRIGANIM ), 5, 0, 0, Word( Opcode.WAIT ), 100000, Word( Opcode.END ) ) ) { Speed = 60, Animations = first.Animations };
+		var scheduler = new RideScriptScheduler();
+
+		scheduler.Add( 1, second );
+
+		var channel = first.Animations!.Channel( 0 )!;
+
+		scheduler.Advance( 1000f );
+
+		Assert.IsTrue( channel.HasQueued, "the second trigger waits behind the first clip" );
+		Assert.AreEqual( 1.1f, channel.DeferredSpeed, 1e-6f, "queued at the rate it was triggered with, and the visit writes the same" );
+
+		second.Speed = 40;
+
+		for ( int tick = 2; tick <= 9; ++tick )
+			scheduler.Advance( 1000f );
+
+		Assert.AreEqual( 0.9f, channel.DeferredSpeed, 1e-6f, "the due visit wrote the word's rate over the queue's" );
+
+		first.Animations.Advance( 1400 );
+
+		Assert.IsFalse( channel.HasQueued, "promoted" );
+		Assert.AreEqual( 0.9f, channel.Speed, 1e-6f, "at the rate the visit wrote" );
 
 		Unimplemented.Forget();
 	}

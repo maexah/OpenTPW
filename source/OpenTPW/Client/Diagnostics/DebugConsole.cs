@@ -931,8 +931,8 @@ public static class DebugConsole
 				break;
 
 			// Every script the scheduler is running, one line each: its id, the thing it drives, its directory and name,
-			// its place, the scripts it was spawned by and has spawned, its speed word, its last WAIT and the play rate its model's channel 0 plays at
-			// (the divisor its last trigger handed it; a dash with no model). A script with a parent is a SPAWNCHILD
+			// its place, the scripts it was spawned by and has spawned, its speed word, its last WAIT, the play rate its model's channel 0 plays at
+			// (the divisor its last trigger handed it) and the speed queued on that channel (the scheduler's write after each due turn; a dash with no model). A script with a parent is a SPAWNCHILD
 			// companion (it carries its parent's thing); thing 0 is a SPAWNSOUND child's. A park file's scripts are counted against this list (Q849, Q910).
 			case "scripts":
 				if ( ParkRides.Current is not { } scripted )
@@ -946,7 +946,8 @@ public static class DebugConsole
 				foreach ( var script in scripted.Scheduler.Scripts.OrderBy( script => script.Id ) )
 					Reply( $"  script {script.Id} thing {script.ThingId} dir {script.Directory} name '{script.Name}' at {script.Position} "
 						+ $"parent {script.ParentId} child {script.ChildId} sound {script.SoundChildId} word {script.Speed} lastwait {script.LastWait} lastanim {script.LastAnimationDeadline} "
-						+ $"rate {script.Animations?.Channel( 0 )?.Speed.ToString( "0.000", CultureInfo.InvariantCulture ) ?? "-"}" );
+						+ $"rate {script.Animations?.Channel( 0 )?.Speed.ToString( "0.000", CultureInfo.InvariantCulture ) ?? "-"} "
+						+ $"queued {script.Animations?.Channel( 0 )?.DeferredSpeed.ToString( "0.000", CultureInfo.InvariantCulture ) ?? "-"}" );
 
 				break;
 

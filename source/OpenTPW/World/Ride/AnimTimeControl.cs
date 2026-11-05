@@ -362,6 +362,12 @@ public sealed class AnimTimeControl
 	}
 
 	/// <summary>
+	/// Writes the queued speed alone, as the scheduler does after a turn (<c>FUN_00474020</c>'s store at <c>0x00474037</c>): the role, the entry and
+	/// the flags stay, and so does a queue that is empty, which now holds a speed.
+	/// </summary>
+	public void WriteQueuedSpeed( float speed ) => DeferredSpeed = speed;
+
+	/// <summary>
 	/// Empties the queue - the role, the entry and the speed, leaving <see cref="DeferredFlags"/> alone
 	/// because the engine does.
 	/// </summary>

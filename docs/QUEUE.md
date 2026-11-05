@@ -574,7 +574,7 @@ filed the items that cite it.
 - [ ] **Q155. The other readers of the speed word, and the play rate (decoded in Q897; Q875 built the word and its first readers).**
   Found by the 2026-09-26 staleness audit. Q875 keeps the word per script and reads it in `WAIT`, the three scream readings, the
   bumper ride's performance and the wear (`park.md`, "What a loaded script holds"). What reads the word and does not yet here:
-  the scheduler's channel speed (`+0xe4`, below; `SCHEDULER_CHANNEL_SPEED`), the `TOUR` record's `+0x50` (`0x005517c0`, `FUN_0055d9b0`; `TOUR` is itself unbuilt and counted),
+  the `TOUR` record's `+0x50` (`0x005517c0`, `FUN_0055d9b0`; `TOUR` is itself unbuilt and counted),
   `COAST`'s ride (`0x005517e1` and `INITIALISE`'s `0x00554aab`, `FUN_0043b2b0`; `COAST_RIDE_SPEED`), the bounce riders' sine (`0x00557c03`, `ride-operation.md`,
   "The bounce riders' height") and the walk placer's divisor (`0x0055823e`) (both `WALK_RIDER_SPEED_DIVISOR`); check each against the files before building it. With a divisor
   of 1.1 a `WAITANIM` of a clip under 300 ms waits for weeks in the original, and waits one turn here by Alexah's decision (2026-11-04; counted `WAITANIM_SPEED_WRAP`; `park.md`, "`WAITANIM` is NOT `TRIGANIM` with a wait"). Confirm: the Belly Bounce's clips at their rate in the running game against the original's.
@@ -587,16 +587,21 @@ filed the items that cite it.
   `RIDE_SPEED_SCALES_WAITS` count went with Q875's `WAIT`). `WAITANIM` is built in the original's order (`RideScript.AnimationWait`: `fdiv`
   `0x00552acd`, `_ftol`, unsigned compare with 300 at `0x00552ad6`; at word 60 a 400 ms clip waits 300, a 1000 ms clip 636), a clip under 300 ms waits one turn here where the original waits days (Alexah's decision, 2026-11-04;
   `WAITANIM_SPEED_WRAP`, counted by Q876). The speed push of an upgrade's completion (`0x004dfabc`, when the new tier's `InitSpeed` is above nought)
-  is counted `RIDE_UPGRADE_COMPLETION` and unbuilt: build it with that item or here. The scheduler's channel speed and `COAST`'s ride are counted (`SCHEDULER_CHANNEL_SPEED`, `COAST_RIDE_SPEED`); the channel speed also reaches a loop already playing when the ride window changes the word, which the original replays at the new divisor and this at its old speed; whether a Lost Kingdom coaster reaches `COAST` here is unchecked. The unbuilt
+  is counted `RIDE_UPGRADE_COMPLETION` and unbuilt: build it with that item or here. `COAST`'s ride is counted (`COAST_RIDE_SPEED`); the scheduler's channel speed is built (Q1061); whether a Lost Kingdom coaster reaches `COAST` here is unchecked. The unbuilt
   `TRIGANIMSPEED` passes its rate / 1000 × the divisor (`0x00552f6e`), and its deadline, the length × 1000 / its rate,
   does not divide by it. The length a trigger answers does not depend on it (`FUN_00472f60`,
   `0x0047323e`..`0x00473258`).
-  From Q174: `+0xe4` is the play rate in thousandths. After every turn of a script with a model the scheduler writes
+  From Q174: `+0xe4` is the play rate in thousandths. After every due turn of a script with a model the scheduler writes
   `(0.5 + 0.01 × speed) × +0xe4 / 1000` into every channel's queued speed `+0x30` (`0x00551789`), which a promotion
-  and a loop's replay start at; OpenTPW's promotion keeps the speed the clip was queued at. `TRIGANIMSPEED` leaves its rate
-  there (jungle `Gates` 4000). The Easymode Belly Bounce was saved looping at 1.1, and OpenTPW's second trigger at its
+  and a loop's replay start at (built in Q1061 with the factor fixed at 1000: `RideScript.WriteChannelSpeeds`). `TRIGANIMSPEED`, unbuilt and counted, would leave its rate
+  there (jungle `Gates` 4000), and the factor would then be a field. The Easymode Belly Bounce was saved looping at 1.1, and OpenTPW's second trigger at its
   word 43 (`park.md`, "Where OpenTPW's animation state parts from the engine's", difference 4) replaces it at 1.1 since Q1039. With a divisor other than 1, a clip under 300 ms or no model makes
   `WAITANIM`'s qword sum wrap `+0xa0` (`park.md`, "`WAITANIM` is NOT `TRIGANIM` with a wait").
+- [ ] **Q1062. The saved queued speed of a channel with nothing queued (from Q1061).** `ParkRides.WrittenChannel` writes the file's own queued speed for a channel with nothing queued,
+  because a channel here kept none; since Q1061 it does (`DeferredSpeed`, the scheduler's write after each due turn, which the engine stores at `+0x30` of every channel the same way). The engine
+  saves `+0x30` as it stands. Measure first, over the original's park files (all that are on this machine): the queued speed of every channel with no queued role against the divisor of its script's saved
+  word (`(0.5 - 0.01 x word)`), and against 0; if they agree (or the speeds are the last write for a script the visit reached), write the live `DeferredSpeed` when it is not nought and keep the file's when it is.
+  Confirm: a park saved by OpenTPW after a few seconds at a script word other than 50, its channel records read by `parkfile.py` against the original's, predicted first.
 - [ ] **Q156. The staff screen's two happiness meters (decoded in Q898: they fill from the left).** Found by the 2026-09-26 staleness
   audit. Nothing is left to build: the original paints each meter with its stat-bar skin alone and fills it from the left
   (`hud.md`, "What paints the all-staff meters"), and this game has drawn them so since Q369 (`ParkStaffScreen.Meter`, a

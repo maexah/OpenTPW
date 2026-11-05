@@ -836,6 +836,24 @@ public sealed class RideScript
 	/// </summary>
 	internal static float DivisorOf( int speed ) => (float)(0.5 - (double)speed * -0.01f);
 
+	/// <summary>
+	/// The script's play rate in thousandths, the engine's <c>+0xe4</c>: the loader writes 1000 (<c>0x00558c33</c>) and so do the eight trigger handlers
+	/// (<c>0x0055292e</c> and its seven kin); only <c>TRIGANIMSPEED</c> (<c>0x00552f4b</c>) writes anything else, and it is unbuilt and counted, so this is a constant.
+	/// </summary>
+	private const int PlayRateThousandths = 1000;
+
+	/// <summary>
+	/// What the scheduler writes into every channel's queued speed after a due turn: the divisor times <c>+0xe4</c> times 0.001, one float store
+	/// (<c>0x0055174f</c>..<c>0x0055177f</c>; the constants are <c>0x00700fcc</c>, <c>0x00700fd0</c> and <c>0x00700fd4</c>). 1 at the word 50.
+	/// </summary>
+	internal static float ChannelSpeedOf( int speed ) => (float)((0.5 - (double)speed * -0.01f) * PlayRateThousandths * 0.001f);
+
+	/// <summary>
+	/// The scheduler's write after a script with a model has been given its turn (<c>0x00551748</c>..<c>0x00551789</c>, <c>FUN_00474020</c>): the speed
+	/// word's rate goes into every channel's queued speed, which a promotion and a loop's replay start at. A script with no model writes nothing.
+	/// </summary>
+	internal void WriteChannelSpeeds() => Animations?.WriteQueuedSpeed( ChannelSpeedOf( Speed ) );
+
 	/// <summary>The thing's <c>mIsTrackRideValid</c>, <c>+0x2c</c> - what <c>BUMP 5</c> answers.</summary>
 	public int TrackRideValid { get; set; }
 
