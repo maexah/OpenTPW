@@ -692,6 +692,18 @@ filed the items that cite it.
   perpendicular: it uses |mid|², and its cross term is × 0.0), the branch heading `0x0057e810`, the colour pulse
   `0x0057ee30`, whose grey can pass 255 and wrap to near black. `Lightning.cs` draws one quad 9 wide. Decode first
   (the shape against a run of the original's bolt, `record.sh`), then build the jagged ribbon and its branches.
+- [ ] **Q1044. The bolt's envelope, its sixteen slots and its grey.** From the run 21 review of Q152 (VERIFY-13, read in the
+  listing, not run). Ours fades a bolt over its whole life (`Lightning.cs`, life² × stutter), so a park's 2 s bolt is gone
+  by about 1.5 s; the original keeps no starting lifetime and cuts the bolt when its life left reaches 0 (`0x0057ee81`).
+  Each frame, for each live bolt, m = life left % 500, p = m × 0.002f; if p < 0.9f the base is 255 − trunc((0.9f − p) ×
+  1.11f × 64), else 192 + trunc((1 − p) × 640): each 500 ms tooth rises 193 to 255 over 50 ms and falls to 192 over
+  450 ms (the lobby's bolt one tooth, a park's four). The grey is base + (CRT `rand()` & 63), drawn once a bolt a frame,
+  packed unclamped, so 256..318 wraps to near black (R = G = (g − 256) | 1, B = g − 256) on about half the frames
+  (`0x0057ee30`..`0x0057ef61`). Its colour is neutral grey, where ours tints it (0.85, 0.88, 1.0). The original keeps up to
+  16 bolts (`0x0058032c`); ours replaces the running one, so with 2 s about one park strike in six cuts the last short.
+  Run the original's bolt first (`record.sh`, a park strike: what a near-black frame looks like under its blend state,
+  whether the clock stops when paused), then build the envelope, the slots and the grey, each with its bug put back,
+  and photograph ours beside it. The bolt's shape is Q1035.
 - [ ] **Q212. The ride window's other statuses. Decode first.** Found by the 2026-10-04 review (`u7-ride-door-6`,
   `-7`, `-9`, `-10`). `FUN_00485f60` answers (80/100/255) 5..9 for a ride waiting for an upgrade, `0xb`..`0xf` for a toilet's
   call to the handyman and `0x11`..`0x15` for a mechanic called (`+0x64`), `0x15` (UITEXT 385, "REPAIRS IN PROGRESS")
