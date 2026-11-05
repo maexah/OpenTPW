@@ -1442,11 +1442,14 @@ public sealed class ParkRides : Entity
 	/// <summary>One channel as the engine keeps it - see <see cref="Written"/>.</summary>
 	internal static SavedChannel WrittenChannel( AnimTimeControl channel, SavedChannel file, Func<float, uint> reading, int now )
 	{
-		// What is queued behind it; with nothing queued the engine leaves the last queue's clip, flags and speed
-		// behind, which a channel here does not keep, so the file's stay.
+		// What is queued behind it; with nothing queued the engine leaves the last queue's clip and flags behind,
+		// which a channel here does not keep, so the file's stay. Its speed is the last write the scheduler made
+		// (RideScript.WriteChannelSpeeds, Q1061), which the engine saves as it stands; nought here means no write
+		// since the load or since a promotion, and the file's stays (docs/exe/saves.md, "OpenTPW's writer, the objects", a model).
 		var queued = channel.HasQueued
 			? (Role: channel.DeferredAnimID, Entry: channel.DeferredSubAnim, Flags: channel.DeferredFlags, Speed: channel.DeferredSpeed)
-			: (Role: ParkThingStates.NoRole, Entry: file.QueuedEntry, Flags: file.QueuedFlags, Speed: file.QueuedSpeed);
+			: (Role: ParkThingStates.NoRole, Entry: file.QueuedEntry, Flags: file.QueuedFlags,
+				Speed: channel.DeferredSpeed != 0f ? channel.DeferredSpeed : file.QueuedSpeed);
 
 		if ( channel.IsIdle )
 		{

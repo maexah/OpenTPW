@@ -1760,4 +1760,65 @@ public class ParkFileWriterThingsTests
 
 		Assert.AreEqual( new SavedChannel( 2, 0, 0x54, 1f, 5000, 5666, 9000, ParkThingStates.NoRole, 0, 0, 1f ), written );
 	}
+
+	/// <summary>
+	/// A channel with nothing queued is written with the speed the scheduler last wrote into it (<c>RideScript.WriteChannelSpeeds</c>, Q1061; the
+	/// engine saves <c>+0x30</c> as it stands), over the file's, its clip and flags the file's still; with no write since the load (nought) the file's
+	/// speed stands. In the original's files 2,300 of 2,320 scripted channels with nothing queued hold their script's divisor.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the file's speed always; the live speed written when nought; the live speed dropped on the idle never-started or the idle started branch.</remarks>
+	[TestMethod]
+	public void AChannelWithNothingQueuedIsWrittenWithTheSchedulersLastSpeed()
+	{
+		var file = new SavedChannel( 0, 0, 0x41, 1.1f, 1000, 2000, 2000, ParkThingStates.NoRole, 3, 0x9, 1.1f );
+		var running = new AnimTimeControl();
+
+		running.Start( 0, 0, AnimTimeControl.LoopFlag, 1.1f, now: 1000, frames: 20f );
+		Assert.IsFalse( running.HasQueued );
+
+		Assert.AreEqual( file, ParkRides.WrittenChannel( running, file, moment => (uint)moment, 2000 ) with { Time = 2000, NoPauseTime = 2000 }, "no write yet: the file's speed" );
+
+		running.WriteQueuedSpeed( 1.3f );
+
+		var written = ParkRides.WrittenChannel( running, file, moment => (uint)moment, 2000 );
+
+		Assert.AreEqual( 1.3f, written.QueuedSpeed, "the scheduler's write" );
+		Assert.AreEqual( (ParkThingStates.NoRole, 3, 0x9), (written.QueuedRole, written.QueuedEntry, written.QueuedFlags), "the clip and flags left behind stay the file's" );
+	}
+
+	/// <summary>The same on an idle channel: the one never started that the file holds idle, and one stopped since the load.</summary>
+	[TestMethod]
+	public void AnIdleChannelIsWrittenWithTheSchedulersLastSpeedToo()
+	{
+		var file = new SavedChannel( ParkThingStates.NoRole, 0, 0x40, 0f, 0, 0, 0, ParkThingStates.NoRole, 0, 0, 0f );
+		var untouched = new AnimTimeControl();
+
+		untouched.WriteQueuedSpeed( 0.9f );
+
+		Assert.AreEqual( file with { QueuedSpeed = 0.9f }, ParkRides.WrittenChannel( untouched, file, moment => (uint)moment, 9000 ), "never started" );
+
+		var played = new AnimTimeControl();
+
+		played.Start( 5, 0, 0, 1.5f, now: 1000, frames: 30f );
+		played.Start( 7, 0, 0, 2f, now: 2000, frames: 0f );
+		played.WriteQueuedSpeed( 0.9f );
+
+		Assert.AreEqual( new SavedChannel( ParkThingStates.NoRole, 0, 0x40, 1f, 0, 0, 0, ParkThingStates.NoRole, 0, 0, 0.9f ),
+			ParkRides.WrittenChannel( played, file, moment => (uint)moment, 9000 ), "stopped since the load" );
+	}
+
+	/// <summary>A channel with a clip queued writes the queue's own speed, as before: the scheduler's write has replaced it in the channel, and that is what the engine saves.</summary>
+	[TestMethod]
+	public void AQueuedChannelIsWrittenAtItsQueuedSpeed()
+	{
+		var file = new SavedChannel( 0, 0, 0x40, 1f, 1000, 2000, 2000, 4, 2, 0x1, 1f );
+		var running = new AnimTimeControl();
+
+		running.Start( 0, 0, 0, 1f, now: 1000, frames: 20f );
+		running.Queue( 5, 1, 0x1, 1.25f );
+
+		var written = ParkRides.WrittenChannel( running, file, moment => (uint)moment, 2000 );
+
+		Assert.AreEqual( (5, 1, 0x1, 1.25f), (written.QueuedRole, written.QueuedEntry, written.QueuedFlags, written.QueuedSpeed) );
+	}
 }

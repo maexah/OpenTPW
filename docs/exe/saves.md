@@ -1751,8 +1751,8 @@ and a model's channels their count, so nothing moves, and they go in before the 
   rest the file's; `0x8` is the channel's own mark that a role nought clip has ended on it ("OpenTPW's writer, a
   channel's `0x8`"). **A channel held since before the load keeps the file's
   own word and clip time**: the engine's `0x10` on a held channel comes and goes (FileFormats `saves.md`, "Bit
-  `0x10`"), where a channel here keeps it for good. With nothing queued the last queue's leftovers are the
-  file's. The hoarding's seven bits and its progress are the thing's as they stand. The node flag words are written
+  `0x10`"), where a channel here keeps it for good. With nothing queued the last queue's clip and flags are the
+  file's, and its speed is the scheduler's last write (`RideScript.WriteChannelSpeeds`) once one has been made since the load or a promotion, the file's before (Q1062; the original's files: 2,351 of 2,371 scripted channels with nothing queued hold the divisor of their script's saved word, 2,317 of them bit for bit as `RideScript.ChannelSpeedOf`, 34 at word 60 one ulp below it; the other 20 are in files saved right after a purchase; the 12,657 channels of a scriptless model hold nought). The hoarding's seven bits and its progress are the thing's as they stand. The node flag words are written
   as the clips started since the load have left them ("OpenTPW's writer, the two tables"), and a head `ADDHEAD`
   hung goes into its node's lookup record ("OpenTPW's writer, a rider's head").
 - **An object** (`ParkState.WrittenObjects`, `ParkWorld.PutObjects`): `mState` ("OpenTPW's writer, a broken

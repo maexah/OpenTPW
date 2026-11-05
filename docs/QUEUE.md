@@ -590,11 +590,10 @@ filed the items that cite it.
   there (jungle `Gates` 4000), and the factor would then be a field. The Easymode Belly Bounce was saved looping at 1.1; its `LOOPANIM 2, 0` @43 skips on the saved key
   (`park.md`, "Where OpenTPW's animation state parts from the engine's", difference 4), and its later triggers hand 1.1 too since Q1039. With a divisor other than 1, a clip under 300 ms or no model makes
   `WAITANIM`'s qword sum wrap `+0xa0` (`park.md`, "`WAITANIM` is NOT `TRIGANIM` with a wait").
-- [ ] **Q1062. The saved queued speed of a channel with nothing queued (from Q1061).** `ParkRides.WrittenChannel` writes the file's own queued speed for a channel with nothing queued,
-  because a channel here kept none; since Q1061 it does (`DeferredSpeed`, the scheduler's write after each due turn, which the engine stores at `+0x30` of every channel the same way). The engine
-  saves `+0x30` as it stands. Measure first, over the original's park files (all that are on this machine): the queued speed of every channel with no queued role against the divisor of its script's saved
-  word (`(0.5 - 0.01 x word)`), and against 0; if they agree (or the speeds are the last write for a script the visit reached), write the live `DeferredSpeed` when it is not nought and keep the file's when it is.
-  Confirm: a park saved by OpenTPW after a few seconds at a script word other than 50, its channel records read by `parkfile.py` against the original's, predicted first.
+- [ ] **Q1063. A loaded park's channel keeps the file's queued speed when nothing is queued (from Q1062).** `ParkRides.Resume` queues a channel's saved clip only where a role is queued, while the engine's load copies all eleven
+  dwords whatever they hold (`FUN_004647a0`, `+0x24` to `+0x30`, `0x00464bcb`..`0x00464c17`), so a channel with nothing queued starts at `DeferredSpeed` nought, and a loop that replays before the script's first due visit (up to eight ticks, 248 ms) starts at the channel's own speed where the engine's
+  `+0x30` holds the file's (`0x0047380a`: `+0x30` unless nought). Seed `WriteQueuedSpeed( channel.QueuedSpeed )` for an empty queue on load. A promotion clears `+0x30` to nought (`0x004738af`) until the next due visit writes it again, where Q1062's writer keeps the file's
+  speed for a nought `DeferredSpeed`: a save inside those eight ticks writes a stale speed; with the load seeded, the nought can be written as it stands. Confirm: a park loaded from a file whose channel holds a queued speed other than the script's divisor, `scripts` read before the first visit, predicted first.
 - [ ] **Q156. The staff screen's two happiness meters (decoded in Q898: they fill from the left).** Found by the 2026-09-26 staleness
   audit. Nothing is left to build: the original paints each meter with its stat-bar skin alone and fills it from the left
   (`hud.md`, "What paints the all-staff meters"), and this game has drawn them so since Q369 (`ParkStaffScreen.Meter`, a
