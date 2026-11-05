@@ -58,6 +58,13 @@ public abstract class WeatherSprites : ModelEntity
 	/// direction is whatever is perpendicular to both that and the view.
 	/// </summary>
 	protected void WriteQuad( int index, Vector3 centre, Vector3 up, float halfWidth, float halfHeight )
+		=> WriteQuad( index, centre, up, halfWidth, halfHeight, Vector3.One );
+
+	/// <summary>
+	/// The same, in <paramref name="colour"/>. A vertex has no colour of its own here, so it travels in the normal
+	/// slot, which weather.shader multiplies into the art; <see cref="Vector3.One"/> leaves the art as it is.
+	/// </summary>
+	protected void WriteQuad( int index, Vector3 centre, Vector3 up, float halfWidth, float halfHeight, Vector3 colour )
 	{
 		if ( index < 0 || index >= _capacity )
 			return;
@@ -77,10 +84,10 @@ public abstract class WeatherSprites : ModelEntity
 		var rise = up.Normal * halfHeight;
 
 		var v = index * 4;
-		_vertices[v + 0] = new Vertex( centre - across + rise, new Vector2( 0f, 0f ) );
-		_vertices[v + 1] = new Vertex( centre + across + rise, new Vector2( 1f, 0f ) );
-		_vertices[v + 2] = new Vertex( centre + across - rise, new Vector2( 1f, 1f ) );
-		_vertices[v + 3] = new Vertex( centre - across - rise, new Vector2( 0f, 1f ) );
+		_vertices[v + 0] = new Vertex( centre - across + rise, colour, new Vector2( 0f, 0f ) );
+		_vertices[v + 1] = new Vertex( centre + across + rise, colour, new Vector2( 1f, 0f ) );
+		_vertices[v + 2] = new Vertex( centre + across - rise, colour, new Vector2( 1f, 1f ) );
+		_vertices[v + 3] = new Vertex( centre - across - rise, colour, new Vector2( 0f, 1f ) );
 	}
 
 	/// <summary>Shrinks a quad to a point, which rasterises to nothing.</summary>

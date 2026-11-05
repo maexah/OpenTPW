@@ -685,24 +685,13 @@ filed the items that cite it.
   perpendicular: it uses |mid|², and its cross term is × 0.0), the branch heading `0x0057e810`, the colour pulse
   `0x0057ee30`, whose grey can pass 255 and wrap to near black. `Lightning.cs` draws one quad 9 wide. Decode first
   (the shape against a run of the original's bolt, `record.sh`), then build the jagged ribbon and its branches.
-- [ ] **Q1044. The bolt's envelope, its sixteen slots and its grey.** From the run 21 review of Q152 (VERIFY-13, read in the
-  listing, not run). Ours fades a bolt over its whole life (`Lightning.cs`, life² × stutter), so a park's 2 s bolt is gone
-  by about 1.5 s; the original keeps no starting lifetime and cuts the bolt when its life left reaches 0 (`0x0057ee81`).
-  Each frame, for each live bolt, m = life left % 500, p = m × 0.002f; if p < 0.9f the base is 255 − trunc((0.9f − p) ×
-  1.11f × 64), else 192 + trunc((1 − p) × 640): each 500 ms tooth rises 193 to 255 over 50 ms and falls to 192 over
-  450 ms (the lobby's bolt one tooth, a park's four). The grey is base + (CRT `rand()` & 63), drawn once a bolt a frame,
-  packed unclamped, so 256..318 wraps to near black (R = G = (g − 256) | 1, B = g − 256) on about half the frames
-  (`0x0057ee30`..`0x0057ef61`). Its colour is neutral grey, where ours tints it (0.85, 0.88, 1.0). The original keeps up to
-  16 bolts (`0x0058032c`); ours replaces the running one, so with 2 s about one park strike in six cuts the last short.
-  Run the original's bolt first (`record.sh`, a park strike: what a near-black frame looks like under its blend state,
-  whether the clock stops when paused), then build the envelope, the slots and the grey, each with its bug put back,
-  and photograph ours beside it. The bolt's shape is Q1035.
 - [ ] **Q1037. The lobby's bolt, photographed on the desk.** From Q1034, whose frames are lavapipe's (lane B, off-screen); rule 6 asks the desk's. Island 0, `attract off`, `settle`, `freeze`, `pause`, `near` says `axisDist=-` (nothing has struck), `strike`, `step 6` and shoot at ages 0.1, 0.2 and 0.3 s (`q1034/confirm2.py` gives the lift; the column should stand at about x 790..830 of a 1280 x 720 frame, behind the player panel, `q1034/compare-fix-control.png`), then the original's lobby bolt on the same island under Proton (`TOOLING.md`, "The original under Proton") for the brightness and the width.
 - [ ] **Q1045. The figure of a picked-up member at the pointer (`STAFF_PICKED_UP_PREVIEW`).** The type-6 mode's sprite (vtable `0x006fea70`;
   `docs/exe/hud.md`, "The person's windows"): the original hangs a figure of the picked-up member at the pointer (`q1032/orig/a-2-pickup.png`); ours
   counts `STAFF_PICKED_UP_PREVIEW` (ParkPeople.cs) and keeps the plain arrow. Counted since Q432, never queued. Decode first whether type 6 shares the carried
   figure's sprite path (`0x0046c480` / `0x0046c730`, Q40's fork-watch note H2, which is `STAFF_CARRY_PREVIEW`'s item) or has its own; fold into Q40 if it does.
   Listed in `docs/DOES-NOT.md` beside `STAFF_CARRY_PREVIEW`.
+- [ ] **Q1018. The original's bolt is updated a second time in some frames, 4 to 6 ms after the first.** Found by Q1044's poll (`q1044/orig/run1/a-load.log`, `run2/a-load.log`): of the poll lines, 209 (run 1) and 156 (run 2) show `FUN_0057ff60` called again with `dt` at `+0x9d9c` of 4 to 6 ms, after 997 and 567 of 25 ms or more: about one frame in five. Each call takes the clock's ms since the last call off every bolt and draws it with its own `rand()` (`0x0057ee30`). Not decoded: who calls it a second time (`0x00576dab`'s caller, or another), and whether the second call draws the bolt again, an additive second quad in the same frame that would make such a frame brighter than its one polled grey says. Ours draws one grey a frame and ages a bolt once. Decode first (`watch.sh` on `+0x9d9c`'s writers; `boltpoll.py`, `boltaim.py`), then film with `record.sh` and read whether a frame with a short second call is brighter.
 - [ ] **Q212. The ride window's other statuses. Decode first.** Found by the 2026-10-04 review (`u7-ride-door-6`,
   `-7`, `-9`, `-10`). `FUN_00485f60` answers (80/100/255) 5..9 for a ride waiting for an upgrade, `0xb`..`0xf` for a toilet's
   call to the handyman and `0x11`..`0x15` for a mechanic called (`+0x64`), `0x15` (UITEXT 385, "REPAIRS IN PROGRESS")

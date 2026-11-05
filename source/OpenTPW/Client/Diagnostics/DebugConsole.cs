@@ -3101,8 +3101,15 @@ public static class DebugConsole
 
 		return $"near flyers closest={Radii( LobbyFlyer.DebugClosestApproach )}r "
 			+ $"closestSolid={Radii( LobbyFlyer.DebugClosestSolid )}r "
-			+ $"bolt axisDist={boltDistance} opacity={bolt?.DebugOpacity ?? 0f:F2} flash={bolt?.Flash ?? 0f:F3} life={bolt?.DebugLifetime ?? 0f:F3}";
+			+ $"bolt axisDist={boltDistance} opacity={bolt?.DebugOpacity ?? 0f:F2} flash={bolt?.Flash ?? 0f:F3} life={bolt?.DebugLifetime ?? 0f:F3} "
+			+ BoltSlotCensus( bolt );
 	}
+
+	/// <summary>The bolts alive and the first one's life left in whole ms (what the grey is worked from) and the grey it was drawn in this frame (<see cref="BoltEnvelope"/>).</summary>
+	private static string BoltSlotCensus( Lightning? bolt )
+		=> bolt == null
+			? "slots=0"
+			: $"slots={bolt.DebugLive} slot0={(int)bolt.DebugLifeLeft}ms rgb={bolt.DebugColour.R},{bolt.DebugColour.G},{bolt.DebugColour.B}";
 
 	/// <summary>
 	/// The lines of the `mem` command: the kernel's resident figures for this process (<c>/proc/self/status</c>, Linux only), the
@@ -3265,6 +3272,7 @@ public static class DebugConsole
 			+ $"flash={ParkWeather.Current?.DebugBolt?.Flash:F3} "
 			+ $"boltOpacity={ParkWeather.Current?.DebugBolt?.DebugOpacity:F3} boltLife={ParkWeather.Current?.DebugBolt?.DebugLifetime:F3} "
 			+ $"boltDist={ParkWeather.Current?.DebugBolt?.DebugAxisDistance:F0} "
+			+ BoltSlotCensus( ParkWeather.Current?.DebugBolt ) + " "
 			// Compact, because Vector3's own formatting carries spaces and a harness splitting the
 			// reply on whitespace gets a single bracket.
 			+ $"cam={Camera.Position.X:F0},{Camera.Position.Y:F0},{Camera.Position.Z:F0} "

@@ -26,9 +26,14 @@ namespace OpenTPW;
 /// same renderer (0x00512b4c) and plays a thunder of its own. So the sound belongs with whoever strikes -
 /// see <see cref="LobbyWeather"/>.
 ///
-/// Engine and content: the bolt - its shape, its flicker, its fade near the camera and its flash - is
+/// Engine and content: the bolt - its grey, its sixteen slots, its fade near the camera and its flash - is
 /// engine, and draws a park's lightning the same way. When it strikes, and what that sounds like,
 /// is the weather's.
+///
+/// Each live bolt is drawn in the grey of <see cref="BoltEnvelope"/>: a saw-tooth of 192 to 255 every 500 ms of the
+/// life it has left, plus a draw of the game's <c>rand()</c> each frame, packed as the original packs it, so a sum past
+/// 255 wraps to near black. The bolt is cut at the frame its life left reaches nought, with no fade. Up to sixteen are
+/// alive at once (<see cref="BoltSlots"/>). Its shape stays one quad, nine wide (Q1035).
 /// </summary>
 public sealed class Lightning : WeatherSprites
 {
@@ -63,30 +68,37 @@ public sealed class Lightning : WeatherSprites
 
 	/// <summary>Where the camera is relative to the bolt, and what that did to it. For DebugConsole.</summary>
 	internal float DebugAxisDistance { get; private set; } = float.MaxValue;
+
+	/// <summary>The brightest slot's grey, 0 to 1, after the fade near the camera. For DebugConsole.</summary>
 	internal float DebugOpacity { get; private set; }
+
+	/// <summary>How many bolts are alive. For DebugConsole.</summary>
+	internal int DebugLive => _bolts.Count;
+
+	/// <summary>The first live bolt's life left in ms and the grey bytes it was drawn in this frame. For DebugConsole.</summary>
+	internal float DebugLifeLeft { get; private set; }
+	internal (byte R, byte G, byte B) DebugColour { get; private set; }
 
 	/// <summary>
 	/// 0 when nothing is happening, rising to 1 at the peak of a strike. Read by
-	/// <see cref="LobbyWeather"/> to flash the sun and the sky along with the bolt.
+	/// <see cref="LobbyWeather"/> to flash the sun and the sky along with the bolt. It keeps its own curve, a fade over
+	/// the bolt's lifetime with a stutter, which is not the bolt's grey (Q715's ground for the lobby's lift).
 	/// </summary>
 	public float Flash { get; private set; }
 
 	private readonly Random _rng = new( 0x104E );
-	private Vector3 _base;
-	private Vector3 _top;
-	private float _remaining;
+	private readonly BoltSlots _bolts = new();
 	private float _duration;
-	private float _flicker;
 
-	public Lightning() : base( 1, "generic/weather/lightning.tga" )
+	public Lightning() : base( BoltSlots.Capacity, "generic/weather/lightning.tga" )
 	{
 	}
 
-	/// <summary>The lifetime, in seconds, the strike now running or last run was given.</summary>
+	/// <summary>The lifetime, in seconds, the strike last started was given.</summary>
 	internal float DebugLifetime => _duration;
 
 	/// <summary>
-	/// Starts a strike near <paramref name="islandOrigin"/>, replacing any still running. Its
+	/// Starts a strike near <paramref name="islandOrigin"/>. Its
 	/// <paramref name="lifetime"/> is the scene's: the original's bolt draw (FUN_00580320) takes it as
 	/// argument 7, in milliseconds (<c>docs/exe/weather.md</c>, "The bolt").
 	/// </summary>
@@ -103,7 +115,8 @@ public sealed class Lightning : WeatherSprites
 	}
 
 	/// <summary>
-	/// Starts a strike between two points the caller has chosen, replacing any still running.
+	/// Starts a strike between two points the caller has chosen. It runs alongside any still alive, up to the
+	/// original's sixteen; a seventeenth is dropped, as the original drops it (0x0058032c).
 	///
 	/// <para>
 	/// A park picks its own rather than scattering them about an origin: FUN_00512c50 puts the ground
@@ -116,12 +129,10 @@ public sealed class Lightning : WeatherSprites
 	/// <param name="lifetime">How long the bolt is up, in seconds; nought or less draws nothing.</param>
 	public void Strike( Vector3 ground, Vector3 top, float lifetime )
 	{
-		_base = ground;
-		_top = top;
-
-		_duration = Math.Max( lifetime, 0f );
-		_remaining = _duration;
-		_flicker = 0f;
+		if ( _bolts.Add( ground, top, lifetime ) )
+			_duration = lifetime;
+		else if ( lifetime > 0f )
+			Log.Info( $"Lightning: a seventeenth bolt dropped, as the original drops it ({BoltSlots.Capacity} slots)" );
 	}
 
 	/// <summary>
@@ -133,12 +144,12 @@ public sealed class Lightning : WeatherSprites
 	/// always somewhere along its length and the only distance that means anything is the
 	/// horizontal one.
 	/// </summary>
-	private float NearCameraFade()
+	private float NearCameraFade( Vector3 ground, Vector3 top )
 	{
-		var rise = _top.Z - _base.Z;
-		var along = rise <= 0.001f ? 0f : ((Camera.Position.Z - _base.Z) / rise).Clamp( 0f, 1f );
+		var rise = top.Z - ground.Z;
+		var along = rise <= 0.001f ? 0f : ((Camera.Position.Z - ground.Z) / rise).Clamp( 0f, 1f );
 
-		var axis = _base.LerpTo( _top, along );
+		var axis = ground.LerpTo( top, along );
 
 		DebugAxisDistance = new Vector3( axis.X - Camera.Position.X, axis.Y - Camera.Position.Y, 0f ).Length;
 
@@ -147,7 +158,7 @@ public sealed class Lightning : WeatherSprites
 
 	protected override void OnUpdate()
 	{
-		if ( _remaining <= 0f )
+		if ( _bolts.Count == 0 )
 		{
 			if ( Flash > 0f )
 			{
@@ -159,37 +170,49 @@ public sealed class Lightning : WeatherSprites
 			return;
 		}
 
-		_remaining -= Time.Delta;
-		_flicker += Time.Delta;
+		// The bolt's clock is the game's own, so a park's menu holds it where the original's does (the life left
+		// stays put, dt = 0, while the bolt is redrawn with a fresh grey each frame); nothing in the lobby pauses it.
+		_bolts.Advance( GameClock.Delta );
 
-		var life = (_remaining / _duration).Clamp( 0f, 1f );
+		var flash = 0f;
+		var brightest = 0f;
 
-		// Bright immediately and then falling away, with a stutter on top so it reads as a
-		// strike rather than a fading rectangle. Frame-rate independent: the stutter is a
-		// function of elapsed time, not of how many frames have gone by.
-		var stutter = 0.55f + (0.45f * MathF.Abs( MathF.Sin( _flicker * 47f ) ));
-		var brightness = life * life * stutter;
-
-		Flash = brightness;
-
-		if ( _remaining <= 0f )
+		for ( var slot = 0; slot < _bolts.Count; ++slot )
 		{
-			Upload( 0 );
-			return;
+			var bolt = _bolts[slot];
+
+			// The flash is not the bolt's grey: it is bright immediately and then falling away, with a stutter on
+			// top, frame-rate independent because the stutter is a function of elapsed time.
+			var life = (bolt.LifeMs / bolt.DurationMs).Clamp( 0f, 1f );
+			var stutter = 0.55f + (0.45f * MathF.Abs( MathF.Sin( bolt.AgeSeconds * 47f ) ));
+			flash = MathF.Max( flash, life * life * stutter );
+
+			// One draw of the game's rand() a bolt a frame, as the original takes it, a paused menu's frames too (the
+			// original redraws a held bolt in a fresh grey each frame). Only the debug console's held frame clock keeps
+			// the last grey, so a paused or stepped frame is repeatable.
+			var fade = NearCameraFade( bolt.Ground, bolt.Top );
+			var colour = _bolts.Draw( slot, _rng.Next( 0x8000 ), Time.Delta > 0f, fade );
+			bolt = _bolts[slot];
+
+			// The quad spans the whole bolt, so its "up" is the lean direction and its half-height
+			// is half the bolt's actual length rather than half its vertical extent.
+			var along = bolt.Top - bolt.Ground;
+			WriteQuad( slot, (bolt.Ground + bolt.Top) * 0.5f, along.Normal, BoltHalfWidth, along.Length * 0.5f, colour );
+
+			brightest = MathF.Max( brightest, MathF.Max( colour.X, MathF.Max( colour.Y, colour.Z ) ) );
+
+			if ( slot == 0 )
+			{
+				DebugLifeLeft = bolt.LifeMs;
+				DebugColour = (bolt.R, bolt.G, bolt.B);
+			}
 		}
 
-		var centre = (_base + _top) * 0.5f;
-		var along = _top - _base;
+		Flash = flash;
+		DebugOpacity = brightest;
 
-		brightness *= NearCameraFade();
+		Tint = System.Numerics.Vector4.One;
 
-		// The quad spans the whole bolt, so its "up" is the lean direction and its half-height
-		// is half the bolt's actual length rather than half its vertical extent.
-		WriteQuad( 0, centre, along.Normal, BoltHalfWidth, along.Length * 0.5f );
-
-		Tint = new System.Numerics.Vector4( 0.85f, 0.88f, 1f, brightness );
-		DebugOpacity = brightness;
-
-		Upload( 1 );
+		Upload( _bolts.Count );
 	}
 }
