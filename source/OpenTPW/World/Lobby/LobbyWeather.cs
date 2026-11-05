@@ -30,6 +30,12 @@ public sealed class LobbyWeather : Entity
 	/// </summary>
 	private const float SkyRate = 1f;
 
+	/// <summary>
+	/// How long a lobby bolt is up, in seconds: the 500 milliseconds the lobby's tick passes the bolt draw as its
+	/// argument 7 (FUN_00580320, <c>docs/exe/weather.md</c>, "The bolt"). The tick's other 500 is the bolt's height.
+	/// </summary>
+	internal const float BoltLifetime = 0.5f;
+
 	/// <summary>The one weather system, so DebugConsole can reach it. There is only ever one.</summary>
 	internal static LobbyWeather? Current { get; private set; }
 
@@ -141,7 +147,7 @@ public sealed class LobbyWeather : Entity
 	/// </summary>
 	private void Strike( Vector3 islandOrigin )
 	{
-		_lightning.Strike( islandOrigin );
+		_lightning.Strike( islandOrigin, BoltLifetime );
 		LobbyAudio.Current?.Thunder();
 	}
 }

@@ -93,6 +93,7 @@ public sealed class ParkWeather : Entity
 	private readonly int _lightningHigh;
 	private readonly int _countdownSpeed;
 	private readonly int _countdownFrom;
+	private readonly int _lightningTime;
 	private readonly int _thunderDistance;
 	private readonly int _thunderRandomiser;
 	private readonly int _maxRaindrops;
@@ -138,6 +139,16 @@ public sealed class ParkWeather : Entity
 	private readonly Lightning? _lightning;
 
 	/// <summary>
+	/// How long a park's bolt is up, in seconds: the balance file's <c>LightningTime</c> (2000 milliseconds as
+	/// shipped), which the park's weather passes the bolt draw as its argument 7 (FUN_00580320, <c>docs/exe/weather.md</c>,
+	/// "The bolt").
+	/// </summary>
+	internal float BoltLifetime => _lightningTime / 1000f;
+
+	/// <summary>Where a placed bolt goes to be drawn: the bolt, with its ground, its top and its lifetime in seconds. A test replaces it.</summary>
+	internal Action<Vector3, Vector3, float> StrikeBolt { get; set; } = null!;
+
+	/// <summary>
 	/// How far a bolt may come down from the park's edge, and how far its top leans - straight out of
 	/// FUN_00512c50, which picks a ground point anywhere across the map (clamped away from the very
 	/// edge) and leans the top by up to fifty either way over a height of three hundred.
@@ -166,9 +177,12 @@ public sealed class ParkWeather : Entity
 	/// <param name="savedWindDirection">As the public constructor's.</param>
 	/// <param name="drawn">Whether it makes the rain and the bolt that draw it; a weather that draws nothing needs no device.</param>
 	/// Dead by CODE with <paramref name="drawn"/> false: only ParkFileWriterTests and ParkWeatherFreshTests pass it.
-	internal ParkWeather( float? savedWindDirection, bool drawn )
+	/// <param name="balance">The balance file to read; null reads the level's own (a test hands one over).</param>
+	internal ParkWeather( float? savedWindDirection, bool drawn, ParkBalance? balance = null )
 	{
 		Current = this;
+
+		StrikeBolt = ( ground, top, lifetime ) => _lightning?.Strike( ground, top, lifetime );
 
 		if ( drawn )
 		{
@@ -176,7 +190,7 @@ public sealed class ParkWeather : Entity
 			_lightning = new();
 		}
 
-		var balance = Level.Current?.Balance;
+		balance ??= Level.Current?.Balance;
 
 		// Every one of these is a real key in data/levels/Standard.sam, and the fallbacks are the
 		// shipped values rather than invented ones - so a missing balance file gives the game's own
@@ -204,6 +218,7 @@ public sealed class ParkWeather : Entity
 
 		_countdownSpeed = Int( balance, "WeatherEffects.LightningCountdownSpeed", 10 );
 		_countdownFrom = Int( balance, "WeatherEffects.LightningCountdownFrom", 500 );
+		_lightningTime = Int( balance, "WeatherEffects.LightningTime", 2000 );
 		_thunderDistance = Int( balance, "WeatherEffects.ThunderStartsThisFarAway", 10 );
 		_thunderRandomiser = Int( balance, "WeatherEffects.ThunderRandomiser", 2 );
 		_maxRaindrops = Int( balance, "WeatherEffects.MaxRaindrops", 600 );
@@ -614,7 +629,7 @@ public sealed class ParkWeather : Entity
 		LastStrikeGround = new Vector3( groundX, groundY, 0f );
 		LastStrike = new Vector3( groundX + Lean(), groundY + Lean(), BoltHeight );
 
-		_lightning?.Strike( LastStrikeGround, LastStrike );
+		StrikeBolt( LastStrikeGround, LastStrike, BoltLifetime );
 
 		// Thunder follows the flash, and closes in as the storm builds: the delay is the distance less
 		// however many bolts this period has already thrown, so the first is about ten weather ticks

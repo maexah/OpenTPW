@@ -41,9 +41,6 @@ public sealed class Lightning : WeatherSprites
 	private const float GroundSpread = 50f;
 	private const float LeanSpread = 10f;
 
-	/// <summary>How long a strike is on screen. Short, and flickering while it lasts.</summary>
-	private const float Duration = 0.42f;
-
 	/// <summary>How much the strike lifts the scene's lighting at its brightest.</summary>
 	public const float MaxFlash = 1.35f;
 
@@ -78,14 +75,22 @@ public sealed class Lightning : WeatherSprites
 	private Vector3 _base;
 	private Vector3 _top;
 	private float _remaining;
+	private float _duration;
 	private float _flicker;
 
 	public Lightning() : base( 1, "generic/weather/lightning.tga" )
 	{
 	}
 
-	/// <summary>Starts a strike near <paramref name="islandOrigin"/>, replacing any still running.</summary>
-	public void Strike( Vector3 islandOrigin )
+	/// <summary>The lifetime, in seconds, the strike now running or last run was given.</summary>
+	internal float DebugLifetime => _duration;
+
+	/// <summary>
+	/// Starts a strike near <paramref name="islandOrigin"/>, replacing any still running. Its
+	/// <paramref name="lifetime"/> is the scene's: the original's bolt draw (FUN_00580320) takes it as
+	/// argument 7, in milliseconds (<c>docs/exe/weather.md</c>, "The bolt").
+	/// </summary>
+	public void Strike( Vector3 islandOrigin, float lifetime )
 	{
 		float Spread( float extent ) => ((_rng.NextSingle() * 2f) - 1f) * extent;
 
@@ -94,7 +99,7 @@ public sealed class Lightning : WeatherSprites
 			islandOrigin.Y + Spread( GroundSpread ),
 			0f );
 
-		Strike( ground, ground + new Vector3( Spread( LeanSpread ), Spread( LeanSpread ), BoltHeight ) );
+		Strike( ground, ground + new Vector3( Spread( LeanSpread ), Spread( LeanSpread ), BoltHeight ), lifetime );
 	}
 
 	/// <summary>
@@ -108,12 +113,14 @@ public sealed class Lightning : WeatherSprites
 	/// over the pair it has already worked out.
 	/// </para>
 	/// </summary>
-	public void Strike( Vector3 ground, Vector3 top )
+	/// <param name="lifetime">How long the bolt is up, in seconds; nought or less draws nothing.</param>
+	public void Strike( Vector3 ground, Vector3 top, float lifetime )
 	{
 		_base = ground;
 		_top = top;
 
-		_remaining = Duration;
+		_duration = Math.Max( lifetime, 0f );
+		_remaining = _duration;
 		_flicker = 0f;
 	}
 
@@ -155,7 +162,7 @@ public sealed class Lightning : WeatherSprites
 		_remaining -= Time.Delta;
 		_flicker += Time.Delta;
 
-		var life = (_remaining / Duration).Clamp( 0f, 1f );
+		var life = (_remaining / _duration).Clamp( 0f, 1f );
 
 		// Bright immediately and then falling away, with a stutter on top so it reads as a
 		// strike rather than a fading rectangle. Frame-rate independent: the stutter is a

@@ -527,16 +527,6 @@ filed the items that cite it.
     of `[0x8bcbc8]` on Lost Kingdom's island page settles it. Also: in the lobby the rebuild `FUN_00585720` writes random greys
     0x80..0xff into all four cloud colour tables after the load, so the lobby's three untinted layers are not the `sky_rgb`
     gradient (`Sky.cs`), and the first layer's flood is the island colour at SKYQUALITY above 1.
-- [ ] **Q152. Every lightning bolt lasts 0.42 s.** Found by the 2026-09-26 staleness audit. `Lightning.Duration` is a
-  constant, and neither `LobbyWeather` nor `ParkWeather.PlaceBolt` passes a lifetime to `Strike`. The original's bolt
-  draw takes one (`FUN_00580320`, argument 7, in milliseconds): 500 in the lobby and `LightningTime` in a park, 2000
-  in the balance file, which nothing here reads (`weather.md`, "The bolt"). Pass each scene's own. Confirm: `bolt` in
-  the lobby and in Lost Kingdom, frames grabbed every 100 ms, the bolt up for 0.5 s and 2 s.
-  - **Note (fork review 2, 2026-10-16, `verify-audio-lips-video.md` lead 3):** the bolt's shape is the PC's own: the
-    constructor (`0x0057d2ab`..`0x0057d2e9`) sets roughness 0.6, a stop test of 6 ± 2, a ribbon half-width of 1.3 /
-    (depth + 1) in screen units and branch odds of 9 in 512; the midpoint step is `0x0057e4b0` (its offset is not
-    perpendicular: it uses |mid|², and its cross term is × 0.0), the branch heading `0x0057e810`, the colour pulse
-    `0x0057ee30`, whose grey can pass 255 and wrap to near black. `Lightning.cs` draws one quad 9 wide.
 - [ ] **Q859. A queue piece whose index is 8 or more draws what the original draws (decoded in Q895; the build waits on the confirm below).** From Q154. A queue cell's
   tile index is `2` for a straight and `3` for a corner, `+1` on the four bumped corner pairs, `+3` per mutual path link, and the
   table of queue models holds eight; the original's index runs on into the kart kit's table (`park-engine.md`, "An index past the
@@ -701,6 +691,12 @@ filed the items that cite it.
   cell on the desk with the pointer moved off it, and compare the same cell with him standing: the
   cell empty where he stood.
 - [ ] **Q1043. The all-items panel's top and its close button.** From Q1042's side-by-side (`q1042/side-by-side-order.png`): ours draws the panel's top black behind the four tabs where the original shows its green waves, and its close button a red cross where the original shows a green tick. Seen, not measured; find which picture each uses in the original (`hud.md`) before building.
+- [ ] **Q1034. The lobby's bolt, seen in a frame.** From Q152. Its off-screen run struck with the camera on the player-select view (no island current, so the strike lands at the world origin over open sea and no bolt is in shot), so the lobby's 0.5 s is proved by the census alone (`life=0.500`, flash 0.000 from 0.51 s). Strike with the camera on an island, frames every 100 ms, and photograph it on the desk (rule 6). The whole-frame lift of the lobby is not a usable metric: after `freeze` it still carries 15 to 30 grey levels for a second, in the bolt-free control too (`q152/run-control1`, `run-fix5`), so find what moves (the flyers, the sky's ease, a glow) before measuring the bolt there.
+- [ ] **Q1035. The bolt's shape is the PC's own, and OpenTPW draws one quad.** From Q152's note (fork review 2, 2026-10-16, `verify-audio-lips-video.md` lead 3): the constructor (`0x0057d2ab`..`0x0057d2e9`) sets roughness 0.6, a stop test of 6 ± 2, a ribbon half-width of 1.3 /
+  (depth + 1) in screen units and branch odds of 9 in 512; the midpoint step is `0x0057e4b0` (its offset is not
+  perpendicular: it uses |mid|², and its cross term is × 0.0), the branch heading `0x0057e810`, the colour pulse
+  `0x0057ee30`, whose grey can pass 255 and wrap to near black. `Lightning.cs` draws one quad 9 wide. Decode first
+  (the shape against a run of the original's bolt, `record.sh`), then build the jagged ribbon and its branches.
 - [ ] **Q212. The ride window's other statuses. Decode first.** Found by the 2026-10-04 review (`u7-ride-door-6`,
   `-7`, `-9`, `-10`). `FUN_00485f60` answers (80/100/255) 5..9 for a ride waiting for an upgrade, `0xb`..`0xf` for a toilet's
   call to the handyman and `0x11`..`0x15` for a mechanic called (`+0x64`), `0x15` (UITEXT 385, "REPAIRS IN PROGRESS")

@@ -3101,7 +3101,7 @@ public static class DebugConsole
 
 		return $"near flyers closest={Radii( LobbyFlyer.DebugClosestApproach )}r "
 			+ $"closestSolid={Radii( LobbyFlyer.DebugClosestSolid )}r "
-			+ $"bolt axisDist={boltDistance} opacity={bolt?.DebugOpacity ?? 0f:F2}";
+			+ $"bolt axisDist={boltDistance} opacity={bolt?.DebugOpacity ?? 0f:F2} flash={bolt?.Flash ?? 0f:F3} life={bolt?.DebugLifetime ?? 0f:F3}";
 	}
 
 	/// <summary>
@@ -3263,7 +3263,7 @@ public static class DebugConsole
 			+ $"storm={ParkWeather.Current?.Lightning} snow={ParkWeather.Current?.Snowing} "
 			+ $"strikes={ParkWeather.Current?.DebugStrikes} forecast={ParkWeather.Current?.Forecast} "
 			+ $"flash={ParkWeather.Current?.DebugBolt?.Flash:F3} "
-			+ $"boltOpacity={ParkWeather.Current?.DebugBolt?.DebugOpacity:F3} "
+			+ $"boltOpacity={ParkWeather.Current?.DebugBolt?.DebugOpacity:F3} boltLife={ParkWeather.Current?.DebugBolt?.DebugLifetime:F3} "
 			+ $"boltDist={ParkWeather.Current?.DebugBolt?.DebugAxisDistance:F0} "
 			// Compact, because Vector3's own formatting carries spaces and a harness splitting the
 			// reply on whitespace gets a single bracket.
