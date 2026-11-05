@@ -4,7 +4,7 @@ local matrix (+0x10, 3 rows of 4 floats) in the running ORIGINAL, read-only, eve
 to stdout (wall time, role, clip, frame, length, the node's 9 rotation elements, its three row lengths). ITEM is the thing's
 id at slot record +0xf8 (headpause.py's way into a ride's channel: slot list 0x007a4614, [m+8] instance, [inst+4] model header,
 [m+0x10] the first channel: words 1, 2, 7, 8 = role, clip, length, frame); NODE is a node name (default jm_leaf, Mumbo's), found by walking
-the header's tree from +0x78 (child +0xc, sibling +8, name pointer +0x54) as modelnodes.py does. The node's matrix is a 64-byte read, so one poll's
+the header's tree from +0x78 (child +0xc, sibling +8, name pointer +0x54) as modelnodes.py does. The node's matrix is one 48-byte read (not atomic against the game's writes; no torn read was seen, spread 0.00000), so one poll's
 matrix is whole; the frame is read after it, so a pose between the two reads shows as a frame a step later. Q1004."""
 import json, struct, sys, time
 pid, item, secs = int(sys.argv[1]), int(sys.argv[2]), float(sys.argv[3]); want = (sys.argv[4] if len(sys.argv) > 4 else 'jm_leaf').lower()

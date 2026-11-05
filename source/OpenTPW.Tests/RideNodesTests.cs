@@ -471,6 +471,55 @@ public class RideNodesTests
 		Assert.AreEqual( 4, turnedHeads, "Head02 to Head05 carry 0x40000" );
 	}
 
+	/// <summary>
+	/// <b>A node's parent counts as morphing only where an animator that targets it is morphing</b> (<c>LobbyModel.MorphedParent</c>,
+	/// what <c>TryGetDrawnNodeTurn</c> hands <c>DrawnTurn</c>): the morphing one's vertices, not another mesh's animator, not one at rest, and
+	/// nothing where none targets the mesh.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the answer always null (the face turn never applied in the game); the <c>Morphing</c> test dropped.</remarks>
+	[TestMethod]
+	public void OnlyAMorphingAnimatorOfTheParentMeshPosesItsFace()
+	{
+		static MeshAnimator Animator( int target, bool morphing, float x )
+		{
+			var animator = (MeshAnimator)System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject( typeof( MeshAnimator ) );
+			const System.Reflection.BindingFlags any = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+
+			void Set( string field, object value ) => typeof( MeshAnimator ).GetField( field, any )!.SetValue( animator, value );
+
+			Set( "_targetIndex", target );
+			Set( "_morphed", morphing );
+			Set( "_positions", new[] { new OpenTPW.Vector3( x, 0, 0 ) } );
+			Set( "_restPositions", new[] { new OpenTPW.Vector3( -x, 0, 0 ) } );
+
+			return animator;
+		}
+
+		MeshAnimator[] animators = [Animator( 2, true, 7 ), Animator( 3, false, 9 )];
+
+		Assert.AreEqual( 7f, LobbyModel.MorphedParent( animators, 2 )!( 0 ).X, "the morphing animator of mesh 2 gives its morphed vertices" );
+		Assert.IsNull( LobbyModel.MorphedParent( animators, 3 ), "an animator at rest does not pose the face" );
+		Assert.IsNull( LobbyModel.MorphedParent( animators, 4 ), "no animator targets mesh 4" );
+	}
+
+	/// <summary>
+	/// <b>A head's picture is chosen by the turn its node is drawn with, not the stored matrix</b> (<c>ParkGuestSprites.HeadPicture</c>,
+	/// <c>HeadOnRide</c>, Q1003): the same camera over a stored matrix that sees it from above (picture 0) and a drawn turn of 90 degrees about x
+	/// that sees it level from behind (picture 28); with no drawn turn the stored matrix picks.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the drawn turn ignored (the stored matrix again, as before Q1003).</remarks>
+	[TestMethod]
+	public void AHeadsPictureIsChosenByTheDrawnTurnNotTheStoredMatrix()
+	{
+		var stored = System.Numerics.Matrix4x4.Identity;
+		var drawn = System.Numerics.Matrix4x4.CreateRotationX( System.MathF.PI / 2 );
+		var at = new OpenTPW.Vector3( 0, 0, 0 );
+		var camera = new OpenTPW.Vector3( 0, 0, 10 );
+
+		Assert.AreEqual( 0, ParkGuestSprites.HeadPicture( stored, null, at, camera ), "no drawn turn: the stored matrix, camera straight above" );
+		Assert.AreEqual( 28, ParkGuestSprites.HeadPicture( stored, drawn, at, camera ), "the drawn turn picks, not the stored matrix" );
+	}
+
 	/// <summary>Whether node <paramref name="index"/> has a mesh among its ancestors.</summary>
 	private static bool HangsInAMesh( ModelFile model, int index )
 	{

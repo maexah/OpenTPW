@@ -128,6 +128,8 @@ public class MeshRotator
 
 			// Same Y/Z swap the meshes go through; that swap flips handedness, so the rotation
 			// is conjugated too.
+			// Not the original's: before a track's first key the engine skips it (0x00471c56) and the node keeps the turn it
+			// holds; Sample holds the first key (Mumbo's `c`, Q1010).
 			var q = track.Sample( frame );
 			var rotation = Matrix4x4.CreateFromQuaternion( new Quaternion( q.X, q.Z, q.Y, -q.W ) );
 

@@ -998,7 +998,7 @@ public sealed class ParkGuestSprites : ModelEntity
 		// drawn, the head goes where its node is drawn.
 		var at = new Vector3( world.M41, world.M43, world.M42 );
 
-		var turn = world;
+		System.Numerics.Matrix4x4? drawnTurn = null;
 
 		if ( ParkObjects.Current is { } objects )
 		{
@@ -1006,17 +1006,26 @@ public sealed class ParkGuestSprites : ModelEntity
 				at = drawn;
 
 			if ( objects.TryDrawnNodeTurnOn( script.ThingId, nodes.HeadIndex( node ), out var turned ) )
-				turn = turned;
+				drawnTurn = turned;
 		}
 
-		var seen = Camera.Position - at;
+		return (at, HeadPicture( world, drawnTurn, at, Camera.Position ));
+	}
+
+	/// <summary>
+	/// The picture a head at <paramref name="at"/> shows <paramref name="camera"/>, by the turn its node is drawn with
+	/// (<paramref name="drawnTurn"/>), or by the stored matrix <paramref name="stored"/> where the thing is not drawn.
+	/// </summary>
+	internal static int HeadPicture( System.Numerics.Matrix4x4 stored, System.Numerics.Matrix4x4? drawnTurn, Vector3 at, Vector3 camera )
+	{
+		var seen = camera - at;
 		var towards = new System.Numerics.Vector3( seen.X, seen.Z, seen.Y );
-		var rotation = turn with { M41 = 0, M42 = 0, M43 = 0 };
+		var rotation = (drawnTurn ?? stored) with { M41 = 0, M42 = 0, M43 = 0 };
 
 		if ( System.Numerics.Matrix4x4.Invert( rotation, out var inverse ) )
 			towards = System.Numerics.Vector3.TransformNormal( towards, inverse );
 
-		return (at, ParkBumperBoats.HeadFrame( towards ));
+		return ParkBumperBoats.HeadFrame( towards );
 	}
 
 	/// <summary>

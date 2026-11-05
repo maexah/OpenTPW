@@ -3716,8 +3716,8 @@ Q940's 32 pauses against a run of this game loaded from the same `Q848.TPWS`, th
 carried by the turn that mesh is drawn with, is the original's matrix to 0.0-1.6 degrees for Head1 in all 7 pauses it was held at (7 of 7 pictures), and for
 Heads 2 to 5 only at two pauses (role 4 frame 111, role 5 frame 101: 1 to 13 degrees); at the other six they are 20 to 71 degrees
 out about a horizontal axis (`lib/headresidual.py`). Over all 32 samples the drawn turn picks the original's picture in 13 (the rest matrix, 4), a mean 30.5 degrees apart. The
-gap is `FUN_0044a640`, which replaces the matrix's rotation rows with cross(edge, normal), the normal and the edge (three kept angles), under flag `0x40000` only
-(`test eax,0x40000` at `0x0044af61`; "Where a head on a morphing face stands", `park.md`), which ours does not build. The flag split is the evidence: Mumbo's Head1
+gap is `FUN_0044a640`, which replaces the matrix's rotation rows with n x e (cross(normal, edge)), the normal and the edge (three kept angles), under flag `0x40000` only
+(`test eax,0x40000` at `0x0044af61`; "Where a head on a morphing face stands", `park.md`), which ours did not build before Q1003. The flag split is the evidence: Mumbo's Head1
 (`0x100000f1`) lacks it and is the one that matches; Head02-Head05 (`0x000400f1`) carry it and are out. **With it built** (Q1003; `LobbyModel.TurnToFace`, its decode
 in `park.md`, "Where a head on a morphing face stands"), the same pauses against a run of this game from the same file: Heads 2 to 5 are 0.1 to 5.5 degrees from the
 original's matrix at all eight pauses and Head1 0.0 to 1.6 as before; the drawn turn picks the original's picture in 32 of 32 samples, a mean 1.0 degrees apart, and

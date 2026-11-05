@@ -619,11 +619,18 @@ public sealed class LobbyModel : IChannelPosed
 	public bool TryGetDrawnNodeTurn( int index, out Matrix4x4 world )
 	{
 		var parent = index >= 0 && index < _file.Nodes.Count ? _file.Nodes[index].ParentIndex : -1;
-		var morphed = Animators.FirstOrDefault( animator => animator.TargetIndex == parent ) is { Morphing: true } animator
-			? animator.SourcePosition
-			: (Func<int, Vector3>?)null;
+		return DrawnTurn( _file, Entities, index, MorphedParent( Animators, parent ), out world );
+	}
 
-		return DrawnTurn( _file, Entities, index, morphed, out world );
+	/// <summary>
+	/// The source vertices of mesh <paramref name="parent"/> as a morph poses them now, or null where no animator that is morphing
+	/// targets it (the engine's runtime flag <c>0x200000</c>, <c>0x0044ac00</c>).
+	/// </summary>
+	internal static Func<int, Vector3>? MorphedParent( IEnumerable<MeshAnimator> animators, int parent )
+	{
+		return animators.FirstOrDefault( animator => animator.TargetIndex == parent ) is { Morphing: true } animator
+			? animator.SourcePosition
+			: null;
 	}
 
 	/// <summary>

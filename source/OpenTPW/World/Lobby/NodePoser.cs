@@ -171,7 +171,8 @@ public sealed class NodePoser : IChannelPosed
 
 				// Before the first key's frame the engine's key search (Anim_FindKey, 0x00470b60, the keys at or before the
 				// frame's truncation) answers nought and the track is skipped (0x00471c56): the node keeps the turn it holds,
-				// the rest after a change of clip, the last key of the pass before when the clip comes round (docs/exe/park.md, FUN_00471860).
+				// the one the clip before last posed (the same clip coming round, or a change of clip that also turns the node),
+				// the rest after a change that puts it back (FUN_00472310) (docs/exe/park.md, FUN_00471860).
 				if ( (int)frame < track.FrameIndices[0] )
 					continue;
 
