@@ -5983,8 +5983,28 @@ neighbours unlinked), clearing nothing when P is a path (`0x0052ff9a`), then mea
 object there, the tool's `Serves` here) and counts the advisor `0xcb` its re-arm posts (`BACKSPACE_QUEUE_ADVISOR_0xCB`). The first entry is
 never popped. Measured in OpenTPW off-screen on the stock Belly Bounce's queue: edit (3 pending, anchor (49,22)), a run south and one
 west, Backspace twice: the west run's three cells go and (49,25) stays at 0, the south run's go and (49,22) stays at 0, the balance
-back to what it was (`q860-b18/run1`). A third press would pop the edited queue itself, back to the node (the list's whole point);
-not run. The original's own run of the same clicks is not made (lane A's confirm).
+back to what it was (`q860-b18/run1`).
+
+**The same clicks in the original, run (Q1038, 2026-11-05, `q1038/orig/run1`..`run4`; `tools/harness/original/queuecells.py` reads the tool and the cells live):** the stock
+Belly Bounce's queue (49..52,22) edited by a click on (50,22) with the hand empty, then a run south to (49,25), one west to (46,25), Backspace four times. **Every cell's type,
+neighbour mask, direction, flags, owner and counter, and the tool's mode, anchor and pending count, read as OpenTPW reads them, at each of seven stages, for 15 cells**
+(`q1038/cmp-A.txt`; the same in the three other scenarios, `cmp-BC.txt`, `cmp-D.txt`). The values the decode gave hold in the running game: the edit's walk leaves (52,22) at 1
+(NOMODIFY, flags `0x20`) and the rest 0; the south run re-stamps its anchor (49,22) to 1 and lays three cells at 0; the west run re-stamps (49,25) to 1 and lays (48,25),
+(47,25) (path cells before, laid over) and (46,25) at 0; Backspace once takes the three west cells (type 0) and leaves (49,25) a queue cell at counter 0 with the one link,
+north; again, the south run, (49,22) at 0. The edit unlinks (49,22) from the path (48,22) (neighbours `0x44` to `0x04`, and (48,22)'s `0xf5` to `0xf1`). The pending list the
+edit builds is `[(52,22), (52,22), (49,22)]` (`0x00820a8c` its count, `0x0081b740` the pairs); each run pushes its target. **The press after those two does take something:** the
+list's third entry pops, the stepped clear runs over (51,22)..(49,22), all three go (type 0) and the NOMODIFY node (52,22) stays (neighbours `0x50` to `0x10`, counter 1),
+anchor (52,22), pending 2; a fourth press leaves one entry and changes no cell; a list left with one entry takes nothing back. Ours does the same cell for cell.
+**The lay costs 75 a cell** (the balance fell 225 at the click of a three-cell run, over two path cells and one bare, read every 0.1 s: `orig/run1/t3-west-trace.txt`), **and
+Backspace refunds 37 a cell, not 75: +111 for each three-cell press** (`t4-bs1-trace.txt`, `t5-bs2-trace.txt`, `t6-bs3-trace.txt`: 87283 to 87394, 87404 to 87515, 87525 to
+87636), the scrap percentage of "DEMOLISH refunds" above; 37 is 75 x 50 / 100 truncated a cell, and the stock ride has had customers. Ours gives 75 a cell
+(`QUEUE_REFUND_DEPRECIATION`, counted; Q1052). **A click on the anchor with a run laid** puts the tool away (mode 0, anchor -1), lays and charges nothing and leaves
+the list as it is, the click counter `[0x008186dc]` one higher (`run2/b3-anchorclick.txt`). **A run onto a cell of the ride's own queue is refused**: the click on
+(49,22) from (46,22) (a run east over the paths (47,22), (48,22)) and the click on (49,23) from (49,25) each put the tool away, lay nothing and leave every counter as it was,
+the second showing the "no" cursor and "$ 0" in the preview (`run3/c5-east.txt`, `run4/d3-ownqueue.txt`, `d3-hover.png`); so the stamp's +1 on a run's last cell never meets a
+queue cell of its own. The click counter is one word for the whole process: it was 6 at a reloaded park's first click, left by earlier runs and not reset by a load, an Escape or
+the put-away (a fresh start reads 0, 1, 2, 2 as OpenTPW does; Q1047). The pointer's pixel for a cell on a camera set by `setcam.py` is `camera.py --aim`'s, and with a tool armed
+the preview cell `[0x008186b8]`, `[0x008186b4]` follows the pointer, snapped to the anchor's row or column.
 
 **`mFlags & 0x40` marks land outside the park** — the meaning is inferred from a census. `FUN_00536490` sets it as
 the map loads on every cell but the first paths (`0x00536553`, `0x005365b5`), and `FUN_005311c0` tests it (`FUN_00535db0( 0x40 )`) and clears it (`FUN_0053a530( 0x40 )`, first at `0x00531327`), and Buy Land's apply arm reaches that (tool `0x39` tested at `0x00525c4e`, `FUN_005327e0` at `0x00525d52`, the call at `0x005328b4`), as does the terrain initializer `FUN_005323f0` (`0x00532557`). 13,878 of Lost Kingdom's 16,384 cells carry it, all
