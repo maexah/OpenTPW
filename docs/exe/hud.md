@@ -3703,13 +3703,13 @@ the box up (`orig/b-5-fire-box.png`); the cross kept him; FIRE again and the tic
 costs 538 to 699 in the same 1.2 s, exactly 161 (his wage, 7 x 23), his `+3` 1; the mechanics' locator then named nobody.
 
 **His cell, held** (Q1032, `q1032/orig/`; the clock held by `memhold.py` on `0x007859a0`, the camera on him by the strip's snap, the pointer in
-the lower right): standing, Mike and a child in the same cell (two figures and two shadows); after PICK UP only the child and his shadow
+the lower right): standing, Mike and a smaller figure (a child by its look; not read) in the same cell (two figures and two shadows); after PICK UP only the smaller figure and his shadow
 (`orig/side-by-side-A-B.png`; 963 of 32,000 pixels differ, a 46 x 41 box). A member put down with the clock held is not drawn until the clock has run.
 
 **OpenTPW** (Q432): FIRE opens `MessageBox` on UITEXT 397 where `GameOptions.Confirmations` is on, its tick
 `ParkPeople.Fire` on the member kept; PICK UP is `ParkPeople.PickUp`; each closes the window. `ParkPeople.Fire` puts a
 carried worker back first. A member in the hand is not drawn in the park (`ParkGuestSprites.InTheHand`; the `guests`
-census says "IN THE HAND, not drawn"; that the draw loop skips him is on screen since Q1032: his cell photographed standing and held, 599 of 14,400 pixels differ, all inside his sprite, the path with no ghost and his shadow gone; the original's the same, `q1032/orig/side-by-side-A-B.png`). Built since Q900: the puff (`PersonPuffs`). Counted: the figure at the pointer
+census says "IN THE HAND, not drawn"; that the draw loop skips him is on screen since Q1032: his cell photographed standing and held, 599 of 14,400 pixels differ, all inside his sprite and his shadow (x 1092..1121, y 273..308 of the frame), the path with no ghost and his shadow gone; the original's the same, `q1032/orig/side-by-side-A-B.png`). Built since Q900: the puff (`PersonPuffs`). Counted: the figure at the pointer
 (`STAFF_PICKED_UP_PREVIEW`), so our pointer stays the plain arrow while a worker is carried. Its run (`q432/confirm.py`)
 logged one month's wage of 161 paid and put 161 on the staff costs across the tick (the balance moved -86, with income between the reads), the same box (`q432/side-by-side-box.png`).
 

@@ -1,8 +1,8 @@
 """framesweep.py - a console command, then a frame and a census line every STEP seconds, and the lift a thing leaves in the frames.
-exec() it AFTER parkrun.py (it uses `send`, `drain`, `lines`, `tail`, `grab`, `time`, `queue` and `re` from the library).
+exec() it AFTER parkrun.py (it uses `send`, `drain`, `lines`, `tail`, `ask`, `collect`, `grab`, `time`, `queue`, `re`, `os` and `OUT` from the library).
 
     sweep( cmd, pat, secs, tag, trigger, step=0.1 )
-                    grabs the window, sends `trigger` (the console command that starts the thing: `strike`, `bolt X Y`), then every
+                    sends `trigger` (the console command that starts the thing: `strike`, `bolt X Y`), then every
                     `step` seconds grabs a frame and sends `cmd`, keeping the first reply line containing `pat`; saves each frame as
                     OUT/<tag>-NN.png and answers [(seconds since the trigger was sent, the census line or None, the frame)].
                     The seconds are the wall clock: the thing's own age is that less the frame or two (more on a busy machine, up to
@@ -12,8 +12,9 @@ exec() it AFTER parkrun.py (it uses `send`, `drain`, `lines`, `tail`, `grab`, `t
                     Time.StepDelta), waits for `state` to say stepping=0, grabs a frame and sends `cmd`; answers [(age, census, frame)] with the age
                     0 (before any step) first, age = k * steps / 60. A paused world does not strike or drift by itself, but the stepped one still
                     moves (ocean, mascot, flyers: tens of thousands of pixels over a second). Pause BEFORE the thing is triggered, and in the lobby
-                    check first that nothing has struck by itself (`near` says axisDist=-): the lobby strikes about every 2.5 s, from
-                    Random.Shared, and a strike before yours moves Lightning's own random sequence on, so the bolt lands elsewhere (Q1034)
+                    check after the pause that nothing has struck (`near` says axisDist=-): island 0's script never strikes (`state`: strikes/s=0.000;
+                    only hallow's does, about one in 2.5 s), but a strike from the attract wander before `island 0` moves Lightning's random sequence on, so the bolt
+                    lands elsewhere. A `step` runs the world at 1/60 s, so on a striking island a stepped sweep can strike by itself (Q1034)
     val( line, key )
                     the number after `key=` in a census line, or None
     mask_of( samples, base, box, thr, after=0.05 )
@@ -59,6 +60,8 @@ def stepsweep(cmd, pat, n, tag, trigger=None, steps=3):
             drain(); send("state")
             got = [tail(l) for l in collect(0.3) if "stepping=" in l]
             if got and "stepping=0" in got[0]: break
+        else:
+            print(f"  stepsweep: stepping=0 not seen within 10 s at step {k}; sampling anyway")
         time.sleep(0.25)
         out.append((k * steps / 60.0, ask(cmd, pat), grab()))
     for i, (age, got, im) in enumerate(out):

@@ -704,6 +704,11 @@ filed the items that cite it.
   whether the clock stops when paused), then build the envelope, the slots and the grey, each with its bug put back,
   and photograph ours beside it. The bolt's shape is Q1035.
 - [ ] **Q1037. The lobby's bolt, photographed on the desk.** From Q1034, whose frames are lavapipe's (lane B, off-screen); rule 6 asks the desk's. Island 0, `attract off`, `settle`, `freeze`, `pause`, `near` says `axisDist=-` (nothing has struck), `strike`, `step 6` and shoot at ages 0.1, 0.2 and 0.3 s (`q1034/confirm2.py` gives the lift; the column should stand at about x 790..830 of a 1280 x 720 frame, behind the player panel, `q1034/compare-fix-control.png`), then the original's lobby bolt on the same island under Proton (`TOOLING.md`, "The original under Proton") for the brightness and the width.
+- [ ] **Q1045. The figure of a picked-up member at the pointer (`STAFF_PICKED_UP_PREVIEW`).** The type-6 mode's sprite (vtable `0x006fea70`;
+  `docs/exe/hud.md`, "The person's windows"): the original hangs a figure of the picked-up member at the pointer (`q1032/orig/a-2-pickup.png`); ours
+  counts `STAFF_PICKED_UP_PREVIEW` (ParkPeople.cs) and keeps the plain arrow. Counted since Q432, never queued. Decode first whether type 6 shares the carried
+  figure's sprite path (`0x0046c480` / `0x0046c730`, Q40's fork-watch note H2, which is `STAFF_CARRY_PREVIEW`'s item) or has its own; fold into Q40 if it does.
+  Listed in `docs/DOES-NOT.md` beside `STAFF_CARRY_PREVIEW`.
 - [ ] **Q212. The ride window's other statuses. Decode first.** Found by the 2026-10-04 review (`u7-ride-door-6`,
   `-7`, `-9`, `-10`). `FUN_00485f60` answers (80/100/255) 5..9 for a ride waiting for an upgrade, `0xb`..`0xf` for a toilet's
   call to the handyman and `0x11`..`0x15` for a mechanic called (`+0x64`), `0x15` (UITEXT 385, "REPAIRS IN PROGRESS")
