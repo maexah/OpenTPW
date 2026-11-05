@@ -717,7 +717,7 @@ save's `mOperatingSpeed` does not reach the script**; the two agree because each
 the constructor (`0x004db534`, `+0x58` at `0x004db54c`, both only when `InitSpeed` is above nought), the ride window's
 speed control (`FUN_004dd6e0` from `RideWindow_Slot3C` at `0x004af450`: `0x004dd6f6`, `+0x58` at `0x004dd70e`, at any
 value) and the repair's upgrade arm (`FUN_004df8f0`: `0x004dfabc`, `+0x58` at `0x004dfad4`, when the new tier's
-`InitSpeed` is above nought). A `SPAWNCHILD` child takes its parent's word at every scheduler visit (`0x0055184c`..
+`InitSpeed` is above nought). A `SPAWNCHILD` child takes its parent's word at every due scheduler visit (`0x0055184c`..
 `0x00551888`, the child's handle at `+0x0c` looked up in the list; a handle not in it leaves `EAX` nought, and the store
 goes to address `0xc0`).
 
@@ -754,9 +754,9 @@ it (`ParkRides.SetOperating`), and the scheduler copies a parent's into its chil
 (`RideScript.DivisorOf`: `duration / (0.5 - speed x -0.01f)` with the divisor stored as a float and the quotient cut toward zero,
 `_ftol` at `0x00553801`, whose control word is round-toward-zero, so `WAIT 500` is 454 at 60), the three scream readings
 (`ParkAudio.ScreamVolume`, `ScreamGridIndex`; a held chain keeps the word it was asked under), the bumper ride's performance (the scheduler's
-push at every visit of a script whose thing has a track ride, `ParkBumperCars.PushSpeedWord`, which replaced the once-bound word) and the
+push at every due visit of a script whose thing has a track ride, `ParkBumperCars.PushSpeedWord`, which replaced the once-bound word) and the
 wear (`ParkRideOperation.WearByRunning`, the getter `FUN_0055a330`). The save writer writes the live word (`WrittenScript.Speed`). **Read by the triggers since Q1039 (the play rate) and Q1060 (the deadline)**: `TRIGANIM`, `TRIGWAITANIM` and `TRIGANIM_CH` arm `WAIT4ANIM` at the clock plus the stored length (the clip less 300, floored at 300) divided by the divisor and cut (`RideScript.TriggerDeadline`; 636 for a 1000 ms clip at word 60); every trigger hands the divisor to its channel as the play rate (`RideScript.StartAnimation`; `TRIGANIM`,
-`WAITANIM`, `LOOPANIM`, `TRIGWAITANIM`, `TRIGANIM_CH`, `LOOPANIM_CH`), a queued clip keeps it until the scheduler's next due visit writes the word's rate over it (Q1061: `RideScript.WriteChannelSpeeds`), and a loop's replay plays at the queued speed unless that is nought, then at the channel's (`0x0047380a`). **Not read
+`WAITANIM`, `LOOPANIM`, `TRIGWAITANIM`, `TRIGANIM_CH`, `LOOPANIM_CH`), a queued clip keeps it only until the scheduler's write at the end of the same visit replaces it with the word's rate x `+0xe4` / 1000 (Q1061: `RideScript.WriteChannelSpeeds`), and a loop's replay plays at the queued speed unless that is nought, then at the channel's (`0x0047380a`). **Not read
 yet** (Q155): the `TOUR` record, `COAST`'s ride, the bounce
 riders' sine and the walk placer's divisor. Run off-screen (`q155-b16/run3/`), the shipped Belly Bounce reads word 60, its screams start at
 `parameter 40` (`speed 60`, level 20) where the constant 50 gave 35, its `WAIT 500` arms for 454 ms, and a bought Hot Pot's performance follows
@@ -1626,8 +1626,8 @@ while the ride loads.
 
 **The performance** is `clamp( p, 0, 100 )` at `+0x1c`, each of the four `lo + ( hi − lo ) × p / 100`. The placer lays
 it from the template (50); `BUMP 7` sets it again from `+0x1c`; the save loader from the saved dword (`0x00543788`);
-and **each scheduler visit of the ride's script pushes the script's speed word** (`0x00551844`, `FUN_005516b0`, through
-the thing's `+0x28`), whether or not a turn ran, logging "Set ride performance to %d". The word is the ride's operating
+and **each due visit of the ride's script pushes the script's speed word** (`0x00551844`, `FUN_005516b0`, through
+the thing's `+0x28`; a visit not due jumps over it, `0x005516f6`), logging "Set ride performance to %d". The word is the ride's operating
 speed, pushed by the constructor and an upgrade only when `InitSpeed` is over nought (else the script creator's 50): 60 for
 all four bumper rides as bought, none of which sets `Upgrades[0].InitSpeed` over `Rides.sam`'s 60.
 

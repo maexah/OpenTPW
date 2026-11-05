@@ -112,11 +112,16 @@ public class ParkScriptSpeedWordTests
 	}
 
 	/// <summary>
-	/// The scheduler copies a script's word into its <c>SPAWNCHILD</c> child at every visit (<c>0x00551888</c>), and into no other script.
+	/// A due visit of a script (the first, then every eighth) pushes its word into its thing's bumper ride (<c>0x00551844</c>, <c>FUN_00545180</c>,
+	/// clamped to 0-100 there) and into its <c>SPAWNCHILD</c> child (<c>0x00551888</c>), and into no other script; a visit not due jumps over
+	/// both (<c>0x005516f6</c> to <c>0x0055188f</c>), so a word changed between two due visits waits for the next.
 	/// </summary>
 	[TestMethod]
-	public void AVisitCopiesTheParentsWordIntoItsChildAndNoOtherScript()
+	public void OnlyADueVisitPushesTheWordIntoTheBumperRideAndTheChild()
 	{
+		var table = new ParkTrackRideTable();
+		var handle = table.Take( -1 );
+		var ride = table.Cars.RideOf( handle )!;
 		var scheduler = new RideScriptScheduler();
 		var parent = Idle();
 		var child = Idle();
@@ -126,51 +131,31 @@ public class ParkScriptSpeedWordTests
 		scheduler.Add( 2, child );
 		scheduler.Add( 3, other );
 		parent.ChildId = 2;
-		parent.Speed = 70;
-
-		scheduler.Advance( 0f );
-
-		Assert.AreEqual( (70, 70, 50), (parent.Speed, child.Speed, other.Speed) );
-
-		parent.Speed = 33;
-		scheduler.Advance( 31f );
-
-		Assert.AreEqual( (33, 33, 50), (parent.Speed, child.Speed, other.Speed), "and again at the next visit" );
-	}
-
-	/// <summary>
-	/// A script whose thing has a bumper ride pushes its word into the ride's performance at each visit (<c>0x00551844</c>, <c>FUN_00545180</c>),
-	/// so a word changed after the bind, by the ride window or an upgrade, reaches the cars (clamped to 0-100 there); a script with no track ride pushes nothing.
-	/// </summary>
-	[TestMethod]
-	public void AVisitPushesTheWordIntoTheBumperRidesPerformance()
-	{
-		var table = new ParkTrackRideTable();
-		var handle = table.Take( -1 );
-		var ride = table.Cars.RideOf( handle )!;
-		var scheduler = new RideScriptScheduler();
-		var script = Idle();
-		var unbound = Idle();
-
-		scheduler.Add( 1, script );
-		scheduler.Add( 2, unbound );
-		script.Bumpers = table.Cars;
-		script.TrackRide = handle;
-		unbound.Bumpers = table.Cars;
-		unbound.Speed = 10;
+		parent.Bumpers = table.Cars;
+		parent.TrackRide = handle;
+		parent.Speed = 80;
 
 		Assert.AreEqual( 50, ride.Performance, "the template's, until a script pushes" );
 
-		script.Speed = 80;
 		scheduler.Advance( 0f );
-		Assert.AreEqual( 80, ride.Performance, "the word the window wrote" );
+		Assert.AreEqual( (80, 80, 50), (ride.Performance, child.Speed, other.Speed), "tick 1: due" );
 
-		script.Speed = 35;
-		scheduler.Advance( 31f );
-		Assert.AreEqual( 35, ride.Performance, "and the next one, every visit" );
+		parent.Speed = 35;
 
-		script.Speed = 150;
-		scheduler.Advance( 62f );
+		for ( int tick = 2; tick <= 8; ++tick )
+		{
+			scheduler.Advance( 31f * tick );
+			Assert.AreEqual( (80, 80), (ride.Performance, child.Speed), $"tick {tick}: not due, nothing pushed (0x005516f6)" );
+		}
+
+		scheduler.Advance( 31f * 9 );
+		Assert.AreEqual( (35, 35, 50), (ride.Performance, child.Speed, other.Speed), "tick 9: due" );
+
+		parent.Speed = 150;
+
+		for ( int tick = 10; tick <= 17; ++tick )
+			scheduler.Advance( 31f * tick );
+
 		Assert.AreEqual( 100, ride.Performance, "held to 100 by the ride's own clamp" );
 	}
 

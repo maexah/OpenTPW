@@ -19,13 +19,13 @@ namespace OpenTPW;
 /// </para>
 ///
 /// <para>
-/// <b>What this deliberately does not do.</b> Each turn, the original also pushes the script's speed word
-/// into its ride, its sound and <b>its child</b> - that last one found through this same registry, by the
-/// child id at <c>+0x0c</c> - and moves any particle objects hung off it. A child's speed word is 60 in
-/// every file measured (97 of 97), the parent's pushed in at <c>0x00551881</c>..<c>0x00551888</c>; here every script runs at 50 and
-/// no opcode writes it, so the push is not made, and the writer lays the parent's word on a child it writes
-/// (<c>docs/exe/saves.md</c>, "A companion's links, and one made since the load"); the rest does not exist here yet, and inventing it would put motion in the world that nothing asked
-/// for - see <see cref="RideScript"/> for the same reasoning about world-touching opcodes.
+/// <b>What a due visit does.</b> After the turn it writes the channel speed (<see cref="RideScript.WriteChannelSpeeds"/>) and pushes the
+/// script's speed word into its thing's bumper ride (<c>0x00551844</c>) and into its <c>SPAWNCHILD</c> child (found through this same
+/// registry, by the child id at <c>+0x0c</c>, <c>0x00551888</c>); a visit not due does neither (<c>0x005516f6</c>). The engine pushes
+/// nothing into the script's sound (<c>+0x14</c>). <b>Not built</b>: the <c>TOUR</c> record and the coaster push (<c>COAST_RIDE_SPEED</c>,
+/// Q155), a kart's or a water ride's record taking the word (<c>TRACK_RIDE_SPEED_PUSH</c>), and the particle objects hung off a script;
+/// inventing them would put motion in the world that nothing asked for - see <see cref="RideScript"/> for the same reasoning about
+/// world-touching opcodes.
 /// </para>
 /// </summary>
 public sealed class RideScriptScheduler
@@ -364,22 +364,30 @@ public sealed class RideScriptScheduler
 				// After a turn of a script with a model the engine writes (0.5 + 0.01 x speed) x +0xe4 / 1000 into every
 				// channel's queued speed (0x00551748, 0x00551789), which a promotion and a loop's replay start at.
 				entry.Script.WriteChannelSpeeds();
-			}
 
-			// Due a turn or not, the visit pushes the script's speed word on: into its thing's bumper ride (0x00551844; a thing
-			// with none pushes nothing), then into its SPAWNCHILD child (0x00551888; a handle the list does not hold leaves
-			// the store to address 0xc0, which is not built).
-			if ( _entries.Contains( entry ) )
-			{
-				// A script holding a COAST ride has its speed pushed into the ride at the same visit (0x005517e1); not built (docs/QUEUE.md Q155).
-				if ( entry.Script.Ride is not null && RideScript.DivisorOf( entry.Script.Speed ) != 1f )
-					Unimplemented.Report( "COAST_RIDE_SPEED" );
+				// Then, on a due visit only (a visit not due jumps from 0x005516f6 to 0x0055188f), the word goes on: into the
+				// script's coaster (0x005517e1; not built, Q155), its thing's bumper ride (0x00551844) and its SPAWNCHILD child
+				// (0x00551888; a handle the list does not hold leaves the store to address 0xc0, which is not built).
+				if ( _entries.Contains( entry ) )
+				{
+					// The coaster push needs +0xe0, which only a COAST 8 sets (0x00554a9f); Initialised stands for it. Whether the
+					// engine's park load restores +0xe0 was not read, so a loaded coaster past its COAST 8 may count differently.
+					if ( entry.Script.Initialised && RideScript.DivisorOf( entry.Script.Speed ) != 1f )
+						Unimplemented.Report( "COAST_RIDE_SPEED" );
 
-				if ( entry.Script.TrackRide != 0 )
-					entry.Script.Bumpers?.PushSpeedWord( entry.Script.TrackRide, entry.Script.Speed );
+					if ( entry.Script.TrackRide != 0 )
+					{
+						// FUN_00545180 takes any record of the track-ride table; only the bumper rides' records are built here, so the
+						// push into a kart's or a water ride's record is counted.
+						if ( entry.Script.Bumpers?.RideOf( entry.Script.TrackRide ) is null )
+							Unimplemented.Report( "TRACK_RIDE_SPEED_PUSH" );
 
-				if ( entry.Script.ChildId != 0 && Find( entry.Script.ChildId ) is { } child )
-					child.Speed = entry.Script.Speed;
+						entry.Script.Bumpers?.PushSpeedWord( entry.Script.TrackRide, entry.Script.Speed );
+					}
+
+					if ( entry.Script.ChildId != 0 && Find( entry.Script.ChildId ) is { } child )
+						child.Speed = entry.Script.Speed;
+				}
 			}
 
 			// Due a turn or not, the engine then walks the script's effect list (0x005516f6 into 0x0055188f), and moves

@@ -418,7 +418,7 @@ public sealed class RideAnimations
 	/// the instruction answers nothing at all.
 	/// </summary>
 	public void Flush( int index = 0 )
-		=> Channel( index )?.ClearQueue();
+		=> Channel( index )?.ClearRole();
 
 	/// <summary>
 	/// Writes <paramref name="speed"/> into every channel's queued speed - <c>FUN_00474020</c>, which walks the model's channels (count at
@@ -481,7 +481,7 @@ public sealed class RideAnimations
 			// (FUN_004735d0's per-frame argument, 0x00473874); this poses every model every frame, so it binds as the
 			// queued flags say, in view or not.
 			StartOn( channel, channel.DeferredAnimID, channel.DeferredSubAnim, channel.DeferredFlags,
-				channel.DeferredSpeed <= 0f ? channel.Speed : channel.DeferredSpeed, now );
+				channel.DeferredSpeed, now );
 
 			channel.ClearQueue();
 

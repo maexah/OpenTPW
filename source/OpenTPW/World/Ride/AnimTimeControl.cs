@@ -367,6 +367,9 @@ public sealed class AnimTimeControl
 	/// </summary>
 	public void WriteQueuedSpeed( float speed ) => DeferredSpeed = speed;
 
+	/// <summary>The queued role alone goes back to the sentinel (<c>FUN_00473270</c>'s store at <c>0x00473292</c>): the entry, the flags and the speed stay.</summary>
+	public void ClearRole() => DeferredAnimID = RideAnimations.NoRole;
+
 	/// <summary>
 	/// Empties the queue - the role, the entry and the speed, leaving <see cref="DeferredFlags"/> alone
 	/// because the engine does.

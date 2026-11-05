@@ -12740,7 +12740,7 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
     after every queued entry whose key is above 0.001 and before the key-0 bolts and rain; what is drawn at submit (`0x3000`) comes
     before the flush and is inverted. Not proven: the keys of translucent meshes and the sky, and the bolt in play (the film above).
 - [x] **Q1061. The scheduler's channel speed (Q155's third piece, `SCHEDULER_CHANNEL_SPEED`).** From Q174 and Q155. After a due turn of a script with a model
-  the scheduler writes `(0.5 - 0.01 x word) x +0xe4 x 0.001` into every channel's queued speed (`0x0055174f`..`0x00551789`, `FUN_00474020`), and a loop's replay
+  the scheduler writes `(0.5 + 0.01 x word) x +0xe4 x 0.001` into every channel's queued speed (`0x0055174f`..`0x00551789`, `FUN_00474020`), and a loop's replay
   starts at it unless it is nought (`0x0047380a`..`0x00473823`); a promotion pushes it (`0x00473874`). Done: `RideScriptScheduler.Advance` calls
   `RideScript.WriteChannelSpeeds` behind the `(id ^ tick) & 7` test, `RideAnimations.WriteQueuedSpeed` stores it in every channel (queue or none), `RideAnimations.End`
   replays a loop at it, the `scripts` line gains `queued`, and the `SCHEDULER_CHANNEL_SPEED` count is gone. The factor `+0xe4` is the constant 1000 while `TRIGANIMSPEED` is unbuilt.
