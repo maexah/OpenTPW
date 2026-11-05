@@ -99,6 +99,22 @@ internal sealed class ParkItemsScreen : UiWindow
 	/// <summary>How often a tab's rows are rewritten, in milliseconds of real time: <c>FUN_0065ef90( 0x80083, 2000 )</c>.</summary>
 	private const long RefreshEvery = 2000;
 
+	/// <summary>Told which picture each control is given as the screen is built, by control id; a test's way to read it without a graphics device.</summary>
+	internal static Action<int, string>? PictureAsked;
+
+	private static UiMesh? Picture( int id, string name )
+	{
+		PictureAsked?.Invoke( id, name );
+
+		return UiMesh.Get( name );
+	}
+
+	/// <summary>The picture of the control that holds the tab strip, its mesh hash <c>0xbea849ac</c> (<c>0x007509e2</c>).</summary>
+	internal const string BackdropMesh = "list_all";
+
+	/// <summary>The close button's picture, the green tick: its mesh hash <c>0x14a7e48b</c> (<c>0x00750a2c</c>).</summary>
+	internal const string CloseMesh = "b_okay";
+
 	/// <summary>The font the rows are lettered in, the screen's font slot 7.</summary>
 	private const int RowFont = 7;
 
@@ -139,11 +155,14 @@ internal sealed class ParkItemsScreen : UiWindow
 			Mesh = UiMesh.Get( "w_big" )
 		};
 
+		// The control that holds the tab strip wears list_all (stream 0x7508e0: its mesh op, 0xbea849ac, follows the strip's
+		// close): the list's own backdrop, with the holder the four tabs sit in. See docs/exe/hud.md, "The all-items
+		// screen's pictures".
 		Root.Add( new UiControl
 		{
 			Id = 0x12c4b8,
 			Rect = new UiRect( 239, 179, 1835, 902 ),
-			Mesh = UiMesh.Get( "!frame" )
+			Mesh = Picture( 0x12c4b8, BackdropMesh )
 		} );
 
 		// Lettered by UI_SetTitle, by the opener's one call (0x00495bc3) and each tab's click (0x004953d7 to 0x0049547e): font 5 in
@@ -177,8 +196,7 @@ internal sealed class ParkItemsScreen : UiWindow
 		_tabs = Root.Add( new UiRadioGroup
 		{
 			Id = 0x12c4b9,
-			Rect = new UiRect( 1280, 192, 1745, 300 ),
-			Mesh = UiMesh.Get( "list_all" )
+			Rect = new UiRect( 1280, 192, 1745, 300 )
 		} );
 
 		foreach ( var tab in Tabs )
@@ -214,7 +232,7 @@ internal sealed class ParkItemsScreen : UiWindow
 			Id = -2,
 			Rect = new UiRect( 1889, 818, 1972, 901 ),
 			HelpText = 1,
-			Mesh = UiMesh.Get( "b_exit" ),
+			Mesh = Picture( -2, CloseMesh ),
 			Clicked = () => Stack.Close( this )
 		} );
 

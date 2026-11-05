@@ -531,6 +531,27 @@ run, the guards tab draws a list of guards under the heading *"Entertainers' Hap
 the gadget's happiness gauge uses. Rebuilding such a list every frame instead is measurably wrong,
 not merely untidy.
 
+### The all-items screen's pictures (Q1043)
+
+Stream `0x007508e0`, walked with `lib/uistream.py` (the mesh op follows a control's children, at the control's own depth):
+
+| Control | Rect | Mesh hash | File |
+|---|---|---|---|
+| root `0x12c4b7` | 186, 30, 2018, 1007 | `0xf76e4200` (`0x00750a34`) | `w_big` (the node `window4`): the green waves and the blue rim |
+| `0x12c4b8`, the holder of the tab strip | 239, 179, 1835, 902 | `0xbea849ac` (`0x007509e2`) | **`list_all`**: the black list backdrop with the dark-blue holder the four tabs sit in, standing out of its top right |
+| `0x12c4b9`, the tab group (type 8) | 1280, 192, 1745, 300 | none | the four tabs (`0x12c4ba`..`0x12c4bd`) carry their own |
+| close, id `0xfffffffe`, help row 1 | 1889, 818, 1972, 901 | `0x14a7e48b` (`0x00750a2c`) | **`b_okay`**, the green tick |
+
+The screen is the same shape as the visitors', whose list control (type 7, `0x1e497`) wears `list_kids` (stream `0x007506c8`, the
+close there `b_okay` too, `0x0075070e`): the list's backdrop is a picture of its own, not a `!frame`. OpenTPW had drawn `!frame` on
+`0x12c4b8`, which painted the whole rectangle black over the waves behind the tabs, `list_all` on the tab group, and the red cross
+`b_exit` for the close. Now each is the stream's (`ParkItemsScreen.BackdropMesh`, `CloseMesh`; `ParkItemsPicturesTests` hashes each
+name by the game's rule and compares with the stream's number). Seen in both games on the New Save's rides tab
+(`q1043/side-by-side-original-left-ours-right.png`): the waves left of the holder 100.0% green in the original and 98.0% in ours
+(region x 150..600, y 100..150 of a 1024 x 768 picture), the holder's patch (636..646 x 100..140) mean RGB (42, 63, 86) in both,
+the tick 82.6% green in the original and 74.2% in ours (944..986 x 409..450, the rect halved). The buy and hire screens' close
+buttons keep `b_exit`: their streams give the close mesh `0x16ac3f4f` (`0x007550d6`, `0x0075200a`) with help row 2, "Left-click to cancel": the red cross, as built.
+
 #### Resolving a mesh hash to a file name
 
 The layout stream names a mesh by `h = (c ^ h) * 47` from zero over the model's **first node name**,
@@ -541,7 +562,7 @@ all 1202 entries instead of the 278 models picks up textures and gives names tha
 **`b_sresrhcer.MD2`**. Validate the arithmetic against a known pair before trusting any match —
 `b_buy` → `0x2135e13d` and `base` → `0x1beb0695`.
 
-Resolved this way: `list_allstaff`, `list_kids` (allpeeps), `list_all` (the allitems tab group),
+Resolved this way: `list_allstaff`, `list_kids` (allpeeps), `list_all` (the allitems backdrop, the control `0x12c4b8`: "The all-items screen's pictures"),
 `b_finance`, `b_loans`, `b_staffcost`, `b_door`, `b_plus`, `b_minus`, `b_parkinfo`, `b_kids`,
 `b_allstaff`, `b_allthings`, `b_sguard`, `b_sresrhcer`.
 
