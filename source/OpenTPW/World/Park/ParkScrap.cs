@@ -7,10 +7,10 @@ namespace OpenTPW;
 /// </summary>
 public static class ParkScrap
 {
-	/// <summary>A year in the 100-nanosecond units the age is taken in - the divisor <c>0x11ed178c6c000</c> (<c>0x004e22ac</c>).</summary>
+	/// <summary>A year in the 100-nanosecond units the age is taken in - the divisor <c>0x11ed178c6c000</c> (<c>0x004e22ce</c>).</summary>
 	private const long OneYear = 315_360_000_000_000L;
 
-	/// <summary>Thirty days in the same units - the divisor <c>0x1792f8648000</c> (<c>0x004e22cf</c>).</summary>
+	/// <summary>Thirty days in the same units - the divisor <c>0x1792f8648000</c> (<c>0x004e237b</c>).</summary>
 	private const long ThirtyDays = 25_920_000_000_000L;
 
 	/// <summary>
@@ -18,7 +18,7 @@ public static class ParkScrap
 	/// <c>mNumCustomers</c> (<c>+0x1a0</c>). <b>A literal 100 only</b> while the age is under thirty days, no customer
 	/// has come (<c>0x004e2390</c>) and the item's tier-nought first-year figure is above nought (<c>0x004e23b2</c>); else
 	/// the tier's figure for the year the age falls in. The age is the signed 64-bit difference divided toward nought, as
-	/// the original's <c>__alldiv</c> takes it, so a stamp in the future is year 0 (and under thirty days) up to a year ahead, and
+	/// the original's <c>__alldiv</c> takes it, so a stamp in the future is year 0 up to a year ahead, and new (under thirty days) only up to thirty days ahead, and
 	/// a later one falls past year 2 into the fourth year's figure. A stamp that makes no date reads as age nought, as
 	/// <see cref="ParkState.AgeInDays(DateTime, ParkWorld.BuiltWhen)"/> does.
 	/// </summary>

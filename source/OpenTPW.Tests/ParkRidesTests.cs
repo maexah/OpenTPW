@@ -688,8 +688,8 @@ public class ParkRidesTests
 
 	/// <summary>
 	/// The same on a channel that was running nothing: the speed does not wait for a clip, since the engine's copy is
-	/// whatever the channel holds. The Belly Bounce's channel saved idle (the sentinel role) with 0.7 queued, and a
-	/// scriptless model's channel, which the shipped file saves at nought, holding nought.
+	/// whatever the channel holds. The Belly Bounce's channel saved idle (the sentinel role) with 0.7 queued. (A
+	/// scriptless model's channel has no script in the scheduler, so it is not read here.)
 	/// </summary>
 	[TestMethod]
 	public void AnIdleChannelKeepsTheFilesQueuedSpeedToo()

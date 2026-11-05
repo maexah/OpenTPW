@@ -1291,7 +1291,7 @@ public static class ParkTrackTool
 		var refund = 0;
 
 		// The refund is the price at the ride's scrap percentage (FUN_004e2290), 100 for a ride under thirty days old with
-		// no customer; the percentage is not kept here, so the whole price comes back.
+		// no customer; ParkScrap.Percent computes it and is not yet applied here (Q1054), so the whole price comes back.
 		if ( cell.TrackType != 0x19 && price > 0 )
 		{
 			Unimplemented.Report( "SCRAP_VALUE_DEPRECIATION" );

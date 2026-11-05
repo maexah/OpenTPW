@@ -513,7 +513,7 @@ public static class ParkBuilding
 		if ( item.UiType is < 0 or > ItemDescriptionFile.Feature )
 			return new( $"sell: thing {thingId} ('{item.Name}') is UI type {item.UiType}, which nothing can demolish" );
 
-		// The age-based scrap percentage, which nothing here can compute - see the remarks. Reported
+		// The age-based scrap percentage, computed by ParkScrap.Percent and not yet applied here (Q1054) - see the remarks. Reported
 		// once and counted, rather than a number invented to fill the gap.
 		Unimplemented.Report( "SCRAP_VALUE_DEPRECIATION" );
 

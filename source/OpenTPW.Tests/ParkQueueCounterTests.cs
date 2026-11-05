@@ -76,6 +76,8 @@ public class ParkQueueCounterTests
 	/// a run lays fresh hold nought. Backspace then takes up the last run (<c>FUN_0052fe50</c>): the three fresh cells go
 	/// and the corner stays, at 0 now it has lost its link toward the run, the end of the queue as it was. The second
 	/// press takes up the first run, and the node, which the placer marked NOMODIFY, is returned untouched (<c>0x005367d4</c>).
+	/// This level has no <c>Catalogue</c>, so the refunds are the counted <c>QUEUE_REFUND_OWNER_NOT_FOUND</c> fallback, the whole price;
+	/// the percentage (37 a cell for the stock ride) is <c>ParkScrapTests</c>'.
 	/// </summary>
 	/// <remarks>
 	/// <b>Mutations:</b> the lay's already-queue arm writing no counter leaves the node at 0 and the corner at 0, which the
@@ -111,7 +113,7 @@ public class ParkQueueCounterTests
 		var posts = Times( "BACKSPACE_QUEUE_ADVISOR_0xCB" );
 		var said = ParkPathBuilding.UndoQueueRun();
 
-		StringAssert.Contains( said, "took up the queue run from (20,7) to (17,7), 3 cells went, refunded 225" );
+		StringAssert.Contains( said, "took up the queue run from (20,7) to (17,7), 3 cells went, refunded 225" );   // the owner-not-found fallback: no Catalogue, so the whole price; the percentage is ParkScrapTests'
 
 		foreach ( var x in new[] { 19, 18, 17 } )
 			Assert.AreEqual( CellEdge.Nothing, At( park, x, 7 ).Type, $"({x},7) went" );
@@ -123,7 +125,7 @@ public class ParkQueueCounterTests
 		Assert.AreEqual( 0x10, corner.Neighbours & 0x55, "and it links toward the node (south) only" );
 		Assert.AreEqual( (20, 7), ParkBuildMode.Anchor, "the tool anchors where the run began" );
 		CollectionAssert.AreEqual( new[] { (20, 10), (20, 7) }, ParkBuildMode.Pending.ToArray() );
-		Assert.AreEqual( balance - 3 * 75, state.Balance, "three cells give their price back" );
+		Assert.AreEqual( balance - 3 * 75, state.Balance, "three cells give their price back (the owner-not-found fallback; the percentage is ParkScrapTests')" );
 		Assert.AreEqual( posts + 1, Times( "BACKSPACE_QUEUE_ADVISOR_0xCB" ), "mode 3 is re-armed, advisor 0xcb counted" );
 
 		StringAssert.Contains( ParkPathBuilding.UndoQueueRun(), "took up the queue run from (20,10) to (20,7), 3 cells went" );
@@ -136,7 +138,7 @@ public class ParkQueueCounterTests
 		Assert.AreEqual( ParkRideChoice.QueueCellType, node.Type, "the node stays" );
 		Assert.AreNotEqual( 0, node.Flags & ParkPathBuilding.NoModify, "it is the placer's NOMODIFY cell" );
 		Assert.AreEqual( 1, node.OverlapCounter, "returned untouched, so its 1 is kept" );
-		Assert.AreEqual( balance, state.Balance, "every laid cell is given back" );
+		Assert.AreEqual( balance, state.Balance, "every laid cell is given back (the owner-not-found fallback; the percentage is ParkScrapTests')" );
 
 		Assert.IsTrue( ParkPathBuilding.UndoQueueRun().Contains( "nothing laid" ), "the first entry is never popped" );
 		Assert.AreEqual( (20, 10), ParkBuildMode.Anchor );
@@ -241,6 +243,20 @@ public class ParkQueueCounterTests
 		Assert.AreEqual( 1, At( park, 20, 10 ).OverlapCounter, "the node keeps the first run's 1 alone" );
 		CollectionAssert.AreEqual( new[] { (20, 10), (20, 7) }, ParkBuildMode.Pending.ToArray(), "nothing pushed" );
 		Assert.AreEqual( ParkBuildMode.None, ParkBuildMode.Current );
+		Assert.AreEqual( 2, ParkBuildMode.Clicks, "the anchor arm still counts (q1038 run2 b2 2, b3 3)" );
+	}
+
+	/// <summary><b>A click the preview refuses is not counted</b>: the latch turns it away before the apply arm's increment
+	/// (0x00524a63 -> 0x005266a3; the increment is 0x0052732f). The original: q1038/orig/run4, d2-south 7, d3-ownqueue 7.</summary>
+	/// <remarks><b>Mutation:</b> the increment back before the refusal reads 2.</remarks>
+	[TestMethod]
+	public void ARefusedRunIsNotCounted()
+	{
+		Placed();
+		StringAssert.Contains( ParkPathBuilding.RunQueue( 20, 7 ), "laid 3" );
+		Assert.AreEqual( 1, ParkBuildMode.Clicks );
+		StringAssert.Contains( ParkPathBuilding.RunQueue( 20, 9 ), "nothing laid" );   // (20,8) is the middle of its own queue
+		Assert.AreEqual( 1, ParkBuildMode.Clicks, "the refused click is not counted" );
 	}
 
 	/// <summary>The placer's node clicked at once: one entry pending, so the node is laid again, +1, and pushed.</summary>

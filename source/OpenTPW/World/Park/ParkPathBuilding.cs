@@ -293,6 +293,14 @@ public static class ParkPathBuilding
 	internal static void LayingSound( string tool, int x, int y )
 		=> Log.Info( $"{tool}: cat_ui 0x{LayingSoundEffect:x} for the click on ({x},{y}), {(UI.UiSounds.Interface( LayingSoundEffect ) ? "a voice" : "no voice")}" );
 
+	// The click counter is shared with the path tool (0x0052732f..0x0052736d): the latch turns a refused click away first
+	// (0x00524a63 -> 0x005266a3), so only a click the apply arm takes is counted; the third posts advisor 0xd6.
+	private static void CountQueueClick()
+	{
+		if ( ++ParkBuildMode.Clicks == 3 )
+			Unimplemented.Report( "QUEUE_TOOL_ADVISOR_MESSAGE_0xD6" );
+	}
+
 	/// <summary>
 	/// One click of the armed queue tool: a straight run from the anchor to the clicked cell, snapped to
 	/// its longer axis - the original's mode-3 arm of the apply dispatcher (<c>0x00527222</c>..
@@ -329,10 +337,6 @@ public static class ParkPathBuilding
 		// Not built: the original's unanchored click (0x005272be..0x00527316) asks FUN_00535670( 3 ) of the cell, empties the
 		// pending list, pushes the click and resets the counter; here an unanchored click goes on to push onto whatever list
 		// an earlier session left, so a later Backspace can pop into it.
-		// The click counter is shared with the path tool (0x0052732f..0x0052736d): the third anchored click posts advisor
-		// 0xd6, counted here until it is built.
-		if ( ++ParkBuildMode.Clicks == 3 )
-			Unimplemented.Report( "QUEUE_TOOL_ADVISOR_MESSAGE_0xD6" );
 
 		// Clicking the anchor lays its one cell (re-stamped, +1) only while the list holds the tool's first cell alone
 		// (0x005273c7..0x005273cf; the target is pushed first, 0x005273df). After a run, or the queue button's walk, the
@@ -340,6 +344,7 @@ public static class ParkPathBuilding
 		// with the advisor's message for a queue left unjoined.
 		if ( toX == fromX && toY == fromY )
 		{
+			CountQueueClick();
 			LayingSound( "queue", clickX, clickY );
 
 			var laysTheAnchor = ParkBuildMode.Pending.Count == 1;
@@ -368,6 +373,7 @@ public static class ParkPathBuilding
 			return $"queue: nothing laid - ({refused.X},{refused.Y}) {why}, so the queue tool is put away - {ParkBuildMode.RefusedSound( pressReachedTheTool )}";
 		}
 
+		CountQueueClick();
 		LayingSound( "queue", clickX, clickY );
 
 		// The click's target is pushed before the passes run (0x005271b7..0x00527655), so the top of the list is the

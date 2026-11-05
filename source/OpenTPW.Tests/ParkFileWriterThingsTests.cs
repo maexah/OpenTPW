@@ -1764,7 +1764,8 @@ public class ParkFileWriterThingsTests
 	/// <summary>
 	/// A channel with nothing queued is written with the speed the scheduler last wrote into it (<c>RideScript.WriteChannelSpeeds</c>, Q1061; the
 	/// engine saves <c>+0x30</c> as it stands), over the file's, its clip and flags the file's still; with no write since the load (nought) the file's
-	/// speed stands. In the original's files 2,300 of 2,320 scripted channels with nothing queued hold their script's divisor.
+	/// speed stands. In the original's own files 2,193 of 2,208 scripted channels with nothing queued hold their script's divisor (docs/exe/saves.md,
+	/// "OpenTPW's writer, the objects").
 	/// </summary>
 	/// <remarks><b>Mutations:</b> the file's speed always; the live speed written when nought; the live speed dropped on the idle never-started or the idle started branch.</remarks>
 	[TestMethod]

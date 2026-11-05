@@ -1449,8 +1449,9 @@ public sealed class ParkRides : Entity
 		// What is queued behind it; with nothing queued the engine leaves the last queue's clip and flags behind,
 		// which a channel here does not keep, so the file's stay. Its speed is the last write the scheduler made
 		// (RideScript.WriteChannelSpeeds, Q1061), which the engine saves as it stands; a load puts the file's speed back (Resume, Q1063),
-		// so nought here means a promotion since the last write or a made channel no visit has reached, and the file's stays
-		// (docs/exe/saves.md, "OpenTPW's writer, the objects", a model).
+		// so nought here means a promotion or a start-at-once trigger since the last write, or a made channel no visit has reached, and the
+		// file's stays. Not the original's after the first two: the engine saves the nought until the script's next due visit
+		// (0x004738af; Q1064; docs/exe/saves.md, "OpenTPW's writer, the objects", a model).
 		var queued = channel.HasQueued
 			? (Role: channel.DeferredAnimID, Entry: channel.DeferredSubAnim, Flags: channel.DeferredFlags, Speed: channel.DeferredSpeed)
 			: (Role: ParkThingStates.NoRole, Entry: file.QueuedEntry, Flags: file.QueuedFlags,
@@ -1719,7 +1720,7 @@ public sealed class ParkRides : Entity
 		var (x, z) = ParkBumperCars.ArenaCentre( item, placed.CellX, placed.CellY, placed.Angle );
 		cars.Place( placed.TrackRide, x, z );
 
-		// The speed word is the script's own (RideScript.Speed), which the scheduler pushes into the ride's performance at each visit
+		// The speed word is the script's own (RideScript.Speed), which the scheduler pushes into the ride's performance at each due visit
 		// (0x00551844; RideScriptScheduler.Advance). The constructor's push and a load's record have already set it.
 
 		// A kart or water ride has no record in the cars: its words are the track table's, placed at the place the

@@ -5994,10 +5994,10 @@ neighbour mask, direction, flags, owner and counter, and the tool's mode, anchor
 north; again, the south run, (49,22) at 0. The edit unlinks (49,22) from the path (48,22) (neighbours `0x44` to `0x04`, and (48,22)'s `0xf5` to `0xf1`). The pending list the
 edit builds is `[(52,22), (52,22), (49,22)]` (`0x00820a8c` its count, `0x0081b740` the pairs); each run pushes its target. **The press after those two does take something:** the
 list's third entry pops, the stepped clear runs over (51,22)..(49,22), all three go (type 0) and the NOMODIFY node (52,22) stays (neighbours `0x50` to `0x10`, counter 1),
-anchor (52,22), pending 2; a fourth press leaves one entry and changes no cell; a list left with one entry takes nothing back. Ours does the same cell for cell.
+anchor (52,22), pending 2; a fourth press leaves one entry and changes no cell; a list left with one entry takes nothing back (read, `0x0052fecf`; not pressed). Ours does the same cell for cell.
 **The lay costs 75 a cell** (the balance fell 225 at the click of a three-cell run, over two path cells and one bare, read every 0.1 s: `orig/run1/t3-west-trace.txt`), **and
 Backspace refunds 37 a cell, not 75: +111 for each three-cell press** (`t4-bs1-trace.txt`, `t5-bs2-trace.txt`, `t6-bs3-trace.txt`: 87283 to 87394, 87404 to 87515, 87525 to
-87636), the scrap percentage of "DEMOLISH refunds" above; 37 is 75 x 50 / 100 truncated a cell, and the stock ride has had customers.
+87636), consistent with the scrap percentage of "DEMOLISH refunds" above (37 is 75 x 50 / 100 truncated a cell: a fit, not decoded; no customer count was read; Q1052).
 **The queue arm's refund, decoded in Ghidra (Q1052)**: `FUN_005367a0`'s type 3 arm, stepped (`0x00536a37`..`0x00536aa8`) or forced (`0x00536acc`..`0x00536b5b`), finds the
 owner's thing, `FUN_004d99e0` on the owner table entry `[0x007cf83c] + 0x294 + owner * 0x44` (the first thing of type 3 in its chain; skipped when the entry's `+8` is
 nought, `0x00536a2e`), and credits `FUN_0052fb40() * FUN_004e2290( thing ) / 100` through `FUN_004d0190`: an unsigned divide that truncates (`0x51eb851f`, `shr 5`), the
@@ -6012,9 +6012,9 @@ reaches it) the window read **Users last month 0, Age 4 days, Scrap value $ 1000
 back to 87112, **+150, 75 a cell** (`run4/trace.txt`). Ours, the stock ride: +111 on each of three presses (`q1052/ours/runA.out`); the bought Mumbo (`queue` and
 `delqueue`, `runN.out`): +75 with no customer, +37 once it had five. Built: `ParkScrap.Percent`, `ParkPathBuilding.QueueRefund`. **A click on the anchor with a run laid** puts the tool away (mode 0, anchor -1), lays and charges nothing and leaves
 the list as it is, the click counter `[0x008186dc]` one higher (`run2/b3-anchorclick.txt`). **A run onto a cell of the ride's own queue is refused**: the click on
-(49,22) from (46,22) (a run east over the paths (47,22), (48,22)) and the click on (49,23) from (49,25) each put the tool away, lay nothing and leave every counter as it was,
-the second showing the "no" cursor and "$ 0" in the preview (`run3/c5-east.txt`, `run4/d3-ownqueue.txt`, `d3-hover.png`); so the stamp's +1 on a run's last cell never meets a
-queue cell of its own. The click counter is one word for the whole process: it was 6 at a reloaded park's first click, left by earlier runs and not reset by a load, an Escape or
+(49,22) from (46,22) (a run east over the paths (47,22), (48,22)) and the click on (49,23) from (49,25) each put the tool away, lay nothing and leave every counter as it was, the click counter `[0x008186dc]` too (`c5-east-trace.txt` 6 throughout, `d3-ownqueue.txt` 7: the latch refuses before the apply arm's increment, `0x00524a63` -> `0x005266a3`; ours counted it until this fix),
+the second showing the "no" cursor and "$ 0" in the preview (`run3/c5-east.txt`, `run4/d3-ownqueue.txt`, `d3-hover.png`); both clicks met a cell joined two ways, which the verdict refuses (`0x00535a9b`); an own cell joined
+otherwise is accepted (`0x00535aef`) and stamped +1, not run in the original. The click counter is one word for the whole process: it was 6 at a reloaded park's first click, left by earlier runs and not reset by a load, an Escape or
 the put-away (a fresh start reads 0, 1, 2, 2 as OpenTPW does; Q1047). The pointer's pixel for a cell on a camera set by `setcam.py` is `camera.py --aim`'s, and with a tool armed
 the preview cell `[0x008186b8]`, `[0x008186b4]` follows the pointer, snapped to the anchor's row or column.
 

@@ -692,7 +692,8 @@ public class ParkPathBuildingTests
 	/// <b>Selling a queued ride drains its queue, the placer's node included, and hands back what the
 	/// placer laid before its exit as an ordinary path</b> - the demolisher's own work outside the
 	/// footprint. Four queue cells return three cells' worth: each refunds, and one is taken back for the
-	/// node the placer laid for nothing.
+	/// node the placer laid for nothing. This level has no <c>Catalogue</c>, so the refund is the counted owner-not-found fallback, the
+	/// whole price; the percentage is <c>ParkScrapTests</c>'.
 	/// </summary>
 	/// <remarks>
 	/// <b>Mutation:</b> leaving the node standing - clearing only from the second cell - keeps (20,10) a
@@ -719,7 +720,7 @@ public class ParkPathBuildingTests
 		var balance = state.Balance;
 		var returned = ParkPathBuilding.DrainQueue( state, park, ride );
 
-		Assert.AreEqual( 3 * 75, returned, "four cells, one taken back" );
+		Assert.AreEqual( 3 * 75, returned, "four cells, one taken back (the owner-not-found fallback, whole price: no Catalogue; the percentage is ParkScrapTests')" );
 		Assert.AreEqual( balance + (3 * 75), state.Balance, "and the park has it" );
 
 		for ( var x = 17; x <= 20; ++x )
