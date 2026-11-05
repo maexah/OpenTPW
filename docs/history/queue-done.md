@@ -12114,6 +12114,14 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   (`q220/mutate-run1.log`, `mutate-run2.log`). A thirty-first day in the ring cannot be told from thirty: it holds thirty.
   What is left is Q1026. The calendar's day roll, month turn and year turn and their order are Q867 (done; the people and catalogue it hands the month's change are not asserted); the month turn's order (training, the bank, wages) is `ParkBankTests`.
   `ParkRides.Resume`'s `MoveKeptReadings`, `BindNew`'s `RideNodes` and the walk leg's x/z form are Q868 (done).
+- [x] **Q1040. The x87 precision word at the exit point's byte (`FUN_004dedf0`).** From the run 21 review of Q873 (group A). Read the control word live in the running original
+  at `0x004df0ae` (`watch.sh`/gdb under Proton, `p $fctrl`, bits 8-9). `ParkRidePoint.Bytes` keeps 1 - f in doubles for the
+  270 path and 180's first slot (the register, not stored); the 90/180 second slot is already the float store
+  (`0x004df0dc`, `0x004df119`). If the word is 24-bit (`FUN_00591220` sets it for the renderer; `SetCooperativeLevel` is
+  pushed `DDSCL_FPUSETUP`), 0.2 and 0.4 at 270 and in 180's first slot give 204 and 153, not 203 and 152 (Burger Shop and
+  Fries at 180, the Ice Cream's Y at 270): change `Bytes` to cut them to float too, pin 270 and 180 (0.4f first slot) in
+  `ParkRidePointTests`, and put it back to see them fail. If it is 53 or 64, say so in `ride-operation.md` and drop the
+  remark at the site.
 
 ## B. Docs and comments
 

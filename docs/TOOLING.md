@@ -730,6 +730,9 @@ whole list):
   row) as the `POLL` of a `loadfile.sh` load: `fctrl` 0x27f is 53-bit precision, so `FILD`, `FMUL float ptr` is a
   double of the float key (five times the float nearest 0.2 is more than one). The same hit gives the row's turn
   (its tick) and both sides of the compare.
+- **The x87 control word where a routine of the sweep rounds** (Q1040, `q1040/orig/run.sh a`): the stock park (`q325/stock.TPWS`) by
+  `loadfile.sh`, its `POLL` one line, `BRK_PRINT='printf "fctrl %x\n", $fctrl' brk.sh 0x004df0ae 8 300 8 > OUT &`; eight hits of
+  `FUN_004dedf0` (a guest put down or sent to stand) came by tick 952, about 150 ticks after the load, both callers among them.
 - **A polled row whose shipped score is under the advisor's 25** (Q344, row 79's `Score` 20): neither game can
   say it as shipped, so both are run under a raised `Score` beside the key whose edge is asked (`q344/confirm.py`,
   `q344/orig/run.sh` with `POORER=`, `MORE=`, `SCORE=`); `Score` 25 is the control that the limit is strict

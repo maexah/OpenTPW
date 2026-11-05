@@ -21,7 +21,7 @@ public class ParkRidePointTests
 	/// other angle <c>(x, x)</c>. The values are ones a wrong rule gets wrong: 0.1 and 0.9 do not swap into each other
 	/// (25 and 229), and x differs from y.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> rounding rather than cutting; the 90 and 270 rows exchanged; no <c>1 -</c>; the fall-through returning (x, y).</remarks>
+	/// <remarks><b>Mutations:</b> rounding rather than cutting; the 90 and 270 rows exchanged; no <c>1 -</c>; the fall-through returning (x, y); the 270 path's or 180's first slot cut to a float.</remarks>
 	[TestMethod]
 	public void TheByteIsTheFractionTimes255CutAndTheAngleTurnsThePair()
 	{
@@ -38,6 +38,13 @@ public class ParkRidePointTests
 		Assert.AreEqual( ((byte)127, (byte)153), ParkRidePoint.Bytes( 0.4f, 0.5f, 90 ) );
 		Assert.AreEqual( ((byte)127, (byte)204), ParkRidePoint.Bytes( 0.2f, 0.5f, 90 ) );
 		Assert.AreEqual( ((byte)127, (byte)153), ParkRidePoint.Bytes( 0.5f, 0.4f, 180 ) );
+
+		// The 270 path's 1 - y and 180's first slot 1 - x stay in the x87 register, which is 53-bit (0x27f read at
+		// 0x004df0ae in the running original), so they are not cut to a float: 24-bit would give 204 and 153.
+		Assert.AreEqual( ((byte)203, (byte)127), ParkRidePoint.Bytes( 0.5f, 0.2f, 270 ) );
+		Assert.AreEqual( ((byte)152, (byte)127), ParkRidePoint.Bytes( 0.5f, 0.4f, 270 ) );
+		Assert.AreEqual( ((byte)203, (byte)127), ParkRidePoint.Bytes( 0.2f, 0.5f, 180 ) );
+		Assert.AreEqual( ((byte)152, (byte)127), ParkRidePoint.Bytes( 0.4f, 0.5f, 180 ) );
 
 		Assert.AreEqual( ((byte)76, (byte)76), ParkRidePoint.Bytes( 0.3f, 0.9f, 45 ), "an angle off the four leaves x in both" );
 		Assert.AreEqual( ((byte)76, (byte)229), ParkRidePoint.Bytes( 0.3f, 0.9f, 0 ) );
