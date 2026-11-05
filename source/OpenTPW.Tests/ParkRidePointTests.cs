@@ -39,8 +39,8 @@ public class ParkRidePointTests
 		Assert.AreEqual( ((byte)127, (byte)204), ParkRidePoint.Bytes( 0.2f, 0.5f, 90 ) );
 		Assert.AreEqual( ((byte)127, (byte)153), ParkRidePoint.Bytes( 0.5f, 0.4f, 180 ) );
 
-		// The 270 path's 1 - y and 180's first slot 1 - x stay in the x87 register, which is 53-bit (0x27f read at
-		// 0x004df0ae in the running original), so they are not cut to a float: 24-bit would give 204 and 153.
+		// The 270 path's 1 - y and 180's first slot 1 - x stay in the x87 register, which is 53-bit under Proton (0x27f read at
+		// 0x004df0ae in the running original; DX6.1 on a DP2 device would leave 24-bit, and Proton's is the one matched, Q221 (7)), so they are not cut to a float: 24-bit would give 204 and 153.
 		Assert.AreEqual( ((byte)203, (byte)127), ParkRidePoint.Bytes( 0.5f, 0.2f, 270 ) );
 		Assert.AreEqual( ((byte)152, (byte)127), ParkRidePoint.Bytes( 0.5f, 0.4f, 270 ) );
 		Assert.AreEqual( ((byte)203, (byte)127), ParkRidePoint.Bytes( 0.2f, 0.5f, 180 ) );

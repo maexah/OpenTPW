@@ -27,6 +27,9 @@ public class ParkHoardingWiringTests
 		Assert.IsNotNull( bounce.Hoarding, "the shipped Bounce has an outline" );
 	}
 
+	[TestCleanup]
+	public void EndTheParksObjects() => TestRun.DeleteEvery<ParkObjects>();
+
 	private ModelFile BounceModel() => new( new MemoryStream( data.ReadAllBytes( $"{bounce.Directory}/{bounce.Stem}.md2" ) ) );
 
 	private ParkWorld.CatalogueObject Placed( int meshInstance = 1 )
@@ -140,6 +143,13 @@ public class ParkHoardingWiringTests
 		Assert.AreEqual( 12, panels.Length );
 		CollectionAssert.AreEqual( panels.Select( p => p.Order ).Order().ToArray(), panels.Select( p => p.Order ).ToArray(), "ascending" );
 		Assert.IsTrue( panels.Select( p => p.Order ).Distinct().Count() > 1, "and the angles differ, so an unsorted list is told from a sorted one" );
+
+		// The shipped Bounce's order worked from the executable (FUN_00452e70 keys, FUN_00470630 ranks ascending and stable), not from our
+		// output: each panel's middle about the outline's centre, atan2 plus 5pi/4, modulo 2pi. Panel (0,4)'s middle lies exactly on the 135 degree
+		// diagonal, so it is last at 53 or 64 bits (the 0x27f Proton runs under, Q221 (7)); at 24 bits it would round to 0 and come first.
+		CollectionAssert.AreEqual(
+			new System.Numerics.Vector2[] { new( 0, 3 ), new( 0, 2 ), new( 0, 1 ), new( 0, 0 ), new( 2, 0 ), new( 3, 0 ), new( 3, 1 ), new( 3, 2 ), new( 3, 3 ), new( 3, 4 ), new( 1, 4 ), new( 0, 4 ) },
+			panels.Select( p => p.GridA ).ToArray(), "the original's rank" );
 	}
 
 	/// <summary>

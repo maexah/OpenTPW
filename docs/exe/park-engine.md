@@ -1722,7 +1722,7 @@ asked axis may leave its cell.
 **Which rounding is live is not settled.** The CRT starts the FPU at 53-bit precision (`0x006804da`). In the running
 original a breakpoint at `0x0059e17b` read the control word `0x27f`, 53-bit, on ticks 970 and 1125 (`advisor-park.md`,
 "The product is a double of the float key"), and at the conform during a file's load 40 times of 40 (Q819, "The
-control word" above), beside the 24-bit clock accumulator below: both states occur (fork watch
+control word" above), and at `FUN_004dedf0`'s angle chain (`0x004df0ae`) 8 times of 8, ticks 801 to 952 (Q1040, `ride-operation.md`, "Leaving a ride"), beside the 24-bit clock accumulator below: both states occur (fork watch
 2026-10-18, `verify-world-a.md` H2). The frame
 renderer `FUN_00576ec0` switches to 24-bit at `0x00576fa7` and has three exits. On success it restores the saved word
 (`0x00577310`), or, when the `0x2` bit of `[0x008bd508]` is set (`TEST AL,0x2` at `0x005772f6`), the saved word with the precision bits set,
@@ -1734,8 +1734,8 @@ the last exit left (Q173). DirectDraw is set up with `DDSCL_FPUSETUP`: `SetCoope
 (FULLSCREEN | EXCLUSIVE | ALLOWMODEX | FPUSETUP; `push` at `0x0056390b`, call `0x00563914`) and with `0x808` (NORMAL |
 FPUSETUP; `0x00563b7a`, call `0x00563b92`); neither carries FPUPRESERVE `0x1000`. What that does to the control word
 is the runtime's: DX6.1's D3DIM sets `0x7f` on a class 2 device only, one whose HAL has DrawPrimitives2 and with the registry's
-`DisableDP`, `DisableDP2` not set (a DX5-style HAL, or the software path, leaves `0x27f`); the fork's "and any later runtime" is unproven, only 6.1 was on hand; Proton sets nothing (fork watch 2026-10-31, `verify-world.md` H2 points 2 to 6). Every `0x27f` we measured is a Proton fact; which to match is
-Alexah's decision (Q221 (7)). It matters only at the margin: at 53 bits a positive step landing exactly on a
+`DisableDP`, `DisableDP2` not set (a DX5-style HAL, or the software path, leaves `0x27f`); the fork's "and any later runtime" is unproven, only 6.1 was on hand; Proton sets nothing (fork watch 2026-10-31, `verify-world.md` H2 points 2 to 6). Every `0x27f` we measured is a Proton fact; Proton's 53-bit is
+matched (Alexah, 2026-11-02, Q221 (7)). It matters only at the margin: at 53 bits a positive step landing exactly on a
 boundary, `245 + 5`, has reach 0.99999928 and is asked; at 24 bits its reach is 1.0, it is taken whole, and step 7
 puts it back. The cell in step 1 is the same either way. The walking speed's ease (`FUN_004fa870`, `ride-operation.md`,
 "Where a WALKING peep is drawn") leaves a fingerprint in the saves. In Alexah's two played Lost Kingdom saves no guest

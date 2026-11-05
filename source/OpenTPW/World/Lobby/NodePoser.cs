@@ -42,7 +42,7 @@ namespace OpenTPW;
 public sealed class NodePoser : IChannelPosed
 {
 	/// <summary>The channels whose nodes a change of clip puts back (<c>FUN_00472310</c>'s mask).</summary>
-	private const uint RestoredChannels = 0x289;
+	internal const uint RestoredChannels = 0x289;
 
 	private const uint PositionChannel = 0x1;
 	private const uint RotationChannel = 0x8;
@@ -294,7 +294,7 @@ public sealed class NodePoser : IChannelPosed
 	}
 
 	/// <summary>The channels <paramref name="clip"/> drives on each node, of those this project reads.</summary>
-	private static Dictionary<int, uint> Channels( AnimationFile clip )
+	internal static Dictionary<int, uint> Channels( AnimationFile clip )
 	{
 		var channels = new Dictionary<int, uint>();
 

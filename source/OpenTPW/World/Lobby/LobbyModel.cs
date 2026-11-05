@@ -881,12 +881,21 @@ public sealed class LobbyModel : IChannelPosed
 	/// and every mesh under one, of the first <paramref name="meshCount"/> nodes (<c>FUN_00472310</c> restores the outgoing
 	/// clip's nodes alone, <c>0x0047244b</c>, and the pose walk composes what hangs off them again).
 	/// </summary>
-	internal static bool[] MeshesRested( AnimationFile outgoing, IReadOnlyList<int> parents, int meshCount )
+	internal static bool[] MeshesRested( AnimationFile outgoing, IReadOnlyList<int> parents, int meshCount, AnimationFile? incoming = null )
 	{
-		var driven = new HashSet<int>( outgoing.RotationTracks.Select( track => track.TargetIndex )
-			.Concat( outgoing.PositionTracks.Select( track => track.TargetIndex ) )
-			.Concat( outgoing.PathTracks.Select( track => track.TargetIndex ) )
-			.Concat( outgoing.ScaleTracks.Select( track => track.TargetIndex ) ) );
+		// The exe's per-node mask (0x004724ac..0x004724d8): the outgoing clip's channels less the incoming clip's, against 0x289, as NodePoser.Rest.
+		var leaving = NodePoser.Channels( outgoing );
+
+		if ( incoming != null )
+		{
+			foreach ( var (node, channels) in NodePoser.Channels( incoming ) )
+			{
+				if ( leaving.ContainsKey( node ) )
+					leaving[node] &= ~channels;
+			}
+		}
+
+		var driven = new HashSet<int>( leaving.Where( pair => (pair.Value & NodePoser.RestoredChannels) != 0 ).Select( pair => pair.Key ) );
 
 		var rested = new bool[meshCount];
 
@@ -904,6 +913,23 @@ public sealed class LobbyModel : IChannelPosed
 		}
 
 		return rested;
+	}
+
+	/// <summary>
+	/// Poses <paramref name="animation"/> through the node tree and places the meshes from it. What a clip that turned meshes alone left
+	/// (<see cref="MeshRotator.TakeHeld"/>) is handed to the tree first, so the pose starts from it.
+	/// </summary>
+	internal static void PoseThroughTree( ModelEntity[] entities, MeshRotator? rotator, NodePoser poser, AnimationFile animation, float frame,
+		float scale, Quaternion rotation, Vector3 origin )
+	{
+		if ( rotator != null )
+		{
+			foreach ( var (node, key) in rotator.TakeHeld() )
+				poser.Keep( node, key );
+		}
+
+		poser.Pose( animation, frame );
+		PlacePosed( entities, poser, scale, rotation, origin );
 	}
 
 	/// <summary>
@@ -936,15 +962,7 @@ public sealed class LobbyModel : IChannelPosed
 			// Kingdom model plays one on a channel below a clip that moves nodes (the Inca Totem's are channels 1 to 3).
 			var poser = Poser();
 
-			// What a clip that turned meshes alone left stands in the tree before this clip is posed (MeshRotator.TakeHeld).
-			if ( Rotator != null )
-			{
-				foreach ( var (node, key) in Rotator.TakeHeld() )
-					poser.Keep( node, key );
-			}
-
-			poser.Pose( animation, frame );
-			PlacePosed( Entities, poser, _scale, _placedRotation, _placedOrigin );
+			PoseThroughTree( Entities, Rotator, poser, animation, frame, _scale, _placedRotation, _placedOrigin );
 		}
 		else
 		{
@@ -1079,12 +1097,10 @@ public sealed class LobbyModel : IChannelPosed
 	/// </remarks>
 	public void Rest( AnimationFile outgoing, AnimationFile? incoming = null )
 	{
-		Rotator?.Rest( outgoing, incoming );
-
 		foreach ( var animator in Animators )
 			animator.Rest();
 
-		RestMeshes( Entities, Offsets, _nodeParents, _poser, _scale, _placedRotation, _placedOrigin, outgoing, incoming );
+		RestMeshes( Entities, Offsets, _nodeParents, _poser, _scale, _placedRotation, _placedOrigin, outgoing, incoming, Rotator );
 
 		foreach ( var (node, visible) in ShownAtRest( outgoing, Spared ) )
 			SetMeshVisible( node, visible );
@@ -1157,11 +1173,12 @@ public sealed class LobbyModel : IChannelPosed
 	/// moved stays.
 	/// </summary>
 	internal static void RestMeshes( ModelEntity[] entities, Vector3[] offsets, IReadOnlyList<int> nodeParents, NodePoser? poser,
-		float scale, Quaternion rotation, Vector3 origin, AnimationFile outgoing, AnimationFile? incoming )
+		float scale, Quaternion rotation, Vector3 origin, AnimationFile outgoing, AnimationFile? incoming, MeshRotator? turns = null )
 	{
+		turns?.Rest( outgoing, incoming );
 		poser?.Rest( outgoing, incoming );
 
-		var rested = MeshesRested( outgoing, nodeParents, entities.Length );
+		var rested = MeshesRested( outgoing, nodeParents, entities.Length, incoming );
 
 		if ( poser != null )
 			PlacePosed( entities, poser, scale, rotation, origin, rested );

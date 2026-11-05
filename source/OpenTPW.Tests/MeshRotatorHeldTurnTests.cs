@@ -198,17 +198,53 @@ public class MeshRotatorHeldTurnTests
 	}
 
 	/// <summary>
-	/// <see cref="LobbyModel.Pose"/> hands the rotator's turns to the tree before posing a clip through it, and <see cref="LobbyModel.Rest"/> tells the
-	/// rotator which clip comes next. A <c>LobbyModel</c> needs the graphics device, so the wiring is read from the source.
+	/// <see cref="LobbyModel.PoseThroughTree"/> (what <see cref="LobbyModel.Pose"/> runs for a node-tree clip) hands the rotator's turns to the tree
+	/// before the pose and places the meshes from it: <c>next</c>'s mesh 1 is keyed from frame 14, so a pose at frame 5 stands on the turn the
+	/// rotator left, and the placed mesh carries it.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> either line removed.</remarks>
+	/// <remarks><b>Mutations:</b> the hand-over loop after <c>poser.Pose</c> (the placed mesh stands at rest); the loop removed.</remarks>
 	[TestMethod]
-	public void ALobbyModelHandsTheRotatorsTurnsToTheTreeAndTellsItTheNextClip()
+	public void ThePoseThroughTheTreeStartsFromTheTurnTheRotatorLeft()
 	{
-		var text = System.IO.File.ReadAllText( System.IO.Path.Join( RepoFiles.Root(), "source", "OpenTPW", "World", "Lobby", "LobbyModel.cs" ) );
+		var first = Clip( (1, [12, 40], [10f, 30f]) );
+		var next = Clip( (1, [14, 90], [30f, 60f]) );
+		var (rotator, meshes) = ARotator( [first, next], 2 );
 
-		StringAssert.Contains( text, "Rotator.TakeHeld()" );
-		StringAssert.Contains( text, "poser.Keep( node, key )" );
-		StringAssert.Contains( text, "Rotator?.Rest( outgoing, incoming );" );
+		rotator.Pose( first, 20f );
+
+		var heldDegrees = Z( meshes[1].LinearTransform );
+		Assert.IsTrue( heldDegrees > 12f && heldDegrees < 28f, "between the first clip's keys" );
+
+		var poser = new NodePoser( [Matrix4x4.Identity, Matrix4x4.Identity], [-1, -1], 0 );
+		var placed = new[] { 0, 1 }.Select( _ => (ModelEntity)RuntimeHelpers.GetUninitializedObject( typeof( ModelEntity ) ) ).ToArray();
+
+		LobbyModel.PoseThroughTree( placed, rotator, poser, next, 5f, 1f, Quaternion.Identity, OpenTPW.Vector3.Zero );
+
+		Assert.AreEqual( heldDegrees, Z( placed[1].LinearTransform ), 0.2f, "before the key at 14: the turn the rotator left" );
+		Assert.AreEqual( 0, rotator.TakeHeld().Count(), "handed over" );
+	}
+
+	/// <summary>
+	/// <see cref="LobbyModel.RestMeshes"/> with a rotator: the rotator is told the next clip, and a mesh both clips turn is neither restored by the rotator
+	/// nor placed again from the tree (the tree never saw its turn), as the exe's per-node mask leaves it (<c>FUN_00472310</c>).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> <see cref="LobbyModel.MeshesRested"/> without the incoming clip's mask (mesh 1 is placed from the tree); the rotator not
+	/// told the next clip (mesh 1 is put back).</remarks>
+	[TestMethod]
+	public void AChangeOfClipLeavesAMeshBothClipsTurnWhereTheRotatorHeldIt()
+	{
+		var first = Clip( (1, [12, 40], [10f, 30f]), (2, [0, 40], [5f, 5f]) );
+		var next = Clip( (1, [14, 90], [30f, 60f]) );
+		var (rotator, meshes) = ARotator( [first, next], 3 );
+
+		rotator.Pose( first, 20f );
+
+		var held = meshes[1].LinearTransform;
+		var poser = new NodePoser( [Matrix4x4.Identity, Matrix4x4.CreateRotationZ( 40f * MathF.PI / 180f ), Matrix4x4.Identity], [-1, -1, -1], 0 );
+
+		LobbyModel.RestMeshes( meshes, new OpenTPW.Vector3[3], [-1, -1, -1], poser, 1f, Quaternion.Identity, OpenTPW.Vector3.Zero, first, next, rotator );
+
+		Assert.AreEqual( held, meshes[1].LinearTransform, "mesh 1: turned by the next clip too, left as the rotator held it" );
+		CollectionAssert.AreEqual( new[] { false, false, true }, LobbyModel.MeshesRested( first, [-1, -1, -1], 3, next ), "only mesh 2 is placed again" );
 	}
 }

@@ -19,7 +19,7 @@ public static class ParkRidePoint
 	/// and goes on; no queued item of the four themes trips it (the census test), and the log is not reproduced. The second
 	/// slot's 1 - f at 90 and 180 is stored as a 32-bit float before the multiply (<c>0x004df0dc</c>, <c>0x004df119</c>), so
 	/// it is cut to a float here (0.2 gives 204 and 0.4 gives 153). The 270 path and 180's first slot keep 1 - f in the x87
-	/// register, which is 53-bit (control word <c>0x27f</c> at <c>0x004df0ae</c>, <c>docs/exe/ride-operation.md</c>, "Leaving a
+	/// register, which is 53-bit under Proton (control word <c>0x27f</c> at <c>0x004df0ae</c>; DX6.1 on a DP2 device would leave 24-bit, and Proton's is the one matched, Q221 (7), 2026-11-02, <c>docs/exe/ride-operation.md</c>, "Leaving a
 	/// ride"), so they are done in doubles (0.2 gives 203 and 0.4 gives 152).
 	/// </remarks>
 	public static (byte X, byte Y) Bytes( float x, float y, int angle )

@@ -53,6 +53,14 @@ public class LevelActiveWarningTests
 		Assert.AreEqual( 0, under.Drawn, "the topmost window is not one with a box, so the covered box stays unseen" );
 	}
 
+	/// <summary>The two real windows draw their box through the interface <see cref="Level"/> looks for.</summary>
+	[TestMethod]
+	public void TheRideAndShopWindowsAreStatusBoxes()
+	{
+		Assert.IsTrue( typeof( UI.IStatusBox ).IsAssignableFrom( typeof( UI.ParkObjectWindow ) ) );
+		Assert.IsTrue( typeof( UI.IStatusBox ).IsAssignableFrom( typeof( UI.ParkShopWindow ) ) );
+	}
+
 	/// <summary>The level hands its own stack's windows to it (the frame's overlay pass calls the private method).</summary>
 	[TestMethod]
 	public void TheLevelDrawsTheBoxOfItsOwnStacksTopWindow()
