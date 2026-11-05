@@ -2,10 +2,12 @@
 """headpause.py PID OUT ITEM ROLE:FRAME ... - the ORIGINAL's Mumbo paused by the Escape menu at the first moment its
 first channel passes (role, frame - LEAD), then read twice (1.5 s and 2.5 s into the pause, which must agree), then resumed
 by Escape. One JSON line per pause to OUT (and, with SHOTDIR set, a frame of the paused screen): role, clip, frame, each held head's (record, handle, place), and (Q940) its stored matrix, node flags, picture and roll under `pictures` and the view matrix under `view`. Q848 (a harness for loadfile.sh: `loadfile.sh load <file> <outdir> <tag>` with a file lib/headseries.py saved, then setcam.py on the ride; the
-Escape menu pauses the original's clock and its channels). The camera must already be on the ride (setcam.py): a head's sprite place is written when it is drawn."""
+Escape menu pauses the original's clock and its channels). The camera must already be on the ride (setcam.py): a head's sprite place is written when it is drawn.
+WANT_HEADS=r,r,... (Q1008) pauses only when the ride holds at least one of those lookup records, so a pause lands on a head this game also holds: a target that sees none in 60 s says `no trigger`."""
 import json, struct, subprocess, sys, time, os
 pid = int(sys.argv[1]); out = open(sys.argv[2], 'a'); item = int(sys.argv[3]); targets = [tuple(float(x) for x in a.split(':')) for a in sys.argv[4:]]
 LEAD = 6.0
+WANT = {int(x) for x in os.environ['WANT_HEADS'].split(',')} if os.environ.get('WANT_HEADS') else None
 f = open(f'/proc/{pid}/mem', 'rb', buffering=0)
 def rd(a, fmt='<I'):
     f.seek(a); return struct.unpack(fmt, f.read(struct.calcsize(fmt)))[0]
@@ -38,7 +40,7 @@ for role, frame in targets:
     t0 = time.time(); trig = False; last = None
     while time.time() - t0 < 60:
         s = read()
-        if s and s['role'] == role and s['frame'] >= frame - LEAD and s['frame'] < frame + 3 and s['frame'] > (last or -1) - 1e-6:
+        if s and s['role'] == role and s['frame'] >= frame - LEAD and s['frame'] < frame + 3 and s['frame'] > (last or -1) - 1e-6 and (WANT is None or WANT & {h[0] for h in s['heads']}):
             trig = True; break
         last = s['frame'] if s else None; time.sleep(0.02)
     if not trig: print('no trigger for', role, frame); continue

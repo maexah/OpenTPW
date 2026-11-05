@@ -3723,6 +3723,17 @@ in `park.md`, "Where a head on a morphing face stands"), the same pauses against
 original's matrix at all eight pauses and Head1 0.0 to 1.6 as before; the drawn turn picks the original's picture in 32 of 32 samples, a mean 1.0 degrees apart, and
 `HeadOnRide` chooses by it.
 
+**The 56 directions are the sine table's, not exact trigonometry** (Q1008; `lib/headframe.py`'s `candidates()`, `ParkBumperBoats.HeadDirections`). The walk is iterative: from (0, 1, 0)
+each column turns (x, z) by the 4096-entry table's sine and cosine for −45° (`0x006fe2bc`; the cosine is the table's sine of +45°), and each row, after its
+eighth column, turns (y, z) by the table's sine of 30° (`0x006fe2c4`) and its cosine as the sine of 2π/3 (`0x006fe2c8`), so a row stands 29.97° from the last (index 341 of
+4096), not 30°, and row 2's up is 0.50089, not 0.5. Over every one of the original's paused heads with a stored matrix and a view (141: Q940's Mumbo and Ape, Q1003's Mumbo, Q1008's
+Ape, `headpause.py`), the table walk picks the sprite's own picture (`+0xb8`) in 141 and exact trigonometry (what `ParkBumperBoats.HeadFrame` computed before Q1008) in 138; the
+three it missed are the Crazy Ape's Head12 (lookup record 14) in clip `l` at frames 57.3, 78.3 and 94.9, a head 0.02° from a picture's edge (the two nearest pictures' dot products differ by
+1.3e-4 to 3.5e-4) for frames 51 to 97, where the original showed picture 16 and exact trigonometry 8. At frames 95.8 to 96.5 the original's Head12 shows 8 (four pauses), as
+this game's does since the walk was built. Records and heads of the Crazy Ape's lookup table (the model's own, record = node index less `LookupFirst`, 9; the Ape's 16 heads in
+records 0 to 7 and 10 to 17): 0 Head1, 1 Head02, 2 Head06, 3 Head03, 4 Head07, 5 Head04, 6 Head08, 7 Head05, 10 Head09, 11 Head10, 12 Head14, 13 Head15, 14 Head12, 15 Head16,
+16 Head13, 17 Head11 (`lib/ape-records.json`; it agrees with Q916's eight places-paired records). Every other head of the 141 picked the sprite's picture under both walks, so none of them tells them apart.
+
 ### The excitement match — `FUN_004fdcc0`
 
 Decoded first-hand and put to three refuters (Q169), every step at its address. It runs behind the settle-up's gate on

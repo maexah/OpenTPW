@@ -571,7 +571,31 @@ public class RiderHeadTests
 		Assert.AreEqual( 30, ParkBumperBoats.HeadFrame( new( 1, 0, 0 ) ) );
 		Assert.AreEqual( 20, ParkBumperBoats.HeadFrame( At( 60, -180 ) ), "row 2, column 4" );
 		Assert.AreEqual( 48, ParkBumperBoats.HeadFrame( new( 0, -1, 0 ) ), "below" );
+		Assert.AreEqual( 48, ParkBumperBoats.HeadFrame( new( 0.1f, -1, 0.1f ) ), "nearly below keeps column 0 (the walk's own nearest is column 7)" );
 		Assert.AreEqual( 9, ParkBumperBoats.HeadFrame( At( 32, -50 ) ), "the nearest of the 56" );
+	}
+
+	/// <summary>
+	/// <b>A direction near the edge of a picture's cell falls where the engine's sine-table walk puts it</b> (Q1008). The original's Crazy Ape
+	/// Head12 (lookup record 14) in clip `l`, paused at frames 57.3, 78.3 and 94.9 (`lib/headpause.py`, the stored matrix and the view turned into the node's
+	/// frame: <c>lib/headframe.py</c>'s reading, which gave the sprite's own picture in all 141 of the original's samples), showed picture 16 where exact
+	/// trigonometry picks 8; this game's own directions at frames 88 to 92 (the census's `towards`) are the same few hundredths of a degree from the edge.
+	/// The role-4 direction is this game's (Head15), where the walk picks the row below exact trigonometry's; the original was not paused there.
+	/// </summary>
+	[TestMethod]
+	public void ADirectionNearAPictureEdgeIsPickedByTheEnginesTableWalk()
+	{
+		Assert.AreEqual( 16, ParkBumperBoats.HeadFrame( new( 11.0966f, 59.754f, 59.7442f ) ), "the original's Head12, frame 57.3" );
+		Assert.AreEqual( 16, ParkBumperBoats.HeadFrame( new( 11.0511f, 59.7828f, 59.7447f ) ), "the original's Head12, frame 78.3" );
+		Assert.AreEqual( 16, ParkBumperBoats.HeadFrame( new( 11.0158f, 59.8058f, 59.745f ) ), "the original's Head12, frame 94.9" );
+		Assert.AreEqual( 16, ParkBumperBoats.HeadFrame( new( 11.03014f, 59.79653f, 59.74457f ) ), "this game's Head12, frame 88.3" );
+		Assert.AreEqual( 24, ParkBumperBoats.HeadFrame( new( 10.17703f, 18.06437f, 67.15729f ) ), "this game's Head15, role 4 frame 105.8" );
+
+		// The walk's own directions: row 1 stands 29.97° from up (the table's entry for 30° is sin( 341 / 4096 x 2pi )), not 30.
+		Assert.AreEqual( 56, ParkBumperBoats.HeadDirections.Length );
+		Assert.AreEqual( 0.86628f, ParkBumperBoats.HeadDirections[8].Y, 2e-5f );
+		Assert.AreEqual( 0.49956f, ParkBumperBoats.HeadDirections[8].Z, 2e-5f );
+		Assert.AreEqual( 0.50089f, ParkBumperBoats.HeadDirections[16].Y, 2e-5f );
 	}
 
 	[TestMethod]

@@ -3712,8 +3712,10 @@ public sealed partial class ParkPeople : Entity
 					+ (ParkObjects.Current is { } turns && turns.TryDrawnNodeTurnOn( thing.ThingId, nodes.HeadIndex( head.Node ), out var turn )
 						? $" drawnturn [{string.Join( ' ', new[] { turn.M11, turn.M12, turn.M13, turn.M21, turn.M22, turn.M23, turn.M31, turn.M32, turn.M33 }.Select( v => v.ToString( "0.#####", System.Globalization.CultureInfo.InvariantCulture ) ) )}]"
 						: "")
-					// And the picture the head is drawn with from this frame's camera (ParkGuestSprites.HeadOnRide).
-					+ (ParkGuestSprites.HeadOnRide( this, head.Handle ) is { } shown ? $" picture {shown.Frame}" : "");
+					// And the picture the head is drawn with from this frame's camera (ParkGuestSprites.HeadOnRide), and where that camera stands (the
+					// park's axes, z up) and the direction it picked by in the node's frame (the model's axes): a head near the edge of a picture's cell is told from the original's by a fraction of a degree of the eye.
+					+ (ParkGuestSprites.HeadOnRide( this, head.Handle ) is { } shown
+						? $" picture {shown.Frame} eye ({Camera.Position.X:0.###},{Camera.Position.Y:0.###},{Camera.Position.Z:0.###}) towards ({shown.Towards.X:0.#####},{shown.Towards.Y:0.#####},{shown.Towards.Z:0.#####})" : "");
 			} ).ToArray();
 
 			// Every walk slot in use and, while it is walked or once a walk off is done, its leg, which is the whole of what a walk-on ride's timing

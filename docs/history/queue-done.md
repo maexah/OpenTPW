@@ -12569,3 +12569,12 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the first channel, 18,795 polls over 20 passes of `Q848.TPWS` f3b8769a): before frame 14 the leaf stands at one constant turn, the previous pass's last polled turn in 20 of 20 (0.00000 apart), 0.045
   to 0.050 from the first key; at frame 22 it is key 1's within 0.0013 in 20 of 20. `NodePoser.Pose` now skips a rotation track until its first key's frame (`0x00471c56`). Ours' census (`meshes 43 rows`)
   with the skip put back held the first key in 5 of 5 passes, 0.045 off the original's; built, the pass before's turn (within 0.0009 of the last key in 5 of 5). Seven put-back bugs all fail a test. The desktop frames show it, on the leaves alone (P5 missed on size: 3,269 and 2,706 pixels in the plant's box against 43 for the same binary twice). Left: Q1010.
+- [x] **Q1008. The Crazy Ape's head pictures against the original's in clip `l` (Q1003's P9).** From Q1003. The Ape's sixteen heads take the face turn Mumbo's do
+  (all carry `0x40000`), but no pause pairs: the original's role-3 pauses (`q940/orig-ape`) hold Head03 and Head10 only, a fresh Ape of ours (`q1003/census-ape2`, 900
+  samples) held Head1, 02, 06, 09, 12-15 in role 3, and the file the original loaded (`q940/ours-ape/Q848.TPWS`) never reaches role 3 in ours. Ways in: pause the original
+  only when it holds a head ours holds (`headpause.py`'s `read`, polled), or run ours on more fresh rides until it holds 03 or 10 in role 3; then `headframe.py --map
+  ../q916/ape-map.json` (at least 5 of 8, the rest matrix's figure) and the census's `picture` (`q1003/picmatch.py`).
+  **Done (Q1008, 2026-11-04):** paired in clip `l` (role 3), against pauses of the original made this session (`q1008/orig1`, `orig2`, `orig3`, the same park file) and Q940's (earlier evidence): 29 of 29 pairs
+  picture-equal on the final build, 27 of 30 on the build before. The map of the Ape's lookup records to heads is the model's own (`lib/ape-records.json`; `ride-operation.md`). The rule WAS wrong, at a picture's edge: `HeadFrame`
+  computed its 56 directions by exact trigonometry where `FUN_0044b510` walks the sine table (a row 29.97 degrees, not 30), and the Ape's Head12, 0.02 degrees from an edge for frames 51 to 97, showed 8 here and 16 in the original; built
+  as `HeadDirections`. Every head ours holds in role 3 now pairs; the ones it never holds are Q1011.

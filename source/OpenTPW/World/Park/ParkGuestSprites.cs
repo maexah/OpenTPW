@@ -984,7 +984,7 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// rest turn inside its nearest mesh as that mesh is drawn (a clip on a node between them is not carried, counted as the head is
 	/// hung, <see cref="RideScript.Heads"/>); by the stored matrix where the thing is not drawn.
 	/// </summary>
-	internal static (Vector3 At, int Frame)? HeadOnRide( ParkPeople? people, int thingId )
+	internal static (Vector3 At, int Frame, System.Numerics.Vector3 Towards)? HeadOnRide( ParkPeople? people, int thingId )
 	{
 		if ( people == null || !people.TryHeadOf( thingId, out var script, out var node ) || script?.Nodes is not { } nodes )
 			return null;
@@ -1009,7 +1009,8 @@ public sealed class ParkGuestSprites : ModelEntity
 				drawnTurn = turned;
 		}
 
-		return (at, HeadPicture( world, drawnTurn, at, Camera.Position ));
+		var towards = HeadTowards( world, drawnTurn, at, Camera.Position );
+		return (at, ParkBumperBoats.HeadFrame( towards ), towards);
 	}
 
 	/// <summary>
@@ -1017,6 +1018,10 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// (<paramref name="drawnTurn"/>), or by the stored matrix <paramref name="stored"/> where the thing is not drawn.
 	/// </summary>
 	internal static int HeadPicture( System.Numerics.Matrix4x4 stored, System.Numerics.Matrix4x4? drawnTurn, Vector3 at, Vector3 camera )
+		=> ParkBumperBoats.HeadFrame( HeadTowards( stored, drawnTurn, at, camera ) );
+
+	/// <summary>The direction to <paramref name="camera"/> in the head's own axes, which <see cref="HeadPicture"/> picks by.</summary>
+	static System.Numerics.Vector3 HeadTowards( System.Numerics.Matrix4x4 stored, System.Numerics.Matrix4x4? drawnTurn, Vector3 at, Vector3 camera )
 	{
 		var seen = camera - at;
 		var towards = new System.Numerics.Vector3( seen.X, seen.Z, seen.Y );
@@ -1025,7 +1030,7 @@ public sealed class ParkGuestSprites : ModelEntity
 		if ( System.Numerics.Matrix4x4.Invert( rotation, out var inverse ) )
 			towards = System.Numerics.Vector3.TransformNormal( towards, inverse );
 
-		return ParkBumperBoats.HeadFrame( towards );
+		return towards;
 	}
 
 	/// <summary>
