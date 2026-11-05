@@ -7,10 +7,10 @@ namespace OpenTPW.Tests;
 
 /// <summary>
 /// The animation triggers read the script's speed divisor twice (docs/QUEUE.md Q155): as the play rate they hand the channel, which is built (Q1039:
-/// <c>TheRateATriggerHandsTheChannelIsTheDivisor</c> and the tests after it), and as the divisor of the deadline, which is not: a trigger at a divisor other
-/// than 1 counts as <c>ANIM_TRIGGER_SPEED_DEADLINE</c> (the <c>WAIT4ANIM</c> deadline of <c>TRIGANIM</c>, <c>TRIGWAITANIM</c> and the <c>_CH</c> one); a
+/// <c>TheRateATriggerHandsTheChannelIsTheDivisor</c> and the tests after it), and as the divisor of the deadline (Q1060: the <c>WAIT4ANIM</c> deadline of <c>TRIGANIM</c>,
+/// <c>TRIGWAITANIM</c> and the <c>_CH</c> one is the floored length divided by it, <see cref="RideScript.TriggerDeadline"/>). A
 /// <c>WAITANIM</c> whose length-less-300 is negative (a clip under 300 ms or no model) counts <c>WAITANIM_SPEED_WRAP</c>, the one turn it waits here where the
-/// engine's unsigned sum waits days. At the word 50 none count.
+/// engine's unsigned sum waits days; at the word 50 it counts nothing.
 /// </summary>
 [TestClass]
 [DoNotParallelize]
@@ -65,41 +65,87 @@ public class AnimTriggerSpeedCountTests
 		return script;
 	}
 
-	/// <summary>A model-less trigger arms a deadline, so it counts the deadline (the rate goes only to a channel).</summary>
+	/// <summary>
+	/// A trigger's deadline is the floored length divided by the divisor and cut toward zero (<c>0x005529ac</c>, <c>0x00552d94</c>, <c>0x005531ee</c>): at the word 60
+	/// (divisor 1.1) a length of 1000 arms 909 and one of 300 arms 272; at 40 (0.9) 1000 arms 1111; at 80 (1.3) 769; at 20 (0.7) 500 arms 714; at 0 (0.5) 1000 arms 2000;
+	/// at 50 the length itself. A divisor read the wrong way round (0.5 - 0.01 x) or a deadline left whole fails every row but 50.
+	/// </summary>
 	[TestMethod]
-	[DataRow( 50, 0 )]
-	[DataRow( 60, 1 )]
-	[DataRow( 0, 1 )]
-	[DataRow( 80, 1 )]
-	public void ATriggerAtADivisorOtherThanOneCountsItsDeadlineAlone( int speed, int counted )
-	{
-		Trigger( Opcode.TRIGANIM, speed, 5, 0, 0 );
+	[DataRow( 60, 1000, 909 )]
+	[DataRow( 60, 300, 272 )]
+	[DataRow( 60, 700, 636 )]
+	[DataRow( 40, 1000, 1111 )]
+	[DataRow( 80, 1000, 769 )]
+	[DataRow( 20, 500, 714 )]
+	[DataRow( 0, 1000, 2000 )]
+	[DataRow( 50, 1000, 1000 )]
+	[DataRow( 50, 300, 300 )]
+	public void ATriggerDeadlineIsTheLengthDividedByTheDivisorAndCut( int speed, int length, int armed )
+		=> Assert.AreEqual( armed, RideScript.TriggerDeadline( length, speed ), $"word {speed}, length {length}" );
 
-		Assert.AreEqual( counted, Times( "ANIM_TRIGGER_SPEED_DEADLINE" ), $"a word of {speed}" );
+	/// <summary>
+	/// The three triggers through the instruction, with no model (the length floors to 300, <c>0x00552fe5</c>'s sum): the deadline <c>WAIT4ANIM</c> reads is the clock
+	/// plus the divided 300, 272 at the word 60 and 333 at 40, 300 at 50; the length stored for the script, here the result register, stays the 300.
+	/// </summary>
+	[TestMethod]
+	[DataRow( Opcode.TRIGANIM, 60, 272 )]
+	[DataRow( Opcode.TRIGANIM, 40, 333 )]
+	[DataRow( Opcode.TRIGANIM, 50, 300 )]
+	[DataRow( Opcode.TRIGANIM_CH, 60, 272 )]
+	[DataRow( Opcode.TRIGANIM_CH, 40, 333 )]
+	[DataRow( Opcode.TRIGANIM_CH, 50, 300 )]
+	public void ATriggerArmsItsDeadlineDividedAndStoresTheLengthWhole( Opcode opcode, int speed, int armed )
+	{
+		var script = Trigger( opcode, speed, opcode == Opcode.TRIGANIM_CH ? [5, 0, 0, 0] : [5, 0, 0] );
+
+		Assert.AreEqual( 300, script.Result, "the length stored is undivided" );
+		Assert.AreEqual( armed, script.LastAnimationDeadline, $"{opcode} at a word of {speed}" );
+		Assert.AreEqual( 1000f + armed, script.AnimationDeadline, $"{opcode}: the deadline WAIT4ANIM reads" );
+		Assert.AreEqual( 0, Times( "ANIM_TRIGGER_SPEED_DEADLINE" ), "nothing is counted any more" );
 
 		Unimplemented.Forget();
 	}
 
-	/// <summary>The _CH trigger arms the same deadline.</summary>
+	/// <summary>A <c>LOOPANIM</c> arms no deadline.</summary>
 	[TestMethod]
-	public void ATriggerOnAChannelCountsItsDeadlineToo()
+	public void ALoopArmsNoDeadline()
 	{
-		Trigger( Opcode.TRIGANIM_CH, 60, 5, 0, 0, 0 );
-		Assert.AreEqual( 1, Times( "ANIM_TRIGGER_SPEED_DEADLINE" ) );
+		var script = Trigger( Opcode.LOOPANIM, 60, 5, 0 );
 
-		Trigger( Opcode.TRIGANIM_CH, 50, 5, 0, 0, 0 );
-		Assert.AreEqual( 0, Times( "ANIM_TRIGGER_SPEED_DEADLINE" ), "and not at the word 50" );
+		Assert.AreEqual( 0, script.LastAnimationDeadline );
+		Assert.IsNull( script.AnimationDeadline );
 
 		Unimplemented.Forget();
 	}
 
-	/// <summary>A <c>LOOPANIM</c> arms no deadline: nothing is counted.</summary>
+	/// <summary>
+	/// On the 1x1 east scenery's 666 ms role 0 (length 366) a <c>TRIGANIM</c> at the word 60 stores 366 and arms 332 (<c>366 / 1.1</c>), at 50 arms 366,
+	/// and the same through <c>TRIGWAITANIM</c> (which triggers by the same call) and <c>TRIGANIM_CH</c>.
+	/// </summary>
 	[TestMethod]
-	public void ALoopWithNoModelCountsNothing()
+	[DataRow( Opcode.TRIGANIM, 60, 332 )]
+	[DataRow( Opcode.TRIGANIM, 50, 366 )]
+	[DataRow( Opcode.TRIGWAITANIM, 60, 332 )]
+	[DataRow( Opcode.TRIGANIM_CH, 60, 332 )]
+	[DataRow( Opcode.TRIGANIM_CH, 20, 522 )]
+	public void ATriggerOnARealClipDividesItsLength( Opcode opcode, int speed, int armed )
 	{
-		Trigger( Opcode.LOOPANIM, 60, 5, 0 );
+		FileSystem = GameData.Required();
 
-		Assert.AreEqual( 0, Times( "ANIM_TRIGGER_SPEED_DEADLINE" ) );
+		Unimplemented.Forget();
+
+		var body = opcode == Opcode.TRIGANIM_CH ? new[] { Word( opcode ), 0, 0, 0, 0 } : new[] { Word( opcode ), 0, 0, 0 };
+		var script = new RideScript( Build( 1, [.. body, Word( Opcode.END )] ) )
+		{
+			Speed = speed,
+			Animations = RideAnimations.Load( "levels/jungle/features/1x1east", "1x1east", FileSystem )
+		};
+
+		script.Turn( 1000f );
+
+		Assert.AreEqual( 366, script.Result, "the length stored is undivided" );
+		Assert.AreEqual( armed, script.LastAnimationDeadline, $"{opcode} at a word of {speed}" );
+		Assert.AreEqual( 1000f + armed, script.AnimationDeadline );
 
 		Unimplemented.Forget();
 	}

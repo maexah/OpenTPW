@@ -945,7 +945,7 @@ public static class DebugConsole
 
 				foreach ( var script in scripted.Scheduler.Scripts.OrderBy( script => script.Id ) )
 					Reply( $"  script {script.Id} thing {script.ThingId} dir {script.Directory} name '{script.Name}' at {script.Position} "
-						+ $"parent {script.ParentId} child {script.ChildId} sound {script.SoundChildId} word {script.Speed} lastwait {script.LastWait} "
+						+ $"parent {script.ParentId} child {script.ChildId} sound {script.SoundChildId} word {script.Speed} lastwait {script.LastWait} lastanim {script.LastAnimationDeadline} "
 						+ $"rate {script.Animations?.Channel( 0 )?.Speed.ToString( "0.000", CultureInfo.InvariantCulture ) ?? "-"}" );
 
 				break;

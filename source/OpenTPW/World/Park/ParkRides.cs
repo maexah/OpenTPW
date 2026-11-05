@@ -775,9 +775,8 @@ public sealed class ParkRides : Entity
 	/// <para>
 	/// <b>How long a restored speed lasts, measured rather than assumed.</b> It survives loop wraps and
 	/// holds, because <see cref="RideAnimations.Advance"/> carries the channel's own speed into both -
-	/// but the next trigger from the script replaces it, since <c>RideScript.StartAnimation</c> passes 1.0
-	/// where the engine's handlers push the script's speed divisor, 0.5 + 0.01 x the speed word
-	/// (<c>0x00552be4</c>) - the deviation docs/QUEUE.md Q155 names. The Belly Bounce's script meets its
+	/// but the next trigger from the script replaces it, since <c>RideScript.StartAnimation</c> passes the script's
+	/// speed divisor, 0.5 + 0.01 x the speed word (<c>0x00552be4</c>), as the engine's handlers push it (Q1039). The Belly Bounce's script meets its
 	/// <c>LOOPANIM 2, 0</c> at word 43 with the saved looping key 2, so it skips it as the engine does and the
 	/// saved loop plays on at 1.1.
 	/// </para>

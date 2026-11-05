@@ -769,6 +769,9 @@ public sealed class RideScript
 	/// <summary>The milliseconds the latest <c>WAIT</c> or <c>WAITANIM</c> armed itself for (<see cref="Wait"/>, <see cref="AnimationWait"/>), for the <c>scripts</c> census; nought before the first.</summary>
 	public int LastWait { get; private set; }
 
+	/// <summary>The milliseconds the latest <c>TRIGANIM</c>, <c>TRIGWAITANIM</c> or <c>TRIGANIM_CH</c> armed its <c>WAIT4ANIM</c> deadline for (<see cref="TriggerDeadline"/>), for the <c>scripts</c> census; nought before the first.</summary>
+	public int LastAnimationDeadline { get; private set; }
+
 	/// <summary>True while the script is sitting on a <c>WAIT</c> or <c>WAITANIM</c> not yet come due.</summary>
 	public bool Waiting => _waitUntil is not null;
 
@@ -4099,7 +4102,7 @@ public sealed class RideScript
 	/// it (<c>FDIV</c> at <c>0x005537fd</c>) by <see cref="DivisorOf"/> and truncates the quotient (<c>_ftol</c>,
 	/// <c>0x00553801</c>) before adding it to the clock: <c>3000</c> waits <c>3000</c> at a word of 50 and <c>2727</c> at
 	/// 60. <c>WAITANIM</c> does its own arithmetic (<see cref="AnimationWait"/>) and shares only the arming
-	/// (<see cref="Arm"/>); the trigger deadlines do not divide (Q155, counted by <see cref="CountUndividedDeadline"/>).
+	/// (<see cref="Arm"/>); the trigger deadlines divide too, with the length floored first (<see cref="TriggerDeadline"/>).
 	/// </para>
 	/// </summary>
 	private void Wait( float now, int duration, int length )
@@ -4247,16 +4250,14 @@ public sealed class RideScript
 	}
 
 	/// <summary>
-	/// Counts a <c>WAIT4ANIM</c> deadline armed at a speed divisor other than 1: <c>TRIGANIM</c> (<c>0x005529ac</c>),
-	/// <c>TRIGWAITANIM</c> (<c>0x00552d94</c>) and <c>TRIGANIM_CH</c> (<c>0x005531ee</c>) divide the length by it, and here
-	/// the deadline is the whole length (docs/QUEUE.md Q155). The length stored for the script does not read it
-	/// (<c>0x0047323e</c>..<c>0x00473258</c>).
+	/// The milliseconds a trigger's <c>WAIT4ANIM</c> deadline lies ahead of the clock: the floored length (<see cref="FloorAnimation"/>)
+	/// divided by the divisor (<c>FILD</c> then <c>FDIV [ESP+0x14]</c>, <c>TRIGANIM</c> <c>0x005529a7</c>..<c>0x005529ac</c>, <c>TRIGWAITANIM</c>
+	/// <c>0x00552d94</c>, <c>TRIGANIM_CH</c> <c>0x005531ee</c>) and cut toward zero (<c>_ftol</c>, <c>0x0067a830</c>), at a word of 60 a 1000 ms clip (a length of 700)
+	/// arms 636. It is the order <c>TRIGANIM</c> keeps and <c>WAITANIM</c> reverses (floor, then divide; no second floor): a 400 ms clip
+	/// answers 300 and arms 272, where <c>WAITANIM</c> divides 100 and floors to 300. The length stored for the script (<c>+0x48</c>, the destination) is the undivided one (<c>0x0047323e</c>..<c>0x00473258</c>).
 	/// </summary>
-	private void CountUndividedDeadline()
-	{
-		if ( DivisorOf( Speed ) != 1f )
-			Unimplemented.Report( "ANIM_TRIGGER_SPEED_DEADLINE" );
-	}
+	internal static int TriggerDeadline( int length, int speed )
+		=> unchecked( (int)(long)(length / (double)DivisorOf( speed )) );
 
 	/// <summary>
 	/// <c>TRIGANIM</c>: start a one-shot animation, answer how long it runs, and arm the deadline that
@@ -4280,8 +4281,8 @@ public sealed class RideScript
 
 		Store( destination, length );
 
-		CountUndividedDeadline();
-		_animationUntil = now + length;
+		LastAnimationDeadline = TriggerDeadline( length, Speed );
+		_animationUntil = now + LastAnimationDeadline;
 		_looping = OneShot;
 	}
 
@@ -4383,8 +4384,8 @@ public sealed class RideScript
 
 		Store( destination, length );
 
-		CountUndividedDeadline();
-		_animationUntil = now + length;
+		LastAnimationDeadline = TriggerDeadline( length, Speed );
+		_animationUntil = now + LastAnimationDeadline;
 	}
 
 	/// <summary>
@@ -4501,7 +4502,7 @@ public sealed class RideScript
 		// The play rate is the script's speed divisor, 0.5 + 0.01 x the speed word, where every triggering handler pushes the dispatcher's
 		// [ESP+0x14] as the channel's speed (0x00552952, 0x00552aa4, 0x00552bea, 0x00552d3c, 0x00553190, 0x00553471; docs/exe/park.md, "The animation
 		// opcodes"): 1 at the word 50 a script is made with, 1.1 at the Belly Bounce's 60. It is the play rate alone; the length answered
-		// does not read it, and the deadline that divides by it is counted (ANIM_TRIGGER_SPEED_DEADLINE).
+		// does not read it; the deadline that divides by it is TriggerDeadline.
 		var rate = DivisorOf( Speed );
 
 		//

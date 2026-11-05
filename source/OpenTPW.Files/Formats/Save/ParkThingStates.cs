@@ -18,7 +18,7 @@ namespace OpenTPW;
 /// dumper pointedly cannot name - and in the shipped park it is nought on every idle channel, 1 on
 /// fourteen of the fifteen running ones, and <b>1.1 on the Belly Bounce</b>, which is the park's only
 /// ride. What a restored speed is worth is bounded and was measured: it survives loop wraps and holds,
-/// and the script's next trigger on that channel replaces it with 1 - see <c>ParkRides.Restore</c>.
+/// and the script's next trigger on that channel replaces it with the script's divisor (1 at the word 50, Q1039) - see <c>ParkRides.Restore</c>.
 /// </param>
 /// <param name="StartTime">
 /// The channel's start stamp <c>+0x10</c>, a reading of the saved clock (<see cref="ParkClock"/>): where the clip

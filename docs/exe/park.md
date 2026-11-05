@@ -755,9 +755,9 @@ it (`ParkRides.SetOperating`), and the scheduler copies a parent's into its chil
 `_ftol` at `0x00553801`, whose control word is round-toward-zero, so `WAIT 500` is 454 at 60), the three scream readings
 (`ParkAudio.ScreamVolume`, `ScreamGridIndex`; a held chain keeps the word it was asked under), the bumper ride's performance (the scheduler's
 push at every visit of a script whose thing has a track ride, `ParkBumperCars.PushSpeedWord`, which replaced the once-bound word) and the
-wear (`ParkRideOperation.WearByRunning`, the getter `FUN_0055a330`). The save writer writes the live word (`WrittenScript.Speed`). **Read by the triggers since Q1039**: every trigger hands the divisor to its channel as the play rate (`RideScript.StartAnimation`; `TRIGANIM`,
+wear (`ParkRideOperation.WearByRunning`, the getter `FUN_0055a330`). The save writer writes the live word (`WrittenScript.Speed`). **Read by the triggers since Q1039 (the play rate) and Q1060 (the deadline)**: `TRIGANIM`, `TRIGWAITANIM` and `TRIGANIM_CH` arm `WAIT4ANIM` at the clock plus the stored length (the clip less 300, floored at 300) divided by the divisor and cut (`RideScript.TriggerDeadline`; 636 for a 1000 ms clip at word 60); every trigger hands the divisor to its channel as the play rate (`RideScript.StartAnimation`; `TRIGANIM`,
 `WAITANIM`, `LOOPANIM`, `TRIGWAITANIM`, `TRIGANIM_CH`, `LOOPANIM_CH`), a queued clip keeps it, and a loop's replay plays at the channel's. **Not read
-yet** (Q155): the three trigger deadlines (counted, Q876; Q1060), the scheduler's channel speed, the `TOUR` record, `COAST`'s ride, the bounce
+yet** (Q155): the scheduler's channel speed, the `TOUR` record, `COAST`'s ride, the bounce
 riders' sine and the walk placer's divisor. Run off-screen (`q155-b16/run3/`), the shipped Belly Bounce reads word 60, its screams start at
 `parameter 40` (`speed 60`, level 20) where the constant 50 gave 35, its `WAIT 500` arms for 454 ms, and a bought Hot Pot's performance follows
 the word written (60 to 80 and back); the original's memory was not read for any of them.
