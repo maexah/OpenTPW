@@ -123,18 +123,43 @@ public class ParkBumperCarStepTests
 		Assert.AreEqual( 0x40, car.Turned );
 	}
 
-	/// <summary>A steering heading more than half a circle round is turned toward the short way: -64 here, and the heading wraps to 449.</summary>
+	/// <summary>
+	/// The heading eases toward the steering heading the short way round: an offset over half a circle (0x100) is taken less 0x200
+	/// (<c>0x0054827b</c>, <c>jle</c>: exactly 0x100 is not), times the speed over 1000 truncated toward nought.
+	/// </summary>
 	[TestMethod]
-	public void ARunningCarTurnsTheShortWayRound()
+	[DataRow( 0x1c0, -63, 0x200 - 63 )]   // -64 x 990 / 1000 = -63.36
+	[DataRow( 0x100, 253, 253 )]          // 256 x 990 / 1000 = 253.44: half a circle is not wrapped
+	[DataRow( 0x101, -252, 0x200 - 252 )] // 257 - 512 = -255; -255 x 990 / 1000 = -252.45 -> -252, not -253
+	public void ARunningCarTurnsTheShortWayRound( int steering, int turn, int heading )
 	{
 		var (cars, ride, car) = Lone( ParkBumperCars.CarFlags.None, 1024, 0 );
 
 		ride.State = ParkBumperCars.RideState.Running;
-		car.Steering = 0x1c0;
+		car.Steering = steering;
 		cars.Tick();
 
-		Assert.AreEqual( -64 * FrictionAt60 / 1000, car.Turn, "truncated toward nought: -63" );
-		Assert.AreEqual( 0x200 - 63, car.Heading );
+		Assert.AreEqual( turn, car.Turn );
+		Assert.AreEqual( heading, car.Heading );
+		Assert.AreEqual( steering, car.Turned );
+	}
+
+	/// <summary>
+	/// Both divisions truncate toward nought (<c>0x00547f72</c>..<c>0x00547f8a</c>, the friction's /10; <c>0x00547f9b</c>..<c>0x00547fbe</c>, the
+	/// velocity's /1024 by <c>cdq</c>, and 0x3ff, <c>sar</c> 10): at friction 987 a seating car keeps 690 (6909 / 10), and 1000 and -1000
+	/// become 673 and -673 (690000 / 1024 = 673.8).
+	/// </summary>
+	[TestMethod]
+	public void TheFrictionAndTheVelocityTruncateTowardNought()
+	{
+		var (cars, ride, car) = Lone( ParkBumperCars.CarFlags.Seating, 1000, -1000 );
+
+		cars.SetPerformance( ride.Handle, 54 );
+		Assert.AreEqual( 987, ride.Friction );
+		cars.Tick();
+
+		Assert.AreEqual( 673, car.VelocityX, "rounded friction 691 would keep 674" );
+		Assert.AreEqual( -673, car.VelocityZ, "a shift (floor) would keep -674" );
 	}
 
 	/// <summary>A ride that is not running (loading, or closed) turns no car, whatever the steering.</summary>

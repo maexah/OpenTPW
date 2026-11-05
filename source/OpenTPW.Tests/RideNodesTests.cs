@@ -661,19 +661,19 @@ public class RideNodesTests
 
 						var clip = new AnimationFile( clipStream );
 
-						visibility += clip.VisibilityTracks.Count( track => headNodes.Contains( track.TargetIndex ) );
-
-						others.AddRange( clip.RotationTracks.Where( track => headNodes.Contains( track.TargetIndex ) ).Select( _ => $"{directory}/{clipName} turns" ) );
-						others.AddRange( clip.PositionTracks.Where( track => headNodes.Contains( track.TargetIndex ) ).Select( _ => $"{directory}/{clipName} moves" ) );
-						others.AddRange( clip.ScaleTracks.Where( track => headNodes.Contains( track.TargetIndex ) ).Select( _ => $"{directory}/{clipName} scales" ) );
-						others.AddRange( clip.PathTracks.Where( track => headNodes.Contains( track.TargetIndex ) ).Select( _ => $"{directory}/{clipName} routes" ) );
-						others.AddRange( clip.MorphTracks.Where( track => headNodes.Contains( track.TargetIndex ) ).Select( _ => $"{directory}/{clipName} morphs" ) );
+						foreach ( var (node, flags) in clip.Tracks.Where( track => headNodes.Contains( track.Node ) ) )
+						{
+							if ( flags == 0x20000 )
+								++visibility;
+							else
+								others.Add( $"{directory}/{clipName} node {node} flags 0x{flags:x}" );
+						}
 					}
 				}
 			}
 		}
 
-		CollectionAssert.AreEqual( System.Array.Empty<string>(), others, "no clip turns, moves, scales, routes or morphs a head node" );
+		CollectionAssert.AreEqual( System.Array.Empty<string>(), others, "no clip has any track but a visibility track (flags 0x20000) on a head node" );
 		Assert.AreEqual( 80, models, "the models with heads" );
 		Assert.AreEqual( 84, visibility, "the visibility tracks on a head node: the one track a head node has" );
 		Assert.AreEqual( 792, heads, "the head nodes read" );

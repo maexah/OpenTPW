@@ -1,5 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Linq;
 
 namespace OpenTPW.Tests;
 
@@ -112,9 +113,22 @@ public class ParkBumperBoatPutTests
 		var car = Car( x: 2 * ParkBumperCars.CellUnits, z: ParkBumperCars.CellUnits, vx: 768, heading: 0x194, turn: 40, phase: 10,
 			flags: ParkBumperCars.CarFlags.Live | ParkBumperCars.CarFlags.Bobs );
 
-		var (at, turn, height) = ParkBumperBoats.Placement( car, 0.5f, 10f, 20f, radius: 768, under: ( cornerX, _ ) => 0.1f * cornerX );
+		var corners = new System.Collections.Generic.List<(float X, float Y)>();
+
+		var (at, turn, height) = ParkBumperBoats.Placement( car, 0.5f, 10f, 20f, radius: 768, under: ( cornerX, cornerY ) =>
+		{
+			corners.Add( (cornerX, cornerY) );
+			return 0.1f * cornerX;
+		} );
 
 		Assert.AreEqual( 1.875f + 0.15828125f, height, 1e-3f );
+		// The eased heading 0x180 has its sine 255 and its quarter-turn's nought, so "ahead" lies along one axis at the ride's radius of 768:
+		// 255 x 4 x 768 / 1024 / 3072 x 10 = 2.49 from the eased place along x (cells 10 wide) and twice that along y (cells 20 deep); the car's raw heading 0x194, or a radius of nought, puts the corners elsewhere.
+		const float reach = 255f * 4f * 768f / 1024f / 3072f * 10f;
+
+		Assert.AreEqual( 4, corners.Count );
+		Assert.AreEqual( 2, corners.Count( c => MathF.Abs( c.X - 18.75f ) < 1e-3f && MathF.Abs( MathF.Abs( c.Y - 20f ) - reach * 2f ) < 1e-3f ), "two corners ahead and behind" );
+		Assert.AreEqual( 2, corners.Count( c => MathF.Abs( c.Y - 20f ) < 1e-3f && MathF.Abs( MathF.Abs( c.X - 18.75f ) - reach ) < 1e-3f ), "two to each side" );
 		Assert.AreEqual( (18.75f, 20f, height), (at.X, at.Y, at.Z), "the position carries the same height" );
 		Assert.IsTrue( System.Numerics.Quaternion.Dot( System.Numerics.Quaternion.CreateFromAxisAngle( System.Numerics.Vector3.UnitZ, -MathF.PI / 2 ), turn ) > 0.99999f,
 			"a quarter turn about up, the other way" );

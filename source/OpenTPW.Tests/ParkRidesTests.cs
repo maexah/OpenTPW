@@ -520,6 +520,32 @@ public class ParkRidesTests
 	}
 
 	/// <summary>
+	/// <b>A head hung on a clip-driven seat is not counted as an unbuilt path</b> (Q1009): the Aztec Mayhem's seat heads are
+	/// <see cref="NodeEnd.RestPose"/>, and <c>ADDHEAD</c> on them hangs the head without <c>Unimplemented.Report( "RIDER_HEAD_TURN_AT_REST" )</c>.
+	/// </summary>
+	[TestMethod]
+	public void AHeadHungOnAClipDrivenSeatReportsNoGap()
+	{
+		var rides = Bind( World(), Catalogue() );
+
+		Assert.IsTrue( Catalogue().TryGet( 1104, out var mayhemItem ), "the jungle offers the Aztec Mayhem" );
+		Assert.IsTrue( rides.BindNew( new ParkWorld.CatalogueObject( ThingId: 902, CatalogueId: 1104, RawX: 46 << 8, RawY: 33 << 8, Angle: 0 ), mayhemItem ), "it has a script" );
+
+		var nodes = rides.Scheduler.Find( rides.ScriptFor( 902 ) )!.Nodes;
+
+		Assert.AreEqual( NodeEnd.RestPose, nodes!.FindHead( 1, out _ ), "its first seat head is at rest" );
+
+		var script = new RideScript( RideScriptHeadTests.Build( RideScriptHeadTests.Word( Opcode.ADDHEAD ), 7, RideScriptHeadTests.Word( Opcode.END ) ) ) { Nodes = nodes };
+
+		Unimplemented.Forget();
+		script.SizeHeads( 1 );
+		script.Turn( 0f );
+
+		Assert.AreEqual( 1, script.Heads().Count(), "the head was hung" );
+		Assert.IsFalse( Unimplemented.Summary.Any( entry => entry.What == "RIDER_HEAD_TURN_AT_REST" ), "and no gap was reported" );
+	}
+
+	/// <summary>
 	/// <b>The load's moment is the clock the park's ticks run on</b>, the last tick's instant as the load finds it,
 	/// which is where the save's own moment is put; every saved deadline keeps its distance from it. With the game
 	/// clock 64 ticks further on, the cameras' waits end 2,329 and 2,341 ms after that instant, not after nought.

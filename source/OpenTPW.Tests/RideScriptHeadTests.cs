@@ -14,12 +14,12 @@ namespace OpenTPW.Tests;
 [TestClass]
 public class RideScriptHeadTests
 {
-	private static int Word( Opcode opcode ) => unchecked( (int)(0x80000000u | (uint)opcode) );
+	internal static int Word( Opcode opcode ) => unchecked( (int)(0x80000000u | (uint)opcode) );
 
 	private static int Var( int index ) => unchecked( (int)(0x40000000u | (uint)index) );
 
 	/// <summary>A whole .RSE file of <paramref name="body"/>, three variables and no slots of any other kind.</summary>
-	private static RideScriptFile Build( params int[] body )
+	internal static RideScriptFile Build( params int[] body )
 	{
 		const int variableCount = 3;
 
