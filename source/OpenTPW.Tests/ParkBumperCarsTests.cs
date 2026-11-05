@@ -578,7 +578,7 @@ public class RiderHeadTests
 	/// <summary>
 	/// <b>A direction near the edge of a picture's cell falls where the engine's sine-table walk puts it</b> (Q1008). The original's Crazy Ape
 	/// Head12 (lookup record 14) in clip `l`, paused at frames 57.3, 78.3 and 94.9 (`lib/headpause.py`, the stored matrix and the view turned into the node's
-	/// frame: <c>lib/headframe.py</c>'s reading, which gave the sprite's own picture in all 141 of the original's samples), showed picture 16 where exact
+	/// frame: <c>lib/headframe.py</c>'s reading, which gave the sprite's own picture in all 157 of the original's samples), showed picture 16 where exact
 	/// trigonometry picks 8; this game's own directions at frames 88 to 92 (the census's `towards`) are the same few hundredths of a degree from the edge.
 	/// The role-4 direction is this game's (Head15), where the walk picks the row below exact trigonometry's; the original was not paused there.
 	/// </summary>

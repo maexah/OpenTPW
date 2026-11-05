@@ -3,7 +3,7 @@
 
 Q1023 (docs/TOOLING.md, "A test's flake found by setting its generators from outside"). Run from the repo root.
 Copies SweepHook.cs into source/OpenTPW/ and ZSweepScratch.cs into source/OpenTPW.Tests/, and edits the 19 default
-generators the park's audio, weather, sea, staff and peeps make, and the 3 `Random.Shared` draws (the lobby's lightning and
+generators the park's audio, weather, sea, staff and peeps make, and the 5 `Random.Shared` draws in 3 files (the lobby's lightning and
 camera wander, the VM's RAND), routed through `SweepHook.Shared` (a line that has moved stops the script with an
 AssertionError, so an edit never half applies). Build, then run.sh. Commit nothing while it is applied: the edits are the
 sweep's, not the product's.

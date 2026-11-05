@@ -19,7 +19,7 @@ public class ParkBumperCarStepTests
 
 	private const int Centre = 30 * ParkBumperCars.CellUnits + ParkBumperCars.CellUnits / 2;
 
-	/// <summary>The ride's friction at the speed word every bumper ride is bought at: the lerp of 985 and 1010 at 60.</summary>
+	/// <summary>The ride's friction at the speed word every bumper ride is bought at: the lerp of 960 and 1010 at 60.</summary>
 	private const int FrictionAt60 = 990;
 
 	/// <summary>

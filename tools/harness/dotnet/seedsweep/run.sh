@@ -19,5 +19,5 @@ capped=${OPENTPW_HARNESS_WORK:-$HOME/.cache/tpw-harnesses}/lib/capped.sh
 case "$1" in
 	profile) shift; rm -f "$1.profile"; SWEEP_PROFILE=1 SWEEP_LO=0 SWEEP_HI=0 SWEEP_LOG=$1 "$capped" "$dotnet" test "$root/source/OpenTPW.sln" --no-build --filter "Name=Sweep" ;;
 	sweep) shift; env ${4:+SWEEP_ONLY=$4} ${5:+SWEEP_CLASSES=$5} SWEEP_LO=$1 SWEEP_HI=$2 SWEEP_LOG=$3 "$capped" "$dotnet" test "$root/source/OpenTPW.sln" --no-build --filter "Name=Sweep" ;;
-	*) sed -n 2,8p "$0"; exit 2 ;;
+	*) sed -n 2,13p "$0"; exit 2 ;;
 esac

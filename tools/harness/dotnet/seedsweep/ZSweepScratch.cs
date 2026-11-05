@@ -8,7 +8,7 @@ using System.Collections.Generic;
 
 namespace OpenTPW.Tests;
 
-// SCRATCH, never committed (Q1023): every test of the nine files once per seed of the park audio's script generator.
+// SCRATCH, never committed (Q1023): every test of the classes it is given (SWEEP_ALL: every class) once per seed of every routed generator.
 public sealed class CountingRandom( int seed, string name ) : Random
 {
 	public static long Draws;
@@ -47,8 +47,8 @@ public class ZSweepScratch
 	private static readonly string[] ByConstruction = [ "ParkWeatherFreshTests" ];
 
 	/// <summary>
-	/// The 31 ms clock starts each row at nought. Left to grow through a long sweep it passes where a float holds a tick count
-	/// exactly (about 2^24 ms), and ParkTickTests.EveryWalkIsNoticedWithinOneTickOfComingDue fails by 32 ms from seed 194 on, not by a seed.
+	/// The 31 ms clock starts each row at nought. Left to grow through a long sweep it passes 2^24 ticks (about 5.2e8 ms), past which a float no longer holds every tick count,
+	/// and ParkTickTests.EveryWalkIsNoticedWithinOneTickOfComingDue fails by 32 ms from seed 194 on, not by a seed.
 	/// </summary>
 	private static void ResetGameClock()
 	{

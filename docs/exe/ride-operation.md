@@ -3692,7 +3692,7 @@ that grid read the body's way. The sprite's flag word `0x3000080` carries `0x200
 (`FUN_00542010`) adds no direction of its own and draws picture `first + frame`. The frame is written every draw by
 `FUN_0044b510`, for each node record flagged 2: it takes the camera into the node's own frame (the node's matrix
 inverted, then `DAT_00790a98`'s), normalises that direction, and walks 56 candidates, `(0, 1, 0)` tilted `r` × 30° about
-x (`0x006fe2c4`) and turned `c` × −45° about y (`0x006fe2bc`), keeping the first with the largest dot product above
+x (`0x006fe2c4`) and turned `c` × −45° about y (`0x006fe2bc`), by the sine table's entries (below), keeping the first with the largest dot product above
 nought; rows 0 and 6 keep column 0, and the frame is `c + 8r` (`0x0044b9f5`). It then sets two more locals (`0x0044ba04`..`0x0044ba2f`; `FUN_004755d0` writes local *n* at
 `+0x84 + 4n`): local 9, `+0xa8`, the roll from `FUN_0046f200` times 1/2π (`0x006fe2cc`), so in turns, which OpenTPW
 does not draw (`RIDER_HEAD_ROLL`); and **local 8, `+0xa4`, the sprite's scale, 0.685** (the float at `0x0074ced0`),
@@ -3726,13 +3726,13 @@ original's matrix at all eight pauses and Head1 0.0 to 1.6 as before; the drawn 
 **The 56 directions are the sine table's, not exact trigonometry** (Q1008; `lib/headframe.py`'s `candidates()`, `ParkBumperBoats.HeadDirections`). The walk is iterative: from (0, 1, 0)
 each column turns (x, z) by the 4096-entry table's sine and cosine for −45° (`0x006fe2bc`; the cosine is the table's sine of +45°), and each row, after its
 eighth column, turns (y, z) by the table's sine of 30° (`0x006fe2c4`) and its cosine as the sine of 2π/3 (`0x006fe2c8`), so a row stands 29.97° from the last (index 341 of
-4096), not 30°, and row 2's up is 0.50089, not 0.5. Over every one of the original's paused heads with a stored matrix and a view (141: Q940's Mumbo and Ape, Q1003's Mumbo, Q1008's
-Ape, `headpause.py`), the table walk picks the sprite's own picture (`+0xb8`) in 141 and exact trigonometry (what `ParkBumperBoats.HeadFrame` computed before Q1008) in 138; the
+4096), not 30°, and row 2's up is 0.50089, not 0.5. Over every one of the original's paused heads with a stored matrix and a view (157: Q940's Mumbo and Ape, Q1003's Mumbo, Q1008's
+Ape, `headpause.py`), the table walk picks the sprite's own picture (`+0xb8`) in 157 and exact trigonometry (what `ParkBumperBoats.HeadFrame` computed before Q1008) in 154; the
 three it missed are the Crazy Ape's Head12 (lookup record 14) in clip `l` at frames 57.3, 78.3 and 94.9, a head 0.02° from a picture's edge (the two nearest pictures' dot products differ by
 1.3e-4 to 3.5e-4) for frames 51 to 97, where the original showed picture 16 and exact trigonometry 8. At frames 95.8 to 96.5 the original's Head12 shows 8 (four pauses), as
 this game's does since the walk was built. Records and heads of the Crazy Ape's lookup table (the model's own, record = node index less `LookupFirst`, 9; the Ape's 16 heads in
 records 0 to 7 and 10 to 17): 0 Head1, 1 Head02, 2 Head06, 3 Head03, 4 Head07, 5 Head04, 6 Head08, 7 Head05, 10 Head09, 11 Head10, 12 Head14, 13 Head15, 14 Head12, 15 Head16,
-16 Head13, 17 Head11 (`lib/ape-records.json`; it agrees with Q916's eight places-paired records). Every other head of the 141 picked the sprite's picture under both walks, so none of them tells them apart.
+16 Head13, 17 Head11 (`lib/ape-records.json`; it agrees with Q916's eight places-paired records). Every other head of the 157 picked the sprite's picture under both walks, so none of them tells them apart. The Hot Pot's seat heads (`ParkBumperBoats.SeatOf`) take the same walk through `HeadFrame`; no Hot Pot head was compared.
 
 ### The excitement match — `FUN_004fdcc0`
 

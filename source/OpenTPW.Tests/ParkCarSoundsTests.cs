@@ -216,8 +216,9 @@ public class ParkCarSoundsTests
 	}
 
 	/// <summary>
-	/// The engine's fade is sixty milliseconds long (<c>docs/exe/audio.md</c>, "The bumper arm's engine": the original's voice went
-	/// 135 ms after its fade began): the rate the voice falls at is its volume over 0.06 s.
+	/// OpenTPW's engine fade is a flat 0.06 s ramp (<see cref="ParkCarSounds"/>'s <c>FadeSeconds</c>): the rate the voice falls at is its
+	/// volume over 0.06 s. <b>A deviation:</b> the original's <c>Sound_StopFading</c> is a x0.6 step every 100 ms above sound detail 30
+	/// and a cut below (<c>docs/exe/audio.md</c>, "The fade"; Q509); rewrite this test when Q509 builds that law.
 	/// </summary>
 	/// <remarks><b>Mutations:</b> a fade of 0.6 s; a fade of nought (a hard stop, so no fade is under way).</remarks>
 	[TestMethod]
@@ -254,8 +255,9 @@ public class ParkCarSoundsTests
 			new ParkCarSounds( new RideScriptScheduler() ).Fade( held );
 
 			var fields = BindingFlags.Instance | BindingFlags.NonPublic;
-			var volume = (float)typeof( Voice ).GetField( "_volume", fields )!.GetValue( held.Voice )!;
-			var rate = (float)typeof( Voice ).GetField( "_volumeRate", fields )!.GetValue( held.Voice )!;
+			var volume = held.Voice.Volume;
+			var rate = (float)( typeof( Voice ).GetField( "_volumeRate", fields )
+				?? throw new AssertFailedException( "Voice._volumeRate was renamed" ) ).GetValue( held.Voice )!;
 
 			Assert.IsTrue( held.Voice.Ending );
 			Assert.IsTrue( volume > 0f, "the voice has a volume to fade" );

@@ -354,7 +354,7 @@ public sealed class ParkBumperBoats : Entity
 
 	/// <summary>
 	/// Which head picture a node shows the camera - <c>FUN_0044b510</c>: of the 56 directions it walks (<see cref="HeadDirections"/>), rows 0 to 6
-	/// tilting 30° about x from the node's own up (<c>0x006fe2c4</c>) and columns 0 to 7 turning −45° about up (<c>0x006fe2bc</c>),
+	/// tilting 30° about x from the node's own up (<c>0x006fe2c4</c>) and columns 0 to 7 turning −45° about up (<c>0x006fe2bc</c>), both by the sine table's entries (<see cref="HeadDirections"/>),
 	/// the first that lies closest to the camera's direction (strictly, from nought); straight above or below keeps column
 	/// 0. The picture is column + 8 × row: a head bank's 56 run eight headings to a row, from above to below.
 	/// </summary>
@@ -391,7 +391,7 @@ public sealed class ParkBumperBoats : Entity
 	/// <summary>
 	/// The 56 directions <c>FUN_0044b510</c> walks, in the order it walks them (row by row, eight columns to a row), worked out as it works them:
 	/// from (0, 1, 0), each column turns the pair (x, z) by the sine table's entry for −45° and each row, after its eighth column, the pair (y, z)
-	/// by the table's entry for 30° (<c>0x006fe2bc</c>, <c>0x006fe2c4</c> and 2π/3 at <c>0x006fe2c8</c>, whose table sine is the cosine). Those entries are
+	/// by the table's entry for 30° (<c>0x006fe2bc</c>, its +π/4 cosine at <c>0x006fe2c0</c>, <c>0x006fe2c4</c> and 2π/3 at <c>0x006fe2c8</c>, whose table sine is the cosine). Those entries are
 	/// the 4096-entry table's (<see cref="RideNodes.Table"/>), so a row stands 29.97° from the last and the turns add up as they do there: a direction near the
 	/// edge of a picture's cell (the Crazy Ape's Head12, 45.5° down from up) falls where the engine's walk puts it, not where exact trigonometry does (Q1008, `docs/exe/ride-operation.md`).
 	/// </summary>

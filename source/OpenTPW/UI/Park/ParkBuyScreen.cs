@@ -363,6 +363,7 @@ internal sealed class ParkBuyScreen : UiWindow
 		// The land tools, which only the features tab carries - see the constants above.
 		if ( _tab == ItemDescriptionFile.Feature )
 		{
+			// Buy Land at 0 is a known gap (QUEUE.md, Q158): the original prices it at Costs.MapCell ([0x0078560c]), per tile.
 			_list.Add( PricedRow( BuyLandRow, Localization.Get( UIStrings.BuyLand ), 0 ) );
 			_list.Add( PricedRow( ClearLandRow, Localization.Get( UIStrings.ClearLand ), 0 ) );
 		}
