@@ -779,7 +779,7 @@ public class ParkSaveScreenTests
 		Assert.AreEqual( 1234, TickIn( Path.Combine( Jungle, "jungle.TPWS" ) ), "in orbit Alt+S writes the park" );
 		Assert.AreEqual( ("jungle", "users/1Test/jungle/jungle.TPWS"), WhatWasAsked(), "Alt+L loads it" );
 		Assert.AreEqual( ParkBuildMode.None, ParkBuildMode.Current, "and Delete puts the tool away" );
-		Assert.AreEqual( "1x BACKSPACE_UNDO_QUEUE_RUN, 1x CLEAR_LAND_TOOL", Counted(), "Backspace's undo of the queue is counted" );
+		Assert.AreEqual( "1x BACKSPACE_QUEUE_ADVISOR_0xCB, 1x CLEAR_LAND_TOOL", Counted(), "Backspace's undo of the queue is counted" );
 	}
 
 	/// <summary>

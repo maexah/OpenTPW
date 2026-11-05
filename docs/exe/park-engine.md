@@ -5970,9 +5970,18 @@ too).**
   called by hand); the key's route to it is read, not run (`0x0052f340`, `0x00525f3a`, `0x00525f63`). With P at nought,
   which is what OpenTPW's lay leaves, P goes too and its own neighbour loses its bit (C6').
 
-OpenTPW: the lay's "Already queue" arm (`ParkPathBuilding`) writes no counter; `LiftQueue` (the console's
-`delqueue`, an unstepped clear) removes a queue cell whatever it holds and needs no change; Backspace on a queue is `BACKSPACE_UNDO_QUEUE_RUN`, counted.
-`QueueEnds` already writes the walk's 1 and 0. The build is Q860's.
+OpenTPW (Q860): the lay's "Already queue" arm (`ParkPathBuilding.LayQueue`) adds 1 to the counter, as the path arm does;
+`LiftQueue` (the console's `delqueue`, an unstepped clear) removes a queue cell whatever it holds and needs no change.
+Backspace on a queue is `ParkPathBuilding.UndoQueueRun`: the pending list (`ParkBuildMode.Pending`) is the placer's anchor, or
+`EditQueue`'s walk list, with each click's snapped target pushed before its run is laid (`RunQueue`); a press pops the top as T,
+anchors at the entry under it P and gives every cell of T..P one press of the stepped clear (`ClearQueueCell`: a NOMODIFY cell
+untouched, a corner or an unstepped press -1, otherwise one off, removed only below nought, refunded when its owner's cell is typed,
+neighbours unlinked), clearing nothing when P is a path (`0x0052ff9a`), then measures the queue again (`0x0052ffec`; the selected
+object there, the tool's `Serves` here) and counts the advisor `0xcb` its re-arm posts (`BACKSPACE_QUEUE_ADVISOR_0xCB`). The first entry is
+never popped. Measured in OpenTPW off-screen on the stock Belly Bounce's queue: edit (3 pending, anchor (49,22)), a run south and one
+west, Backspace twice: the west run's three cells go and (49,25) stays at 0, the south run's go and (49,22) stays at 0, the balance
+back to what it was (`q860-b18/run1`). A third press would pop the edited queue itself, back to the node (the list's whole point);
+not run. The original's own run of the same clicks is not made (lane A's confirm).
 
 **`mFlags & 0x40` marks land outside the park** — the meaning is inferred from a census. `FUN_00536490` sets it as
 the map loads on every cell but the first paths (`0x00536553`, `0x005365b5`), and `FUN_005311c0` tests it (`FUN_00535db0( 0x40 )`) and clears it (`FUN_0053a530( 0x40 )`, first at `0x00531327`), and Buy Land's apply arm reaches that (tool `0x39` tested at `0x00525c4e`, `FUN_005327e0` at `0x00525d52`, the call at `0x005328b4`), as does the terrain initializer `FUN_005323f0` (`0x00532557`). 13,878 of Lost Kingdom's 16,384 cells carry it, all

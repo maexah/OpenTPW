@@ -2663,8 +2663,7 @@ public class Level
 				return ParkPathBuilding.UndoPathRun();
 
 			case ParkBuildMode.Queue:
-				Unimplemented.Report( "BACKSPACE_UNDO_QUEUE_RUN" );
-				return "backspace: undoing a queue run is not built";
+				return ParkPathBuilding.UndoQueueRun();
 
 			// BuildTool_Backtrack in mode 0x35 clears the last run (Track_ClearCell, 0x0053b280) and refunds its pieces.
 			case ParkBuildMode.KartTrack or ParkBuildMode.WaterTrack:

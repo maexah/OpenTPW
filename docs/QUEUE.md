@@ -563,20 +563,14 @@ filed the items that cite it.
   machine load heavier than three suites at once. Next failure anywhere: `tools/harness/lib/suiteloop.sh OUTDIR [N]` keeps every run's output, so its file names the test.
   **One of the one-offs is named (2026-11-04):** `ScriptSoundTests.AHeldParksHeldChainMakesItsChildrenUnheardAndNoneBurstsOnResume` failed once in a full suite at `b6531222` (line 1672, "not before the newest child's time", 2 samples where 1), and passed 60 of 60 runs of `ScriptSoundTests` alone and the next full suite; the output is `~/.cache/tpw-harnesses/q942/named-2026-11-04/`. The gap is drawn from `ParkAudioScripts`' unseeded `_scriptRandom`. Piece Q1022 (ticked) found the cause and seeded `ScriptSoundTests`' park audio; Piece Q1023 (ticked) swept the nine files that make a `ParkAudio`: none fails for any seed tried; Piece Q1024 (ticked) swept the other test classes' unseeded generators (135 rows of 127 methods over seeds 0 to 507 or more: none fails; the deeper seeds are Q1025), and the clip, Full Simulation and `EveryTileOfEveryParkIsTheOriginals` failures of 2026-11-01 stay unnamed.
 - [ ] **Q1025. The unseeded generators' rows are swept deeper (the fifth piece of Q942).** From Q1024. The 135 rows swept in Q1024 passed seeds 0 to 507 (121 rows), 0 to 687 (13 rows) and 0 to 24 (the 14 s row), which excludes only a failure commoner than about 1 seed in 170. Sweep them to a few thousand seeds each with `tools/harness/dotnet/seedsweep/` - first re-run the Q1023 control on the mended runner (`run.sh`, its header: the pre-Q1022 held-chain test, `SWEEP_RAW=1`): it must fail at seeds 2199 and 2307 and pass at 942 before any sweep counts - (`SWEEP_ALL=1 run.sh sweep` with an ONLYFILE a cost class, as Q1024's `q1024/only-light.txt`, `only-mid.txt`, `only-mon.txt`: the 117 cheap methods take about 11 s a seed, the 9 dearer ones about 8 s, the 14 s row about 16 s), and seed or branch the ones that fail, proving each by a seed that fails without it. `ParkWeatherFreshTests` (2 rows that count on fresh parks' unseeded rolls differing) is left out by construction; the `Random.Shared` rows (`LobbyEyeHandoverTests`, `CameraLensTests`) are in the 117. The clip, Full Simulation and every-tile failures of 2026-11-01 stay unnamed.
-- [ ] **Q860. A queue cell's counter is written and read as the original's (decoded in Q896).** From Q153. The 1 a queue cell
-  holds after a click is the queue tool's re-stamp: each click's run starts on its anchor, already queue, and the stamp `FUN_005346d0` adds 1
-  (`0x005346f5`), so the placer's node and every clicked cell (each corner, and a straight clicked part way) hold 1 (read from the rule, not replayed for the straights); the walk
-  (`FUN_00530120`, built as `QueueEnds`) then sets every corner 1 too and the rest 0; the one reader in play is the clear's queue arm (`park-engine.md`,
-  "A queue cell's counter"). The track walks' calls of `0x5228a0` write the track record's counter, not the queue's. Build: the lay's
-  "Already queue" arm (`ParkPathBuilding`) adds 1 as the path arm does; `LiftQueue`, an unstepped clear, needs no change (it already removes whatever it holds, as the original's -1 does); and Backspace on a queue
-  (`BACKSPACE_UNDO_QUEUE_RUN`, `Level.cs`): `EditQueue` keeps the walk's pending list as the original does (`0x0081b740`), and
-  Backspace (`0x0040beb3` -> `FUN_0052fe50`) clears from the last click back to the one before with the stepped clear, which
-  keeps that click's cell (it is at 1 and has lost its link); the apply at P is skipped in mode 3 on a type 1 cell
-  (`0x0052ff9a`..`0x0052ffaa`), and every clear returns a NOMODIFY cell untouched unless forced (`0x005367d4`..`0x005367e0`,
-  `park-engine.md`). The run applies the Backspace line by hand; the key's route to it is read, not run. `tools/harness/lib/queuerun.py` gives the original's answer for any
-  made-up run. Confirm (lane A): lay a two-click queue in both games and read the corner's counter (here `cell X Y`, there the
-  saved record's `+8`, `parkfile.py`): predicted 1 before the button is pressed; press Backspace once and photograph the queue
-  ending at the corner. Also: a sideshow's or feature's window, when built, must not offer the queue button.
+- [ ] **Q1038. Q860's confirm in the original, and the feature window's queue button.** From Q860 (built in run 21, lane B). Confirm
+  (lane A): lay a two-click queue in both games and read the corner's counter (here `cell X Y`, there the saved record's `+8`,
+  `parkfile.py`): predicted 1 before the button is pressed (Q860's build: here (49,25) holds 1 after a south run then a west run
+  from the edited Belly Bounce queue, and a Backspace takes the west run back leaving it at 0, `q860-b18/run1`); press Backspace once
+  and photograph the queue ending at the corner, in the original as here. The original's apply on a pop at P of type 1 (a path)
+  is built as read (`0x0052ff9a`), not run. Also: a sideshow's or feature's window, when built, must not offer the queue button.
+  `tools/harness/lib/queuerun.py` gives the original's answer for any made-up run.
+
 - [ ] **Q155. The other readers of the speed word, and the play rate (decoded in Q897; Q875 built the word and its first readers).**
   Found by the 2026-09-26 staleness audit. Q875 keeps the word per script and reads it in `WAIT`, the three scream readings, the
   bumper ride's performance and the wear (`park.md`, "What a loaded script holds"). What reads the word and does not yet here:

@@ -210,8 +210,8 @@ public static class ParkPathBuilding
 
 		var cell = ParkState.CellFor( park, cellX, cellY );
 
-		// Already queue: the stamp charges nothing and writes no counter here (the original adds 1 to the cell's
-		// counter on any re-stamp, 0x005346f5; Q860), but the rest of the run's
+		// Already queue: the stamp charges nothing and adds 1 to the cell's counter, as it does for a path
+		// (0x005346f5; docs/exe/park-engine.md, "A queue cell's counter"), and the rest of the run's
 		// ops still reach it - the link pass, and the owner - which is how a run's first cell renews its
 		// bond to the entrance.
 		if ( cell.Type == ParkRideChoice.QueueCellType )
@@ -222,10 +222,12 @@ public static class ParkPathBuilding
 			var ownerCell = MapStep.CellId( serves.CellX, serves.CellY );
 
 			LinkQueueCell( state, park, cellX, cellY, fromX, fromY, ownerCell, serves, firstOfRun );
-			state.SetRecord( cellX, cellY, ParkState.CellFor( park, cellX, cellY ) with { ParentId = (ushort)ownerCell } );
+			var linked = ParkState.CellFor( park, cellX, cellY );
+
+			state.SetRecord( cellX, cellY, linked with { ParentId = (ushort)ownerCell, OverlapCounter = (short)(linked.OverlapCounter + 1) } );
 			RetileAround( state, park, cellX, cellY );
 
-			return $"queue: ({cellX},{cellY}) is already queue - nothing charged";
+			return $"queue: ({cellX},{cellY}) is already queue - nothing charged, counter {linked.OverlapCounter + 1}";
 		}
 
 		if ( !MayBecome( cell.Type, ParkRideChoice.QueueCellType, lastOfRun ) )
@@ -324,6 +326,10 @@ public static class ParkPathBuilding
 		}
 
 		LayingSound( "queue", clickX, clickY );
+
+		// The click's target is pushed before the passes run (0x005271b7..0x00527655), so the top of the list is the
+		// anchor the run leaves and Backspace takes the run up again (UndoQueueRun).
+		ParkBuildMode.Push( toX, toY );
 
 		var (acrossBy, downBy) = (Math.Sign( toX - fromX ), Math.Sign( toY - fromY ));
 		var laid = 0;
@@ -1360,10 +1366,15 @@ public static class ParkPathBuilding
 			return ParkBuildMode.Arm( ParkBuildMode.Queue, thingId );
 		}
 
-		// The walk's list of cells is dropped here. The original keeps it pending (0x0081b740; FUN_0052f580 writes no
-		// 0x00820a8c), so Backspace (0x0040beb3 -> FUN_0052fe50) would pop the edited queue corner by corner; here Backspace
-		// is BACKSPACE_UNDO_QUEUE_RUN (Level.BackspaceKey), counted, and the pending list is armed as nothing (Q860).
-		var (anchorX, anchorY) = QueueEnds( state, park, placed )[^1];
+		// The walk's list is kept pending (0x0081b740; the walk empties it first, 0x00530150, and FUN_0052f580 writes no
+		// 0x00820a8c), so Backspace (0x0040beb3 -> FUN_0052fe50, UndoQueueRun) pops the edited queue corner by corner.
+		var ends = QueueEnds( state, park, placed );
+		var (anchorX, anchorY) = ends[^1];
+
+		ParkBuildMode.ClearPending();
+
+		foreach ( var (endX, endY) in ends )
+			ParkBuildMode.Push( endX, endY );
 
 		state.RemeasureQueue( thingId );
 		ParkSurfaces.Rebuild();
@@ -1632,6 +1643,111 @@ public static class ParkPathBuilding
 		}
 
 		return refunded;
+	}
+
+	/// <summary>
+	/// Backspace with the queue tool armed: the last run is taken up and the tool anchors where it started -
+	/// <c>FUN_0052fe50( 0, 1 )</c> from the Backspace handler <c>0x0040beb3</c>. The top of the pending list is T and the one
+	/// under it P; every cell of the line from T to P, P last, takes one press of the stepped clear
+	/// (<see cref="ClearQueueCell"/>), which keeps a cell whose counter is still nought or more. P is the last click's
+	/// anchor and holds 1 (<see cref="LayQueue"/>), so it has lost its link toward T by then and stays at 0, the end of the
+	/// queue as it was before the click. <b>Nothing is cleared when P is a path</b> (<c>0x0052ff9a</c>). Then the queue is
+	/// measured again (<c>0x0052ffec</c>) and mode 3 re-armed (advisor <c>0xcb</c>, counted). The list's first entry is
+	/// never popped; with only it left nothing goes.
+	/// </summary>
+	public static string UndoQueueRun()
+	{
+		if ( Level.Current is not { } level || level.ParkState is not { } state || level.Park is not { } park )
+			return "backspace: a park has to be loaded";
+
+		Unimplemented.Report( "BACKSPACE_QUEUE_ADVISOR_0xCB" );
+
+		if ( !ParkBuildMode.TryPopRun( out var end, out var start ) )
+			return "backspace: nothing laid since the queue tool anchored";
+
+		var onPath = ParkState.OnMap( start.X, start.Y ) && ParkState.CellFor( park, start.X, start.Y ).Type == PathType;
+		var removed = 0;
+		var refunded = 0;
+
+		if ( !onPath )
+		{
+			var steps = Math.Max( Math.Abs( start.X - end.X ), Math.Abs( start.Y - end.Y ) );
+			var (acrossBy, downBy) = (Math.Sign( start.X - end.X ), Math.Sign( start.Y - end.Y ));
+
+			for ( var step = 0; step <= steps; ++step )
+			{
+				var (x, y) = (end.X + (acrossBy * step), end.Y + (downBy * step));
+
+				if ( ParkState.OnMap( x, y ) && ParkState.CellFor( park, x, y ).Type is not (NothingType or ParkRideChoice.QueueCellType) )
+				{
+					Unimplemented.Report( "BACKSPACE_QUEUE_CLEARS_ANOTHER_KIND" );
+					continue;
+				}
+
+				if ( ClearQueueCell( state, park, x, y, stepped: true, out var refund ) )
+				{
+					++removed;
+					refunded += refund;
+				}
+			}
+		}
+
+		ParkBuildMode.AnchorAt( start.X, start.Y );
+
+		if ( ParkBuildMode.Serves != 0 )
+			state.RemeasureQueue( ParkBuildMode.Serves );
+
+		ParkSurfaces.Rebuild();
+
+		return $"backspace: took up the queue run from ({start.X},{start.Y}) to ({end.X},{end.Y}), {removed} cells went, refunded {refunded}"
+			+ (onPath ? " (the run's start is a path, so nothing was cleared)" : "");
+	}
+
+	/// <summary>
+	/// One press of the clear on a queue cell - <c>FUN_005367a0</c>'s queue arm (<c>0x005369ec</c>..<c>0x00536c03</c>). A NOMODIFY
+	/// cell is returned untouched (<c>0x005367d4</c>). The counter is set to -1 when the press is unstepped or the cell is a
+	/// corner, and otherwise takes one off; <b>the cell is removed only once the counter is below nought</b>, so a cell at 1 that is
+	/// no longer a corner stays at 0. A removed cell gives its price back when its owner's cell is typed, and lets go of its
+	/// neighbours. Answers whether the cell went, and what it gave back.
+	/// </summary>
+	internal static bool ClearQueueCell( ParkState state, IParkInitialState park, int x, int y, bool stepped, out int refund )
+	{
+		refund = 0;
+
+		if ( !ParkState.OnMap( x, y ) )
+			return false;
+
+		var cell = ParkState.CellFor( park, x, y );
+
+		if ( cell.Type != ParkRideChoice.QueueCellType || (cell.Flags & NoModify) != 0 )
+			return false;
+
+		var counter = stepped && !IsCorner( cell.Neighbours ) ? cell.OverlapCounter - 1 : -1;
+
+		if ( counter >= 0 )
+		{
+			state.SetRecord( x, y, cell with { OverlapCounter = (short)counter } );
+
+			return false;
+		}
+
+		var (ownerX, ownerY) = MapStep.CellAt( cell.ParentId );
+		var ownerTyped = cell.ParentId != 0 && ParkState.OnMap( ownerX, ownerY )
+			&& ParkState.CellFor( park, ownerX, ownerY ).Type != NothingType;
+
+		Unlink( state, park, x, y );
+		state.SetRecord( x, y, Cleared( cell ) with { OverlapCounter = 0 } );
+
+		if ( !ownerTyped )
+			return true;
+
+		// The refund is scaled by a per-age percentage, FUN_004e2290, which nothing here keeps.
+		Unimplemented.Report( "QUEUE_REFUND_DEPRECIATION" );
+
+		refund = QueueCost( Level.Current );
+		state.Deposit( refund );
+
+		return true;
 	}
 
 	/// <summary>

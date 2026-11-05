@@ -1781,6 +1781,10 @@ public static class ParkBuilding
 
 		Unimplemented.Report( "QUEUE_MODE_ADVISOR_MESSAGE_0xCB" );
 
+		// The placer empties the pending list and pushes the anchor (FUN_0052fbd0, 0x00525296).
+		ParkBuildMode.ClearPending();
+		ParkBuildMode.Push( node.X, node.Y );
+
 		return $"{built.Answer} - {ParkBuildMode.ArmAt( ParkBuildMode.Queue, built.ThingId, node.X, node.Y )}";
 	}
 

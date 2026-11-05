@@ -773,7 +773,7 @@ object in `ECX`:
 | `0x00527541` | a queue run laid (mode 3) | no | `LayQueue`, `RunQueue` |
 | `0x00534858` | the stamp: path laid over a queue cell | **yes** | `LayPathRun`, `ParkBuilding.LayPathStub` |
 | `0x0053694b` | `ClearCell`'s path arm, a path joined to an entrance cleared: the link goes first, so the queue measures **0** and all but the nominee and state 14 go | **yes** | built (Q86): `ClearPathCell` and `ForceClearPath`, after each entrance is unlinked |
-| `0x0052ffec` | `FUN_0052fe50`, the backtrack: Backspace with the queue tool (`FUN_0052fe50(0,1)` at `0x0040beb3`, gated on a vtable answer of 3), and the demolisher's drain before the destructor | **yes** | Backspace counted (`BACKSPACE_UNDO_QUEUE_RUN`); the drain, `ParkPathBuilding.DrainQueue` |
+| `0x0052ffec` | `FUN_0052fe50`, the backtrack: Backspace with the queue tool (`FUN_0052fe50(0,1)` at `0x0040beb3`, gated on a vtable answer of 3), and the demolisher's drain before the destructor | **yes** | Backspace, `ParkPathBuilding.UndoQueueRun` (Q860; its advisor re-arm counted, `BACKSPACE_QUEUE_ADVISOR_0xCB`); the drain, `ParkPathBuilding.DrainQueue` |
 
 The console's `delqueue` (`LiftQueue`) re-measures too. In Lost Kingdom the one queue that could be cut is the Belly
 Bounce's: cells (52,22), (51,22), (50,22), (49,22), of which (52,22) is NOMODIFY, and path over (51,22) would leave

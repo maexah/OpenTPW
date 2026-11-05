@@ -569,6 +569,11 @@ Each was found by trial in the item named, and cost a run to find.
   `camera 485 175 90 0`: set the click's camera back before the click. A console scene (`tool queue 13`, a click to
   anchor, `hover X Y`) must be ended with Escape while `hover` still holds the cell: released first, the pass runs over
   the pointer's own cell and moves the latch.
+  **A queue edited, lengthened and taken back, here** (Q860, `q860-b18/confirm.py`, off-screen, stock park paused): `worldclick 50 22` edits
+  the Belly Bounce's queue (`tool` then reads mode 3, anchored (49,22), 3 pending: the walk's list), `worldclick 49 25` and
+  `worldclick 46 25` lay a run south and one west (`cell X Y` reads `overlap`, the counter: (49,22) and (49,25) 1, the cells laid fresh 0;
+  `money` the balance, 75 a cell), and `backspace` takes the last run up (`took up the queue run from (49,25) to (46,25)`), leaving
+  (49,25) at 0. `camera 495 230 90 0` frames it. Not run in the original.
   **The locator's edges over a tool's strip** (Q540, `q540/orig/` with `lib.sh`, `q540/confirm.py`): commit a fence
   for Mike Cooper over the Belly Bounce (his window, the switch up then down, (52,26) anchored, a click on (54,27)), edit
   the queue, then Ctrl+S and the mechanics' button: the queue tool stays armed in both games and the edges are drawn
