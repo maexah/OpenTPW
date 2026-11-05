@@ -12691,3 +12691,8 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   draw takes one (`FUN_00580320`, argument 7, in milliseconds): 500 in the lobby and `LightningTime` in a park, 2000
   in the balance file, which nothing here reads (`weather.md`, "The bolt"). Pass each scene's own. Confirm: `bolt` in
   the lobby and in Lost Kingdom, frames grabbed every 100 ms, the bolt up for 0.5 s and 2 s.
+- [x] **Q1032. A picked-up member's cell, photographed.** From Q211. `ParkHeldStaffFrameTests` shows the draw loop writes no
+  quad for the member in the hand (`ParkGuestSprites.WriteTheFrame`), and `PickUpPutsTheMemberInTheHand` shows the census
+  predicate; neither shows the picture. Pick a member up in a running park (the staff window's PICK UP), photograph his
+  cell on the desk with the pointer moved off it, and compare the same cell with him standing: the
+  cell empty where he stood.

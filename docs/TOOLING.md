@@ -584,6 +584,15 @@ Each was found by trial in the item named, and cost a run to find.
   here by `money`'s `staff` total. The strip's click folds the locator and ends the follow, so the camera stays put while
   the member walks on with the window up: a frame from before the strip's click is not the view at the pickup. Shoot
   the window, the carry and the drop, which share a camera.
+- **A picked-up member's cell, photographed in either game** (Q1032, `q1032/confirm.py`, `q1032/orig/seq5.sh`): the staff window covers
+  the middle of the view, so the cell cannot be photographed with it up. Ours: `pause`, then the console's `camera X Y` (direct, not eased)
+  until `circle 26`'s `origin pixel` is right of the window and above the advisor's picture (two probes 30 units apart give the slope; two
+  rounds reach (1100,300) within 6 px), shots A and A2 (identical, 0 pixels), PICK UP (`50e`), the pointer in the far corner, shot B; the
+  crop diffed. The original: close the window with its tick (816,378) and open it again, so the strip's snap puts the camera on him
+  (`camera.py` reads his cell centre), `memhold.py PID SECS 0x007859a0:I=1` holds the clock (start it only after he has walked a few
+  seconds: a member put down under the hold is not drawn until the clock runs), then A, A2, the window again, PICK UP (308,385), B. **Park the
+  pointer at (880,650)**: past 0.95 of the way to an edge pans the camera. `pkill -f memhold` kills the shell that names it; kill by
+  `pgrep -f '^python3 .*memhold'`, and the hold ends on its SECS by itself, writing the old value back.
 
 - **The shop's window in either game** (Q31, `q31/orig/run.sh`, `run2.sh`, `q31/confirm.py`): the stock park at camera
   (480,265) 130 180; in the original **align the pointer before `setcam.py`**, as the align's sweep to the edges scrolls

@@ -685,11 +685,6 @@ filed the items that cite it.
   reads the mesh with the most (`0x0046a82c`). Port both, and write the test's expected value from the executable's
   formula, not from the code. Confirm: a ride bought on sloping ground, closed, photographed with `hoardings`; then
   the same panels beside the original's under Proton (their height, which rises first, where the sign sits).
-- [ ] **Q1032. A picked-up member's cell, photographed.** From Q211. `ParkHeldStaffFrameTests` shows the draw loop writes no
-  quad for the member in the hand (`ParkGuestSprites.WriteTheFrame`), and `PickUpPutsTheMemberInTheHand` shows the census
-  predicate; neither shows the picture. Pick a member up in a running park (the staff window's PICK UP), photograph his
-  cell on the desk with the pointer moved off it, and compare the same cell with him standing: the
-  cell empty where he stood.
 - [ ] **Q1043. The all-items panel's top and its close button.** From Q1042's side-by-side (`q1042/side-by-side-order.png`): ours draws the panel's top black behind the four tabs where the original shows its green waves, and its close button a red cross where the original shows a green tick. Seen, not measured; find which picture each uses in the original (`hud.md`) before building.
 - [ ] **Q1034. The lobby's bolt, seen in a frame.** From Q152. Its off-screen run struck with the camera on the player-select view (no island current, so the strike lands at the world origin over open sea and no bolt is in shot), so the lobby's 0.5 s is proved by the census alone (`life=0.500`, flash 0.000 from 0.51 s). Strike with the camera on an island, frames every 100 ms, and photograph it on the desk (rule 6). The whole-frame lift of the lobby is not a usable metric: after `freeze` it still carries 15 to 30 grey levels for a second, in the bolt-free control too (`q152/run-control1`, `run-fix5`), so find what moves (the flyers, the sky's ease, a glow) before measuring the bolt there.
 - [ ] **Q1035. The bolt's shape is the PC's own, and OpenTPW draws one quad.** From Q152's note (fork review 2, 2026-10-16, `verify-audio-lips-video.md` lead 3): the constructor (`0x0057d2ab`..`0x0057d2e9`) sets roughness 0.6, a stop test of 6 ± 2, a ribbon half-width of 1.3 /
