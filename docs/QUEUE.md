@@ -444,6 +444,10 @@ filed the items that cite it.
   copies, which the original's reader stops first. Then the writer: write the live voices (`Sound_SaveModule`,
   `0x0051c350`) where today it carries the loaded file's list less the voices let go (`ParkVoices.Without`, not counted).
   Confirm: the stock park's Fountain heard from the entry (`q565/orig/` run b), and a save and load round trip.
+  - **Note (Q243's census, 2026-11-12):** counted in `ParkAudioFileVoices.cs` and named by no item, so they are this item's too:
+    the other classes `PutBack` does not put back, `PARK_FILE_SOUND_VOICE_CLASS_2`, `_HELD_CHAIN_CHILD_TYPE`, `_HELD_CHAIN_NO_KEY`,
+    `_HELD_CHAIN_OWN_RANGE`, `_HELD_CHILD_NO_ZONE`, `_NO_CATEGORY` and `_NO_SAMPLE`, and the list read short,
+    `PARK_FILE_SOUND_VOICE_CLASS_10` (`audio.md`) and `PARK_FILE_SOUND_VOICE_UNREAD`.
 - [ ] **Q719. Does a loaded park play at the save's sound volumes? (one game check)** From the fork watch, 2026-10-20
   (`verify-world.md` M2; `saves.md`, "Sound"). The loader `0x0051c400` overwrites the live sound words at `0x00803aa0` with
   the save's (the volumes and the three on-flags; all 558 park files on hand hold 100/75/60/75 and on/on/on) and sets
@@ -559,6 +563,8 @@ filed the items that cite it.
   there (jungle `Gates` 4000), and the factor would then be a field. The Easymode Belly Bounce was saved looping at 1.1; its `LOOPANIM 2, 0` @43 skips on the saved key
   (`park.md`, "Where OpenTPW's animation state parts from the engine's", difference 4), and its later triggers hand 1.1 too since Q1039. With a divisor other than 1, a clip under 300 ms or no model makes
   `WAITANIM`'s qword sum wrap `+0xa0` (`park.md`, "`WAITANIM` is NOT `TRIGANIM` with a wait").
+  - **Note (Q243's census, 2026-11-12):** beside `COAST_RIDE_SPEED`, the scheduler counts `TRACK_RIDE_SPEED_PUSH` (`RideScriptScheduler.cs`):
+    `FUN_00545180`'s push into a kart's or a water ride's record of the track-ride table, where only the bumper rides' are built.
 - [ ] **Q1064. The park writer's nought queued speed of a loaded channel (from Q1063).** With the load seeding every channel's `+0x30`, a loaded channel's `DeferredSpeed` is nought only after a promotion cleared it (`0x004738af`)
   and before the next due visit, so `ParkRides.WrittenChannel` can write the nought as it stands (the engine saves `+0x30` whatever it holds) where it now writes the file's stale speed (`Speed: channel.DeferredSpeed != 0f ? ... : file.QueuedSpeed`). A made
   channel's nought (a bought ride before its first visit) falls back to `MadeChannel`'s 1.0 or `NeverStartedChannel`'s nought, and the original's own just-bought Hot Pot (`q257r` hotpot-bought-shut, slot 90, item 1140) holds 1.1, its divisor (the Sentinel's review datum, 2026-11-05; not read by Q1063; `fix-bought.TPWS` is OpenTPW's file, not the original's), so a just-bought thing must not save nought and the nought is for a clear's alone (a promotion `0x004738af` or a start-at-once trigger `0x00473408` leaves `+0x30` nought and the engine saves it so until the next due visit); a made channel's value before any visit is what is unmeasured: read a bought ride's `+0x30` in the original before its first visit
@@ -2635,6 +2641,8 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
     that `+0x18` is that key is the fork's reading, not re-read); a load failure gives an empty string. Join: first line empty
     gives the second alone; first ending in '-' drops it and joins with `"%s%s"` (`0x749850`); second empty gives the first alone;
     else `"%s %s"` (`0x75c0c0`).
+  - **Note (Q243's census, 2026-11-12):** the two clicks this builds are counted: `RENAME_PARK` (`ParkEntryPriceScreen.cs`, the
+    heading) and `RENAME_OBJECT` (`ParkObjectWindow.cs`, `ParkShopWindow.cs`, the title; `hud.md`).
 - [ ] **Q29. Parity with the original's hardware renderer.** `render-states.md`, "Texture addressing", counts the
   MIN/MAG/MIPFILTER and LOD-bias sites but does not decode their values; no shade-mode row exists; ZFUNC
   is LESSEQUAL there and Less here. The renderer lights per pixel with 16x anisotropic filtering and
@@ -2873,10 +2881,6 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   Alexah: leave them counted, say so in the game's own style (rule 11), or something else. Then build the answer.
   From Q496: the online visit's own interface (`FUN_0048a410`, stream `0x00758ae8`) and its help rows are decoded
   (`hud.md`, "The online visit's help rows"); they come with whatever Go Online becomes.
-- [ ] **Q243. Every counted name against this queue.** Asked by Alexah, 2026-10-08: a thing "counted, not built"
-  must have an item here, or it may never be come back to. List every `Unimplemented.Report` name in the source by
-  script, find each in this file, and file an item (or add the name to the item it belongs to) for each one that has
-  none; names dead by content say so in their item. No game run.
 - [ ] **Q246. The ride view from first person, and its three other cameras. Decode first.** From Q140b. Walking
   into an open entrance starts the ride's view in the original (`FUN_0042a340`, then `FUN_004e15b0( 1 )`, the ride
   window's "Ride it!"; `park-engine.md`, "An entrance is shut to the viewer") and ends the walk; here each pass in the
@@ -3357,6 +3361,213 @@ Back to the advisor in a park; saving a fresh park is Q783, in section A. Also l
   Out of scope until Lost Kingdom is whole (`CLAUDE.md`, the goal); kept so it is not lost. Reproduce in `hallow` with a
   `guests` census at the crossing, then find what the walk asks of the crosswalk cells there.
   - **Note (play test 2026-10-31):** still seen in a short look at Halloween World; not the priority. Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
+
+- [ ] **Q1190. Counted, not built, and owned by no item: the interface (23 names, from Q243).** Filed by Q243's census,
+  2026-11-12: `python3 tools/gap_census.py` found each name below counted by `Unimplemented.Report` and named by no other item
+  here. A session takes one name or a few: read the site and the `docs/exe/` page given, classify the path (`AGENTS.md`
+  rule 3; only a site's own "dead by" words were read, given below, and the rest are not classified), then build it or
+  file it as its own item and take the name out of this list. The census drops a name once an item names it. Each name:
+  the file of each call, then the `docs/exe/` pages that name it.
+  - `BOOT_SPLASH` (`Game.cs`; `boot.md`, `ui.md`)
+  - `BOOT_LEGAL_SCREEN` (`Game.cs`; `boot.md`, `ui.md`)
+  - `INTRO_MOVIE_BULLFROG` (`Game.cs`; `boot.md`)
+  - `INTRO_MOVIE_PARK` (`Game.cs`; `boot.md`)
+  - `*_*_READ_BARE` (`Localization.cs`)
+  - `LIST_HEADING_SORT_NOT_BUILT` (`UiList.cs`; `hud.md`)
+  - `LIST_SCROLLBAR_NOT_BUILT` (`UiList.cs`; `hud.md`)
+  - `LIST_CLICK_MISS_SELECTION_NOT_UNDER_POINTER` (`UiList.cs`; `hud.md`)
+  - `LIST_ROW_ACTIVATED_UNANSWERED` (`UiList.cs`; `hud.md`)
+  - `LIST_RIGHT_CLICK_FIRST_ROW_NOT_SELECTED` (`UiList.cs`; `hud.md`)
+  - `ALL_STAFF_SCREEN` (`ParkCategoryScreens.cs`); dead by CODE at its site
+  - `ALL_VISITORS_SCREEN` (`ParkCategoryScreens.cs`); dead by CODE at its site
+  - `LOANS_SCREEN` (`ParkCategoryScreens.cs`; `hud.md`)
+  - `UNKNOWN_CATEGORY_SCREEN` (`ParkCategoryScreens.cs`); dead by CODE at its site
+  - `OBJECT_WINDOW_HIGHER_PRIORITY_STATUS` (`ParkClosedStatus.cs`; `ride-window-door.md`)
+  - `POSTCARD_SHORTCUT` (`ParkFrontEnd.cs`; `hud.md`)
+  - `TAG_BAR_BUTTON` (`ParkGadget.cs`; `hud.md`, `advisor-park.md`)
+  - `STAFF_PORTRAIT_ACTOR` (`ParkHireScreen.cs`)
+  - `RIDE_EXCITEMENT_BAR` (`ParkObjectWindow.cs`; `park-engine.md`)
+  - `RIDE_RELIABILITY_BAR` (`ParkObjectWindow.cs`; `park-engine.md`)
+  - `STAFF_LIST_ADVISOR_LINE` (`ParkStaffScreen.cs`; `hud.md`)
+  - `VISITORS_LIST_ADVISOR_LINE` (`ParkVisitorsScreen.cs`; `hud.md`)
+  - `TEXTURE_WRAP_SHARED` (`LobbyModel.cs`; `render-states.md`)
+- [ ] **Q1191. Counted, not built, and owned by no item: guests' turns and events (38 names, from Q243).** Filed by Q243's census,
+  2026-11-12: `python3 tools/gap_census.py` found each name below counted by `Unimplemented.Report` and named by no other item
+  here. A session takes one name or a few: read the site and the `docs/exe/` page given, classify the path (`AGENTS.md`
+  rule 3; only a site's own "dead by" words were read, given below, and the rest are not classified), then build it or
+  file it as its own item and take the name out of this list. The census drops a name once an item names it. Each name:
+  the file of each call, then the `docs/exe/` pages that name it.
+  - `SAVED_CURRENT_ARRIVAL_VEHICLE` (`ParkPeople.cs`; `saves.md`, `park.md`)
+  - `VEHICLE_MADE_NO_ITEM` (`ParkPeople.cs`; `saves.md`)
+  - `SPRITE_STATE_ANIMATION_NOT_STARTED` (`ParkPeople.cs`; `ride-operation.md`)
+  - `RIDE_CONDEMNED_EVENT` (`ParkPeople.cs`; `saves.md`, `ride-operation.md`, `advisor-park.md`)
+  - `PARK_DOOR_COMMANDS_THE_GATE` (`ParkPeople.cs`; `park-gate.md`)
+  - `SETTLE_UP_EVENT_HISTORY` (`ParkRideOperation.cs`; `ride-operation.md`)
+  - `SETTLE_UP_ANALYSER_SAMPLE` (`ParkRideOperation.cs`)
+  - `SETTLE_UP_SIDESHOW_EVENT` (`ParkRideOperation.cs`; `ride-operation.md`)
+  - `SETTLE_UP_COSTUME_EVENT` (`ParkRideOperation.cs`; `ride-operation.md`)
+  - `SETTLE_UP_BALLOON_EVENT` (`ParkRideOperation.cs`; `ride-operation.md`)
+  - `SETTLE_UP_TOILET_EVENT` (`ParkRideOperation.cs`; `ride-operation.md`)
+  - `SETTLE_UP_TOILET_ILLNESS_EVENT` (`ParkRideOperation.cs`; `ride-operation.md`)
+  - `OPEN_GUARD_COASTER_TRACK_RECORD` (`ParkRideOperation.cs`; `ride-operation.md`)
+  - `CHARGE_CHALLENGE_POST` (`ParkRideOperation.cs`)
+  - `RIDE_EXCITEMENT_COASTER_TRACK` (`ParkRideScore.cs`; `ride-operation.md`)
+  - `RIDE_EXCITEMENT_UPGRADE_TIER` (`ParkRideScore.cs`; `ride-operation.md`)
+  - `GOING_TO_RIDE_STUCK_EVENT` (`PeepBehaviour.cs`; `ride-operation.md`)
+  - `DECIDE_CHOSEN_EVENT` (`PeepBehaviour.cs`; `ride-operation.md`)
+  - `DECIDE_NOTHING_CHOSEN_EVENT` (`PeepBehaviour.cs`; `ride-operation.md`)
+  - `DECIDE_WATCH_FIREWORKS` (`PeepBehaviour.cs`; `ride-operation.md`); dead by CONTENT at its site
+  - `DECIDE_WATCH_ENTERTAINER_EVENT` (`PeepBehaviour.cs`)
+  - `LEAVE_ROUTE_MODE_1_RETRY` (`PeepBehaviour.cs`; `ride-operation.md`)
+  - `ARRIVAL_BACK_OF_QUEUE_LOST_EVENT` (`PeepBehaviour.cs`; `ride-operation.md`)
+  - `ARRIVAL_NO_ROOM_EVENT` (`PeepBehaviour.cs`; `ride-operation.md`)
+  - `ARRIVAL_TOO_EXCITING_EVENT` (`PeepBehaviour.cs`; `ride-operation.md`)
+  - `ARRIVAL_NOT_EXCITING_EVENT` (`PeepBehaviour.cs`; `ride-operation.md`)
+  - `ARRIVAL_TOO_LONG_EVENT` (`PeepBehaviour.cs`; `ride-operation.md`)
+  - `QUEUE_PLACE_DODGY_DIRECTION` (`PeepBehaviour.cs`; `ride-operation.md`)
+  - `QUEUE_TURN_COASTER_TRACK_RECORD` (`PeepBehaviour.cs`; `ride-operation.md`)
+  - `QUEUE_TURN_HEADING` (`PeepBehaviour.cs`; `ride-operation.md`)
+  - `QUEUE_TURN_BOREDOM` (`PeepBehaviour.cs`; `ride-operation.md`)
+  - `DOOR_EVENT_HISTORY` (`PeepBehaviour.cs`)
+  - `QUEUE_CAPACITY_UNKNOWN_ITEM` (`PeepBehaviour.cs`; `ride-operation.md`)
+  - `QUEUE_CAPACITY_UPGRADE_TIER` (`PeepBehaviour.cs`; `ride-operation.md`)
+  - `MINOR_DECISION_EVENT` (`PeepBehaviour.cs`; `ride-operation.md`)
+  - `DOOR_PRICE_ANALYSER_SAMPLE` (`PeepPriceOpinion.cs`; `ride-operation.md`)
+  - `NEEDS_THOUGHT_4_SOUND` (`Thoughts.cs`; `ride-operation.md`)
+  - `NEEDS_THOUGHT_LITTER_SHARE` (`Thoughts.cs`; `ride-operation.md`)
+- [ ] **Q1192. Counted, not built, and owned by no item: staff, strikes, research and the advisor's and challenges' posts (18 names, from Q243).** Filed by Q243's census,
+  2026-11-12: `python3 tools/gap_census.py` found each name below counted by `Unimplemented.Report` and named by no other item
+  here. A session takes one name or a few: read the site and the `docs/exe/` page given, classify the path (`AGENTS.md`
+  rule 3; only a site's own "dead by" words were read, given below, and the rest are not classified), then build it or
+  file it as its own item and take the name out of this list. The census drops a name once an item names it. Each name:
+  the file of each call, then the `docs/exe/` pages that name it.
+  - `PARK_ADVISOR_SAVED_SLOT_NOT_BUILT` (`ParkAdvisorMessages.cs`; `advisor-park.md`)
+  - `TAG_ROW_NOT_LISTED` (`ParkTags.cs`; `advisor-park.md`)
+  - `TAG_TEXT_KIND` (`ParkTags.cs`; `saves.md`, `advisor-park.md`)
+  - `RESEARCH_FINISHED_TO_THE_CHALLENGES` (`ParkResearch.cs`; `park-engine.md`)
+  - `SAVED_STAFF_CANDIDATE_OF_NO_KIND` (`ParkStaffPool.cs`)
+  - `SAVED_STAFF_CANDIDATE_ON_POINTER` (`ParkStaffPool.cs`)
+  - `ROLLED_STAFF_COSTUME` (`ParkStaffPool.cs`; `park-engine.md`)
+  - `GATE_FEE_CHALLENGE_POST` (`ParkState.cs`; `hud.md`, `ride-operation.md`)
+  - `COST_OF_GOODS_CHALLENGE_POST` (`ParkState.cs`; `ride-operation.md`)
+  - `ADVISOR_PARK_ENDED_IN_THE_RED` (`ParkState.cs`; `ride-operation.md`)
+  - `STRIKE_CALLED_OFF_TO_THE_ADVISOR` (`ParkStrikes.cs`; `ride-operation.md`)
+  - `STRIKE_WARNING_TO_THE_ADVISOR` (`ParkStrikes.cs`; `ride-operation.md`)
+  - `STRIKE_TO_THE_ADVISOR` (`ParkStrikes.cs`; `ride-operation.md`)
+  - `STRIKE_HANDYMEN_CELL_RATIO` (`ParkStrikes.cs`; `ride-operation.md`)
+  - `HANDYMAN_LITTER_SEARCH` (`StaffBehaviour.cs`; `staff-wandering.md`, `ride-operation.md`, `advisor-park.md`)
+  - `MECHANIC_UPGRADE_JOB` (`StaffBehaviour.cs`; `staff-wandering.md`, `ride-operation.md`)
+  - `HANDYMAN_TOILET_AIM_LEFT_ON_A_LATER_TOILET` (`StaffBehaviour.cs`; `ride-operation.md`)
+  - `STAFF_TRAINING_NO_POINT_COST` (`ParkPeople.cs`; `ride-operation.md`)
+- [ ] **Q1193. Counted, not built, and owned by no item: paths, queues, building, markers and hoardings (30 names, from Q243).** Filed by Q243's census,
+  2026-11-12: `python3 tools/gap_census.py` found each name below counted by `Unimplemented.Report` and named by no other item
+  here. A session takes one name or a few: read the site and the `docs/exe/` page given, classify the path (`AGENTS.md`
+  rule 3; only a site's own "dead by" words were read, given below, and the rest are not classified), then build it or
+  file it as its own item and take the name out of this list. The census drops a name once an item names it. Each name:
+  the file of each call, then the `docs/exe/` pages that name it.
+  - `FRESH_PARK_PATH_ART_VARIANT` (`FreshPark.cs`; `saves.md`, `park-engine.md`)
+  - `BOUNDARY_HOARDING_UNMADE` (`ParkBoundaryHoarding.cs`; `park.md`)
+  - `BOUNDARY_HOARDING_ROW` (`ParkBoundaryHoarding.cs`)
+  - `MARKER_RIPPLE_SHADING` (`ParkBuildMarkers.cs`)
+  - `MARKER_ICON_TURNS_WITH_CAMERA` (`ParkBuildMarkers.cs`)
+  - `MARKER_LIFT_OVER_TRACK_THING` (`ParkBuildMarkers.cs`, `ParkItemHeights.cs`; `park.md`)
+  - `SHAPE_KIND_*_PLACEMENT` (`ParkBuilding.cs`)
+  - `FIREWORKS_SPENT_REGION_EFFECT` (`ParkBuilding.cs`; `saves.md`, `ride-operation.md`)
+  - `QUEUE_STUB_OVER_SOMETHING` (`ParkBuilding.cs`)
+  - `PATH_STUB_OVER_SOMETHING` (`ParkBuilding.cs`)
+  - `QUEUE_MODE_ADVISOR_MESSAGE_0xCB` (`ParkBuilding.cs`)
+  - `COASTER_PYLON_BANK_TURNED_NODE` (`ParkCoasterTrack.cs`)
+  - `ITEM_VALUE_REFUSED` (`ParkItemCatalogue.cs`; `park-engine.md`)
+  - `HMP_REBUILD` (`ParkItemHeights.cs`)
+  - `QUEUE_RUN_OVER_A_LOW_PRIORITY_THING` (`ParkPathBuilding.cs`)
+  - `PATH_RUN_OVER_A_LOW_PRIORITY_THING` (`ParkPathBuilding.cs`)
+  - `PATH_TOOL_ADVISOR_MESSAGE_0xB8` (`ParkPathBuilding.cs`)
+  - `PATH_RUN_OVER_TRACK` (`ParkPathBuilding.cs`)
+  - `BACKSPACE_DELETE_SOUND_0x5F` (`ParkPathBuilding.cs`)
+  - `EDIT_QUEUE_ADVISOR_0xCB` (`ParkPathBuilding.cs`)
+  - `QUEUE_DRAIN_ADVISOR_0xCB` (`ParkPathBuilding.cs`; `ride-operation.md`)
+  - `QUEUE_DRAIN_DEBIT_DEPRECIATION` (`ParkPathBuilding.cs`; `ride-operation.md`)
+  - `QUEUE_END_WALK_UNBOUNDED` (`ParkPathBuilding.cs`; `ride-operation.md`)
+  - `QUEUE_DRAIN_CLEARS_ANOTHER_KIND` (`ParkPathBuilding.cs`; `ride-operation.md`)
+  - `BACKSPACE_QUEUE_ADVISOR_0xCB` (`ParkPathBuilding.cs`; `ride-operation.md`, `park-engine.md`)
+  - `BACKSPACE_QUEUE_CLEARS_ANOTHER_KIND` (`ParkPathBuilding.cs`)
+  - `PATH_TILE_NO_TABLE_ROW` (`ParkPathTiles.cs`)
+  - `SCENE_HEIGHT_OWN_MESH` (`ParkSceneHeight.cs`; `park.md`)
+  - `HOARDING_DEGENERATE_BASE` (`RideHoardingGeometry.cs`; `ride-hoardings.md`)
+  - `SHAPE_CHARACTER_NOT_IN_ALPHABET` (`ItemDescriptionFile.cs`)
+- [ ] **Q1194. Counted, not built, and owned by no item: sound (7 names, from Q243).** Filed by Q243's census,
+  2026-11-12: `python3 tools/gap_census.py` found each name below counted by `Unimplemented.Report` and named by no other item
+  here. A session takes one name or a few: read the site and the `docs/exe/` page given, classify the path (`AGENTS.md`
+  rule 3; only a site's own "dead by" words were read, given below, and the rest are not classified), then build it or
+  file it as its own item and take the name out of this list. The census drops a name once an item names it. Each name:
+  the file of each call, then the `docs/exe/` pages that name it.
+  - `PARK_LOOP_FUN_0055AB50` (`ParkAudio.cs`; `park-engine.md`)
+  - `RIDE_EFFECT_SOUND_CLASS_6BE330` (`ParkAudioScripts.cs`)
+  - `RIDE_EFFECT_SOUND_CLASS_6BE680` (`ParkAudioScripts.cs`)
+  - `RIDE_EFFECT_SOUND_HELD_CHAIN_NO_KEY` (`ParkAudioScripts.cs`; `audio.md`)
+  - `RIDE_EFFECT_SOUND_PARAMETER_OTHER_CLASS` (`ParkAudioScripts.cs`; `audio.md`)
+  - `SOUND_PLACE_NO_CELL_RECTANGLE` (`ParkObjects.cs`; `ride-operation.md`)
+  - `SOUND_GAP_BY_PARAMETER` (`ParkScreams.cs`)
+- [ ] **Q1195. Counted, not built, and owned by no item: ride scripts: particles, walks, model nodes and loaded scripts (31 names, from Q243).** Filed by Q243's census,
+  2026-11-12: `python3 tools/gap_census.py` found each name below counted by `Unimplemented.Report` and named by no other item
+  here. A session takes one name or a few: read the site and the `docs/exe/` page given, classify the path (`AGENTS.md`
+  rule 3; only a site's own "dead by" words were read, given below, and the rest are not classified), then build it or
+  file it as its own item and take the name out of this list. The census drops a name once an item names it. Each name:
+  the file of each call, then the `docs/exe/` pages that name it.
+  `STARTSCREAM`, `SCREAMLEVEL`, `SPAWN`, `DIPMUSIC`, `SETOBJPARAM` and `SETBROKE` are a built instruction's message (the census's
+  MESSAGE): the counted case is the one the site's message names (wrong operands, nothing to work on, a value not handled).
+  - `PARK_PARTICLE_ITEM_EFFECT` (`RideScript.cs`; `park.md`)
+  - `PARK_PARTICLE_NO_PLACE` (`RideScript.cs`; `park.md`)
+  - `PARK_PARTICLE_NO_DIRECTION` (`RideScript.cs`; `park.md`)
+  - `PARK_PARTICLE_NOT_STARTED` (`RideScript.cs`, `ParkBumperBoats.cs`, `ParkPlacedObjects.cs`, `PersonPuffs.cs`; `park.md`)
+  - `LOADED_EMITTER_LIFE_PART_RUN` (`RideScript.cs`; `park.md`)
+  - `WALK_FACING_REST_POSE` (`RideScript.cs`; `saves.md`, `ride-operation.md`)
+  - `WALK_FACING_ON_A_FACE` (`RideScript.cs`)
+  - `WALK_FACING_NODE_MISS` (`RideScript.cs`)
+  - `WALK_NODES_NO_MODEL` (`RideScript.cs`; `ride-operation.md`)
+  - `WALK_LEG_REST_POSE` (`RideScript.cs`; `ride-operation.md`)
+  - `WALK_NODE_ON_A_FACE` (`RideScript.cs`; `ride-operation.md`)
+  - `WALK_NODE_MISS` (`RideScript.cs`; `ride-operation.md`)
+  - `WALK_NODE_UNPOSED` (`RideScript.cs`; `ride-operation.md`)
+  - `WALK_NODE_NEGATIVE_ID` (`RideScript.cs`; `ride-operation.md`)
+  - `STARTSCREAM` (`RideScript.cs`; `park.md`, `addresses.md`, `ride-operation.md`, `audio.md`)
+  - `SCREAMLEVEL` (`RideScript.cs`; `park.md`, `addresses.md`, `ride-operation.md`, `audio.md`); dead by CONTENT at its site
+  - `SPAWN` (`RideScript.cs`)
+  - `DIPMUSIC` (`RideScript.cs`; `park.md`, `park-engine.md`, `audio.md`)
+  - `SETOBJPARAM` (`RideScript.cs`; `saves.md`, `park.md`, `addresses.md`, `audio.md`)
+  - `ADDHEAD_DRAWS_EXHAUSTED` (`RideScript.cs`; `park.md`)
+  - `WALK_RIDER_NODE_MISS` (`ParkGuestSprites.cs`; `ride-operation.md`)
+  - `RIDER_HEAD_BANK_MISSING` (`ParkGuestSprites.cs`)
+  - `SCAPE_OMP_SOUND_TYPE_3` (`ParkPlacedObjects.cs`; `park.md`)
+  - `SCAPE_OMP_SOUND_TYPE_1` (`ParkPlacedObjects.cs`; `park.md`)
+  - `LOADED_COMPANION_NOT_STARTED` (`ParkRides.cs`; `saves.md`)
+  - `SAVE_PARK_SCRIPT_ENDED` (`ParkRides.cs`; `saves.md`)
+  - `WALK_RIDER_ACTION_UNPLACED` (`WalkRiders.cs`; `ride-operation.md`)
+  - `WALK_RIDER_HEIGHT_FROM_THE_SURFACE` (`WalkRiders.cs`; `ride-operation.md`)
+  - `WORLD_PARTICLE_ADDED_WITHOUT_ALPHA` (`WorldParticles.cs`; `park.md`)
+  - `MODEL_NODES_AFTER_ROLE_NOUGHT_ENDED` (`AnimTimeControl.cs`; `saves.md`)
+  - `SETBROKE` (`RideState.cs`; `park.md`)
+- [ ] **Q1196. Counted, not built, and owned by no item: track rides and bumper rides (15 names, from Q243).** Filed by Q243's census,
+  2026-11-12: `python3 tools/gap_census.py` found each name below counted by `Unimplemented.Report` and named by no other item
+  here. A session takes one name or a few: read the site and the `docs/exe/` page given, classify the path (`AGENTS.md`
+  rule 3; only a site's own "dead by" words were read, given below, and the rest are not classified), then build it or
+  file it as its own item and take the name out of this list. The census drops a name once an item names it. Each name:
+  the file of each call, then the `docs/exe/` pages that name it.
+  - `BUMPER_CAR_NO_MESH` (`ParkBumperBoats.cs`)
+  - `BUMPER_CAR_NO_SMOKE_NODE` (`ParkBumperBoats.cs`; `park.md`)
+  - `BUMPER_CAR_ROCK` (`ParkBumperBoats.cs`)
+  - `BUMPER_CAR_WAKE` (`ParkBumperBoats.cs`; `saves.md`)
+  - `SAVED_TRACK_CAR_MODEL_NOT_ITS_OWN` (`ParkBumperBoats.cs`; `saves.md`)
+  - `BUMPER_TEMPLATE_*` (`ParkBumperCars.cs`)
+  - `BUMPER_CAR_OTHER_TARGET` (`ParkBumperCars.cs`)
+  - `BUMPER_CAR_UNJOINED_TARGET` (`ParkBumperCars.cs`)
+  - `BUMPER_RIDER_PARTICLE` (`ParkBumperCars.cs`; `park.md`, `park-engine.md`)
+  - `SAVED_TRACK_RIDER_WITH_NO_CAR` (`ParkTrackRideTable.cs`; `saves.md`)
+  - `SAVED_TRACK_RIDE_OUTSIDE_THE_TABLE` (`ParkTrackRideTable.cs`; `ride-operation.md`)
+  - `TRACK_SECTION_OUT_OF_OBJECTS` (`ParkTrackRideTable.cs`; `park.md`)
+  - `TRACK_SECTION_UNKNOWN_TYPE` (`ParkTrackRideTable.cs`; `park.md`)
+  - `TRACK_SECTION_TEMPLATE_*` (`ParkTrackRideTable.cs`)
+  - `TRACK_RIDE_TABLE_FULL` (`ParkTrackRideTable.cs`; `ride-operation.md`)
 
 ## G. The lobby plan's open items
 
