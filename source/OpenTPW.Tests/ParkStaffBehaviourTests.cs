@@ -355,6 +355,35 @@ public class ParkStaffBehaviourTests
 	}
 
 	/// <summary>
+	/// A handyman loaded in state 8 or 9 (the walk to litter and the sweep, <c>FUN_004d73c0</c>'s cases 8 and 9) has
+	/// no arm here: he stands where he is in that state and is counted on every turn, by name; any other member in a
+	/// state with no arm is counted by its number, and a carried member (state 7, an empty arm in the original) is not.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the default arm counting nothing; Held counted as a state with no arm; a mechanic in state 8 counted as a handyman's litter job.</remarks>
+	[DataTestMethod]
+	[DataRow( Handyman, 8, "HANDYMAN_LITTER_STATE_8" )]
+	[DataRow( Handyman, 9, "HANDYMAN_LITTER_STATE_9" )]
+	[DataRow( Mechanic, 8, "STAFF_STATE_0x8" )]
+	[DataRow( Handyman, 0x12, "STAFF_STATE_0x12" )]
+	[DataRow( Handyman, 7, null )]
+	public void AStateWithNoArmIsCountedAndHeldWhereItIs( int thing, int state, string? gap )
+	{
+		var (member, walk, park) = OnThePath( thing, activity: (StaffActivity)state );
+		var behaviour = new StaffBehaviour( Balance(), new ConstantDraw(), park );
+		var gaps = new[] { "HANDYMAN_LITTER_STATE_8", "HANDYMAN_LITTER_STATE_9", "STAFF_STATE_0x7", "STAFF_STATE_0x8", "STAFF_STATE_0x12" };
+		var before = gaps.Select( Counted ).ToArray();
+		var at = member.Navigator.Position;
+
+		behaviour.Step( member, walk, playing: null, tick: 1001 );
+		behaviour.Step( member, walk, playing: null, tick: 1002 );
+
+		CollectionAssert.AreEqual( gaps.Select( name => name == gap ? 2 : 0 ).ToArray(),
+			gaps.Select( ( name, index ) => Counted( name ) - before[index] ).ToArray(), "each turn counted, under its own name" );
+		Assert.AreEqual( (StaffActivity)state, member.Activity, "the state is kept" );
+		Assert.AreEqual( at, member.Navigator.Position, "and nobody moves" );
+	}
+
+	/// <summary>
 	/// Every kind's decide opens with the tired test (<c>FUN_00506a40</c>): a tired mechanic, handyman or
 	/// entertainer sets off for the Staff Room and looks for no work.
 	/// </summary>

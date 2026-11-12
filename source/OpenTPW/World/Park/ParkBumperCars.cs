@@ -497,9 +497,23 @@ public sealed class ParkBumperCars
 	/// </para>
 	/// </summary>
 	/// <returns>The car, or null for a handle the table does not hold or a full pool.</returns>
+	/// <remarks>
+	/// A car whose handle names no record here (a BumperType with no template, <c>BUMPER_TEMPLATE_n</c>) is dropped with
+	/// its riders, each counted, where the original's car arm restores it for any ride its handle names.
+	/// </remarks>
 	internal Car? Restore( SavedTrackCar saved )
 	{
-		if ( RideOf( saved.Handle ) is not { } ride || Array.Find( _cars, candidate => !candidate.IsLive ) is not { } car )
+		if ( RideOf( saved.Handle ) is not { } ride )
+		{
+			Unimplemented.Report( "SAVED_TRACK_CAR_WITH_NO_RECORD" );
+
+			foreach ( var _ in saved.Riders )
+				Unimplemented.Report( "SAVED_TRACK_RIDER_WITH_NO_RECORD" );
+
+			return null;
+		}
+
+		if ( Array.Find( _cars, candidate => !candidate.IsLive ) is not { } car )
 			return null;
 
 		car.Riders.Clear();
@@ -573,6 +587,13 @@ public sealed class ParkBumperCars
 	/// </summary>
 	internal void Restore( SavedTrackPeep saved )
 	{
+		// A peep listed on a ride with no record here is dropped and counted (see the car's Restore).
+		if ( RideOf( saved.Handle ) is null )
+		{
+			Unimplemented.Report( "SAVED_TRACK_LISTED_PEEP_WITH_NO_RECORD" );
+			return;
+		}
+
 		if ( saved.Boarding )
 		{
 			Board( saved.Handle, saved.Peep );

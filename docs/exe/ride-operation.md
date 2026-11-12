@@ -4744,7 +4744,8 @@ The park analyser (`mParkAnalyser`, model 13) keeps 20 byte rings of 50, one per
 `FUN_004c74b0( kind, value )` steps the entry on and stores the byte. **Only kind 0 is ever read**: the gate's ticket
 opinion (`FUN_004ff5b0`), by the advisor's messages 91 and 92 ("high ticket price", "a steal") through `0x004c9830` and
 `0x004c9920`, whose four calls all pass 0. The settle-up's kinds 10 to 13, 15, 16 and 18, and the door's 1 to 4, 6, 7
-and 9, are written, saved and loaded, and read by nothing else.
+and 9, are written, saved and loaded, and read by nothing else. OpenTPW keeps no analyser: the ticket opinion's four pushes are counted (`ENTRY_FEE_ANALYSER_SAMPLE`,
+`ParkAdmission.OpinionOf`, Q285), the door's (`DOOR_PRICE_ANALYSER_SAMPLE`) and the settle-up's (`SETTLE_UP_ANALYSER_SAMPLE`) too.
 
 ### What Lost Kingdom reaches
 

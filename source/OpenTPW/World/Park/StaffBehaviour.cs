@@ -582,7 +582,17 @@ public sealed class StaffBehaviour
 				break;
 
 			// Being carried does nothing here: the original's case 7 has an empty body.
+			case StaffActivity.Held:
+				break;
+
+			// A handyman's walk to litter and his sweep (FUN_004d73c0's cases 8 and 9, set by FUN_004d7330's table at
+			// 0x004d73a4) are unbuilt: one loaded in either stands where he is, counted on every turn. Any other state
+			// this switch has no arm for is counted by its number.
 			default:
+				Unimplemented.Report( staff.Model == HandymanModel && (int)staff.Activity is 8 or 9
+					? $"HANDYMAN_LITTER_STATE_{(int)staff.Activity}"
+					: $"STAFF_STATE_0x{(int)staff.Activity:x}" );
+
 				break;
 		}
 

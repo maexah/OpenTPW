@@ -961,6 +961,15 @@ internal sealed class WindowStack : Panel
 		if ( Input.KeysPressed.Contains( Key.BackSpace ) )
 			focus.Backspace();
 
+		// The original's box moves its caret, and Shift its selection, on Left, Right, Home and End, and deletes forward
+		// on Delete (FUN_00667a72: 0x2500, 0x2700, 0x2400, 0x2300, 0x2e00). Here the caret is always at the end, so each
+		// is dropped and counted.
+		foreach ( var key in Input.KeysPressed )
+		{
+			if ( key is Key.Delete or Key.Left or Key.Right or Key.Home or Key.End )
+				Unimplemented.Report( $"EDIT_BOX_KEY_{key.ToString().ToUpperInvariant()}" );
+		}
+
 		// In the order they came up, and only the first: either closes the box's window, and a key let go after it in the
 		// same frame is not handed on to whatever has the keys next, where the original's queue would hand it on.
 		foreach ( var key in Input.KeysReleased )

@@ -1143,40 +1143,13 @@ filed the items that cite it.
   three draws on would show it From the week-end audit (stage 6, the second reading of commit `d490bc90`; read
   from the code, not reproduced in the game). `OpenTPW.Files/Formats/Save/ParkParticles.cs`, line 376.
 
-- [ ] **Q285. Seven unbuilt paths the game reaches count nothing.** From the week-end audit (stage 6, the second
-  reading of each commit; read from the code). `AGENTS.md` rule 4 asks each for an `Unimplemented.Report`; build
-  the path where it is small. One bullet a path.
-  - Built by Q918: a park loaded from a file with a camera module opens on the camera the file holds (`Level.TakeTheFilesCamera`), for a park entered as for
-    one chosen from the Load Park list; it was left on the default view and counted nothing (`ParkWorld.Camera.Saved` was used by no load).
-    (`OpenTPW/World/Level.cs`; commit `2bdbd7fd`)
-  - Built by Q241j: `Level.WritePark` writes `gms.dat` first and installs the idle mode before the park, as the
-    original's save does on every call; nothing of this bullet is left.
-  - Built by Q668: `Peep.Tick` adds the cell's happiness, illness and hunger words on every needs turn
-    (`ParkPeople.CellEffects`); nothing of this bullet is left.
-  - A handyman loaded from a park file in state 8 or 9 (the walk to litter and the sweep, FUN_004d73c0's cases 8
-    and 9, set by FUN_004d7330's table at 0x004d73a4) takes `StaffBehaviour.Step`'s `default:` arm, stands for the
-    rest of the session and is counted nowhere. It should at least call `Unimplemented.Report` and fall to idle so
-    he decides again, until the litter job is built; Alexah's `jungle/New Save.TPWS` and `jungle/autosave.TPWS`
-    each hold four such handymen, which a load and the `staff` census would show stuck at `st 0x8` and `st 0x9`.
-    (`OpenTPW/World/Park/StaffBehaviour.cs`, line 579; commit `757c46a6`)
-  - The name box of Save Park and of the new player dialog ignores Delete, Left, Right, Home and End and counts
-    nothing (`WindowStack.Keyboard` hands a `UiEdit` typed text and Backspace alone, and the caret is always at
-    the end). The original's box answers each in `FUN_00667a72` (`0x2e00`, `0x2500`, `0x2700`, `0x2400`, `0x2300`,
-    Shift extending the selection), so either they are built or the keys are counted where they are dropped.
-    (`OpenTPW/UI/WindowStack.cs`, line 745; commit `d2052d84`)
-  - A load drops the cars, riders and two lists of a saved track ride whose BumperType has no record here (every
-    type but the Hot Pot's -1) and counts none of them (`Open` counts the ride alone, as `BUMPER_TEMPLATE_n`, and
-    only for the family's -3, -6, -11 and -14), where the build before Q257p counted each car chunk as
-    SAVED_TRACK_RIDE_CARS. It should count each dropped car, rider and listed peep, since the loader's car arm
-    (FUN_00543560, chunk 5, docs/exe/saves.md "OpenTPW's reader, a track ride's cars") restores a car for any ride
-    its handle names; a test with a type -4 ride and one car chunk would show the census unmoved.
-    (`OpenTPW/World/Park/ParkBumperCars.cs`, line 522; commit `a96db38d`)
-  - A guest's judgement of the entry fee pushes no sample to the park analyser and counts nothing:
-    `ParkAdmission.OpinionOf` returns its band and `PeepBehaviour.Judge` acts on it. The original's `FUN_004ff5b0`
-    calls `FUN_004c74b0( 0, byte )` on each of the four compared arms (`0x004ff693`, `0x004ff6b5`, `0x004ff6f0`,
-    `0x004ff715`; not on the early-out), and kind 0 is the one ring anything reads, the advisor's messages 91 and
-    92 (`ride-operation.md`, "The analyser's samples"), so it should be built or call `Unimplemented.Report`.
-    (`OpenTPW/World/Park/ParkAdmission.cs`, line 303; commit `542b67e4`)
+- [ ] **Q1154. A handyman loaded walking to litter or sweeping falls to idle (from Q285).** A handyman loaded from a park
+  file in state 8 or 9 (FUN_004d73c0's cases 8 and 9) takes `StaffBehaviour.Step`'s default arm, is counted
+  (`HANDYMAN_LITTER_STATE_8`, `_9`) and stands in that state for the rest of the session. Until the litter job is built he
+  should fall to idle (`Staff.SetActivity( StaffActivity.Idle, tick )`, which clears the stamp so he decides on the next
+  sweep), as Q285's bullet asked; left out of Q285 because it changes what is drawn (he walks off) and that lane could not
+  photograph. Confirm: Alexah's `jungle/New Save.TPWS` (four such handymen) loaded, the `staff` census read before and
+  after a few seconds, predicted first; a photograph of one walking off.
 
 - [ ] **Q287. ParkHireScreen.Selected previews a highlighted candidate's wage with ShowMoney( person.Wage ), and
   Update() calls ShowMoney() with no wage on every frame (WindowStack.OnUpdate).** So the staff-costs preview is
