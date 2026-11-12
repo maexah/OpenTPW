@@ -12145,6 +12145,18 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q218. Five gaps left by the Q208 and Q209 corrections.** Found 2026-10-04 by a second read of those four
+  commits, each checked against the code. (1) `RideHoardingTests.TerrainEndpointsFollowTheOriginalNormalizedQuarterTurns`
+  still says by its name that it follows the original, while `docs/exe/ride-hoardings.md` says it checks OpenTPW's
+  larger rectangle: rename it now, and Q210 writes the real one. (2) `ride-hoardings.md` says `Meshes[0]` is the mesh
+  with the most base vertices in every shipped outline; the corpus test reads `Meshes[0]` and never counts them.
+  Measure it over all 129 outlines and assert it, or take the sentence out. (3) `ProfilePreservationTests` has no
+  profile that reads at `Load` and fails at `Select`: the unreadable one is unreadable before `Load`, the cached one
+  is deleted. Q216 wrote that case (`AFailedReloadOfAGoodProfileBacksUpWhateverOpensLater`; the revoke is now
+  `NoteFailedReload`, a mutant of it failing it): leave (3) out. (4) `ParkBoughtClosedTests.ALoadedDisconnectedRideKeepsItsSavedDoor` builds a new ride and rebinds it; no save
+  is read. Load one, or name the test for what it does. (5) `docs/exe/ride-operation.md` says the remeasure tail
+  `FUN_004de1f0` leaves at once when `+0x68` is non-zero; `ParkRideOperation.ReopenAfterRemeasure` clears
+  `AssignedStaff` whatever was decided and cites `0x004de48c`. Read the tail in Ghidra and make the two agree. Put the bug back for each test (`AGENTS.md` rule 6). No game run. **Done 2026-11-12 (cloud lane c30, no Ghidra):** (1) renamed `TerrainEndpointsSampleOpenTPWsLargerRectangleNotTheOriginals`; (2) measured: in all 129 outlines mesh 0 is the only mesh with a base vertex, asserted in the corpus test; (4) renamed `MakingThePeopleAgainKeepsADisconnectedRidesDoor`, no save read; (5) needs Ghidra and is Q1240.
 
 ## B. Docs and comments
 

@@ -172,11 +172,15 @@ public class ParkBoughtClosedTests
 		Assert.AreEqual( 22, UI.ParkClosedStatus.For( world, Ride ) );
 	}
 
-	/// <summary>Loading a park closes nothing: a ride keeps the door its save gave it, queue joined or not.</summary>
+	/// <summary>
+	/// A ride bound with <c>BindNew</c> (no close) keeps the door it was given when the park's people are made again, its queue
+	/// unjoined: the door, its script's closed word and its hoarding are as they were. No save is read; this stands in for a
+	/// load's people, not a load.
+	/// </summary>
 	[TestMethod]
 	[DataRow( 0 )]
 	[DataRow( 1 )]
-	public void ALoadedDisconnectedRideKeepsItsSavedDoor( int canLoad )
+	public void MakingThePeopleAgainKeepsADisconnectedRidesDoor( int canLoad )
 	{
 		var item = Construct( 1100 );
 		rides.BindNew( Ride, item );
