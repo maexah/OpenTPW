@@ -215,6 +215,34 @@ internal sealed class ParticleSystem
 			emitter.Hidden = hidden;
 	}
 
+	/// <summary>
+	/// Hands a live effect to another window, or to none (see <see cref="Emitter.Owner"/>), with the effect or effector
+	/// it started along with it, which took its owner as it started. Its particles go with it, since they are drawn with
+	/// their emitter, and what it starts from now belongs to the new owner. The original has no such call: its effects
+	/// belong to no window (<c>ScreenParticles</c>, "In front of what").
+	/// </summary>
+	public void SetOwner( int handle, UiWindow? owner )
+	{
+		// A linked chain cannot be longer than the emitters there are; the bound keeps a chain that comes round from looping.
+		for ( int step = 0; step < EmitterCount && TryEmitter( handle, out var emitter ); ++step )
+		{
+			emitter.Owner = owner;
+
+			if ( emitter.Linked == 0 )
+				return;
+
+			if ( emitter.Template.LinkedIsEffector )
+			{
+				if ( TryEffector( emitter.Linked, out var effector ) )
+					effector.Owner = owner;
+
+				return;
+			}
+
+			handle = emitter.Linked;
+		}
+	}
+
 	/// <summary>Moves an effect's emitter (0x0051fe30), in the units effects are started at.</summary>
 	public void Move( int handle, int x, int y, int z )
 	{

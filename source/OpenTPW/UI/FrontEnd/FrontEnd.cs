@@ -355,7 +355,8 @@ internal sealed class FrontEnd : Panel
 	/// window in front keeps Escape from the lobby. Otherwise the lobby's key handler (0x005e41c0) asks the island camera first -
 	/// which cancels a flight into a park and answers, see <see cref="LobbyCameraMode.CancelLeave"/> - and opens the
 	/// game menu (GameMenu_Open with 1) only if it did not. A cancel shows the island panel again (0x004b8ea0), which
-	/// looks at the player's keys as it comes into view.
+	/// looks at the player's keys as it comes into view, and takes the key puff that is still falling, which the original's
+	/// leaves to no window (see <see cref="IslandPanel.TakeKeyPuff"/>).
 	/// </para>
 	/// <para>
 	/// Over the player slots Escape reaches nothing, as in the original: FrontEnd_ShowPlayerSlots hides the lobby's root
@@ -381,8 +382,13 @@ internal sealed class FrontEnd : Panel
 		{
 			// Only a player can have entered a park, so only a player's lobby has the panel to give back. The debug
 			// console can fly the camera in with nobody playing, and their lobby shows the player slots instead.
+			// The key puff the Enter started is still falling for up to about 0.7 s more, owned by no window; the panel
+			// takes it, so that a second Escape's menu covers it (IslandPanel.TakeKeyPuff).
 			if ( Players.Roster.Current != null )
+			{
 				_stack.Open( _islandPanel );
+				_islandPanel.TakeKeyPuff();
+			}
 
 			return;
 		}

@@ -42,22 +42,11 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the maintainer's pre-commit hook: grep it by Q-number.
 
-- **Q448 (`REPAIREFFECT` and `BUMP 17`):** in a cloud container (no Ghidra, no original, no photograph, nothing heard;
-  the runs' output was not kept), `RideScriptRepairEffectTests` (seven, one needing the game: the corpus's 70 scripts,
-  70 x 1 and 70 x 0, `VAR_ONRIDE` sixth in each; jungle's `BUMP 17` only `Wateride.RSE`'s 0, 1, 1, 0) and
-  `ParkTrackPieceClipTests.Bump17WalksBothMouthsWithOneClip` pass, and ten bugs put back by hand (the show's polarity,
-  the picker given the speed word, five variables let through, `BUMP 17`'s polarity, `+0xe6` from nought, 17 behind the
-  bumper record, the store after the walk, the other mouth at rest, the case dropped, the particle ungated) each failed
-  a test. Off-screen (`consolerun.py`): a Splish Splash on (32,26) with the karts' loop and its queue joined to a path
-  opened, and its `BUMP 17 0` put 16 pieces to clip 5, a break's `BUMP 17 1` put them at rest, the repair's
-  `REPAIREFFECT 1` started the global rides' 111 and 211 and its `BUMP 17 0` ran the water again; a broken Belly Bounce's
-  repair played 111 (`hammer2.mp2`) and 211 (`tp_riderepaired`), flags `0x0`, then the picker with 0 aboard nothing; the
-  census held no `REPAIREFFECT at` nor `BUMP at 33`, `155`, `201`, `219`, and one `REPAIREFFECT_PARTICLE` a repair. Not
-  checked: the particle and `FUN_00556a80`'s place (Q1576, Ghidra); the water and the sounds beside the original (Q1577);
-  the picker with riders aboard in a run (tests only).
+- **Q747 (a second Escape soon after the park-entry cancel shows the key puff over the game menu):** in a cloud container (no Ghidra, no original, no photograph; the run's output was not kept), `ASecondEscapeOpensTheMenuOverThePanelThatHoldsTheFallingPuff`, `EnteringStartsTheKeyPuffOwnedByNoWindowAndACancelHandsItToThePanel` and `SetOwnerHandsAnEffectAndTheEffectItStartedToAWindow` (all needing the game) pass, and three bugs put back by hand (the cancel not handing the puff over, a new Enter not giving the old puff back, `SetOwner` leaving the linked effect) each failed them. Off-screen (`lib/consoledrive.py`, a new Full Simulation player, one `xdotool` call of Return, Escape, Escape 150 ms apart), `windows` read `IslandPanel, GameMenu` and `particles screen` effect 98 with 32 particles `owner IslandPanel, open`, the log `key puff handle 0x10000 handed to the island panel`; with the hand-over taken out the same keys read `owner no window (drawn over all)`. Not checked: a photograph of the menu with no keys over it (no display here; filed as Q1584), and the original's own puff through its menu, which this deviates from on purpose (the original's draws over every window, `docs/exe/lobby.md`, taken from the doc, not read in Ghidra).
 
 ## Numbers (take counts fresh; these go stale within a day)
 
+- Linux, 2026-11-12, Q747 (`capped.sh`; the Escape puff after the entry cancel; two tests added, needing the game; built in a cloud container, re-gated here after Q448): with the game, 5770 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5772; with no game named, 2489 passed, 0 failed, 3283 skipped.
 - Linux, 2026-11-12, Q448 (`capped.sh`; ride script REPAIREFFECT and BUMP 17; eight tests added, seven needing no game; built in a cloud container, re-gated here after Q684): with the game, 5768 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5770; with no game named, 2489 passed, 0 failed, 3281 skipped.
 - Linux, 2026-11-12, Q684 (`capped.sh`; the map's overlay switches and pickers, first piece; five tests added, needing the game; built in a cloud container, merged by an agent onto Q683 and here after the a11 photo pack): with the game, 5760 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5762; with no game named, 2482 passed, 0 failed, 3280 skipped.
 - Linux, 2026-11-12, the a11 photo pack (`capped.sh`; no test added, photographs beside the original; merged here after the review fixes of group R): with the game, 5755 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5757; with no game named, 2482 passed, 0 failed, 3275 skipped.

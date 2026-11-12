@@ -14453,3 +14453,12 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   them at rest, the repair's `REPAIREFFECT 1` started 111 and 211 and its `BUMP 17 0` ran them again; a broken Belly
   Bounce's repair played 111 and 211, then the picker with 0 aboard nothing. Not photographed nor heard beside the
   original (Q1577).
+- [x] **Q747. A second Escape within about 0.7 s of the park-entry cancel shows the key puff over the game menu. (from the run 11 review of Q669.)**
+  Small. `IslandPanel.EnterPark` starts the puff ownerless; the first Escape cancels the flight and reopens the panel
+  (`LobbyCameraMode.CancelLeave`), so a second Escape goes to `FrontEnd.MenuKey` (`FrontEnd.cs`), which opens a `GameMenu`
+  while the puff is still falling (32, 27, 14, 8 particles for about 0.7 s, `q669/run2/run.log`), and the ownerless puff is
+  drawn over the dimmed menu: the case the owner rule was made for. Derived from the code, not observed. Build: keep the
+  puff's handle in `EnterPark`; when the cancel reopens the panel make the panel the owner of the live puff, with a small
+  `ParticleSystem.SetOwner( int handle, UiWindow? owner )` beside `Hide`, so it is still drawn over the panel and the menu's
+  dimming then covers it. Said at the site (`IslandPanel.cs`) and in `lobby.md` meanwhile. Confirm: Enter then Escape twice
+  in quick succession, a screenshot of the menu with no keys over it.

@@ -2836,15 +2836,14 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   over a flight with `original/lobbycam.py` (add the fields), against ours' `PositionRate` and `LookAtRate`
   (`LobbyCameraMode`) and the island's camera target; the fade (Q61) darkens the original's frames from +4.3 s, so
   compare positions, not pictures. Confirm: the eye's distance a frame at a time in both games.
-- [ ] **Q747. A second Escape within about 0.7 s of the park-entry cancel shows the key puff over the game menu. (from the run 11 review of Q669.)**
-  Small. `IslandPanel.EnterPark` starts the puff ownerless; the first Escape cancels the flight and reopens the panel
-  (`LobbyCameraMode.CancelLeave`), so a second Escape goes to `FrontEnd.MenuKey` (`FrontEnd.cs`), which opens a `GameMenu`
-  while the puff is still falling (32, 27, 14, 8 particles for about 0.7 s, `q669/run2/run.log`), and the ownerless puff is
-  drawn over the dimmed menu: the case the owner rule was made for. Derived from the code, not observed. Build: keep the
-  puff's handle in `EnterPark`; when the cancel reopens the panel make the panel the owner of the live puff, with a small
-  `ParticleSystem.SetOwner( int handle, UiWindow? owner )` beside `Hide`, so it is still drawn over the panel and the menu's
-  dimming then covers it. Said at the site (`IslandPanel.cs`) and in `lobby.md` meanwhile. Confirm: Enter then Escape twice
-  in quick succession, a screenshot of the menu with no keys over it.
+- [ ] **Q1584. A photograph of the game menu over the island panel after Enter then two Escapes: no keys over it. (Q747's photograph, for the desk lane.)**
+  Q747 (cloud lane, no display) hands the still-falling key puff to the panel at the cancel, so the menu a second Escape
+  opens covers it; seen only in the census (`particles screen`: effect 98 `owner IslandPanel, open` under `windows:
+  IslandPanel, GameMenu`). Confirm: a Full Simulation player, Return, Escape, Escape within about 0.3 s (`docs/TOOLING.md`,
+  "Enter a park from the lobby's panel and Escape, from a cloud lane"; on a desk `lib/lobbyentry.py` with `CANCEL`), a
+  frame 0.2 to 0.5 s after the second Escape: the dimmed menu with no keys over it, the keys under the dimming. Beside it
+  the original's same keys (`original/lobbypanel.sh`), whose puff shows through the menu: this is a deviation, said in
+  `docs/exe/lobby.md`.
 - [ ] **Q748. The key sparkle's last particles at park entry are drawn, as the original's. Decode first. (from the run 11 review of Q669.)**
   At the Enter the original's sparkle (effect 97, the handle at `0x7cc4bc`) is stopped with life -2 and its last particles
   fall on screen: 4 still falling at 0.1 s, counts 3, 2, 1, 1 over 0.1 to 0.4 s, gone by 0.5 s (`q630/orig-a/poll.txt`).
