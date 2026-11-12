@@ -264,11 +264,19 @@ internal static class Game
 			var start = _parkFreshAsked ? Level.ParkStart.MadeFresh : Level.ParkStart.Entered;
 			_parkFreshAsked = false;
 
+			var quick = _parkQuickAsked;
+			_parkQuickAsked = false;
+
 			if ( parkFile != null )
 			{
 				if ( (readAhead ?? Level.ReadParkAhead)( themeName, parkFile ) is not { } read )
 				{
 					Log.Warning( $"Load: {parkFile} will not read, so nothing is taken down and the running scene goes on" );
+
+					// Alt+L's answer is the load's, as the original picks its string from FUN_005ac5d0's (0x00747ed4, 0x007486bc).
+					if ( quick )
+						Log.Info( $"Quickload: QuickSave Load Failed - {parkFile} will not read" );
+
 					return;
 				}
 
@@ -284,6 +292,9 @@ internal static class Game
 
 			unload();
 			loadPark( themeName, start );
+
+			if ( quick )
+				Log.Info( $"Quickload: QuickSave Loaded - {parkFile} is loaded" );
 
 			// State 9 goes on to 0xf, which writes restart.INTS when the folder has none (0x0054f3f7). A park built again
 			// from a park here (Load Park's row, Alt+L, Restart Park) is loaded in place there and never passes it.
@@ -326,6 +337,19 @@ internal static class Game
 		_parkAsked = themeName.ToLowerInvariant();
 		_parkFileAsked = parkFile;
 		_parkFreshAsked = false;
+		_parkQuickAsked = false;
+	}
+
+	/// <summary>
+	/// Asks for Alt+L's load of <paramref name="parkFile"/>, a <see cref="RequestParkLoad"/> whose answer is logged
+	/// "QuickSave Loaded" or "QuickSave Load Failed" once the file has been read at the scene change, as the original
+	/// picks the string from its load's answer (<c>GameKey_QuickLoad</c>, <c>0x0040c040</c>; <c>docs/exe/saves.md</c>,
+	/// "The quicksave and quickload keys").
+	/// </summary>
+	internal static void RequestQuickLoad( string themeName, string parkFile )
+	{
+		RequestParkLoad( themeName, parkFile );
+		_parkQuickAsked = true;
 	}
 
 	/// <summary>
@@ -343,6 +367,9 @@ internal static class Game
 
 	/// <summary>Whether <see cref="_parkAsked"/> is for a world made fresh (<see cref="RequestFreshPark"/>).</summary>
 	private static bool _parkFreshAsked;
+
+	/// <summary>Whether <see cref="_parkAsked"/> is Alt+L's (<see cref="RequestQuickLoad"/>), whose answer is logged.</summary>
+	private static bool _parkQuickAsked;
 
 	/// <summary>
 	/// What the loading bar expects a park to take on a <b>first-ever run</b>.

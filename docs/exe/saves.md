@@ -770,7 +770,10 @@ other: Load Park lists it, and entering the park finds it when it is the newest.
 `Input.KeyUp` so the letter's release with Alt alone held is the press. Alt+S is `Level.WritePark( theme )`, as the
 menu's Save Game; Alt+L asks for the player's `<theme>.TPWS` (`SaveFolder.SavedParkPath`, any case) and loads it as a
 Load Park row does, ending the scene and building it again from the file where the original reads it over the running
-park, and with no such file, or nobody playing, loads nothing. The four strings are logged. They share the build keys'
+park, and with no such file, or nobody playing, loads nothing. The four strings are logged; Alt+L's two from the
+load's answer, as the original's: "QuickSave Loaded" once the file has been read at the scene change
+(`Game.ChangeSceneIfAsked`, a frame after the key) and the park built, "QuickSave Load Failed" where it will not read
+or there is none to read (Q1179). They share the build keys'
 gate: nothing while a box has the keys, a pausing window or a park screen is open, or under the full-screen view or in
 first person.
 

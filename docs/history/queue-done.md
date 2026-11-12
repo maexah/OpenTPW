@@ -12145,6 +12145,13 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q1179. Alt+L's log says "QuickSave Loaded" before the file is read.** From Q994. `Level.QuickLoadKey` answers
+  `Quickload: QuickSave Loaded - <path> is loaded` as it asks for the load; since Q994 the file is read at the scene change, and one
+  that will not read is then logged `Load: <path> will not read ...` with the park kept, so the log carries both lines. The original
+  picks "QuickSave Loaded" or "QuickSave Load Failed" (`0x00747ed4`, `0x007486bc`) from the load's answer, into the empty logger
+  `FUN_005da3c0` (`docs/exe/saves.md`, "The quicksave and quickload keys"), so a player sees nothing either way. Log only: say
+  "QuickSave Load Failed" when the read fails (the read is at `Game.ChangeSceneIfAsked`, a frame later). Confirm: Alt+L on a cut
+  `jungle.TPWS` logs the failed string and not the loaded one.
 
 ## B. Docs and comments
 
