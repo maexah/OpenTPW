@@ -12990,3 +12990,13 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   child in nine to twenty-five in a script chain's runs, `q612/run5/run.log`). Give `ParkScreams.Chain` the same empty-pass
   rule, with a test that fails when the pass is skipped, and confirm in a run by the first child's variation after a due
   millisecond.
+- [x] **Q659. Trim each decoded MPEG clip to the bank's played length (from Q147).** `AudioClip.Decode( name, data )`
+  (`AudioClip.cs:54`) takes no length and decodes until `ReadSamples` answers 0, so every MPEG entry plays its whole
+  stream, 14.4 to 82.8 ms past the bank's played length (`DecodedSize / (2 x channels x rate)`, the entry's `+0x20`),
+  over all 3,739 entries (`Mp2DurationTests`). The original clamps its read to `min( request, [voice+0x30] -
+  [voice+0x14] )` before the slot's `+0x5c` (`0x006c8429`..`0x006c8457`, FileFormats `sounds.md` lines 81-84; that
+  `+0x30` holds the bank's `+0x20` is FileFormats' claim, not re-traced). Trim each decoded clip to
+  `DecodedSize / (2 x channels)` frames. Probably inaudible (encoder padding), so minor. The only user of
+  `DecodedSize` outside the tests is `SoundBank.cs:91`'s memory estimate. Confirm: a clip's frame count against the
+  played length for the five MPEG-1 entries and a sample of MPEG-2 ones; `docs/exe/audio.md` (the decode, ~line 1444)
+  says nothing of the tail and should.

@@ -117,6 +117,9 @@ public sealed class Voice
 	/// <summary>What is playing, so the lobby can say what it picked.</summary>
 	public string Name => _clip.Name;
 
+	/// <summary>How many frames its clip holds, for the debug console's <c>voices</c>.</summary>
+	public int Frames => _clip.Frames;
+
 	/// <summary>The frame of the device's output its first sample went out on, or -1 until then.</summary>
 	private long _startedAtFrame = -1;
 

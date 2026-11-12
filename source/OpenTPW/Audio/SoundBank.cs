@@ -59,13 +59,13 @@ public sealed class SoundBank
 	/// The still-compressed samples, or null once the whole bank has been decoded. An entry goes
 	/// null as it is decoded, so nothing holds the .mp2 bytes for longer than it needs to.
 	/// </summary>
-	private readonly (string Name, byte[] Data)[]? _encoded;
+	private readonly (string Name, byte[] Data, int PlayedBytes)[]? _encoded;
 
 	/// <summary>Which entries have been through <see cref="AudioClip.Decode"/>, decoded or not.</summary>
 	private readonly bool[] _tried;
 
 	private SoundBank( string path, AudioClip?[] clips, TimeSpan[] durations,
-		(string, byte[])[]? encoded )
+		(string, byte[], int)[]? encoded )
 	{
 		Path = path;
 		Durations = durations;
@@ -113,12 +113,12 @@ public sealed class SoundBank
 			var clips = new AudioClip?[archive.soundFiles.Count];
 			var durations = new TimeSpan[archive.soundFiles.Count];
 
-			// The .sdt header carries the length the game plays of each entry, under three frames short of what it decodes to, so about how much this bank would cost
+			// The .sdt header carries the length the game plays of each entry, which is what each clip is cut to, so how much this bank would cost
 			// is known before a single frame is decoded.
 			var decoded = archive.soundFiles.Sum( entry => (long)entry.DecodedSize );
 			var lazy = decoded > DecodeEverythingBelow;
 
-			var encoded = lazy ? new (string, byte[])[archive.soundFiles.Count] : null;
+			var encoded = lazy ? new (string, byte[], int)[archive.soundFiles.Count] : null;
 
 			for ( int i = 0; i < archive.soundFiles.Count; ++i )
 			{
@@ -127,9 +127,9 @@ public sealed class SoundBank
 				durations[i] = entry.Duration;
 
 				if ( lazy )
-					encoded![i] = (entry.Name, entry.SoundData);
+					encoded![i] = (entry.Name, entry.SoundData, entry.DecodedSize);
 				else
-					clips[i] = AudioClip.Decode( entry.Name, entry.SoundData );
+					clips[i] = AudioClip.Decode( entry.Name, entry.SoundData, entry.DecodedSize );
 			}
 
 			if ( lazy )
@@ -224,8 +224,8 @@ public sealed class SoundBank
 
 			_tried[index] = true;
 
-			var (name, data) = _encoded[index];
-			_clips[index] = AudioClip.Decode( name, data );
+			var (name, data, playedBytes) = _encoded[index];
+			_clips[index] = AudioClip.Decode( name, data, playedBytes );
 
 			// Whether it decoded or not, the compressed bytes have had their one chance.
 			_encoded[index] = default;

@@ -128,7 +128,7 @@ public static class DebugConsole
 	/// <summary>
 	/// The voices the mixer holds, in the order they were started: name, bus, placed or flat, and whether each
 	/// loops, is held, or has been told to stop. A placed voice with a range reads its place, the range, how far
-	/// the listener is from it and what that distance last made of it.
+	/// the listener is from it and what that distance last made of it. Last, its clip's frames (Q659: the bank's played length).
 	/// </summary>
 	private static string Voices()
 	{
@@ -136,7 +136,7 @@ public static class DebugConsole
 		{
 			return $"voices {Audio.Voices.Count}: " + string.Join( ", ", Audio.Voices.Select( voice =>
 				$"{voice.Name} {voice.Bus} {(voice.IsPlaced ? "placed" : "flat")}" + Ranged( voice ) +
-				(voice.Loop ? " looped" : "") + (voice.IsHeld ? " held" : "") + (voice.Playing ? "" : " stopped") ) );
+				(voice.Loop ? " looped" : "") + (voice.IsHeld ? " held" : "") + (voice.Playing ? "" : " stopped") + $" frames {voice.Frames}" ) );
 		}
 	}
 

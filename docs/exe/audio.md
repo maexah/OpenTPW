@@ -1520,6 +1520,15 @@ clamped as the original's is; the mix is summed in float and clamped once more i
 336 peak past full scale in NLayer's float decode, the five at 44,100 Hz included, and the speech sample `sp_203` (index 202, float peak 1.200) is 1.20 times
 louder at its peak in the mix of the build before (peak 0.15602) than after (0.13000) at the same bus and master, its rms over the line the same (0.01867).
 
+**A voice ends at the bank's played length, not at the stream's end.** The read clamps each request to
+`min( request, [voice+0x30] - [voice+0x14] )` before it calls slot `+0x5c` (`0x006c8429`..`0x006c8457`; FileFormats
+`sounds.md` lines 81-84), so the decoder's last 14.4 to 82.8 ms (an encoder's delay and its last frame's padding, over
+all 3,739 entries: `Mp2DurationTests`) are never heard. That `+0x30` holds the entry's `+0x20`, the `DecodedSize` in
+bytes of 16-bit PCM at the stream's rate and channels, is FileFormats' reading, not re-traced here (no Ghidra in the
+Q659 session). OpenTPW cuts each clip to `DecodedSize / (2 x channels)` frames of its stream as it decodes it, before a
+44,100 Hz clip is brought to 22,050 (`AudioClip.Decode`, Q659): every one of the 3,659 clips NLayer decodes is cut, and
+335 of the 336 that peak past full scale still do within what is kept (`AudioClipTests`).
+
 ## The fade, the SoundInfo settings and the reverb
 
 (Fork watch 2026-10-18, `verify-other-a.md` H1/H2/M3 and `verify-audio-fx.md` F1/F2, both read from the disassembly of `testme.exe`.)
