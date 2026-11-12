@@ -12145,6 +12145,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q655. A sold Loudspeaker's chain carried by a save made without sound.** From the run 9 review (Q612 M4). With no sound
+  device `PutBackFileVoices` puts nothing back, so `ParkAudio.FileVoicesLetGo` is empty and `ParkFileWriter` carries every
+  voice of the loaded file; a Loudspeaker sold on such a machine is saved with its 177 chain, and that file loaded where
+  there is sound puts the chain back under a handle no record names (the thing is gone): `FileOwner` for ever, beasts at an
+  empty spot. The original's save with its sound off writes no voice list (FileFormats `saves.md`: records are written when
+  both dwords are set). When the park ran with no sound device, leave out every held chain whose handle no surviving script
+  record names (or write the list empty, as the original's soundless save does), and say it at `Level`'s save. Confirm:
+  buy a Loudspeaker, sell it, save without a device (`SDL_AUDIODRIVER=dummy` is not that; use a test with `Audio.Ready`
+  false), load the save with sound, and `PARK_FILE_SOUND_VOICE_*` / the log show no chain for the sold speaker; the bug
+  put back fails a test in `ParkVoicesTests`.
 
 ## B. Docs and comments
 

@@ -244,6 +244,14 @@ public sealed class ParkVoices
 		return written;
 	}
 
+	/// <summary>The handles of the held chains (<see cref="HeldChainType"/>) the list holds that <paramref name="named"/> does not.</summary>
+	public IReadOnlySet<int> HeldChainsNotIn( IReadOnlySet<int> named )
+	{
+		ArgumentNullException.ThrowIfNull( named );
+
+		return Saved.Where( voice => voice.Type == HeldChainType && !named.Contains( voice.Handle ) ).Select( voice => voice.Handle ).ToHashSet();
+	}
+
 	/// <summary>The file name of the slot <paramref name="record"/> names, or null for none.</summary>
 	public string? CategoryOf( Record record )
 		=> record.Category > 0 && record.Category < Categories.Count ? Categories[record.Category] : null;

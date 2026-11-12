@@ -33,6 +33,13 @@ public sealed partial class ParkAudio
 		=> _fileVoices.Where( entry => !_scriptVoices.Contains( entry.Value ) ).Select( entry => entry.Key ).ToHashSet();
 
 	/// <summary>
+	/// Whether the park file's voices were skipped for want of a sound device (<see cref="PutBackFileVoices"/>): none was put
+	/// back, so none can be let go, and a save leaves out each held chain a script named at the load and none names now instead
+	/// (<see cref="ParkFileWriter.Running.VoicesNotPutBack"/>).
+	/// </summary>
+	internal bool FileVoicesNotPutBack { get; private set; }
+
+	/// <summary>
 	/// Whether the park holds a script voice it started itself, none put back from the file: what the original's save
 	/// writes from its live voices (<c>0x0051c350</c>) and this one's does not (<see cref="Level"/>'s save counts it).
 	/// </summary>
@@ -54,7 +61,10 @@ public sealed partial class ParkAudio
 		}
 
 		if ( !Audio.Ready )
+		{
+			FileVoicesNotPutBack = true;
 			return put;
+		}
 
 		foreach ( var saved in voices.Saved )
 		{

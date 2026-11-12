@@ -8,7 +8,8 @@ console's stdin, then the run waits SECS seconds; `#` starts a comment. The run 
 
 The game never runs on <game> itself: it runs on <outdir>/game, links to <game>'s entries with a COPY of its save/ (empty
 where it has none), and XDG_DATA_HOME is <outdir>/xdg, so nothing of the player's is written (AGENTS.md rule 12); <game>'s
-save/ is checksummed either side and a difference is printed. Sets SDL_AUDIODRIVER=dummy, OPENTPW_DEBUG_CONSOLE=1,
+save/ is checksummed either side and a difference is printed. Sets SDL_AUDIODRIVER=dummy (or CONSOLERUN_AUDIODRIVER's
+value: a driver SDL has not, such as `none`, runs the game with no sound device, Audio.Ready false), OPENTPW_DEBUG_CONSOLE=1,
 OPENTPW_NO_MESSAGE_BOX=1 and OPENTPW_LOG_DIR=<outdir>. Everything the game prints, each command after `>>> `, is in
 <outdir>/stdout.txt. End the script with `8 quit`; whatever is still running 20 s after the last line (the game, Xvfb,
 xvfb-run) is sent SIGTERM as one process group, and SIGKILL 5 s later. No memory cap: on a desk use gamedrive.py's."""
@@ -42,7 +43,7 @@ else:
 xdg = os.path.join(out, "xdg"); os.makedirs(xdg, exist_ok=True)
 before = save_sum(game)
 
-env = dict(os.environ, OPENTPW_DEBUG_CONSOLE="1", SDL_AUDIODRIVER="dummy", OPENTPW_NO_MESSAGE_BOX="1", OPENTPW_LOG_DIR=out,
+env = dict(os.environ, OPENTPW_DEBUG_CONSOLE="1", SDL_AUDIODRIVER=os.environ.get("CONSOLERUN_AUDIODRIVER", "dummy"), OPENTPW_NO_MESSAGE_BOX="1", OPENTPW_LOG_DIR=out,
            OPENTPW_GAME_PATH=private, XDG_DATA_HOME=xdg)
 p = subprocess.Popen(["xvfb-run", "-a", "-s", "-screen 0 1280x1024x24", "dotnet", os.path.join(binp, "OpenTPW.dll"), "--game", private],
                      stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env,

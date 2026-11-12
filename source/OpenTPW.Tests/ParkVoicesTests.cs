@@ -103,6 +103,63 @@ public class ParkVoicesTests
 		Assert.IsFalse( saved.Voices.Saved.Any( voice => voice.Handle == gates.Handle ) );
 	}
 
+	/// <summary>
+	/// <b>A park that ran with no sound device saves without each held chain a script named at the load and none names
+	/// now</b> (Q655): nothing was put back, so nothing is let go, and the chain of a Loudspeaker sold since the load would
+	/// otherwise come back at a load with sound under a handle nothing names (<see cref="ParkFileWriter.WithoutUnnamedChains"/>).
+	/// The shipped park's gates' chain, 177, is named by no record (their <c>EVENT</c> keeps none), so it stays, as a park
+	/// with sound keeps it. Made to be held by the Fountain's script as a Loudspeaker's <c>ADDOBJ 4 -1 177 10</c> holds its
+	/// own, it stays while the script stands and goes once the script is taken out as a sale takes it; the other nine stay.
+	/// </summary>
+	[TestMethod]
+	public void ASaveWithNoSoundDeviceLeavesOutTheHeldChainsNoScriptNamesAnyMore()
+	{
+		var data = GameData.Required();
+
+		using var stream = new MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
+		var reader = new SaveReader( stream );
+		var body = reader.ReadFile();
+		var shipped = new ParkWorld( body, reader.Preamble );
+		var gates = shipped.Voices.Saved.Single( voice => voice.Type == ParkVoices.HeldChainType );
+		var fountain = shipped.ScriptStates.ByHandle.Values.Single( script => (script.Effects ?? []).Any( effect => effect.Handle == 0x01320063 ) );
+
+		Assert.AreEqual( 0x012e0055, gates.Handle );
+		Assert.IsFalse( shipped.ScriptStates.SoundHandles.Contains( gates.Handle ), "the gates' EVENT keeps no record" );
+		Assert.IsTrue( shipped.ScriptStates.SoundHandles.Contains( 0x01320063 ), "the Fountain's 107" );
+		Assert.IsFalse( shipped.ScriptStates.SoundHandles.Contains( 0x01fb0060 ), "the crowd's voice is no script's" );
+
+		ParkVoices Saved( ParkWorld loaded, bool noDevice ) => new ParkWorld( ParkFileWriter.Body( loaded, new ParkFileWriter.Running(
+			loaded.GameTick, false, 13, 0, shipped.Camera.Saved!.Value, VoicesNotPutBack: noDevice ) ), reader.Preamble ).Voices;
+
+		// Never named: the gates' chain stays.
+		Assert.AreEqual( 10, Saved( shipped, noDevice: true ).Saved.Count );
+
+		// Named by a standing script's record: it stays.
+		var heldBody = shipped.ScriptStates.Splice( body, [], [], new Dictionary<int, SavedEffect[]>
+		{
+			[fountain.Handle] = [new SavedEffect( 4, gates.Handle, -1, -1, 10 ), .. fountain.Effects!]
+		} );
+		var held = new ParkWorld( heldBody, reader.Preamble );
+
+		Assert.IsTrue( held.ScriptStates.SoundHandles.Contains( gates.Handle ) );
+		Assert.AreEqual( 10, Saved( held, noDevice: true ).Saved.Count );
+
+		// Its script gone, as a sale takes it: the chain goes, and only it.
+		var soldBody = held.ScriptStates.Splice( heldBody, [], [fountain.Handle] );
+
+		Assert.AreEqual( 10, new ParkVoices( soldBody ).Saved.Count, "the splice leaves the voice list alone" );
+
+		var without = new ParkVoices( ParkFileWriter.WithoutUnnamedChains( held.ScriptStates.SoundHandles, soldBody ) );
+
+		Assert.IsNull( without.Problem );
+		Assert.AreEqual( (9, 9), (without.Count, without.Saved.Count) );
+		CollectionAssert.AreEqual( shipped.Voices.Saved.Where( voice => voice != gates ).Select( voice => voice.Handle ).ToArray(),
+			without.Saved.Select( voice => voice.Handle ).ToArray() );
+
+		// A park that ran with sound leaves out only what it let go.
+		Assert.AreEqual( 10, Saved( held, noDevice: false ).Saved.Count );
+	}
+
 	/// <summary>A list of two held chains reads whole; the shape the three refusals below are made from.</summary>
 	[TestMethod]
 	public void AListOfTwoReadsWhole()

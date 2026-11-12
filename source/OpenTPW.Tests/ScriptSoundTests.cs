@@ -2006,6 +2006,40 @@ public class ScriptSoundTests
 	}
 
 	/// <summary>
+	/// <b>A park with no sound device puts back none of the file's voices and says so</b>, so its save leaves out the held
+	/// chains no script names any more rather than the ones let go (Q655, <see cref="ParkFileWriter.WithoutUnnamedChains"/>);
+	/// a park with one puts the shipped gates' chain back and does not.
+	/// </summary>
+	[TestMethod]
+	public void AParkWithNoSoundDevicePutsBackNoFileVoiceAndSaysSo()
+	{
+		FileSystem = GameData.Required();
+		Log ??= new();
+
+		Assert.IsFalse( Audio.Ready, "a test run has no audio device" );
+
+		var park = new ParkAudio( Theme );
+
+		try
+		{
+			Assert.IsFalse( park.FileVoicesNotPutBack, "not before a file is offered" );
+			Assert.AreEqual( 0, park.PutBackFileVoices( ShippedVoices() ).Count );
+			Assert.IsTrue( park.FileVoicesNotPutBack );
+			Assert.AreEqual( 0, park.FileVoicesLetGo.Count );
+		}
+		finally
+		{
+			park.Delete();
+		}
+
+		WithAParksAudio( ready =>
+		{
+			Assert.IsTrue( ready.PutBackFileVoices( ShippedVoices() ).ContainsKey( 0x012e0055 ) );
+			Assert.IsFalse( ready.FileVoicesNotPutBack );
+		} );
+	}
+
+	/// <summary>
 	/// <b>A held chain of the screams, or of a category no script plays in, is counted and not put back</b>: the kids'
 	/// 73 is <see cref="ParkScreams"/>' (its place 15 in <c>cat_kids</c>), and the speech is no script's.
 	/// </summary>
