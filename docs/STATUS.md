@@ -42,10 +42,19 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the maintainer's pre-commit hook: grep it by Q-number.
 
-- **Q732 (a moved ticket ride meets the money test):** in a cloud container (no Ghidra, no original, no display; the run's output was not kept), `AMovedTicketRideIsRefusedWhereTheBankIsBelowItsPrice` (needing the game) passes, and four bugs put back by hand (the pickup not marking the hand, `PlaceCarried` not telling `Build`, the test made `<=`, the exemption dropped for the carry too) each failed it. An off-screen run (`consolerun.py`, a fresh Full Simulation player with no tickets, paused) stood Jurassic Tours unbought with `buy 1170 20 60`; at a bank of -10000 `move 13 40 70` answered "costs 3000 and the park has -7000 - sound 0xaf" and left it in the hand, marked moved; at 100000 `put 40 70` built it. Not checked: the original's move of an unbought ticket ride (no original here; the rule is from `docs/exe/hud.md`'s listing read), which refusal latch the move's click honours (`0x816d50` or `0x81b604`, not read), and the red squares and cash cursor on screen (no display; the squares are checked by the test's marker list only). Filed: none.
+- **Q1332 (pieces 2 and 3 of Q217: one rule for who stands on a counting cell):** in a cloud container (no Ghidra, no
+  original, no display; the run's output was not kept), `PeepBehaviour.OnACountingCell( FixedVector )` reads the
+  position's cell for the gate's census, the staff outside, the change of mind, the needs turn and a new guest's first
+  state. Tests: `TheParkAsksThePositionsCellNotTheLink` and `APositionOffTheMapCountsNobody` (both needing the game), and
+  the change of mind's rows now place the position; three bugs put back by hand (the link read first, the off-map guard
+  dropped, every cell counting) each failed a test. An off-screen run of the stock Lost Kingdom park (`consolerun.py`)
+  read `13 of 13 guests counted (guests by cell type: 1:9 9:4 ...)` and `gate ... guests 13 staffOutside 0`, and no
+  `COUNTING_CELL_OFF_MAP` (Q1333). Not checked: the original's reading beside ours (no Ghidra, no original; the rule is
+  taken from `docs/exe/park-gate.md`). Piece 1, the staff's fence, waits for Alexah in Q217.
 
 ## Numbers (take counts fresh; these go stale within a day)
 
+- Linux, 2026-11-12, Q1332 (cloud lane c53, run as `tester` on a copy of the tree; two tests added, both needing the game (one changed); after review fixes group F): with the game, 5414 passed, 2 failed (`ACopyStartedOnAFolderAnotherProcessHoldsIsRefused`, which fails the same on origin/main in this container, and `AnExceptionBeforeTheMainLoopIsLoggedAndEndsTheRunWithExit1`, no libEGL here), 2 skipped of 5418; with no game named, 2345 passed, the same 2 failed, 3071 skipped.
 - Linux, 2026-11-12, review fixes group F (`capped.sh`; three tests added, one needing the game; after group E): with the game, 5415 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5417; with no game named, 2347 passed, 0 failed, 3070 skipped.
 - Linux, 2026-11-12, review fixes group E (`capped.sh`; four tests added, one needing the game; after group D): with the game, 5412 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5414; with no game named, 2345 passed, 0 failed, 3069 skipped.
 - Linux, 2026-11-12, review fixes group D (`capped.sh`; three tests added, one needing the game; after Q732): with the game, 5408 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5410; with no game named, 2342 passed, 0 failed, 3068 skipped.

@@ -573,10 +573,10 @@ public sealed partial class ParkPeople : Entity
 			BufferedDistance: 0, TailDistance: 0, TotalDistance: 0, StuckBits: 0 );
 
 		// The constructor's first state (FUN_004faec0, 0x004fb1d0 on). A guest made on a cell that counts as the
-		// park's (FUN_004fa990, Peep.CountsOn) is deciding from the start. One made outside it, which the bus
+		// park's (FUN_004fa990, PeepBehaviour.OnACountingCell) is deciding from the start. One made outside it, which the bus
 		// stop is, walks to the crossing's bus-stop side in state 0 and stands there in state 1 until the road is
 		// clear (PeepBehaviour.WalkInFromTheStop, below; docs/exe/park.md, "Arrivals").
-		var inThePark = Peep.CountsOn( State.Record( cellX, cellY ).Type );
+		var inThePark = _behaviour.OnACountingCell( new FixedVector( x, y ) );
 
 		var guest = new ParkWorld.GuestState(
 			State: (int)(inThePark ? PeepState.Deciding : PeepState.Walking), SavedState: ParkWorld.GuestState.Deciding,
@@ -2848,13 +2848,8 @@ public sealed partial class ParkPeople : Entity
 			operation.Open( script, thingId );
 	}
 
-	/// <summary>The position-cell test used by the door, independent of occupancy and admission state.</summary>
-	private bool InsideGateCensus( PeepNavigator navigator )
-	{
-		var (x, y) = navigator.Position.Cell;
-		return x >= 0 && y >= 0 && x < ParkWorld.MapSize && y < ParkWorld.MapSize
-			&& Peep.CountsOn( State.Record( x, y ).Type );
-	}
+	/// <summary>The gate's test of a person, <see cref="PeepBehaviour.OnACountingCell(FixedVector)"/> of their position.</summary>
+	private bool InsideGateCensus( PeepNavigator navigator ) => _behaviour.OnACountingCell( navigator.Position );
 
 	internal int GateGuestCensus => _peeps.Count( peep => InsideGateCensus( peep.Navigator ) );
 

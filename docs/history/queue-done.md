@@ -12145,6 +12145,15 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q1332. One rule for who stands on a counting cell (pieces 2 and 3 of Q217).** `PeepBehaviour.OnACountingCell`
+  read the cell list a guest is linked into first; `ParkPeople.InsideGateCensus` read the position's cell. Make them one,
+  as `FUN_004fa990` reads the thing's bytes `+5` and `+7` (docs/exe/park-gate.md, "Which people count as inside").
+  **Done 2026-11-12** (cloud lane c53): `PeepBehaviour.OnACountingCell( FixedVector )` is the one rule, the position's
+  cell; the gate's census, the staff outside, the change of mind, the needs turn and the guest constructor's first
+  state all ask it. A position off the map counts nobody and is counted (`COUNTING_CELL_OFF_MAP`, Q1333). The change
+  of mind's tests now put the guest's position on the cell as well as the link, and their not-counted row is the bus
+  stop's approach (type 30): a guest put on a ride's footprint cannot walk off it and turns back as stuck. Piece 3 had
+  nothing left to build: `ParkCatchUpOrderTests.EachSweepSeesTheScriptsToItsOwnTick` is Q150's, and passes.
 
 ## B. Docs and comments
 

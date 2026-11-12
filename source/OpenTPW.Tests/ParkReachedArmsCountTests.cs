@@ -169,6 +169,16 @@ public class ParkReachedArmsCountTests
 	}
 
 	/// <summary>
+	/// The guest on <paramref name="cell"/> as the park leaves them after a step: linked into it and in its middle.
+	/// The change of mind reads the position's cell (<c>FUN_004fa990</c>, Q1332).
+	/// </summary>
+	private static void StandOn( PeepBehaviour behaviour, Peep guest, (int X, int Y) cell )
+	{
+		behaviour.State.StandOn( guest.ThingId, cell.X, cell.Y );
+		guest.Navigator.Position = new FixedVector( (cell.X << 16) + 0x8000, (cell.Y << 16) + 0x8000 );
+	}
+
+	/// <summary>
 	/// The change of mind (Q862) turns a guest back to Deciding when all four of its tests pass
 	/// (<c>0x00500a53</c>..<c>0x00500a84</c>) and when any one fails the walk out goes on: the exit level above nought
 	/// (a negative one is not, <c>JLE</c>), the happiness byte not nought (a half is truncated to nought by
@@ -183,14 +193,14 @@ public class ParkReachedArmsCountTests
 	[DataRow( 100, 0.5f, false, 1, false, "half a point truncates to nought" )]
 	[DataRow( 100, 1f, false, 1, true, "a point of happiness" )]
 	[DataRow( 100, 50f, true, 1, false, "a shut park" )]
-	[DataRow( 100, 50f, false, 2, false, "a cell that is a ride's footprint" )]
+	[DataRow( 100, 50f, false, 30, false, "a cell of the bus stop's approach" )]
 	public void AGuestHeadingForTheExitChangesTheirMindWhereAllFourTestsPass(
 		int exitLevel, float happiness, bool shut, int cellType, bool changes, string why )
 	{
 		var (behaviour, guest, walk) = Guest( PeepState.HeadingForExit, shut );
 		var cell = CellOfType( behaviour.State, cellType );
 
-		behaviour.State.StandOn( guest.ThingId, cell.X, cell.Y );
+		StandOn( behaviour, guest, cell );
 		guest.ExitLevel = exitLevel;
 		guest.Happiness = happiness;
 
@@ -215,7 +225,7 @@ public class ParkReachedArmsCountTests
 		var (behaviour, guest, walk) = Guest( PeepState.Deciding, shut: true );
 		var cell = CellOfType( behaviour.State, 1 );
 
-		behaviour.State.StandOn( guest.ThingId, cell.X, cell.Y );
+		StandOn( behaviour, guest, cell );
 		guest.ExitLevel = 100;
 		guest.Happiness = 50;
 
@@ -229,7 +239,7 @@ public class ParkReachedArmsCountTests
 
 		// Reopened while they walk: a path cell under them again, as one of the cells on the way is.
 		behaviour.State.SetParkClosed( false );
-		behaviour.State.StandOn( guest.ThingId, cell.X, cell.Y );
+		StandOn( behaviour, guest, cell );
 		var standing = walk.Position;
 		behaviour.Step( guest, walk, playing: null, tick: 3 );
 

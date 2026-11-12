@@ -48,6 +48,11 @@ type-4 object footprints and every other type fail. A guest whose stored positio
 terrain type 0 counts even without path links; a rider is decided by that same stored
 position, not automatically counted because they are riding.
 
+**OpenTPW** (Q1332): `PeepBehaviour.OnACountingCell( FixedVector )` is this predicate, once, on the person's position
+(the cell list they are linked into is not read); the gate's census, the staff outside, the change of mind, the needs
+turn and a new guest's first state all ask it. A position off the map counts nobody there and is counted as
+`COUNTING_CELL_OFF_MAP` (Q1333), where the original's byte pack would read another row's cell.
+
 ## The later close check
 
 **The door is not the only command writer.** `FUN_00516380` increments the world's

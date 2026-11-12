@@ -718,6 +718,16 @@ filed the items that cite it.
   versions of `FUN_004fa990`: `InsideGateCensus` reads the position's cell as the original does (bytes `+5`, `+7`),
   `OnACountingCell` reads the occupancy link first; make them one. The third, `ParkCatchUpOrderTests`' row (16, 1), was
   settled by Q150, which made that test the order's own.
+  - **Piece taken (2026-11-12, lane c53):** the second (the two versions made one) and the third (settled by Q150; its
+    test runs) are Q1332, done; the first, the fence, stays here.
+  - **Needs Alexah:** does the staff's path fence stay, or does the original's no-links arm (`0x004f95c0`) alone keep
+    staff on the paths?
+
+- [ ] **Q1333. A position off the map reads another row's cell in the original (`COUNTING_CELL_OFF_MAP`).** From Q1332.
+  `FUN_004fa990` packs the thing's bytes `+5` and `+7` as they are (`0x004fa994`..`0x004fa9b6`), so a person at x 128
+  or more would read a cell of the next row; `PeepBehaviour.OnACountingCell` counts nobody there and counts the arm.
+  Dead by content in the stock Lost Kingdom park (none in a 90 s off-screen run, Q1332): measure whether anything
+  placed reaches it (the bus stop's approach is on the map) before building the wrapped read.
 
 - [ ] **Q1240. The remeasure tail's `+0x68` exit against `ReopenAfterRemeasure` (piece (5) of Q218, which needs Ghidra).**
   `docs/exe/ride-operation.md` says the remeasure tail `FUN_004de1f0` leaves at once when `+0x68` is non-zero;
@@ -1011,8 +1021,8 @@ filed the items that cite it.
   stock park paused as it loads, then guests reach the path). What is left is the original's side: read `FUN_004c81e0`'s level and the
   gauge for the same file with guests standing on a queue cell and off one (the bus stop's type 30 included), in the original under
   Proton (`music.py` of `rv4/orig/` reads the voice), and compare the counts with ours (`music` prints the guests by cell type).
-  If they agree, tick it; if not, the filter's cell read (`InsideGateCensus`, the position's cell, or `OnACountingCell`, the link's:
-  Q217) is the first suspect.
+  If they agree, tick it; if not, the filter's cell read (`PeepBehaviour.OnACountingCell`, the position's cell, one rule since
+  Q1332) is the first suspect.
 
 - [ ] **Q271. The model under a point misses the park gate's row.** From the week-end audit (stage 4; read twice
   from the listing). `FUN_00527e80` (called at `0x00452a82`) answers the gate thing the world keeps at `+0x1da732`

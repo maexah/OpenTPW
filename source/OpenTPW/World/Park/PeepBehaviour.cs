@@ -1516,14 +1516,29 @@ public sealed class PeepBehaviour
 		=> peep.ExitLevel > 0 && (byte)(int)peep.Happiness != 0 && !ParkIsClosed && OnACountingCell( peep );
 
 	/// <summary>
-	/// Whether the cell a guest stands on counts them (<see cref="Peep.CountsOn"/>): the cell the park has them
-	/// linked into, as the original reads the thing's own cell bytes, or the one under their feet before their
-	/// first turn has linked them.
+	/// Whether the cell a guest stands on counts them (<see cref="Peep.CountsOn"/>) - <see cref="OnACountingCell(FixedVector)"/>
+	/// of their position.
 	/// </summary>
-	internal bool OnACountingCell( Peep peep )
+	internal bool OnACountingCell( Peep peep ) => OnACountingCell( peep.Navigator.Position );
+
+	/// <summary>
+	/// <c>FUN_004fa990</c>, the one rule for every count of the park's people: the cell under a position, the whole part
+	/// of its x and y (the thing's bytes <c>+5</c> and <c>+7</c>, <c>0x004fa994</c>), counts when its type is one
+	/// <see cref="Peep.CountsOn"/> answers. The cell list a thing is linked into is not read (docs/exe/park-gate.md, "Which
+	/// people count as inside").
+	/// </summary>
+	/// <remarks>
+	/// <b>Deviation:</b> a position off the 128 x 128 map counts nobody. The original packs the two bytes as they are,
+	/// so a byte of 128 or more would read a cell of another row; that arm is counted as <c>COUNTING_CELL_OFF_MAP</c>.
+	/// </remarks>
+	internal bool OnACountingCell( FixedVector position )
 	{
-		var (x, y) = State.CellOf( peep.ThingId )
-			?? (peep.Navigator.Position.X >> 16, peep.Navigator.Position.Y >> 16);
+		var (x, y) = position.Cell;
+		if ( x < 0 || y < 0 || x >= ParkWorld.MapSize || y >= ParkWorld.MapSize )
+		{
+			Unimplemented.Report( "COUNTING_CELL_OFF_MAP" );
+			return false;
+		}
 
 		return Peep.CountsOn( State.Record( x, y ).Type );
 	}
