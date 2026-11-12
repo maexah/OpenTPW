@@ -239,8 +239,8 @@ public sealed class ParkPaths : ModelEntity
 			element = ParkGround.PutCellElements( elements, element, corner, field.FlagsAt( x, y ) );
 		}
 
-		// Both faces drawn, where the original culls (render-states.md, "Which draws the test covers"; Q613).
-		var material = new Material<ObjectUniformBuffer>( "content/shaders/test.shader", MaterialFlags.DisableCulling );
+		// Culled as the ground is (a path is a ground cell's texture to the terrain pass), the upper side kept.
+		var material = new Material<ObjectUniformBuffer>( "content/shaders/test.shader", ParkGround.DrawFlags );
 		material.Set( "Color", textures );
 
 		Model = new Model( vertices[..vertex], elements[..element], material );

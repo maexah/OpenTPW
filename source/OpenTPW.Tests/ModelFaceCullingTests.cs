@@ -119,10 +119,10 @@ public class ModelFaceCullingTests
 			.OrderBy( site => site.Name, System.StringComparer.Ordinal )
 			.Select( site => $"{site.Name}:{site.Count}" );
 
-		// A model's: LobbyModel. Two-sided in the table: UiMesh, ScreenParticles, WorldParticles, ParkGuestSprites (three: the
-		// people, their shadows and the litter), ParkPaths, ParkSea, ParkGround, ParkBuildMarkers, Sky. Asking for no flag, so culled as
-		// a model is: Material.UI (the Default), Water, ParkRideHoarding, ParkFlags. Weather's are culled, its quads turned
-		// to the camera.
+		// A model's: LobbyModel. Two-sided in the table: ScreenParticles, WorldParticles, ParkGuestSprites (three: the people,
+		// their shadows and the litter), WeatherSprites, Sky. Culled as a model is, asking for no DisableCulling: Material.UI (the
+		// Default), Water, ParkRideHoarding, ParkFlags, and the sheets and interface SheetAndInterfaceCullingTests checks:
+		// UiMesh, ParkPaths, ParkSea, ParkGround, ParkBuildMarkers.
 		CollectionAssert.AreEqual(
 			new[]
 			{

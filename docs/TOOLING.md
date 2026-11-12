@@ -487,6 +487,12 @@ Each was found by trial in the item named, and cost a run to find.
   `3 pause`, `2 candidates` (the ids), `2 carrystaff 1` (the hire list's pick, without the screen), `2 pointer` (`cursor Carry`),
   then `2 worldclick X Y`: a refused cell logs `Staff: cannot place <name> at (X,Y) - <why>` and keeps them in the hand
   ((59,15) type 4, (2,2) track 25, (0,0) outside the park); (47,21), a path cell, hires them.
+- **A marker square and a lifted square's walls on screen, off-screen** (Q613, `lib/consolerun.py`): `40 park jungle`,
+  `5 pause`, `3 tool path`, `3 camera 535 235 70 20`, `3 hover 53 23`, `3 step 1`, `3 strip` (`53,23,1^20 | walls 5 ...`:
+  the red lifted square over the Belly Bounce, blinking seven frames on and two off), then a `!import -window root X.png`
+  grab; `3 camera 405 305 70 20`, `3 hover 40 30`, `3 step 1` give a blue square on flat ground (`40,30,0^0`). The camera has
+  to stand on the cell: from `camera 400 230 110 30` the squares were laid and off the picture. `sea phase 12.366` before a
+  grab holds the sea's wave; its textures are placed at random each start, so a sea frame never matches another run's.
 - **The console's `walk` in a cloud container** (Q14, `lib/consolerun.py`): `40 park jungle`, `3 camcorder 481.897 166.285` (the path, so a short walk crosses no shut edge; `camcorder 500 500` stops at y 510 on the first walk), then `walk 1 0 N`. Each of the N steps is a fixed sixtieth of a second (`Time.StepDelta`), 0.667 units, whatever the frame rate (xvfb's 13 to 14 frames a second too), so N = 60 walks 40 units and `stand=` can be predicted from N before it is read back; it walks under `pause` as well, so a paused walk then a grab photographs a crossing.
 - **A held key in first person, read by the census** (Q17, `lib/consolerun.py`): after `40 park jungle` and `3 camcorder 481.897 166.285 0`, a line `3 !w=$(xdotool search --onlyvisible --name . | head -1); eval $(xdotool getwindowgeometry --shell $w); xdotool windowfocus --sync $w mousemove --window $w $((WIDTH/2)) $((HEIGHT/2)) keydown d sleep 2 keyup d` holds D for 2 s with the pointer in the middle of the window (inside the ±0.4 band, so the yaw stays 0.00), and `2 walk 0 0 0` then prints `stand=` without moving (no frames). Hold `w` for 1 s as the control: it walked 42.2 units (the key's latency over 40). Since Q1161 D turns the view (1.2 radians a second) instead of standing, and `w` walks at the eased
   `sqrt( zoom ) x 2` a second, not 40: the census still reads the stand unmoved aside, but no longer the yaw at 0.00.

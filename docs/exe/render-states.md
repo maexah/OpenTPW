@@ -96,10 +96,10 @@ Q608. `DrawList_AddMesh` (`0x00581cd0`) has one caller, `ModelRenderable_DrawNod
 | Draw | The original | OpenTPW |
 |---|---|---|
 | Every model mesh: the park's and the lobby's models, the advisor (`ui.md`), the object window's preview | Culled, `Face_KeptByWinding` | Culled (`LobbyModel.DrawFlags`) |
-| The three dynamic-faces meshes: the build markers (`BlueprintMesh`), the sea (`WaterMesh`), the gates' flags (`FlagsMesh`), `park-engine.md` | Models: `FUN_0053d790` builds each and `0x00425440` shows it with `Model_ShowInRenderList`. Culled | Markers (`ParkBuildMarkers`) and sea (`ParkSea`) both-sided; flags (`ParkFlags`) culled |
-| The ground, and the paths on it (a path is a ground cell's texture, `park-engine.md`, "A path laid over") | The terrain pass `FUN_0056f670` carries its own copy of the test over the same words `0x008c63b0..0x008c63d0`: a cell's two triangles at `0x00570084` and `0x0057020b` on the clipped path (each kept one goes to the clip, `0x00562a70`), and at `0x005708de` and `0x005709e4` on the path for a cell wholly inside the screen (the four corners' outcodes OR to nought, `0x0056faae`), which writes four corners, three or none itself. `FUN_00570d90`, the second layer (off in the park, `textures.md`), carries the same test (`0x0057178e`, `0x0057190b`, `0x00571d76`, `0x00571e72`). Culled | `ParkGround` and `ParkPaths` both-sided |
-| The UI's meshes (below) | Culled | `UiMesh` both-sided |
-| People, their shadows, particles, weather, everything through `SpriteBatch_AddQuad` (`0x00565f90`), `0x00566220` and `Batch_AddPolygon` (`0x00565bb0`) | No test: `Batch_AddPolygon` makes outcodes (`0x00561bc0`), clips (`0x00562a70`) and writes a fan; its flag `2` only reverses the index order. Two-sided | People (`ParkGuestSprites`) and particles (`WorldParticles`, `ScreenParticles`) both-sided. Weather (`WeatherSprites`) culled, its quads turned to the camera, so it drops none |
+| The three dynamic-faces meshes: the build markers (`BlueprintMesh`), the sea (`WaterMesh`), the gates' flags (`FlagsMesh`), `park-engine.md` | Models: `FUN_0053d790` builds each and `0x00425440` shows it with `Model_ShowInRenderList`. Culled | Culled: the sea (`ParkSea`) and the flags (`ParkFlags`), wound as `FUN_0053e530` winds them, keep the upper side; a marker square is wound to keep its upper side (`ParkBuildMarkers.Elements`); a marker's wall is laid both ways round and so drawn both-sided, its kept side not read (Q1621) |
+| The ground, and the paths on it (a path is a ground cell's texture, `park-engine.md`, "A path laid over") | The terrain pass `FUN_0056f670` carries its own copy of the test over the same words `0x008c63b0..0x008c63d0`: a cell's two triangles at `0x00570084` and `0x0057020b` on the clipped path (each kept one goes to the clip, `0x00562a70`), and at `0x005708de` and `0x005709e4` on the path for a cell wholly inside the screen (the four corners' outcodes OR to nought, `0x0056faae`), which writes four corners, three or none itself. `FUN_00570d90`, the second layer (off in the park, `textures.md`), carries the same test (`0x0057178e`, `0x0057190b`, `0x00571d76`, `0x00571e72`). Culled | Culled (`ParkGround`, `ParkPaths`): each cell's triangles turn clockwise seen from above (`ParkGround.PutCellElements`), so the upper side is kept |
+| The UI's meshes (below) | Culled | Culled (`UiMesh`): its matrix (`UiMesh.ToScreen`) scales x and y by positive amounts, so a face clockwise in the file's (x, y), y up, is kept, and the same 422 go |
+| People, their shadows, particles, weather, everything through `SpriteBatch_AddQuad` (`0x00565f90`), `0x00566220` and `Batch_AddPolygon` (`0x00565bb0`) | No test: `Batch_AddPolygon` makes outcodes (`0x00561bc0`), clips (`0x00562a70`) and writes a fan; its flag `2` only reverses the index order. Two-sided | People (`ParkGuestSprites`), particles (`WorldParticles`, `ScreenParticles`) and weather (`WeatherSprites`) both-sided |
 | The sky (`FUN_005863c0`, `0x00576c78`, through `0x00565960`: outcodes and `0x00562c90`'s clip, no test) | Two-sided | Two-sided (`Sky`) |
 
 `0x00581a00` also carries an inline copy (`0x00581b5b..0x00581c3e`, a plain 4x4 transform with no divide), reached from the
@@ -107,7 +107,10 @@ node walk `0x0057b610` by `FUN_0057b8a0`, which `ModelRenderable_Draw` calls at 
 renderable's `+0x13c` texture, most likely the model shadow; not named): it culls too.
 
 **The ground, paths, sea and markers lose nothing seen from above.** Each is a sheet facing up, and a ray from an eye
-above such a sheet meets its upper side first, so the test drops only faces a nearer one covers. Not photographed.
+above such a sheet meets its upper side first, so the test drops only faces a nearer one covers. In OpenTPW, culled with the
+upper side wound clockwise, off-screen frames of the stock park (the harbour's sea, the paths, a blue square on (40,30) and
+the red lifted square and walls over (53,23)) match the both-sided build's but for what moves (Q613); the ground culled with
+its cells wound the other way drew nothing. Not photographed beside the original (Q1620).
 
 **The UI's meshes** are renderables: `UiControl_PlaceMesh` (`0x00476f10`) hands `Renderable_SetMatrix` (mode 1) the fit
 `UiControl_FitMatrix` (`0x00476c50`) makes, an affine matrix whose x and y scales are both positive (the part's bounds
@@ -117,8 +120,8 @@ the file's (x, y), y up**. `lib/uiwinding.py` counts them: of `ui.wad`'s 278 mod
 the other way, in 13 meshes of three models: `s_X1.md2`'s ten (24 to 50 faces a mesh), `s_key.MD2`'s two (14 each) and
 `warnlite.MD2`'s root mesh `warnlite` (both its faces; which control shows that part was not traced). `ui.wad`'s one twinned
 mesh, `worldlob`, pairs faces turned the same way, so no pair is chosen between there. The key and the "x N" are closed
-solids, so the kept faces cover the whole outline; ours draws every face in file order with no depth test, and a
-turned-away face is painted last over 15.0% of the key and 11.5% of the "x 1" (`q608/coverage.py`). On Lost Kingdom's
+solids, so the kept faces cover the whole outline; drawn both-sided in file order with no depth test, as OpenTPW drew them
+before Q613, a turned-away face is painted last over 15.0% of the key and 11.5% of the "x 1" (`q608/coverage.py`). On Lost Kingdom's
 island panel ours doubles the stem of the "1" with its back wall's edge, and the original does not (`q608/one-side-by-side.png`,
 from `q608/run1/panel-1.png` and `q608/orig/run-a/a-08.png`).
 

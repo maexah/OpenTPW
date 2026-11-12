@@ -350,3 +350,7 @@ belongs to or at the end. Grep it by area or Q-number; never read it whole.
   the file holds them (`ParkWorld.TryNameOf`), "LOST Kingdom" in the stock park, in `UI_SetTitle`'s yellow with its edge in
   the widened rect. The gadget's date is UITEXT 448 since Q527 (`ParkGadget.DateOf`, the american row). Seen off-screen in
   the console's `control` and `unimplemented` replies; not photographed (Q1557).
+- **The sheets and the interface are culled as the original culls them** (Q613): the ground and the paths on it, the sea,
+  the build markers' squares and every UI mesh drop the faces turned away, keeping the side the original's face test keeps
+  (a sheet's upper side; a UI face clockwise in the file's (x, y), y up: 422 of `ui.wad`'s 6,310 faces go, in `s_X1`,
+  `s_key` and `warnlite`), and the weather is drawn both-sided as the original's. A marker's wall is drawn both-sided (Q1621).

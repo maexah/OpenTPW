@@ -421,9 +421,9 @@ public sealed class ParkGround : ModelEntity
 			}
 		}
 
-		// The shader the models use, both faces drawn, where the original culls: its terrain renderer (0x0056f670) carries
-		// its own copy of the face test (render-states.md, "Which draws the test covers"; Q613 builds it).
-		var material = new Material<ObjectUniformBuffer>( "content/shaders/test.shader", MaterialFlags.DisableCulling );
+		// The shader the models use, culled as the terrain renderer (0x0056f670) culls with its own copy of the face test
+		// (render-states.md, "Which draws the test covers"): the upper side kept (PutCellElements).
+		var material = new Material<ObjectUniformBuffer>( "content/shaders/test.shader", DrawFlags );
 		material.Set( "Color", textures );
 
 		// Sliced to what was actually filled. The arrays are sized for every cell because the count is
@@ -476,9 +476,14 @@ public sealed class ParkGround : ModelEntity
 	/// </summary>
 	internal static bool CutByFlag { get; set; } = true;
 
+	/// <summary>The ground's material: culled, as a model's is (the terrain pass's face test, <c>0x00570084</c>).</summary>
+	internal const MaterialFlags DrawFlags = MaterialFlags.None;
+
 	/// <summary>
 	/// Writes a cell's two triangles over its four vertices at <paramref name="corner"/> (x, y), (x + 1, y), (x + 1, y + 1),
-	/// (x, y + 1), cut on the diagonal its flags name (<see cref="SplitsNearToFar"/>), both wound the same way. Answers the next element.
+	/// (x, y + 1), cut on the diagonal its flags name (<see cref="SplitsNearToFar"/>), both turning clockwise seen from above, so
+	/// the culled pipeline keeps the upper side, the side the terrain pass's face test keeps (<c>render-states.md</c>, "Which
+	/// draws the test covers"). Answers the next element.
 	/// </summary>
 	internal static int PutCellElements( uint[] elements, int element, int corner, ushort flags )
 	{
@@ -487,22 +492,22 @@ public sealed class ParkGround : ModelEntity
 		if ( SplitsNearToFar( flags ) )
 		{
 			elements[element++] = c;
-			elements[element++] = c + 1;
 			elements[element++] = c + 2;
+			elements[element++] = c + 1;
 
 			elements[element++] = c;
-			elements[element++] = c + 2;
 			elements[element++] = c + 3;
+			elements[element++] = c + 2;
 		}
 		else
 		{
 			elements[element++] = c;
-			elements[element++] = c + 1;
 			elements[element++] = c + 3;
+			elements[element++] = c + 1;
 
 			elements[element++] = c + 1;
-			elements[element++] = c + 2;
 			elements[element++] = c + 3;
+			elements[element++] = c + 2;
 		}
 
 		return element;

@@ -136,8 +136,9 @@ public class ParkBuildMarkersTests
 		Assert.AreEqual( 4, ParkBuildMarkers.VertexCount( 1, 0 ) );
 		Assert.AreEqual( 4, ParkBuildMarkers.VertexCount( 0, 1 ) );
 		Assert.AreEqual( 28, ParkBuildMarkers.VertexCount( 3, 4 ) );
-		Assert.AreEqual( 6, ParkBuildMarkers.ElementCount( 0, 1 ), "six indices to a wall too" );
-		Assert.AreEqual( 42, ParkBuildMarkers.ElementCount( 3, 4 ) );
+		Assert.AreEqual( 6, ParkBuildMarkers.ElementCount( 1, 0 ), "six indices to a square" );
+		Assert.AreEqual( 12, ParkBuildMarkers.ElementCount( 0, 1 ), "twelve to a wall, its two sides" );
+		Assert.AreEqual( 66, ParkBuildMarkers.ElementCount( 3, 4 ) );
 	}
 
 	/// <summary>
@@ -470,7 +471,8 @@ public class ParkBuildMarkersTests
 	/// <summary>
 	/// <b>The mesh's CPU half lays what Build sizes it from</b>: a blue square on the hill at (73,66) records over its lift of
 	/// 40 (Recorded), and the vertex array holds four corners to it, to every wall under it and to the stranded cell added after
-	/// them (VertexCount, counted after the stranded squares), the index list six to each (ElementCount) (Q892).
+	/// them (VertexCount, counted after the stranded squares), the index list six to each square and twelve to each wall
+	/// (ElementCount) (Q892, Q613).
 	/// </summary>
 	/// <remarks><b>Mutation:</b> at the call sites in <c>Lay</c>: <c>_strip = Recorded( lifts )</c> with every lift 0 reads
 	/// <c>^0</c>; <c>VertexCount( _strip.Count, 0 )</c> or the count taken before the stranded AddRange, or the elements
@@ -513,7 +515,7 @@ public class ParkBuildMarkersTests
 		Assert.IsTrue( walls > 0, "the hill has walls under its square" );
 		StringAssert.Contains( markers.Census(), "73,66,0^40", "recorded over its own lift" );
 		Assert.AreEqual( 4 * (2 + walls), vertices.Length, "the square, the stranded cell and each wall" );
-		Assert.AreEqual( 6 * (2 + walls), elements.Length, "six indices to each" );
+		Assert.AreEqual( (6 * 2) + (12 * walls), elements.Length, "six indices to each square, twelve to each wall" );
 		Assert.AreEqual( (uint)vertices.Length - 1, elements.Max(), "the indices reach the last corner" );
 	}
 }
