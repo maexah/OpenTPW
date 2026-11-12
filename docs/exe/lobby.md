@@ -836,8 +836,10 @@ system sent (`Input.MouseInfo.LeftWentDown`) that no window takes goes to `Windo
 `FrontEnd.ViewPressed`: Enter this park while someone is playing. `UiControl.Outline` is the polygon region, with
 `0x0066c5a4`'s test, and the island panel's root has the L. `IslandPanel.EnterPark` makes the original's five tests in its
 order, `LobbyIsland.GlobalLoaded` standing for the record, and counts the keys held. Three differences are said at their
-sites: Escape over the player slots opens the game menu here (`docs/QUEUE.md` Q64), Ctrl+H acts on its press (Q65),
-and a disabled button still takes the pointer (Q66). F8 is not built (Q65).
+sites: Escape over the player slots opens the game menu here (`docs/QUEUE.md` Q64) and Ctrl+H acts on its press (Q65).
+A disabled button is passed over with all it holds, as `0x0065db25` passes a control flagged `0x2` (`UiButton.SkipsPointer`,
+Q66): an Instant Action player's grey arrows are the panel's, so no hover and no help row, and a press there ends at
+the L. F8 is not built (Q65).
 
 ### Island sound is one island at a time, and the previous one is stopped
 

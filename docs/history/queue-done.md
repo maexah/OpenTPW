@@ -12315,6 +12315,21 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   open. The engine finds a bounce rider's node by id in `0x800` ("Where a rider is drawn"); `ModelFile.FindNode` is
   that lookup and `RideNodes` the stored positions at rest (Q175b), not the animated pose a rider needs. A walk's riders
   are placed by `FUN_005580a0` from the posed nodes since Q585 (`ride-operation.md`, "Where a walk's rider is drawn").
+- [x] **Q66. A disabled button takes the pointer.** Found by Q42's review. The original's hit test (`0x0065db25`) skips a
+  control flagged `0x2` - a disabled button, `0x0065da8d` - with everything under it, so the pointer passes over it to
+  whatever is behind: no hover, no help row, no glint. Here `UiButton.TakesMouse` is true whatever `Enabled` is, said at
+  the site; the island panel's greyed arrows for an Instant Action player are the case in the lobby, and a press there
+  still ends at the panel's outline, so nothing but the hover differs. Before changing the hit test, check every park
+  window whose root takes no pointer: a press on a greyed button there would fall through to the world. Confirm: an
+  Instant Action player's pointer on a grey arrow, no help row; a screenshot.
+  **Done 2026-11-12 (cloud lane c103):** `UiControl.SkipsPointer`, true for a `UiButton` not `Enabled`, and the hit
+  test returns nothing for it or anything under it. Every greyed button checked first lies over something that takes
+  the press: the island panel's L, the gadget's arm (`b_retract`), and the root rectangles of the staff window, the
+  staff costs and entry price screens and the ride window (park screens: the press is the interface's), and the
+  options screen is modal. Off-screen at 1280 x 720 an Instant Action player's pointer on each grey arrow read
+  `over control 0x1e0e7` (the panel; origin/main's build read `0x1e0f0` and `0x1e0f1`), a Full Simulation player's
+  `0x1e0f0` and `0x1e0f1`, and a click there entered nothing. Tests: `DisabledButtonHitTests`,
+  `LobbyKeysOnReleaseTests.AnInstantActionPlayersGreyArrowsAreThePanels`. The photograph is Q1548.
 
 ## E. Large
 

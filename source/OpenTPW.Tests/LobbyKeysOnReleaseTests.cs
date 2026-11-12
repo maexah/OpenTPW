@@ -321,6 +321,36 @@ public class LobbyKeysOnReleaseTests
 	}
 
 	/// <summary>
+	/// <b>An Instant Action player's grey arrows are passed over</b> (Q66): the pointer on one is the panel's, so no hover,
+	/// no help row, and a press there ends at the panel's outline. A keyed player's arrow answers itself.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> the hit test reading no <c>SkipsPointer</c>, or <c>UiButton.SkipsPointer</c> false, answers with the
+	/// arrow for the Instant Action player; the panel without its outline lets the press through to the view.
+	/// </remarks>
+	[TestMethod]
+	public void AnInstantActionPlayersGreyArrowsAreThePanels()
+	{
+		var (_, stack, panel) = APlayersLobby( keys: 1 );
+		var hitTest = typeof( UI.WindowStack ).GetMethod( "HitTest", BindingFlags.Instance | BindingFlags.NonPublic )!;
+		UI.UiControl? HitAt( float x, float y ) => (UI.UiControl?)hitTest.Invoke( stack, [x, y] );
+
+		// The middles of b_lobleft (97,1299)..(250,1453) and b_lobright (260,1299)..(413,1453).
+		Assert.AreEqual( 0x1e0f0, HitAt( 173, 1376 )?.Id, "a keyed player's left arrow" );
+		Assert.AreEqual( 0x1e0f1, HitAt( 336, 1376 )?.Id, "and right arrow" );
+
+		SetCurrentPlayer( new Player( 0, "Test", new PlayerFile { InstantAction = true } ) );
+		panel.ShowKeys();
+
+		Assert.AreEqual( 0x1e0e7, HitAt( 173, 1376 )?.Id, "Instant Action: the grey left arrow is the panel's" );
+		Assert.AreEqual( 0x1e0e7, HitAt( 336, 1376 )?.Id, "and the right" );
+		Assert.AreEqual( -1, HitAt( 173, 1376 )!.HelpText, "which has no help row" );
+
+		Assert.IsTrue( stack.ClickAt( 173, 1376 ), "a press there is the panel's" );
+		StringAssert.StartsWith( LobbyCameraMode.LeaveDescription(), "leave=No ", "and goes no further" );
+	}
+
+	/// <summary>
 	/// <b>The panel's outline is the original's crossings test over the stream's 23 points</b>: in the L's two arms and
 	/// its bottom, out in the corner it leaves bare and outside its rectangle.
 	/// </summary>
