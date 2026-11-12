@@ -575,6 +575,7 @@ public class ParkScreamChainTests
 					while ( GameClock.Ticks < beat )
 					{
 						Frame( held: false, GameClock.TickSeconds );
+						ParkLoop.Run( null, null, null, audio: park );
 						park.Update();
 					}
 				}
@@ -864,6 +865,7 @@ public class ParkScreamChainTests
 					while ( GameClock.Ticks < beat )
 					{
 						Frame( held: false, GameClock.TickSeconds );
+						ParkLoop.Run( null, null, null, audio: park );
 						park.Update();
 					}
 				}
@@ -2094,6 +2096,86 @@ public class ParkScreamChainTests
 	}
 
 	/// <summary>
+	/// <b>The music's level and the crowd's voice count the guests the 32nd tick's sweep left</b>: the park loop's
+	/// every-32nd block runs in that tick's own step, after its sweep (<c>0x0054f82d</c>..<c>0x0054f8c8</c>;
+	/// <c>docs/exe/park-engine.md</c>, "The order within a step"). One frame of ticks 25 to 40, a hitch, sweeps on 32 and
+	/// 40; the sweep of 32's tail admits five guests onto the path at the pointer's cell and the sweep of 40's twenty: the
+	/// level and the crowd's count hold the five and not the twenty.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the block asked once after the frame's ticks (it counts the twenty); asked
+	/// before the step's sweep (it counts the guests before the sweep of 32).</remarks>
+	[TestMethod]
+	public void AFramesThirtySecondTickCountsTheGuestsItsOwnSweepLeft()
+	{
+		var data = GameData.Required();
+		FileSystem = data;
+
+		// The clock from nought, so the frame is ticks 25 to 40 whatever ran before.
+		using var clock = new SimulationClockScope();
+
+		using var stream = new System.IO.MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
+		var world = new ParkWorld( new SaveReader( stream ).ReadFile() );
+		var pointer = typeof( ParkPicking ).GetProperty( nameof( ParkPicking.Cell ) )!;
+		var cellBefore = ParkPicking.Cell;
+		var people = new ParkPeople( world, new ParkBalance( "jungle", easyMode: true ), random: new Random( 1 ),
+			behaviourRandom: new Random( 1 ), rideRandom: new Random( 1 ), staffRandom: new Random( 1 ) );
+
+		try
+		{
+			InAPark( "jungle", park =>
+			{
+				// The guests' cells and the stop's made path, so every guest counts (FUN_004fa990).
+				var state = people.State;
+
+				foreach ( var (x, y) in people.Peeps.Select( peep => peep.Navigator.Position.Cell ).Append( (42, 5) ).Distinct().ToList() )
+					state.SetRecord( x, y, state.Record( x, y ) with { Type = 1 } );
+
+				var stop = (5 * 128) + 42 + 1;
+				pointer.SetValue( null, stop );
+
+				while ( GameClock.Ticks < 24 )
+					Frame( held: false, GameClock.TickSeconds );
+
+				Assert.AreEqual( 24, GameClock.Ticks );
+				Frame( held: false, 16 * GameClock.TickSeconds );
+				Assert.AreEqual( (40, 16), (GameClock.Ticks, GameClock.TicksDue), "one frame of ticks 25 to 40" );
+
+				var tails = 0;
+				var (census, near) = (-1, -1);
+
+				ParkLoop.Run( null, null, people, calendar: swept =>
+				{
+					// Five admitted in the sweep of 32's own tail, which the block follows; twenty in the sweep of 40's.
+					var admitted = ++tails == 1 ? 5 : 20;
+
+					for ( var i = 0; i < admitted; ++i )
+						Assert.AreNotEqual( 0, swept.Admit( 42, 5 ), "the stop takes another" );
+
+					if ( tails == 1 )
+						(census, near) = (swept.GateGuestCensus, swept.GuestsNear( stop, ParkAudio.CrowdVoiceReach ));
+				}, audio: park );
+
+				var (censusAfter, nearAfter) = (people.GateGuestCensus, people.GuestsNear( stop, ParkAudio.CrowdVoiceReach ));
+				Console.WriteLine( $"after the sweep of 32: {census} counted, {near} near the stop; after the frame: {censusAfter}, {nearAfter};"
+					+ $" level {park.LevelNow}, sets {park.LevelSets}, crowd voice {park.CrowdVoiceGuests} guests at level {park.CrowdVoiceLevelNow}" );
+
+				Assert.AreEqual( 2, tails, "sweeps on 32 and 40" );
+				Assert.IsTrue( census >= 10 && near >= 5 && nearAfter >= near + 20, $"the guests counted: {census}, then {near} and {nearAfter} near the stop" );
+				Assert.AreNotEqual( ParkAudio.MusicLevel( census, 0 ), ParkAudio.MusicLevel( censusAfter, 0 ), "the twenty move the level" );
+				Assert.AreEqual( (ParkAudio.MusicLevel( census, 0 ), 1), (park.LevelNow, park.LevelSets), "the level set once, from the sweep of 32's count" );
+				Assert.AreEqual( (near, ParkAudio.CrowdVoiceLevel( near, 0 ), stop), (park.CrowdVoiceGuests, park.CrowdVoiceLevelNow, park.CrowdVoiceCell),
+					"the crowd's voice from the guests round the stop after the sweep of 32" );
+			} );
+		}
+		finally
+		{
+			pointer.SetValue( null, cellBefore );
+			people.Delete();
+			Entity.ApplyDeletions();
+		}
+	}
+
+	/// <summary>
 	/// <c>ParkAudio.OnDelete</c>, "the park is ending: what it has playing fades": the crowd's voice, started on the
 	/// beat by thirteen guests within four cells of the pointer's cell (<c>docs/exe/audio.md</c>, "The crowd's
 	/// voice"), has its playing sample told to end as the park is deleted, as the original stops every voice
@@ -2129,6 +2211,7 @@ public class ParkScreamChainTests
 				while ( GameClock.Ticks < beat )
 				{
 					Frame( held: false, GameClock.TickSeconds );
+					ParkLoop.Run( null, null, null, audio: park );
 					park.Update();
 				}
 
@@ -2203,6 +2286,7 @@ public class ParkScreamChainTests
 					while ( GameClock.Ticks < beat )
 					{
 						Frame( held: false, GameClock.TickSeconds );
+						ParkLoop.Run( null, null, null, audio: park );
 						park.Update();
 					}
 				}

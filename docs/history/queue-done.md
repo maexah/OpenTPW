@@ -12145,6 +12145,21 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q1120. The music's level and the crowd's voice count the guests once a frame, after all its sweeps (from Q150).**
+  The original's every-32nd block (`0x0054f82d`..`0x0054f8c8`) runs in the 32nd tick's own step of the park's loop, after
+  that step's sweep. `ParkAudio.OnUpdate` asks `SetsMusicLevel` once a frame, after `ParkLoop`, so in a frame owing a 32nd
+  tick and a sweep after it (nine ticks or more: a hitch) the level and the crowd's voice count the guests as the later
+  sweep left them. Said at the site. Ask the block from `ParkLoop`'s step, after the sweep, keeping `Audio.Ready`'s guard
+  and the pump outside. Test: a frame from tick 25 to 40 sets the level from the guests the sweep of 32 left (a guest the
+  sweep of 40 admits is not counted). Reached in play only by a hitch (`lib/hitch.py`). Built: the block is `ParkAudio.SetTheLevels`,
+  run by `ParkLoop` last in each step whose tick `ParkAudio.SetsMusicLevel` (now of one tick) passes, after the sweep, its
+  tail and `HandTheReverb`, and on a step whose sweep was dropped; `Audio.Ready`'s guard is in it, the pump stays in
+  `OnUpdate`; `Level.RunTheWorld` hands the loop `ParkAudio.Current`. A hitch frame logs `Park loop: tick N's music block:
+  ...` before tick N's line. `AFramesThirtySecondTickCountsTheGuestsItsOwnSweepLeft` runs one frame of ticks 25 to 40
+  with five guests admitted in the sweep of 32's tail and twenty in the sweep of 40's: level 8 from 17 (not 18 from 36)
+  and the crowd's voice from 5 near the stop; the block put back once after the frame, and before the step's sweep, each
+  fail it. Off-screen (`consolerun.py`, `stall 1000`): "tick 2336's music block" logged before the sweeps of 2344 and
+  2352 in a frame of 2332 to 2365. Cloud lane c69; no Ghidra, no original.
 
 ## B. Docs and comments
 

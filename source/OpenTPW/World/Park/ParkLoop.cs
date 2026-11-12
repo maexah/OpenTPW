@@ -6,15 +6,15 @@ namespace OpenTPW;
 /// <c>docs/exe/park-engine.md</c>, "What the 31 ms tick drives"): the particles (<c>0x0054f4f2</c>), the track tick and the
 /// scripts (<c>0x0054f55f</c>, <c>0x0054f56b</c>), the sprites on an even tick (<c>0x0054f5fb</c>), and on every eighth the
 /// thing sweep (<c>0x0054f7bb</c>), at most <see cref="ParkPeople.SweepsAFrame"/> a frame, each followed by the sweep's tail:
-/// the calendar's compare and its turns and the weather's turn. So a guest's turn sees what the scripts did in the ticks before
+/// the calendar's compare and its turns and the weather's turn; then on every eighth the reverb's handoff (<c>0x0054f828</c>)
+/// and on every 32nd the music's level and the crowd's voice (<c>0x0054f82d</c>..<c>0x0054f8c8</c>). So a guest's turn sees what the scripts did in the ticks before
 /// it and nothing of the ticks after, and a day that turns on a frame's second sweep rolls the objects' rings before its third.
 /// </summary>
 /// <remarks>
 /// Run by <see cref="Level.Update"/> at the top of a park's frame, before the entities' once-a-frame work. The original's
-/// flying cars (<c>0x0054f5ef</c>) are not built (Q408), its every-eighth reverb handoff is counted (<see cref="HandTheReverb"/>),
-/// and its every-32nd block, the music's level and the crowd's voice, is
-/// asked once a frame after the loop (<see cref="ParkAudio"/>), so in a frame owing a 32nd tick and a sweep after it the
-/// level counts the guests after that later sweep (Q1120).
+/// flying cars (<c>0x0054f5ef</c>) are not built (Q408) and its every-eighth reverb handoff is counted (<see cref="HandTheReverb"/>).
+/// The every-32nd block runs in the step whether its sweep ran or was dropped, as the original's dropped step jumps to
+/// <c>0x0054f828</c> (<see cref="ParkAudio.SetTheLevels"/>).
 /// </remarks>
 internal static class ParkLoop
 {
@@ -25,9 +25,13 @@ internal static class ParkLoop
 	/// </summary>
 	/// <param name="calendar">The calendar's compare and its turns for the sweep just run (<see cref="Level.TurnTheCalendar"/>).</param>
 	/// <param name="weather">The weather, whose turn follows the compare.</param>
+	/// <param name="audio">The park's sound, whose every-32nd block ends the step.</param>
 	internal static void Run( ParticleSystem? particles, ParkRides? rides, ParkPeople? people, Action<ParkPeople>? calendar = null,
-		ParkWeather? weather = null )
+		ParkWeather? weather = null, ParkAudio? audio = null )
 	{
+		if ( audio is { IsDeleted: true } )
+			audio = null;
+
 		if ( rides is { IsDeleted: true } )
 			rides = null;
 
@@ -60,6 +64,7 @@ internal static class ParkLoop
 			if ( people == null )
 			{
 				HandTheReverb( tick );
+				SetTheLevels( tick, audio );
 				continue;
 			}
 
@@ -86,6 +91,11 @@ internal static class ParkLoop
 			}
 
 			HandTheReverb( tick );
+			SetTheLevels( tick, audio );
+
+			if ( told && audio != null && ParkAudio.SetsMusicLevel( tick ) )
+				Log.Info( $"Park loop: tick {tick}'s music block: level {audio.LevelNow}, set {audio.LevelSets} times, {people.GateGuestCensus} guests counted;"
+					+ $" crowd's voice {audio.CrowdVoiceLevelNow} from {audio.CrowdVoiceGuests} near cell {audio.CrowdVoiceCell}" );
 
 			if ( told )
 				Log.Info( $"Park loop: tick {tick}: particles to {particles?.Steps.ToString() ?? "none"}, scripts to {rides?.Scheduler.Tick.ToString() ?? "none"}{swept}" );
@@ -131,6 +141,13 @@ internal static class ParkLoop
 	{
 		if ( (tick & (ParkPeople.ThingTickEvery - 1)) == 0 && ParkRideViewCameraMode.Active )
 			Unimplemented.Report( "CAMERA_RIDE_REVERB" );
+	}
+
+	/// <summary>The step's every-32nd block (<c>0x0054f82d</c>), last in the step: <see cref="ParkAudio.SetTheLevels"/> on a tick it falls on.</summary>
+	private static void SetTheLevels( int tick, ParkAudio? audio )
+	{
+		if ( ParkAudio.SetsMusicLevel( tick ) )
+			audio?.SetTheLevels( tick );
 	}
 
 	/// <summary>How many of the <paramref name="ticks"/> ticks from <paramref name="first"/> fall on the thing sweep's beat.</summary>

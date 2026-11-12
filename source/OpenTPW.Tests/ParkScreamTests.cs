@@ -172,26 +172,23 @@ public class ParkScreamTests
 
 	/// <summary>
 	/// <b>The level is set on a tick whose low five bits are nought, and on no other</b> (<c>0x0054f82d</c>): once
-	/// in 32 one-tick frames, and in a long frame whenever one of its ticks is such a tick.
+	/// in 32 ticks, which the park loop asks of each step.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> set every frame; every 16th or 64th tick; only the frame's last tick asked.</remarks>
+	/// <remarks><b>Mutations:</b> every 16th or 64th tick.</remarks>
 	[TestMethod]
 	public void TheMusicsLevelIsSetOnEveryThirtySecondTick()
 	{
 		var sets = 0;
 
 		for ( var tick = 1; tick <= 320; ++tick )
-			sets += ParkAudio.SetsMusicLevel( tick, 1 ) ? 1 : 0;
+			sets += ParkAudio.SetsMusicLevel( tick ) ? 1 : 0;
 
-		Assert.AreEqual( 10, sets, "ten times in 320 one-tick frames" );
-		Assert.IsTrue( ParkAudio.SetsMusicLevel( 64, 1 ) );
-		Assert.IsFalse( ParkAudio.SetsMusicLevel( 63, 1 ) );
-		Assert.IsFalse( ParkAudio.SetsMusicLevel( 65, 1 ) );
-		Assert.IsFalse( ParkAudio.SetsMusicLevel( 64, 0 ), "a frame with no tick sets nothing" );
-
-		Assert.IsTrue( ParkAudio.SetsMusicLevel( 70, 8 ), "a frame of ticks 63 to 70 holds the 64th" );
-		Assert.IsFalse( ParkAudio.SetsMusicLevel( 72, 8 ), "one of ticks 65 to 72 does not" );
-		Assert.IsTrue( ParkAudio.SetsMusicLevel( 127, 64 ) );
+		Assert.AreEqual( 10, sets, "ten times in 320 ticks" );
+		Assert.IsTrue( ParkAudio.SetsMusicLevel( 64 ) );
+		Assert.IsTrue( ParkAudio.SetsMusicLevel( 96 ) );
+		Assert.IsFalse( ParkAudio.SetsMusicLevel( 63 ) );
+		Assert.IsFalse( ParkAudio.SetsMusicLevel( 65 ) );
+		Assert.IsFalse( ParkAudio.SetsMusicLevel( 80 ), "an eighth tick that is not a 32nd" );
 	}
 
 	/// <summary>

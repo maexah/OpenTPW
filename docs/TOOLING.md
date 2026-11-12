@@ -441,6 +441,7 @@ Read this before aiming a click or comparing two pictures. Each fact names the i
 
 Each was found by trial in the item named, and cost a run to find.
 
+- **A hitch that holds a 32nd tick, in a cloud lane** (Q1120, `lib/consolerun.py`): `40 park jungle`, then `stall 1000` lines with uneven waits (`20.4`, `3.3`, `3.7`, `2.6`, `3.1`, `3.9`): each owes 34 ticks, so one 32nd tick falls in it, and its `Park loop: tick N's music block: ...` line comes before tick N's own line; four of six landed it before a later sweep. `stall 600` to `750` (21 to 26 ticks) with even three-second waits held no 32nd tick in five tries.
 - **The console's `walk` in a cloud container** (Q14, `lib/consolerun.py`): `40 park jungle`, `3 camcorder 481.897 166.285` (the path, so a short walk crosses no shut edge; `camcorder 500 500` stops at y 510 on the first walk), then `walk 1 0 N`. Each of the N steps is a fixed sixtieth of a second (`Time.StepDelta`), 0.667 units, whatever the frame rate (xvfb's 13 to 14 frames a second too), so N = 60 walks 40 units and `stand=` can be predicted from N before it is read back; it walks under `pause` as well, so a paused walk then a grab photographs a crossing.
 - **A fade's steps read in a run** (Q509, `lib/consolerun.py`, off-screen): `40 park jungle`, `2 speech 5` (his voice starts 0.8 s after the line is
   given, so a quieten sooner finds nothing), `0.02 quieten`, then `0.04 voices` lines: a stepping voice reads `fading <volume>`; the
