@@ -15,13 +15,13 @@ public static class Localization
 	}
 
 	/// <summary>A line of the interface's text.</summary>
-	public static string Get( UIStrings id ) => UIStrings[(int)id];
+	public static string Get( UIStrings id ) => Bare( UIStrings, "UITEXT", (int)id );
 
 	/// <summary>
 	/// A row of UIHELPTEXT.str - what the help bar says over a control, as the control's layout data
 	/// gives it - or an empty string for a row that does not exist.
 	/// </summary>
-	public static string Help( int id ) => id >= 0 && id < HelpTexts.Entries.Length ? HelpTexts[id] : string.Empty;
+	public static string Help( int id ) => id >= 0 && id < HelpTexts.Entries.Length ? Bare( HelpTexts, "UIHELPTEXT", id ) : string.Empty;
 
 	/// <summary>A row of UIHELPTEXT.str with its parameters filled, as <see cref="Format(int, ValueTuple{int, string}[])"/> fills UITEXT's.</summary>
 	public static string FormatHelp( int row, params (int Parameter, string Value)[] values ) => Format( HelpTexts, row, values );
@@ -34,7 +34,19 @@ public static class Localization
 	/// the enum does not name (the ride window's 365, 366, 388 and 389 status words, the staff window's labels) reads them by number.
 	/// Naming a row from a guess would put a word this project does not own into the interface, where a wrong one reads exactly like a right one.
 	/// </remarks>
-	public static string Text( int row ) => row >= 0 && row < UIStrings.Entries.Length ? UIStrings[row] : string.Empty;
+	public static string Text( int row ) => row >= 0 && row < UIStrings.Entries.Length ? Bare( UIStrings, "UITEXT", row ) : string.Empty;
+
+	/// <summary>
+	/// A row's first text part, and a count, <c>UITEXT_30_READ_BARE</c>, where the row has words after a parameter
+	/// that the first part leaves out: such a row is shown whole only through <see cref="Format(int, ValueTuple{int, string}[])"/>.
+	/// </summary>
+	private static string Bare( StringFile table, string name, int row )
+	{
+		if ( table.LosesWordsBare( row ) )
+			Unimplemented.Report( $"{name}_{row}_READ_BARE" );
+
+		return table[row];
+	}
 
 	/// <summary>
 	/// A row of UITEXT.str with its parameters filled, as the original writes a save.s date (<c>docs/exe/saves.md</c>, "The list is the folder"): each

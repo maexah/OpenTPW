@@ -84,14 +84,6 @@ meets first, found on a Windows 11 PC by a Remote Control session, jobs w1 to w4
 `C:\Users\alexa\tpw-work`): Q976, Q978, Q981, Q979, Q980, Q982, Q977, in that order; then the blocks below. A
 confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
 
-- [ ] **Q944. A UITEXT row read as its first part alone loses the words after its parameter.** (From Q865's second reader.)
-  `StringFile.Entries` holds a row's first text part only (`Parts` holds all). Swept over `UITEXT.str` and `UIHELPTEXT.str`: the rows
-  whose text follows a parameter are 29, 30 (`UpgradeToLevel`, `CancelLevel`), 181 to 183 (the loan boxes), 205, 213, 215, 399, 428 and 429
-  (" sec", " secs"), 433 to 443 (the day, month and hour words), 444, 446, 447, 451 to 455, 461 and 463 (the capacity readout's, see below). Of those, 428 and 429 were
-  read bare by the ride window's duration readout and 433 by its age: fixed (Q865's fix, `Localization.Format`). Every other shown use
-  goes through `Format` or has its parameter last (`Speed`, the money rows); the rest are unread. 461 and 463 are not unread: `Capacity` picks 463, 461 or 427 by the item's `WhichTrackType` as `FUN_004aec30` does. Build each with `Format` when
-  its screen lands (the loan boxes, the upgrade buttons, the visitor window's age wording); grep `Localization.Get(` and `.Text(` for
-  a row in this list before using it.
 - [ ] **Q943. The update check and its click on Windows and macOS, and against a real newer release (Q941's leftovers).** Counted, not
   seen: on Windows and macOS the opener (`SDL_OpenURL`), the `updatecheck off` line and the label `local - <commit>` were not run; and the
   pick has met only replies made up in tests and the real GitHub's empty list, because no weekly release exists yet. Once the first weekly

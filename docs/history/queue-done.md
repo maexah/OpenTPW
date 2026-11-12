@@ -12131,6 +12131,20 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   non-null where the entities step starts), or confirm it in a running game off-screen: the log's particle line before the
   catalogue's effects line, with the swap put back and the order seen to flip.
 - [x] **Q1036. The lobby bolt's brightness over its life. Decode first.** Folded into Q1044 (filed by the Sentinel the same hour from VERIFY-13, which decoded the envelope). From Q1034 and the Sentinel's second reading of Q152's fork review. OpenTPW dims the bolt over its whole life (`Lightning.OnUpdate`: opacity = life^2 x stutter, measured exact in Q1034: the lift in the frame is 78, 32, 13, 4.6 and 2.5 grey levels at 0.1, 0.2, 0.35, 0.4 and 0.45 s of a 0.5 s bolt, so it is out of sight by about 0.4 s), where the original is suspected to hold its bolt at 192 to 255 grey in saw-teeth for the whole 500 ms and cut at the end (the colour pulse `0x0057ee30` in Q1035; a second reading, neither decoded nor run). Decode the pulse's value over a bolt's life for the lobby's arguments (lifetime 500, argument 8), run the original's lobby bolt under Proton (`record.sh`, the island pinned) and write the figures in `docs/exe/weather.md`, "The bolt"; build the envelope only after that, in `Lightning.OnUpdate` and the `Flash` that lifts the lobby's sun and sky (`LobbyWeather`), and read it back with `q1034/confirm2.py` (`stepsweep`). Q1034 changed nothing in `Lightning.cs`.
+- [x] **Q944. A UITEXT row read as its first part alone loses the words after its parameter.** (From Q865's second reader.)
+  `StringFile.Entries` holds a row's first text part only (`Parts` holds all). Swept over `UITEXT.str` and `UIHELPTEXT.str` by their parts (English
+  and american the same): the UITEXT rows with words after a parameter are 30 (`CancelLevel`), 181 and 183 (the loan boxes), 205, 213, 215, 399,
+  428 and 429 (" sec", " secs"), 433 to 444 (the day, month and hour words; 444 `AverageHappinessFor`), 446, 448 (the date), 451 to 455, 460, 461 and 463
+  (the capacity readout's), 31 rows; 29, 182 and 447 end on an empty text part and lose nothing. The UIHELPTEXT rows are 148 to 150 (the buy list's), 547 to
+  551, 553, 555 (the hover's people and objects), 580 and 581, 12 rows. Of those, 428 and 429 were read bare by the ride window's duration readout and 433 by
+  its age: fixed (Q865's fix, `Localization.Format`). Every other shown use goes through `Format` or has its parameter last (`Speed`, the money rows).
+  **Done (Q944, `alexah/920-bare-string-reads-counted`, lane A, 2026-11-12):** the bare readers count such a row where it is read, so a screen built later that
+  shows one without `Format` is named, where a grep cannot see the rows picked at run time (the help bar's posted row, the screens' row variables).
+  `StringFile.LosesWordsBare( row )`; `Localization.Get`, `Text` and `Help` report `UITEXT_<row>_READ_BARE` or `UIHELPTEXT_<row>_READ_BARE` and still
+  return the first part. On the stock jungle park on the desk (`q944/run1`, `run2`, the final binary): no `_READ_BARE` in the census with the park open,
+  the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
+  row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
+  hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
 
 ## B. Docs and comments
 

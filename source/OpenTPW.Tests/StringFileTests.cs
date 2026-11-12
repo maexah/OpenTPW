@@ -1,4 +1,4 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.IO;
 using System.Linq;
@@ -178,6 +178,32 @@ public class StringFileTests
 
 		Assert.AreEqual( 42, files.Length );
 		Assert.AreEqual( 4730, rows );
+	}
+
+	/// <summary>
+	/// <b>The rows with words after a parameter, which their first text part leaves out</b>, in both interface tables
+	/// of both English folders. UITEXT's 29, 182 and 447 end on an empty text part after their parameter and lose
+	/// nothing; 446, 448 and 460 have their words between two parameters.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> any row with a parameter counted (29 and 182 join); only the last part looked at (446, 448 and
+	/// 460 drop out); an empty text part counted (29 joins); the parts before the parameter looked at too (every row with
+	/// a text part joins).
+	/// </remarks>
+	[TestMethod]
+	[DataRow( "English" )]
+	[DataRow( "american" )]
+	public void TheRowsThatLoseWordsBareAreTheOnesWithTextAfterAParameter( string language )
+	{
+		FileSystem = GameData.Required();
+
+		int[] uiText = [30, 181, 183, 205, 213, 215, 399, 428, 429, 433, 434, 435, 436, 437, 438, 439, 440, 441, 442, 443, 444, 446, 448, 451, 452, 453, 454, 455, 460, 461, 463];
+		int[] helpText = [148, 149, 150, 547, 548, 549, 550, 551, 553, 555, 580, 581];
+
+		CollectionAssert.AreEqual( uiText, Losing( new StringFile( $"Language/{language}/UITEXT.str" ) ) );
+		CollectionAssert.AreEqual( helpText, Losing( new StringFile( $"Language/{language}/UIHELPTEXT.str" ) ) );
+
+		static int[] Losing( StringFile file ) => Enumerable.Range( 0, file.Entries.Length ).Where( file.LosesWordsBare ).ToArray();
 	}
 
 	/// <summary>Makes a file with <paramref name="read"/> and counts the log lines that say exactly <paramref name="line"/>.</summary>
