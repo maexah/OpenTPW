@@ -120,7 +120,7 @@ public class RideHoardingTests
 	public void EveryShippedHoardingHasACompleteBaseAndPreservesItsEdgeCount()
 	{
 		var data = GameData.Required();
-		var items = 0; var hoardings = 0; var minimum = int.MaxValue;
+		var items = 0; var hoardings = 0; var floors = 0; var minimum = int.MaxValue;
 		foreach ( var wad in Directory.GetFiles( Path.Combine( GameDir.Data, "levels" ), "*.wad", SearchOption.AllDirectories ) )
 		{
 			var directory = Path.GetRelativePath( GameDir.Data, Path.ChangeExtension( wad, null ) ).Replace( '\\', '/' );
@@ -136,6 +136,11 @@ public class RideHoardingTests
 			using var md2 = data.OpenRead( directory + "/" + stem + ".md2" );
 			var model = new ModelFile( md2 );
 			Assert.IsTrue( model.Meshes.Count > 0, directory );
+			var grid = new ProceduralBase.Grid( 0f, 0f, 10f, 10f );
+			Assert.AreEqual( 0, ProceduralBase.FloorMesh( model, description.Shape, grid, out _ ), $"{directory}: the mesh with the most base vertices" );
+			CollectionAssert.AreEqual( new[] { 0 }, ProceduralBase.BaseVertices( model, description.Shape, grid ).Select( b => b.Mesh ).ToArray(),
+				$"{directory}: the meshes with base vertices, of {model.Meshes.Count}" );
+			++floors;
 			var mesh = model.Meshes[0]; Assert.AreEqual( mesh.TransformMatrix, mesh.WorldTransform, directory ); minimum = Math.Min( minimum, mesh.SourceVertices.Length );
 			Assert.IsTrue( mesh.SourceVertices.Length >= 2, directory );
 			var source = mesh.SourceVertices.Select( v => V3.Transform( v.GetSystemVector3(), mesh.WorldTransform ) ).ToArray();
@@ -145,13 +150,20 @@ public class RideHoardingTests
 			Assert.AreEqual( expected, panels.Length, directory );
 			Assert.IsTrue( panels.All( p => float.IsFinite( p.A.X ) && float.IsFinite( p.A.Y ) && float.IsFinite( p.B.X ) && float.IsFinite( p.B.Y ) ), directory );
 		}
-		Console.WriteLine( $"hoarding corpus: items={items} outlines={hoardings} minimumBaseVertices={minimum}" );
+		Console.WriteLine( $"hoarding corpus: items={items} outlines={hoardings} floorsAtMesh0={floors} minimumBaseVertices={minimum}" );
 		Assert.AreEqual( 274, items );
 		Assert.AreEqual( 129, hoardings );
+		Assert.AreEqual( 129, floors );
 	}
 
+	/// <summary>
+	/// <b>A panel endpoint stands on the ground OpenTPW samples, <c>x0 + gx</c> over the cells the turned footprint covers</b>,
+	/// a rectangle one cell longer on each axis than the original's inclusive <c>x0 + trunc( gx * (w - 1) / w + 0.1 )</c>
+	/// (<c>docs/exe/ride-hoardings.md</c>, <c>HOARDING_TERRAIN_RECTANGLE</c>). It checks OpenTPW's rule, not the original's;
+	/// <c>QUEUE.md</c> Q210 ports the original's and writes that test.
+	/// </summary>
 	[TestMethod]
-	public void TerrainEndpointsFollowTheOriginalNormalizedQuarterTurns()
+	public void TerrainEndpointsSampleOpenTPWsLargerRectangleNotTheOriginals()
 	{
 		var data = GameData.Required();
 		using var input = data.OpenRead( "levels/jungle/terrain/base.md2" );

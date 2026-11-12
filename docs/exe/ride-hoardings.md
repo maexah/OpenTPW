@@ -113,7 +113,8 @@ The private project's `0x0067b110` stack-probe call received Ghidra's `alloca_pr
 `FUN_00452e70`'s large local frame. Raw instructions were also checked. No original project was edited.
 The source is the mesh at `[model+8]+0x2c`, set at `0x0046a82c` to the one `FUN_00469a80` found with the most base
 vertices; its positions are used in file order, transformed by its matrix. OpenTPW gates on `Nodes.Count > 1` and
-reads `Meshes[0]` instead, which is the same mesh in every shipped outline (`QUEUE.md` Q210), and retains
+reads `Meshes[0]` instead, which is the same mesh in every shipped outline: in all 129, mesh 0 is the only mesh with a base
+vertex as `ProceduralBase.BaseVertices` counts them (the original's count on Lost Kingdom's 41 floors, `ProceduralBaseTests`), so it has the most (`EveryShippedHoardingHasACompleteBaseAndPreservesItsEdgeCount`; `QUEUE.md` Q210), and retains
 that order before its ordinary render-vertex reorder. The shipped corpus has 129 outlines in 274 item
 archives, all with at least four finite first-mesh source vertices. Each first mesh's local and world
 matrix agrees in this corpus. The generated panel count equals the number of selected outline edges.
@@ -133,7 +134,7 @@ stable, matching `FUN_00470630`'s left-first equality branch. This order drives 
 integer truncation, then `FUN_00454190` uses half the height difference from the model's origin.
 The rectangle is inclusive: model `+0xc0` is the first cell and `+0xc4` the last, `x0 + w - 1` and `y0 + d - 1`
 (`FUN_00467030`, `0x004670c1`..`0x004670f3`), so the original samples `x0 + trunc( gx * (w - 1) / w + 0.1 )`.
-OpenTPW samples `x0 + gx`, and its test builds the same value: equal on flat ground, different on a slope, and
+OpenTPW samples `x0 + gx`, and its test (`TerrainEndpointsSampleOpenTPWsLargerRectangleNotTheOriginals`) builds the same value, not the original's: equal on flat ground, different on a slope, and
 counted `HOARDING_TERRAIN_RECTANGLE` (`QUEUE.md` Q210). Corner corrections affect X/Y placement, not the terrain probe.
 
 Explicit deviations and limits:

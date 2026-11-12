@@ -721,18 +721,11 @@ filed the items that cite it.
   versions of `FUN_004fa990`: `InsideGateCensus` reads the position's cell as the original does (bytes `+5`, `+7`),
   `OnACountingCell` reads the occupancy link first; make them one. The third, `ParkCatchUpOrderTests`' row (16, 1), was
   settled by Q150, which made that test the order's own.
-- [ ] **Q218. Five gaps left by the Q208 and Q209 corrections.** Found 2026-10-04 by a second read of those four
-  commits, each checked against the code. (1) `RideHoardingTests.TerrainEndpointsFollowTheOriginalNormalizedQuarterTurns`
-  still says by its name that it follows the original, while `docs/exe/ride-hoardings.md` says it checks OpenTPW's
-  larger rectangle: rename it now, and Q210 writes the real one. (2) `ride-hoardings.md` says `Meshes[0]` is the mesh
-  with the most base vertices in every shipped outline; the corpus test reads `Meshes[0]` and never counts them.
-  Measure it over all 129 outlines and assert it, or take the sentence out. (3) `ProfilePreservationTests` has no
-  profile that reads at `Load` and fails at `Select`: the unreadable one is unreadable before `Load`, the cached one
-  is deleted. Q216 wrote that case (`AFailedReloadOfAGoodProfileBacksUpWhateverOpensLater`; the revoke is now
-  `NoteFailedReload`, a mutant of it failing it): leave (3) out. (4) `ParkBoughtClosedTests.ALoadedDisconnectedRideKeepsItsSavedDoor` builds a new ride and rebinds it; no save
-  is read. Load one, or name the test for what it does. (5) `docs/exe/ride-operation.md` says the remeasure tail
-  `FUN_004de1f0` leaves at once when `+0x68` is non-zero; `ParkRideOperation.ReopenAfterRemeasure` clears
-  `AssignedStaff` whatever was decided and cites `0x004de48c`. Read the tail in Ghidra and make the two agree. Put the bug back for each test (`AGENTS.md` rule 6). No game run.
+
+- [ ] **Q1240. The remeasure tail's `+0x68` exit against `ReopenAfterRemeasure` (piece (5) of Q218, which needs Ghidra).**
+  `docs/exe/ride-operation.md` says the remeasure tail `FUN_004de1f0` leaves at once when `+0x68` is non-zero;
+  `ParkRideOperation.ReopenAfterRemeasure` clears `AssignedStaff` whatever was decided and cites `0x004de48c`. Read the tail
+  in Ghidra and make the two agree. Put the bug back for each test (`AGENTS.md` rule 6). No game run.
 
 - [ ] **Q219. Light the models from the normals the file stores. Decode first.** Found by the 2026-10-04 effort
   audit (`r-f1`, `r-c2`). The original's model lighter `FUN_00574660` takes one normal per vertex-order entry from the
