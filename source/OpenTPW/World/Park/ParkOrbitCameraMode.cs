@@ -165,9 +165,10 @@ public sealed class ParkOrbitCameraMode : CameraMode
 	/// <summary>
 	/// How fast the pan's term catches up with a held key: half the gap every 31 ms. The original halves it every frame
 	/// (<c>0x006fddfc</c>), so its rise is quicker at a higher frame rate; this one is the same at every rate, its frame
-	/// taken as the park's 31 ms tick.
+	/// taken as the park's 31 ms tick. First person's walk eases the same term at the same rate
+	/// (<see cref="ParkCamcorderCameraMode.Move"/>).
 	/// </summary>
-	private const float PanRiseRate = 22.36f;
+	internal const float PanRiseRate = 22.36f;
 
 	/// <summary>
 	/// How fast the pan's term coasts away with no key held, in the original's own step: it divides the term by
@@ -494,8 +495,12 @@ public sealed class ParkOrbitCameraMode : CameraMode
 			? term + ((target - term) * Time.SmoothingFactor( PanRiseRate ))
 			: term / (1f + (PanCoastRate * Time.Delta));
 
-		return new Vector2( MathF.Abs( next.X ) < 0.1f ? 0f : next.X, MathF.Abs( next.Y ) < 0.1f ? 0f : next.Y );
+		return Floored( next );
 	}
+
+	/// <summary>The term with each axis under 0.1 a second noughted, the original's 0.0001 a millisecond (<c>0x0074c988</c>).</summary>
+	internal static Vector2 Floored( Vector2 term )
+		=> new( MathF.Abs( term.X ) < 0.1f ? 0f : term.X, MathF.Abs( term.Y ) < 0.1f ? 0f : term.Y );
 
 	/// <summary>
 	/// A frame of the pan: the term stepped towards the target, held at the edge by where the point stood before the move

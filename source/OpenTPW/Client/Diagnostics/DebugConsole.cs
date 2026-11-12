@@ -1781,6 +1781,29 @@ public static class DebugConsole
 				Reply( ParkCamcorderCameraMode.State() );
 				break;
 
+			// The walk and turn keys, driven by hand: `keys <forward> <turn> [frames]`, forward 1 the Up arrow, turn 1 the Left
+			// arrow. It reaches ParkCamcorderCameraMode.Move, the body Walk() runs with the real keys, so the turn
+			// (1.2 radians a second) and the eased speed (sqrt( zoom ) x 2 a second) are the player's. Each frame is a
+			// sixtieth of a second (Time.StepDelta), so 60 is a second of holding; it runs under `pause` too, as `walk` does.
+			case "keys":
+				if ( !ParkCamcorderCameraMode.Active )
+				{
+					Reply( "keys: camcorder mode is not active - use `camcorder` first" );
+					break;
+				}
+
+				if ( parts.Length < 3 )
+				{
+					Reply( "keys <forward> <turn> [frames]" );
+					break;
+				}
+
+				ParkCamcorderCameraMode.DebugKeys( Argument( 1 ), Argument( 2 ),
+					parts.Length > 3 ? (int)Argument( 3 ) : 60 );
+
+				Reply( ParkCamcorderCameraMode.State() );
+				break;
+
 			// What the pointer is over. The instrument for every verb that starts by pointing at the
 			// ground, and the only way to see whether the ray lands where the cursor is drawn - which
 			// a screenshot alone cannot settle, because a cell is ten units across and a pitched

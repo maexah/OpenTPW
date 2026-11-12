@@ -12145,6 +12145,15 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q1161. The camcorder's keys turn, and its turn rate and walk speed are the original's.** From the fork watch 2026-11-12
+  (`verify-other.md` L2, `verify-world.md` M3, M4). The original's first person is read in `park-engine.md`, "The walk's keys,
+  turn and speed": Left and keypad 9, Right and keypad 7 turn at 1.2 radians a second; Up, Down and keypads 1 and 3 walk; the
+  pointer turns 2.4 radians a second a unit past ±0.4; the walk settles at `sqrt( zoom ) x 0.002` units a millisecond (21 a
+  second at zoom 110) by a half step a frame; the orbit's pan velocity carries in. Ours (`ParkCamcorderCameraMode`) turns
+  2.0 a unit, walks 40 a second, strafes on Right (Q17) and has no key turn; each is said at the site. Build them on
+  `Time.Delta` (rule 10: the per-frame half step becomes its time-based equivalent, said at the site). Confirm under Proton
+  first (`campoi.py` in first person: the yaw after a held Left of known length, the position after a held Up at zoom 110),
+  then ours' `camcorder` census against it.
 
 ## B. Docs and comments
 

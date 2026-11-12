@@ -220,7 +220,7 @@ the console of a Debug build (`dotnet build`); the Release build, which the Wind
 | Going places | `lobby`, `island`, `enter`, `park`, `reload`, `savepark`, `quit` |
 | Time | `pause`, `resume`, `step`, `clock`, `sweeps` |
 | Lobby camera and weather | `orbit`, `freeze`, `unfreeze`, `attract`, `aim`, `settle`, `near`, `rain`, `weather`, `strike`, `bolt`, `flags` |
-| Park camera and drawing | `camera`, `camcorder`, `facing`, `walk`, `fog`, `sea`, `shadows`, `sprites`, `meshes`, `circle`, `cut` |
+| Park camera and drawing | `camera`, `camcorder`, `facing`, `walk`, `keys`, `fog`, `sea`, `shadows`, `sprites`, `meshes`, `circle`, `cut` |
 | Sound and the advisor | `volume`, `mute`, `sound`, `voices`, `place`, `speech`, `advisor`, `greet`, `duck`, `music`, `crowd`, `bus`, `placed`, `parkcue`, `scriptsounds`, `sayas`, `advisorgame`, `tutorial` |
 | Reading the park | `guests`, `peeps`, `staff`, `candidates`, `rides`, `vehicles`, `paths`, `arrivals`, `objects`, `catalogue`, `money`, `loans`, `budgets`, `research`, `tickets`, `outlets`, `happiness`, `rings`, `spend`, `why`, `cell`, `ground`, `drawn`, `scriptvar`, `bumpers`, `gate`, `boundary`, `hoardings`, `strikes`, `effects`, `emitters`, `particles`, `endfeature`, `thingids`, `track`, `pylons`, `rim`, `scripts`, `built` |
 | Changing guests | `arrive`, `admit`, `send`, `load`, `depart`, `happy`, `cash`, `thirst`, `balloon`, `toilet`, `need`, `pin` |

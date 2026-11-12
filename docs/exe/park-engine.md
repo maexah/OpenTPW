@@ -2298,9 +2298,13 @@ in these places, of which a walk in the park reaches only `FUN_0042a340`'s branc
   and only the cap ends it. The put-back loads its cell with `FILD` over a zero high word (`0x0042c0b0` and the
   others), so a cell below 0 reads as unsigned and lands past 4e10; and `__ftol` keeps the low word of a
   position past 2e10, where C# saturates. None of it is reached on the map with a finite step.
-- **The keys, the turn and the speed** (above, "The walk's keys, turn and speed"): ours turns 2.0 radians a second a
-  unit past ±0.4 (5/6 of the original's), walks 40 units a second, strafes on Right and has no key turn
-  (`docs/QUEUE.md` Q17, Q1161).
+- **The keys, the turn and the speed** (above, "The walk's keys, turn and speed"; Q1161): ours turns 1.2 radians a
+  second on Left and keypad 9, Right and keypad 7 with no modifier, 2.4 a unit past ±0.4 by the pointer, walks on Up,
+  Down and keypads 1 and 3, and eases the pan's own term (`ParkOrbitCameraMode.Scroll`, so a pan carries in and the
+  walk carries out) to `sqrt( zoom ) x 2` a second (`ParkCamcorderCameraMode.Move`). It differs in these: the term
+  halves its gap every 31 ms, not every frame (rule 10); with no key held it halves the same way, read from the formula
+  with an input of nought; both ways held cancel, which the original's rows are not read for; and W and S walk too and
+  A and D still strafe (`docs/QUEUE.md` Q17). Not measured against the running original (Q1452).
 
 Which precision is live is open (above). At 24 bits two of `ParkCamcorderWalkTests`' cases come out otherwise: a
 step of 5 from 245 is taken whole and put back at 249.999 instead of crossing onto 250, and the tie from (45, 45)

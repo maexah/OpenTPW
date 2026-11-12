@@ -42,10 +42,19 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the maintainer's pre-commit hook: grep it by Q-number.
 
-- **Q732 (a moved ticket ride meets the money test):** in a cloud container (no Ghidra, no original, no display; the run's output was not kept), `AMovedTicketRideIsRefusedWhereTheBankIsBelowItsPrice` (needing the game) passes, and four bugs put back by hand (the pickup not marking the hand, `PlaceCarried` not telling `Build`, the test made `<=`, the exemption dropped for the carry too) each failed it. An off-screen run (`consolerun.py`, a fresh Full Simulation player with no tickets, paused) stood Jurassic Tours unbought with `buy 1170 20 60`; at a bank of -10000 `move 13 40 70` answered "costs 3000 and the park has -7000 - sound 0xaf" and left it in the hand, marked moved; at 100000 `put 40 70` built it. Not checked: the original's move of an unbought ticket ride (no original here; the rule is from `docs/exe/hud.md`'s listing read), which refusal latch the move's click honours (`0x816d50` or `0x81b604`, not read), and the red squares and cash cursor on screen (no display; the squares are checked by the test's marker list only). Filed: none.
+- **Q1161 (first person's keys turn, and its turn rate and walk speed are the original's):** built in a cloud container (no
+  Ghidra, no original, no Proton, no photograph; the runs' output was not kept), from `park-engine.md`, "The walk's keys, turn
+  and speed". Seven tests in `ParkCamcorderKeysTests` pass, and seven bugs put back by hand (the pointer's 2.0, the key turn at
+  2.0, the old 40 a second, the per-frame half with no time, the turn's sign swapped, `Enter` noughting the term, the walk
+  before the turn) each failed one or more. Two off-screen park runs (`lib/consolerun.py`, `xdotool` keys): `keys 0 1 60`
+  turned the yaw -2.8591 to -1.6591; `keys 1 0 60` walked 20.20 and left the term at 20.976 (zoom 110); held Left about a
+  second turned 1.24, keypad 9 and 7 turned about half a second's worth each way, Ctrl+Left turned nothing, a held Up walked
+  21.2 units in about a second. Not checked: any of it against the original (Q1452: `campoi.py` under Proton, and a photograph
+  of both games after the same held Left), and whether the original's term halves or coasts with no key held.
 
 ## Numbers (take counts fresh; these go stale within a day)
 
+- Linux, 2026-11-12, Q1161 (seven tests added, needing no game (one changed); built in a cloud container, run as `tester` on a copy of the tree): with the game, 5420 passed, 2 failed, 2 skipped of 5424; with no game named, 2352 passed, 2 failed, 3070 skipped. The two failures are the container's (they fail on `origin/main` there too): `AnExceptionBeforeTheMainLoopIsLoggedAndEndsTheRunWithExit1` (no libEGL) and `ACopyStartedOnAFolderAnotherProcessHoldsIsRefused` (the one-copy lock cannot be opened).
 - Linux, 2026-11-12, review fixes group F (`capped.sh`; three tests added, one needing the game; after group E): with the game, 5415 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5417; with no game named, 2347 passed, 0 failed, 3070 skipped.
 - Linux, 2026-11-12, review fixes group E (`capped.sh`; four tests added, one needing the game; after group D): with the game, 5412 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5414; with no game named, 2345 passed, 0 failed, 3069 skipped.
 - Linux, 2026-11-12, review fixes group D (`capped.sh`; three tests added, one needing the game; after Q732): with the game, 5408 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5410; with no game named, 2342 passed, 0 failed, 3068 skipped.

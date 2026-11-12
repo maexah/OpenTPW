@@ -1,4 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 
 namespace OpenTPW.Tests;
 
@@ -35,10 +36,16 @@ public class ParkFirstPersonRightButtonWalkTests
 	/// <summary>Where the viewer starts, facing +Y.</summary>
 	private static readonly Vector3 Start = new( 500f, 500f, 0f );
 
-	/// <summary>A frame's length, and how far the forward key alone walks in it at 40 units a second.</summary>
+	/// <summary>
+	/// A frame's length, and how far the forward key alone walks in it at zoom 110: <c>sqrt( 110 ) x 2</c>, 20.976 a
+	/// second (<see cref="ParkCamcorderCameraMode.WalkSpeedAt"/>). Half a second eases the term all but whole.
+	/// </summary>
 	private const float FrameLength = 0.5f;
 
-	private const float OneStep = 20f;
+	private static readonly float OneStep = MathF.Sqrt( 110f ) * 2f * FrameLength;
+
+	private float _zoom;
+	private Vector2 _scroll;
 
 	[TestInitialize]
 	public void StartInFirstPerson()
@@ -54,6 +61,10 @@ public class ParkFirstPersonRightButtonWalkTests
 		_now = Time.Now;
 		_delta = Time.Delta;
 		_hudHidden = UI.RootPanel.Hidden;
+		_zoom = ParkOrbitCameraMode.Zoom;
+		_scroll = ParkOrbitCameraMode.Scroll;
+		ParkOrbitCameraMode.Zoom = 110f;
+		ParkOrbitCameraMode.Scroll = Vector2.Zero;
 
 		FileSystem = GameData.Required();
 		GameOptions.Current.RmbCancel = true;
@@ -74,6 +85,8 @@ public class ParkFirstPersonRightButtonWalkTests
 		ParkCamcorderCameraMode.Forget();
 		ParkOrbitCameraMode.PointOfInterest = _orbitLooksAt;
 		ParkOrbitCameraMode.Yaw = _orbitYaw;
+		ParkOrbitCameraMode.Zoom = _zoom;
+		ParkOrbitCameraMode.Scroll = _scroll;
 		GameOptions.Current.RmbCancel = _rmbCancel;
 		UI.RootPanel.Hidden = _hudHidden;
 		Time.Now = _now;

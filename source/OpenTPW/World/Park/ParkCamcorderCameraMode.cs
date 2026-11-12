@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using NeoVeldrid;
+using System.Numerics;
 
 namespace OpenTPW;
 
@@ -135,13 +136,23 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 	/// turn accelerates as the pointer goes further out and is zero inside the band.
 	///
 	/// <para>
-	/// <b>A deviation: 5/6 of the original's rate.</b> The original's 0.4 branch doubles the excess
-	/// (<c>fadd st(0),st</c>, <c>0x0042b89c</c>; nothing reads <c>_DAT_006fdde8</c>) and turns
-	/// <c>0.0012</c> radians a millisecond per unit of that (<c>0x0042bab3</c>..<c>0x0042bad3</c>), 2.4
-	/// radians a second per unit past the band. The 3.5 belongs with the +/-0.2 bands of the other branch.
+	/// The original's: its 0.4 branch doubles the excess (<c>fadd st(0),st</c>, <c>0x0042b89c</c>; nothing reads
+	/// <c>_DAT_006fdde8</c>) and turns <c>0.0012</c> radians a millisecond per unit of that
+	/// (<c>0x0042bab3</c>..<c>0x0042bad3</c>), 2.4 radians a second per unit past the band
+	/// (<c>docs/exe/park-engine.md</c>, "The walk's keys, turn and speed"). The 3.5 belongs with the +/-0.2 bands of
+	/// the other branch.
 	/// </para>
 	/// </summary>
-	private const float YawRate = 2.0f;
+	internal const float YawRate = 2.4f;
+
+	/// <summary>
+	/// How fast a held turn key turns the view, in radians a second: the original takes <c>0.0012 x dt</c> off its yaw
+	/// for Left and keypad 9 and adds it for Right and keypad 7, <c>dt</c> the frame's milliseconds
+	/// (<c>0x0042b417</c>, <c>0x0042b432</c>; <c>docs/exe/park-engine.md</c>, "The walk's keys, turn and speed").
+	/// Ours' yaw is the original's rotation negated (<c>docs/TOOLING.md</c>, the first-person stand in both games, Q485),
+	/// so Left raises it here, which turns the view left.
+	/// </summary>
+	internal const float KeyTurnRate = 1.2f;
 
 	/// <summary>
 	/// Radians of pitch per unit of deflection past <see cref="DeadZone"/> - <c>_DAT_006fddf0</c>, 1.2.
@@ -164,13 +175,18 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 	private const float PitchScale = 1.2f;
 
 	/// <summary>
-	/// How fast the viewer walks, in world units a second. <b>A choice, not the original's</b>, a fifth of
-	/// <see cref="ParkOrbitCameraMode"/>'s scroll. The original's velocity is <c>( sqrt( zoom ) x 0.02 x v
-	/// + last ) x 0.5</c> each frame, with no frame time (<c>0x0042bc2a</c>; v the keys' +/-0.1), so it
-	/// settles at <c>sqrt( zoom ) x 0.002</c> units a millisecond, 21 a second at zoom 110
-	/// (docs/QUEUE.md Q1161).
+	/// The speed <see cref="DebugWalk"/> steps at, in world units a second: an instrument's fixed pace for the sweep, so a
+	/// count of frames is a known distance. Not the walk's: a player walks at <see cref="WalkSpeedAt"/>, eased.
 	/// </summary>
-	private const float WalkSpeed = 40f;
+	private const float DebugWalkSpeed = 40f;
+
+	/// <summary>
+	/// The speed a held walk key settles at, in world units a second, at <paramref name="zoom"/>: the original's term
+	/// becomes <c>( sqrt( zoom ) x 0.02 x v + term ) x 0.5</c> a frame, <c>v</c> the keys' 0.1 (<c>0x0042bc2a</c>;
+	/// <c>0x006fddf8</c>, <c>0x006fddfc</c>), so it settles at <c>sqrt( zoom ) x 0.002</c> units a millisecond, 20.98 a
+	/// second at zoom 110 (<c>docs/exe/park-engine.md</c>, "The walk's keys, turn and speed").
+	/// </summary>
+	internal static float WalkSpeedAt( float zoom ) => MathF.Sqrt( zoom ) * 2f;
 
 	/// <summary>
 	/// Stands the viewer where the orbit camera was looking, facing the way it faced, and hands the
@@ -191,12 +207,17 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 
 		SavedPointOfInterest = ParkOrbitCameraMode.PointOfInterest;
 		SavedYaw = ParkOrbitCameraMode.Yaw;
+		_turnHeld = 0f;
+		_walkHeld = (0f, 0f);
 
 		Stand = ParkOrbitCameraMode.PointOfInterest;
 		Yaw = ParkOrbitCameraMode.Yaw;
 		Pitch = 0f;
 		Active = true;
-		Log.Info( $"First person: entered at ({Stand.X:F3}, {Stand.Y:F3}) yaw {Yaw:F4}, the orbit's saved" );
+		// The pan's term is left as it is: nothing on the way in writes 0x00790a88..0x00790a90, so a pan still moving
+		// carries into the walk (docs/exe/park-engine.md, "The walk's keys, turn and speed").
+		Log.Info( $"First person: entered at ({Stand.X:F3}, {Stand.Y:F3}) yaw {Yaw:F4}, the orbit's saved; "
+			+ $"term {ParkOrbitCameraMode.Scroll.Length:F1} a second carried in" );
 
 		Camera.SetCameraMode<ParkCamcorderCameraMode>();
 		ParkGuestSprites.Current?.UseFirstPersonPictures( true );
@@ -219,8 +240,10 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 	{
 		ParkOrbitCameraMode.PointOfInterest = SavedPointOfInterest;
 		ParkOrbitCameraMode.Yaw = SavedYaw;
+		// The walk's term is the pan's (ParkOrbitCameraMode.Scroll) and the toggle does not write it, so the orbit coasts on
+		// from it, as the original's writers of 0x00790a88..0x00790a90 leave it (docs/exe/park-engine.md).
 		Log.Info( $"First person: left at ({Stand.X:F3}, {Stand.Y:F3}) yaw {Yaw:F4}; the orbit put back at "
-			+ $"({SavedPointOfInterest.X:F3}, {SavedPointOfInterest.Y:F3}) yaw {SavedYaw:F4}" );
+			+ $"({SavedPointOfInterest.X:F3}, {SavedPointOfInterest.Y:F3}) yaw {SavedYaw:F4}, term {ParkOrbitCameraMode.Scroll.Length:F1} a second kept" );
 		Active = false;
 		ParkGuestSprites.Current?.UseFirstPersonPictures( false );
 
@@ -251,6 +274,8 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 		SavedYaw = 0f;
 		Pitch = 0f;
 		RightHeld = false;
+		_turnHeld = 0f;
+		_walkHeld = (0f, 0f);
 
 		_blockedFor = null;
 		_blocked = null;
@@ -333,7 +358,7 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 	/// Turns the view according to how far the pointer is from the middle of the screen - see
 	/// <see cref="DeadZone"/> for why it is the position and not the movement.
 	/// </summary>
-	private void Steer()
+	internal static void Steer()
 	{
 		var size = Screen.Size;
 
@@ -348,8 +373,7 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 		// Minus, not plus. Increasing Yaw turns the view LEFT here - the look direction is
 		// (-sin Yaw, cos Yaw, .), whose derivative points along screen-left at every yaw - so adding a
 		// positive deflection would turn away from the pointer. Measured in the running game to be
-		// sure of it: the pointer held at the right edge takes yaw 0.000 to -1.950 to -3.030, turning
-		// toward the pointer.
+		// sure of it: the pointer held at the right edge takes the yaw down, turning toward the pointer.
 		//
 		// The exe does not settle the sign: it SUBTRACTS its yaw step's _DAT_006fdda8 = -0.0012 term, so
 		// its net step is positive for a pointer on the right, and what that does on screen needs
@@ -461,21 +485,117 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 	}
 
 	/// <summary>
-	/// Walks the viewer about, facing-relative, swept against the cell edges by <see cref="Slide"/>.
+	/// The turn and the walk the held keys ask for, each -1, 0 or 1, with no modifier held: Up and keypad 1 walk forward,
+	/// Down and keypad 3 back (camera actions 0, <c>0x15</c>, 1, <c>0x16</c>); Left and keypad 9 turn left, Right and
+	/// keypad 7 right (actions 6, <c>0x12</c>, 7, <c>0x13</c>; <c>0x0042b32d</c>..<c>0x0042b3ee</c>, rows of the camera
+	/// table <c>0x00748158</c>, which counts a key only with no modifier). Both ways held cancel; what the original does
+	/// with both is not read.
+	/// </summary>
+	internal static (float Forward, float Turn) KeyInput( IReadOnlyCollection<Key> down )
+	{
+		if ( Input.HeldIn( down ) != Input.Modifiers.None )
+			return (0f, 0f);
+
+		return (Held( down, Key.Up, Key.Keypad1 ) - Held( down, Key.Down, Key.Keypad3 ),
+			Held( down, Key.Left, Key.Keypad9 ) - Held( down, Key.Right, Key.Keypad7 ));
+
+		static float Held( IReadOnlyCollection<Key> down, Key a, Key b )
+			=> down.Contains( a ) || down.Contains( b ) ? 1f : 0f;
+	}
+
+	/// <summary>The turn and walk keys' last frame, so the log says when each starts and ends.</summary>
+	private static float _turnHeld;
+
+	private static (float Forward, float Right) _walkHeld;
+
+	/// <summary>
+	/// Turns and walks the viewer by the held keys, facing-relative, swept against the cell edges by <see cref="Slide"/>.
 	/// </summary>
 	/// <remarks>
+	/// <para>
 	/// A held right button (<see cref="RightHeld"/>) adds the forward key's amount to the forward term, the original's
 	/// Up arrow's 0.1, on top of what the keys give and whatever RMB cancel is set to (<c>0x0042b935</c>): with the
 	/// forward key it walks twice as fast, and with the back key it stands.
+	/// </para>
+	/// <para>
+	/// <b>Not the original's:</b> W and S walk too, and A and D still strafe (<see cref="Input.Right"/>; the original has
+	/// no strafe, its across term is 0.0 at <c>0x0042b82a</c>; <c>docs/QUEUE.md</c> Q17). The camera's keys are heard
+	/// only while its table is on, as the orbit's (<see cref="ParkOrbitCameraMode.CameraTableOn"/>).
+	/// </para>
 	/// </remarks>
 	internal static void Walk()
 	{
-		var forward = Input.Forward + (RightHeld ? 1f : 0f);
+		var down = ParkOrbitCameraMode.CameraTableOn && !Input.TextCaptured ? Input.Keyboard.KeysDown : [];
+		var (keyForward, turn) = KeyInput( down );
+		var forward = Input.Forward + keyForward + (RightHeld ? 1f : 0f);
+		var moving = ParkOrbitCameraMode.Scroll != Vector2.Zero;
 
-		if ( forward == 0f && Input.Right == 0f )
-			return;
+		Move( forward, Input.Right, turn, Time.Delta, Time.SmoothingFactor( ParkOrbitCameraMode.PanRiseRate ) );
 
-		Step( forward, Input.Right, WalkSpeed * Time.Delta );
+		if ( turn != _turnHeld )
+			Log.Info( $"First person: turn by key {(turn > 0f ? "left" : turn < 0f ? "right" : "let go")}, yaw {Yaw:F4}" );
+
+		if ( (forward, Input.Right) != _walkHeld )
+			Log.Info( $"First person: walk forward {forward:F0} right {Input.Right:F0}, term {ParkOrbitCameraMode.Scroll.Length:F2} a second "
+				+ $"(settles at {WalkSpeedAt( ParkOrbitCameraMode.Zoom ):F2} at zoom {ParkOrbitCameraMode.Zoom:F0}), stand ({Stand.X:F3},{Stand.Y:F3})" );
+
+		if ( moving && ParkOrbitCameraMode.Scroll == Vector2.Zero )
+			Log.Info( $"First person: walk at rest, stand ({Stand.X:F3},{Stand.Y:F3}) yaw {Yaw:F4}" );
+
+		_turnHeld = turn;
+		_walkHeld = (forward, Input.Right);
+	}
+
+	/// <summary>
+	/// One frame of the keys' turn and walk, of <paramref name="seconds"/>: the yaw turned by <see cref="KeyTurnRate"/>,
+	/// then the walk's term (<see cref="ParkOrbitCameraMode.Scroll"/>, the original's <c>0x00790a88</c>..<c>0x00790a90</c>,
+	/// which the pan shares) eased towards <see cref="WalkTarget"/> by <paramref name="ease"/>, then the viewer swept by
+	/// the term, in the original's order (the turn at <c>0x0042b417</c>, the term at <c>0x0042bbe6</c>..<c>0x0042bc2a</c>).
+	/// </summary>
+	/// <remarks>
+	/// <b>A deviation (rule 10):</b> the original halves the gap to the target every frame with no frame time
+	/// (<c>0x0042bc2a</c>), so its walk rises faster at a higher frame rate; this halves it every 31 ms, the park's tick,
+	/// at any rate (<paramref name="ease"/> is <see cref="Time.SmoothingFactor"/> of the pan's own rise rate). With no
+	/// key held the term halves the same way, to nought under 0.1 a second (<see cref="ParkOrbitCameraMode.Floored"/>):
+	/// read from <c>docs/exe/park-engine.md</c>'s formula with an input of nought, not measured in the original.
+	/// </remarks>
+	internal static void Move( float forward, float right, float turn, float seconds, float ease )
+	{
+		Yaw += turn * KeyTurnRate * seconds;
+
+		var term = ParkOrbitCameraMode.Scroll;
+		term = ParkOrbitCameraMode.Floored( term + ((WalkTarget( forward, right, Yaw, ParkOrbitCameraMode.Zoom ) - term) * ease) );
+		ParkOrbitCameraMode.Scroll = term;
+
+		if ( term != Vector2.Zero )
+			Sweep( term.X * seconds, term.Y * seconds );
+	}
+
+	/// <summary>
+	/// The term a held key settles at, in world units a second on the map's axes: <see cref="WalkSpeedAt"/> the zoom,
+	/// turned by the yaw so that forward is the way the viewer faces.
+	/// </summary>
+	internal static Vector2 WalkTarget( float forward, float right, float yaw, float zoom )
+	{
+		var speed = WalkSpeedAt( zoom );
+
+		return new Vector2(
+			((forward * -MathF.Sin( yaw )) + (right * MathF.Cos( yaw ))) * speed,
+			((forward * MathF.Cos( yaw )) + (right * MathF.Sin( yaw ))) * speed );
+	}
+
+	/// <summary>
+	/// Runs <paramref name="frames"/> frames of the keys' turn and walk (<see cref="Move"/>) for the debug console's
+	/// <c>keys</c>, each of <see cref="Time.StepDelta"/>, as <see cref="DebugWalk"/> runs its steps: the same body a
+	/// player's keys drive, with only the reading of <see cref="Input"/> skipped, so the turn and the eased speed can be
+	/// read back from a known number of frames.
+	/// </summary>
+	internal static void DebugKeys( float forward, float turn, int frames )
+	{
+		var ease = 1f - MathF.Exp( -ParkOrbitCameraMode.PanRiseRate * Time.StepDelta );
+
+		for ( var frame = 0; frame < frames; ++frame )
+			Move( forward, 0f, turn, Time.StepDelta, ease );
 	}
 
 	/// <summary>
@@ -489,11 +609,13 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 	/// the ones a player gets.
 	/// </remarks>
 	internal static void Step( float forward, float right, float distance )
+		=> Sweep( ((forward * -MathF.Sin( Yaw )) + (right * MathF.Cos( Yaw ))) * distance,
+			((forward * MathF.Cos( Yaw )) + (right * MathF.Sin( Yaw ))) * distance );
+
+	/// <summary>The viewer swept by (<paramref name="dx"/>, <paramref name="dy"/>) on the map's axes, then held on the map.</summary>
+	private static void Sweep( float dx, float dy )
 	{
 		var extent = ParkWorld.MapSize * 10f;
-
-		var dx = ((forward * -MathF.Sin( Yaw )) + (right * MathF.Cos( Yaw ))) * distance;
-		var dy = ((forward * MathF.Cos( Yaw )) + (right * MathF.Sin( Yaw ))) * distance;
 
 		// No park means no cells to ask about - a scene that is not a park cannot reach this camera, but
 		// the sweep is written so that the answer without one is the plain step, taken whole.
@@ -509,14 +631,14 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 	}
 
 	/// <summary>
-	/// Walks <paramref name="frames"/> steps at the ordinary walking speed, for the debug console - the capture
+	/// Walks <paramref name="frames"/> steps at <see cref="DebugWalkSpeed"/>, for the debug console - the capture
 	/// this camera's collision has to be confirmed by cannot be taken with <see cref="StandAt"/>, which puts the
 	/// viewer down rather than walking them there and so crosses no cell edge at all.
 	///
 	/// <para>
 	/// <b>An instrument, not motion</b>: it runs <paramref name="frames"/> simulated frames of
 	/// <see cref="Time.StepDelta"/> inside one real frame, as the console's <c>step</c> runs its frames, so the walk
-	/// is the same at any frame rate (60 is 40 units, a second of walking) and is taken under <c>pause</c> as
+	/// is the same at any frame rate (60 is 40 units at <see cref="DebugWalkSpeed"/>) and is taken under <c>pause</c> as
 	/// <c>camera</c> and <c>camcorder</c> act there. Rule 10's per-frame motion is <see cref="Walk"/>'s, on
 	/// <see cref="Time.Delta"/>.
 	/// </para>
@@ -524,7 +646,7 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 	internal static void DebugWalk( float forward, float right, int frames )
 	{
 		for ( var frame = 0; frame < frames; ++frame )
-			Step( forward, right, WalkSpeed * Time.StepDelta );
+			Step( forward, right, DebugWalkSpeed * Time.StepDelta );
 	}
 
 	/// <summary>
@@ -818,7 +940,8 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 		return $"stand=({Stand.X:F3},{Stand.Y:F3}) " +
 			$"cell=({Stand.X / 10f:F1},{Stand.Y / 10f:F1}) " +
 			$"at=({cellX},{cellY}) type={type} " +
-			$"yaw={Yaw:F2} pitch={Pitch:F1} " +
+			$"yaw={Yaw:F4} pitch={Pitch:F1} " +
+			$"term=({ParkOrbitCameraMode.Scroll.X:F3},{ParkOrbitCameraMode.Scroll.Y:F3}) zoom={ParkOrbitCameraMode.Zoom:F0} " +
 			$"ground={(ground.HasValue ? ground.Value.ToString( "F4" ) : "-")} " +
 			$"eyeOverGround={(ground ?? 0f) + EyeHeight:F4}";
 	}
