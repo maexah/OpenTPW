@@ -49,6 +49,7 @@ internal sealed class ParkEntryPriceScreen : UiWindow
 
 	private readonly UiControl _fee;
 	private readonly UiButton _door;
+	private readonly UiButton _loans;
 
 	public ParkEntryPriceScreen( WindowStack stack ) : base( stack )
 	{
@@ -129,9 +130,11 @@ internal sealed class ParkEntryPriceScreen : UiWindow
 		} );
 
 		// This category's other three screens. Each closes this one behind it, as the buy screen's
-		// cross-link to hire does.
+		// cross-link to hire does. The loans button is disabled in Instant Action (game type 2,
+		// 0x00499008..0x00499030), as the staff costs screen's is.
 		Root.Add( CrossLink( 0x4f3ad, new UiRect( 1568, 303, 1670, 406 ), 195, "b_staffcost", 9 ) );
-		Root.Add( CrossLink( 0x4f3ac, new UiRect( 1568, 411, 1670, 513 ), 196, "b_loans", 8 ) );
+		_loans = Root.Add( CrossLink( 0x4f3ac, new UiRect( 1568, 411, 1670, 513 ), 196, "b_loans", 8 ) );
+		_loans.Enabled = !Level.InstantAction;
 		Root.Add( CrossLink( 0x4f3ab, new UiRect( 1568, 518, 1670, 620 ), 197, "b_finance", 7 ) );
 
 		// The door: whether the park is open to visitors at all. DOWN IS CLOSED. The handler calls
@@ -164,7 +167,13 @@ internal sealed class ParkEntryPriceScreen : UiWindow
 		// wait runs out. The original's setter does no more: it writes the bank's +0x118 (FUN_004d05d0).
 
 		Show();
+
+		Log.Info( $"Entry price: opened, {Census()}" );
 	}
+
+	/// <summary>The screen as it stands, for the log: the fee, whether the door is down (the park closed), and the loans button.</summary>
+	internal string Census()
+		=> $"fee {_fee.Text ?? "empty"} closed {(_door.IsDown ? 1 : 0)} loans {(_loans.Enabled ? "on" : "off")}";
 
 	/// <summary>One of the spinner's two buttons.</summary>
 	private UiButton Nudge( UiRect rect, string mesh, int by )
