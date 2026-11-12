@@ -96,7 +96,7 @@ public static class ParkTrackAddOn
 	}
 
 	/// <summary>Track to the snap and the verdict: a kart or water anchor or station, or a boundary piece (<c>TrackCell_IsTrack</c>).</summary>
-	private static bool IsTrack( int type )
+	internal static bool IsTrack( int type )
 		=> type is ParkTrackPieces.KartAnchor or ParkTrackPieces.KartStation or ParkTrackPieces.WaterAnchor or ParkTrackPieces.WaterStation
 			or ParkTrackPieces.Boundary;
 

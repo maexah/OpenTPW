@@ -42,23 +42,11 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the maintainer's pre-commit hook: grep it by Q-number.
 
-- **Q771 (a text control's bitmap is its box, and the text is cut at it):** built in a cloud container (no Ghidra, no
-  original, no photograph), rebased here onto the review fixes of group K and the run 22 review's VERIFY-17 applied.
-  `UiText`'s texture is the box (`BitmapOf`), lettered by the renderer's rules from `ui.md` and `hud.md`: the label's box
-  (`BoxOf`, the button offset moving its edges inside the bitmap, never the bitmap), the block placed by its widest line and
-  each line in it (`LineLeft`), the grey copy's box moved inside the same bitmap. Tests in `TextBitmapCutTests` (needing the
-  game), `ParkScreenLetteringTests` and `UiButtonLetteringTests` pass, and nine bugs put back by hand here (one-step
-  centring, the layout always or never wrapped, the layout's offset dropped, a right label's top moved, both edges of a
-  centred box moved, the wrap not narrowed, the grey box moved by two edges, the offset floored, a right label moved right
-  and down) each failed one or more. **This changes what is drawn and no frame of it was seen**: an off-screen census on the
-  rebased build (`consolerun.py`, `OPENTPW_TEXT_CENSUS=1`, 1280 x 720, the lobby, the park with its gadget, the buy and hire
-  screens and `screen 3` to `10`) cut 12 of 139 layouts, the gadget's date (6), money (5) and the build label (1). A probe of
-  the font found the date, row 448's "2.2.2000", losing its top row (18 of 397 ink pixels; the bottom row, also cut, holds
-  none; Q1449); the money and the build label were not probed here (the cloud lane's probe found them losing none). Not checked: the glyph blitter's clip at negative x (not read), the offset beside the original (Q1456). The
-  photograph beside the original is Q1448.
+- **Q37 (where a thing may stand; lane B, off-screen):** decoded in the private Ghidra copy and `testme.objdump` (`park-engine.md`, "Where a thing may stand"); no run of the original made. Seen off-screen (lavapipe, `q37/run3`, binary `0dee1018`, 6 of 6): the Belly Bounce's squares blue over the path at (40..42,21), put down at (40,20) over it, sold back to bare ground with no flags, a camera refused outside the park, on rock, NOMODIFY and a queue. Not seen: the desk photograph and the original's cells beside ours (Q1509); what the people on a path taken up do (Q1508, counted); a ride over scenery stays refused (Q449, counted); Windows, macOS and Full Simulation not run.
 
 ## Numbers (take counts fresh; these go stale within a day)
 
+- Linux, 2026-11-12, Q37 (`capped.sh`; eight tests added, needing the game; built in lane B, merged here after Q771): with the game, 5691 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5693; with no game named, 2461 passed, 0 failed, 3232 skipped.
 - Linux, 2026-11-12, Q771 (`capped.sh`; nine tests added, six needing the game; built in a cloud container, rebased onto the review fixes of group K with its review's fixes, re-gated here after Q1288): with the game, 5683 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5685; with no game named, 2461 passed, 0 failed, 3224 skipped.
 - Linux, 2026-11-12, Q1288 (`capped.sh`; litter placed, drawn and written; seven tests added, five needing no game; built in a cloud container, re-gated here after Q992): with the game, 5674 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5676; with no game named, 2458 passed, 0 failed, 3218 skipped.
 - Linux, 2026-11-12, Q992 (`capped.sh`; the script graph records compared; three tests added, two needing no game; built in a cloud container, re-gated here after Q1292): with the game, 5667 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5669; with no game named, 2453 passed, 0 failed, 3216 skipped.

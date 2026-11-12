@@ -100,8 +100,8 @@ public class ParkMapOffsetCellsTests
 	}
 
 	/// <summary>
-	/// <b>The refusal asks the model's cells, not the anchor's rectangle</b>: a path on the model's top row, a row above the anchor,
-	/// refuses the rock; a path on the anchor's rectangle's last row, which the model does not cover, does not.
+	/// <b>The refusal asks the model's cells, not the anchor's rectangle</b>: rock (type 7) on the model's top row, a row above the
+	/// anchor, refuses the rock; rock on the anchor's rectangle's last row, which the model does not cover, does not.
 	/// </summary>
 	/// <remarks><b>Mutation:</b> <c>PlacementRefusal</c> over <see cref="ParkObjects.FootprintAt"/> fails both halves.</remarks>
 	[TestMethod]
@@ -116,24 +116,24 @@ public class ParkMapOffsetCellsTests
 
 		var was = new Dictionary<(int, int), ParkWorld.MapCell>();
 
-		void PathAt( int cellX, int cellY )
+		void RockAt( int cellX, int cellY )
 		{
 			was[(cellX, cellY)] = state.Record( cellX, cellY );
-			state.SetRecord( cellX, cellY, was[(cellX, cellY)] with { TileSet = ParkPaths.PathTileSet } );
+			state.SetRecord( cellX, cellY, was[(cellX, cellY)] with { Type = 7 } );
 		}
 
 		void GroundAt( int cellX, int cellY ) => state.SetRecord( cellX, cellY, was[(cellX, cellY)] );
 
-		PathAt( x + 2, y - 1 );
-		StringAssert.Contains( ParkBuilding.PlacementRefusal( state, rock, x, y, 0 ), $"({x + 2},{y - 1}) is a path", "the model's top row" );
+		RockAt( x + 2, y - 1 );
+		StringAssert.Contains( ParkBuilding.PlacementRefusal( state, rock, x, y, 0 ), $"({x + 2},{y - 1}) is type 7", "the model's top row" );
 		GroundAt( x + 2, y - 1 );
 
-		PathAt( x + 2, y + 4 );
+		RockAt( x + 2, y + 4 );
 		Assert.IsNull( ParkBuilding.PlacementRefusal( state, rock, x, y, 0 ), $"the anchor's last row is not the model's ({ParkBuilding.PlacementRefusal( state, rock, x, y, 0 )})" );
 		GroundAt( x + 2, y + 4 );
 
 		// The picture's empty corners are not asked either.
-		PathAt( x, y - 1 );
+		RockAt( x, y - 1 );
 		Assert.IsNull( ParkBuilding.PlacementRefusal( state, rock, x, y, 0 ), "an empty corner of the picture" );
 	}
 

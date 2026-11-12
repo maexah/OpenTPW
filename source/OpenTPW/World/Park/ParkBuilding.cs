@@ -20,7 +20,7 @@ namespace OpenTPW;
 /// <para>
 /// <b>What is not built is counted where it falls, rather than guessed:</b> each gap has its
 /// <c>Unimplemented.Report</c> key at its own site - among them a track ride's first squares while carrying
-/// (<c>CARRY_PREVIEW_TRACK_START</c>), the terrain rule (<c>PLACEMENT_TERRAIN_RULE</c>) and the age-based scrap
+/// (<c>CARRY_PREVIEW_TRACK_START</c>), building over scenery (<c>PLACEMENT_OVER_SCENERY</c>) and the age-based scrap
 /// curve, see <see cref="Sell"/>.
 /// </para>
 /// </summary>
@@ -177,7 +177,23 @@ public static class ParkBuilding
 		}
 		else
 		{
-			Stamp( state, ParkObjects.CoveredCells( item, cellX, cellY, angle ), cellX, cellY );
+			var covered = ParkObjects.CoveredCells( item, cellX, cellY, angle ).ToList();
+
+			// The placer clears each cell before it stamps it (Cell_Clear( 0, 0 ), 0x0052910c): a path there goes, its
+			// neighbours unlinked from it, with no refund (BodyCellRefusal lets a body stand only on bare ground or path).
+			foreach ( var (x, y) in covered )
+			{
+				if ( !ParkState.OnMap( x, y ) || state.Record( x, y ).Type != CellEdge.Path )
+					continue;
+
+				// Whoever stands there is left on the new body: what the original does with them is unread (Q1508).
+				if ( state.CellAt( x, y ).Occupant != 0 )
+					Unimplemented.Report( "BUILD_OVER_PEOPLE_ON_A_PATH" );
+
+				ParkPathBuilding.ClearPathCell( state, park, x, y, stepped: false );
+			}
+
+			Stamp( state, covered, cellX, cellY );
 
 			// No tile pass follows the stamp: after it a purchase retiles none of its table cells to (set 0, tile 55): the placer
 			// retiles the cells its picture marks (type 4 gives tile 8, which gives nothing back) and the entrance's path cell and
@@ -229,10 +245,10 @@ public static class ParkBuilding
 		{
 			var ride = state.TryObject( addOnFor, out var named ) ? named : (ParkWorld.CatalogueObject?)null;
 
-			if ( ParkTrackAddOn.Refusal( state, item, ride, cellX, cellY, angle, ( x, y ) => Refusal( state, (x, y, x, y) ) ) is { } refused )
+			if ( ParkTrackAddOn.Refusal( state, item, ride, cellX, cellY, angle, ( x, y ) => BodyCellRefusal( state, x, y, item.OverwritePriority ) ) is { } refused )
 				return $"buy: '{item.Name}' will not fit at ({cellX},{cellY}) - {refused}";
 		}
-		else if ( Refusal( state, ParkObjects.CoveredCells( item, cellX, cellY, angle ) ) is { } why )
+		else if ( Refusal( state, ParkObjects.CoveredCells( item, cellX, cellY, angle ), item.OverwritePriority ) is { } why )
 			return $"buy: '{item.Name}' will not fit at ({cellX},{cellY}) - {why}";
 
 		// The affordability test the original makes when a buy row is clicked, before it ever builds
@@ -757,51 +773,74 @@ public static class ParkBuilding
 	}
 
 	/// <summary>
-	/// Why a footprint may not go here, or null when it may. Every cell is tested before any is
-	/// changed, which is the original's order and the reason a refused placement leaves nothing behind.
-	///
-	/// <para>
-	/// <b>It refuses only what is demonstrably owned by something else</b> - off the map, already built
-	/// on, a path, a queue. <b>The terrain rule itself is NOT reproduced</b>, and the rule to hand is
-	/// not it: <see cref="CellEdge.IsSolid"/> answers "a guest may not step here", which is a different
-	/// question, and type 7 alone is <b>9,077 of Lost Kingdom's 16,384 cells</b> - so using it would make
-	/// more than half the park unbuildable. Ground a guest cannot walk across is still ground a thing can
-	/// stand on.
-	/// </para>
-	/// <para>
-	/// The original's per-cell verdict is <c>FUN_00535670</c>, which compares the cell type against
-	/// 0, 1, 3, 4, 9, 10, 0x15 and 0x19 - <b>and the adversarial check on that decode recorded that
-	/// those labels are not what the disassembly shows</b>. So the rule is counted as unbuilt rather
-	/// than guessed at: being more permissive than the original is visible and correctable, where a
-	/// wrong rule refuses good ground and looks like the park's own geography.
-	/// </para>
+	/// Why the cells a thing's picture marks may not take it, or null when they may: the placer's test pass
+	/// (<c>BuildTool_Placer</c> with the test flag) asks each one <c>FUN_00532fc0( 0x204 )</c>, the verdict
+	/// <c>FUN_00535670</c> in mode 4 (<see cref="BodyCellRefusal"/>), and one red cell refuses the whole placement.
+	/// Every cell is tested before any is changed, so a refused placement leaves nothing behind. Every offline
+	/// put-down reaches this verdict, the purchase, the move and the add-on alike (<c>docs/exe/park-engine.md</c>,
+	/// "Where a thing may stand").
 	/// </summary>
-	private static string? Refusal( ParkState state, (int Left, int Top, int Right, int Bottom) footprint )
-		=> Refusal( state, ParkObjects.CellsOf( footprint ) );
-
-	/// <summary>The same test over the cells a picture marks, which are not always a whole rectangle (<see cref="ParkObjects.CoveredCells"/>).</summary>
-	private static string? Refusal( ParkState state, IEnumerable<(int X, int Y)> cells )
+	private static string? Refusal( ParkState state, IEnumerable<(int X, int Y)> cells, int priority )
 	{
-		Unimplemented.Report( "PLACEMENT_TERRAIN_RULE" );
-
 		foreach ( var (x, y) in cells )
 		{
 			if ( !ParkState.OnMap( x, y ) )
 				return $"({x},{y}) is off the map";
 
-			var cell = state.Record( x, y );
-
-			if ( ParkObjects.CoversGround( cell ) )
-				return $"({x},{y}) already has something built on it";
-
-			if ( ParkPaths.IsPath( cell ) )
-				return $"({x},{y}) is a path";
-
-			if ( ParkQueues.IsQueue( cell ) )
-				return $"({x},{y}) is a queue";
+			if ( BodyCellRefusal( state, x, y, priority ) is { } why )
+				return why;
 		}
 
 		return null;
+	}
+
+	/// <summary>
+	/// The mode-4 verdict on one cell a thing's body would cover (<c>FUN_00535670</c>, <c>0x00535670</c>..<c>0x00535d73</c>),
+	/// in its own order, or null where it passes: only bare ground or a path, inside the park, not NOMODIFY, with no track
+	/// under it. So a path under a footprint is no refusal: the build clears it first (<see cref="Build"/>).
+	/// </summary>
+	/// <param name="priority">The held item's <c>Info.OverwritePriority</c> (<c>DAT_00818c10</c>, <c>0x005239a9</c>).</param>
+	internal static string? BodyCellRefusal( ParkState state, int x, int y, int priority )
+	{
+		var cell = state.Record( x, y );
+
+		// Modes 4, 9 and 10 answer red on NOMODIFY before anything else (0x005356aa).
+		if ( (cell.Flags & ParkPathBuilding.NoModify) != 0 )
+			return $"({x},{y}) is marked NOMODIFY";
+
+		if ( (cell.Flags & ParkPathBuilding.OutsideThePark) != 0 )
+			return $"({x},{y}) is outside the park";
+
+		if ( ParkObjects.CoversGround( cell ) )
+		{
+			// The verdict passes another thing's cell when that thing's priority is below the held item's (a feature's 0
+			// or 1 under a ride's 5, 0x00535d66), and the build's op 0x87 tears it down first. That teardown is Q449's.
+			if ( ParkTrackTool.OverwritePriorityOf( state, cell.ParentId ) is { } other && other < priority )
+				Unimplemented.Report( "PLACEMENT_OVER_SCENERY" );
+
+			return $"({x},{y}) already has something built on it";
+		}
+
+		var track = ParkTrackAddOn.Head( state, x, y );
+
+		if ( track.TrackType == ParkTrackPieces.Boundary )
+			return $"({x},{y}) is the boundary's";
+
+		if ( cell.Type == 0x15 )
+			return $"({x},{y}) is part of a track";
+
+		// Over track mode 4 is blue only for an add-on (0x00535bc3), which ParkTrackAddOn.Refusal judges itself.
+		if ( ParkTrackAddOn.IsTrack( track.TrackType ) )
+			return $"({x},{y}) is part of a track";
+
+		if ( ParkPathBuilding.TrackCornerOrJunction( track ) )
+			return $"({x},{y}) is a track corner or junction";
+
+		// Bare ground and path pass (0x00535c4c, 0x00535d21); a queue, rock and water do not.
+		if ( cell.Type is CellEdge.Nothing or CellEdge.Path )
+			return null;
+
+		return ParkQueues.IsQueue( cell ) ? $"({x},{y}) is a queue" : $"({x},{y}) is type {cell.Type}, which nothing is built on";
 	}
 
 	/// <summary>
@@ -1188,12 +1227,8 @@ public static class ParkBuilding
 	/// marks the same cells as the save (<c>CoveredCells</c>), so the empty cells are no one's either way.
 	/// </para>
 	/// <para>
-	/// <b>Two deviations, both because the placement verdict is unbuilt</b> (<c>PLACEMENT_TERRAIN_RULE</c>),
-	/// so a thing can stand where the original's refuses one. The outside-the-park flag is kept where the
-	/// original clears the whole flag word, or selling would turn land outside the park into park. And a
-	/// cell the save records as terrain the original never builds on - anything but bare ground, path,
-	/// queue or a thing's footprint - goes back to the save's own record, since nothing but building on it
-	/// can have changed it; clearing it would leave walkable ground where the save has rock.
+	/// <b>The whole flag word goes</b>, the outside-the-park bit with it, as the reset does: a thing can only have
+	/// been put down on in-park bare ground or path (<see cref="BodyCellRefusal"/>).
 	/// </para>
 	/// <para>
 	/// <b>Every cell it owns is cleared, but only the ANCHOR is left.</b> A placed thing is on exactly one
@@ -1224,31 +1259,13 @@ public static class ParkBuilding
 			if ( cell.ParentId != MapStep.CellId( anchorX, anchorY ) )
 				continue;
 
-			if ( state.Park?.CellAt( x, y ) is { } saved && !BuiltOver( saved.Type ) )
-			{
-				state.ClearRecord( x, y );
-				continue;
-			}
-
 			var end = cell.Type is CellEdge.RideEnd or CellEdge.RideFarEnd;
 
-			state.SetRecord( x, y, ParkPathBuilding.Cleared( cell ) with
-			{
-				Flags = (ushort)(cell.Flags & ParkPathBuilding.OutsideThePark),
-				OverlapCounter = end ? (short)0 : cell.OverlapCounter
-			} );
+			state.SetRecord( x, y, ParkPathBuilding.Cleared( cell ) with { OverlapCounter = end ? (short)0 : cell.OverlapCounter } );
 		}
 
 		state.LeaveCell( anchorX, anchorY, thingId );
 	}
-
-	/// <summary>
-	/// Whether a cell of this type is one the original builds a thing over or clears to bare ground - bare
-	/// ground, path, queue and a footprint's three kinds. Anything else is terrain; see <see cref="Unstamp"/>.
-	/// </summary>
-	private static bool BuiltOver( int type )
-		=> type is CellEdge.Nothing or CellEdge.Path or ParkRideChoice.QueueCellType
-			or FootprintType or CellEdge.RideEnd or CellEdge.RideFarEnd;
 
 	/// <summary>Marks every cell of a footprint as built on, and names the thing standing there.</summary>
 	/// <param name="anchorX">

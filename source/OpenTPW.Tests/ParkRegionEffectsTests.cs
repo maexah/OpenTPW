@@ -181,17 +181,17 @@ public class ParkRegionEffectsTests
 		var state = new ParkState( shipped );
 		var rides = new ParkRides( "jungle", shipped, catalogue, data );
 
-		CollectionAssert.AreEqual( new short[] { 0, 0, 0, 0, 0 }, state.EffectsAt( 30, 60 ).ToArray(), "nothing there before" );
+		CollectionAssert.AreEqual( new short[] { 0, 0, 0, 0, 0 }, state.EffectsAt( 65, 33 ).ToArray(), "nothing there before" );
 
 		ParkBuilding.StandThing = _ => true;
 
 		try
 		{
-			var built = ParkBuilding.Build( state, shipped, catalogue, null, rides, CameraItem, 30, 60, 0 );
+			var built = ParkBuilding.Build( state, shipped, catalogue, null, rides, CameraItem, 65, 33, 0 );
 
 			Assert.AreNotEqual( 0, built.ThingId, built.Answer );
-			CollectionAssert.AreEqual( new short[] { 0, 0, 0, 20, 0 }, state.EffectsAt( 30, 60 ).ToArray(), "security 20 on its cell" );
-			CollectionAssert.AreEqual( new short[] { 0, 0, 0, 2, 0 }, state.EffectsAt( 35, 64 ).ToArray(), "and 2 at its reach's edge" );
+			CollectionAssert.AreEqual( new short[] { 0, 0, 0, 20, 0 }, state.EffectsAt( 65, 33 ).ToArray(), "security 20 on its cell" );
+			CollectionAssert.AreEqual( new short[] { 0, 0, 0, 2, 0 }, state.EffectsAt( 70, 37 ).ToArray(), "and 2 at its reach's edge" );
 		}
 		finally
 		{

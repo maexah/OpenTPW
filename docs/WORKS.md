@@ -23,6 +23,10 @@ belongs to or at the end. Grep it by area or Q-number; never read it whole.
   lettered without its minus and `0x32` shows `dollarsignneg`, "-$". Seen beside the original at 800 x 600 at a load,
   1 and 2 March, and four balances (`q674/side-*.png`).
 - **A tag comes on half a second after the mast lifts, in a burst of glints, and glints for its last five seconds** (Q638, with Q463; the put-on measured again by Q673, 0.502 s here, against the original's film of Q637, 0.53 s, `q673/side-by-side.png`): the first show starts effect `0x5a` over the tag's middle (not while paused), and five seconds before its end `0x5b` starts there, hidden and shown with the tag, moved down with it as one below goes, killed as it is opened or goes. Both games filmed side by side (`q638/side-by-side.png`); the census `shown at age 502, effect 0x5a at 5810,45947` and `timer 0x80081 at age 25003`, the original's at 0.52 s and 25.03 s.
+- **A thing stands where the original's may** (Q37): every cell its picture marks is judged as the verdict's mode 4 judges
+  it (`ParkBuilding.BodyCellRefusal`): in-park bare ground or path, not NOMODIFY, with no track; a path under it is taken up
+  with no refund, and a sale leaves bare ground with no flags. The Belly Bounce put down over the path at (40..42,21), its
+  squares blue there, and a camera refused outside the park, on rock, on NOMODIFY and on a queue (off-screen, `q37/run3`).
 - **Ctrl+click on a placed thing puts another of it in the hand** (Q672): Ctrl, whatever Shift and Alt are, opens no
   window; where the item's price is at most the bank the item goes into the hand turned as the clicked thing stands, and
   nothing is charged until it goes down (`ParkBuilding.CarryAnother`); dearer, `cat_ui` `0x1D` plays and the hand stays

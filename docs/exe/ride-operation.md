@@ -1656,7 +1656,7 @@ decide, where the original's comes after it.
 | Staff outside their area whose patrol roll fails | the count and the linked walk, with no patrol filter (the flag at `0x004f95af`) | false | not measured |
 | A member put down with the pointer resting on them | most likely the hover stops the walk, naming them after their first decide or again at the walk's start (inferred; Q229 measures it): 11 or 12 sweeps idle (Q869) | named before the first sweep and set idle from idle, stamp nought: walks on the next sweep that chooses to (Q229) | by a player's PICK UP and put-down |
 | The dead end and the stamp | thought `0x11`, `+0x198` stamped, every route refused until a map edit | the same, for a guest (`PeepBehaviour.SetRandomDest`, `RefusedAsStranded`; "Q110b") | not by the stock park left alone; by a player who cuts a queue's tail off its path ("Q110") |
-| A map type write's block stamp | a fresh counter value in the cell's 16 × 16 block | the same, where a cell becomes ground, path or queue (`ParkState.SetRecord`, `ClearRecord`, `StampBlock`) | every path or queue cell laid or cleared, every sale |
+| A map type write's block stamp | a fresh counter value in the cell's 16 × 16 block | the same, where a cell becomes ground, path or queue (`ParkState.SetRecord`, `StampBlock`) | every path or queue cell laid or cleared, every sale |
 | The split's events 1 and 2 | pushed onto the guest's event ring | counted, `DECIDE_NOTHING_CHOSEN_EVENT` and `DECIDE_CHOSEN_EVENT`; no ring is kept | every choice |
 | Arms (a), (b), (c), (e), (f) | run before the split | (e)'s entertainer arm built: face him, the turn ends (`PeepBehaviour.Watch`, `ParkPeople.EntertainerToWatch`; "Q668"); the rest counted at each arm's own test (`PeepBehaviour.CountBeforeLeaving`, `CountAfterLeaving`; "Q111") | (a) above 80; (c) the Drinks Shop's litter and the bin at (44,29); (e) the entertainer, thing 27; (f) pranksters |
 | Leaving | state 6 only: happiness byte 0, `mExitLevel` exactly 0, or shut; −25 every turn it holds; (47,9)/(48,9); state `0x12` only on a route | the same (`PeepBehaviour.WantsToLeave`, `Leave`, Q109); the second pass in walking mode 1 is counted, `LEAVE_ROUTE_MODE_1_RETRY`; a guest reaching state 19 is taken out at the crossing, where the original walks them on to a bus stop (Q128) | every leaver |
@@ -4720,7 +4720,7 @@ Sets 22 to 25, the four arrows, are named by no thought. **All 22 callers**, and
 
 Counted by Q110 and built by Q110b (below); this section is Q110's account. **The block stamp** follows the type write in each of its three writers
 (`0x005347af`, `0x00534913`, `0x0053908c`, each then `FUN_004d8c50` and `FUN_004d8c60`); OpenTPW counts it once in
-`ParkState.SetRecord` and `ClearRecord`, where a cell's type changes to ground, path or queue (a track cell's writer
+`ParkState.SetRecord`, where a cell's type changes to ground, path or queue (a track cell's writer
 has no caller here). The refusals (`FUN_004fa770`'s six callers) and the blinking square need a non-zero `+0x198`,
 which only the dead end writes, so they are reached only after a wander has met a dead end (`PeepBehaviour.SetRandomDest`).
 
@@ -4770,7 +4770,7 @@ nought also plays an effect (`FUN_004faa00`) with thoughts 4 and `0xf` (`0x85`),
 of which this picker reaches only 4. Then `FUN_0050be80( thought, 0 )`.
 
 **Built.** The counter is `ParkState.NextCounter` (process-wide, as the original's) and the stamps
-`ParkState.StampBlock`, written by `SetRecord`, `ClearRecord` and `RemeasureQueue`. `Peep.StrandedTime` is written at
+`ParkState.StampBlock`, written by `SetRecord` and `RemeasureQueue`. `Peep.StrandedTime` is written at
 the dead end, zeroed by a walk tick (`PeepBehaviour.Walked`), by any route asked (`SendTo`) and by the per-frame
 test (`ParkPeople.OnUpdate`); `PeepBehaviour.RefusedAsStranded` and `StillStranded` are the refusal and
 `FUN_004fa770`. `PeepWalk.Step` re-plans on a newer block stamp (`Ground`, `RouteStamp`). `Thoughts` holds

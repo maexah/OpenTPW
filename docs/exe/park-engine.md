@@ -2466,8 +2466,8 @@ shop kept under Ctrl; a thing with a queue handing over the queue tool). Measure
 Bounce's Ctrl+click holds 1100 at 0, no window, 88112 unmoved; put down on (48,31) for 500, the queue tool, a right click
 puts it away; a second clone on (44,24), 500 again; the toilet thing 22 held turned 270 and built on (41,24) as thing 45
 turned 270, 100; the bank at 50 refused with the sound and no window; without Ctrl the window. Side by side:
-`q672/side-by-side.png` (the views face opposite ways). The put-down on (41,22) that the original's run `b` made is refused
-here, "(40,21) is a path", where the original lets a footprint stand on path (Q37).
+`q672/side-by-side.png` (the views face opposite ways). The put-down on (41,22) that the original's run `b` made is taken
+here too since Q37, over the path at (40..42,21) (`q37/run3`).
 
 ### Picking is a real ray cast, not a grid lookup
 
@@ -3252,6 +3252,57 @@ model version (`0x18`/`0x17`) the one `.md2` reader `FUN_0046d6d0` refuses — i
 below `0xdd` unless flag bit 0 is set, and neither of its two call sites (`0x0046282b`, `0x0046dd06`)
 sets it — and no `qickload.txt` read and no string in the image names them.
 
+### Where a thing may stand
+
+Decoded 2026-11-12 (Q37, lane B, from the private Ghidra copy and `testme.objdump`; no run of the original made for it).
+**Every offline put-down of a carried thing reaches the verdict `FUN_00535670` in mode 4**, the purchase, the move and a
+track add-on alike:
+
+- **The preview's test pass** (`BuildTool_PreviewPass`: `0x0052390e` for a purchase, tool 4, an add-on's snap over a track
+  included; `0x005239c4` for a move, tool `0x3b`) runs the placer with its test flag. Over each cell the picture marks (kind 0, `.`, is passed by) it asks
+  `FUN_00532fc0( 0x204 )`: the `0x200` arm calls the verdict with mode `op & 0xff` and third argument nought and answers
+  whether it was not red (`0x00533000`). Kinds 1 (`@`), 3 (`Q`), 4 (`*`), the ends 9 and 10 and every other ask mode 4;
+  `+` and `#` ask `0x20b` and `0x210` (modes `0xb`, `0x10`), and are then refused on a thing's cell (`FUN_00536380`, map
+  type 4); a station cell (`0x17`) asks mode 4 too (twice where its facing byte is set), and refuses where the cell its
+  facing points to is off the map. Any refusal returns null and sets `g_PlacerFailed`.
+- **The draw pass** asks `0x104` (mode 4; `0x10b`, `0x110` for `+`, `#`) of the same cells, and any red square, or every
+  square under `g_PlacerFailed`, sets `DAT_00816d48` (`0x00533933`).
+- **The click** (`BuildTool_Click`) reaches its tool-4 arm (`0x00524b45`) and its move arm (`0x005253e7`) only with `d48`
+  clear: a set `d48` lays nothing, plays `0xaf` and dispatches the refusal (`0x00524a63`). Its three placer calls (`0x00524c63`, `0x00524da0`,
+  `0x00525417`) are all the build pass. Only an online park's layout replay (`DAT_00785a2c`, never offline: `park.md`, game
+  mode 4) runs the preview pass from the click itself first (`0x005249b6`).
+
+**Mode 4, in the verdict's order** (`0x00535670`..`0x00535d73`), for a body cell:
+
+| # | Test | Answer |
+|---|---|---|
+| 1 | NOMODIFY (`+0xe & 0x20`), any type (modes 4, 9, 10 only, `0x005356aa`) | red, no latch |
+| 2 | outside the park (`+0xe & 0x40`, `0x005357c7`) | red, no latch |
+| 3 | map type 4, 9 or 10 | blue where that thing's `Info.OverwritePriority` (`DAT_00818c14`) is below the held item's (`DAT_00818c10`, `0x005239a9`), else red and latch (`0x00535d66`) |
+| 4 | an earlier latch (third argument nought) | red |
+| 5 | track `0x19` after the 12/17 redirect | red, latch |
+| 6 | the run's total above the balance: the item's price, which the pass sets (`0x005235e6`.. for a purchase, nought for a mystery ride; `0x0052398b` for a move) | red, `c_cash` |
+| 7 | map type `0x15` | red, pending (`0x00535b9f`) |
+| 8 | track (`TrackCell_IsTrack`, `0x00535bb3`) | blue only under the add-on flag `DAT_008187f8`, else red |
+| 9 | a track bend or crossing (`0x00535bd9`, `0x00535be8`, on the track record) | red, pending |
+| 10 | map type 0, or type 1 (`0x00535c4c`, `0x00535d21`) | blue |
+| 11 | anything else (a queue, rock 7, water 2, 30) | red |
+
+So **a body cell may stand on bare ground or on any in-park path that is not NOMODIFY and has no track under it**; `+` and
+`#` take bare ground or path too, NOMODIFY or not. The stamp's own gate agrees: `FUN_00535600( 4 )` (in `Cell_Stamp`,
+`0x005346df`) writes type 4 only over type 0 or 1. **The build pass takes a path up**: over each marked cell it runs op
+`0x87` (the teardown of a thing there), `Cell_Clear( 0, 0 )` (`0x0052910c`; its path arm unlinks the eight neighbours and
+retiles them, no refund), the stamp of the cell's kind (`0xb`, `0x10`, `0x17` stamped as 4) and op `0x81`.
+
+Measured in the stock park's file (`celltypes.py -s`): of the 2,506 in-park cells, 2,362 are bare, 78 path (18 of
+them NOMODIFY), 18 rock; 288 of the bare cells carry the boundary's pieces (215 of track kind 12 parented to 73 of kind
+`0x19`), so mode 4 offers a ride 2,134 cells. Type 7 is 9,059 of the 13,878 cells outside the park.
+
+**OpenTPW** (Q37): `ParkBuilding.BodyCellRefusal` is mode 4 for every picture cell (`ParkTrackAddOn.Refusal` keeps the add-on's
+`+` and `#` cells), and `Build` clears a path under the body with `ParkPathBuilding.ClearPathCell` before the stamp. Row 3's
+blue, a ride over scenery, is refused and counted (`PLACEMENT_OVER_SCENERY`, Q449). Not read: what the people on a path taken up
+by a build do (Q1508; counted here, `BUILD_OVER_PEOPLE_ON_A_PATH`).
+
 ### The object window's stats panel
 
 `FUN_004ade40` fills the placed object's own window. It is worth reading as a whole because the seven
@@ -3439,16 +3490,12 @@ keeping `0x0100`.
 **So a sold thing leaves bare in-park ground.** The build pass clears each cell before it stamps it
 (`FUN_005367a0` at `0x0052910c`), `FUN_00535600` allows type 4 only over type 0 or 1, and the placement
 verdict `FUN_00535670` refuses `0x40` land (`0x005357c7`). That is what the cells held unless a path ran
-there, and that path does not come back. Whether every placement route reaches that verdict is open -
-`FUN_00532fc0` consults it only for ops carrying `0x100` or `0x200` (QUEUE Q37).
+there, and that path does not come back. Every offline put-down reaches that verdict ("Where a thing may stand", Q37).
 
 **OpenTPW writes that reset** (`ParkPathBuilding.Cleared`) from `Unstamp`, the queue drain (`DrainQueue`), the path
 clear (`ClearPathCell`) and the queue-cell lift (`LiftQueue`). `Unstamp` clears only the cells the thing owns, which for a thing the save placed leaves out its
-`.` cells as the original does, and it differs twice, both because its placement verdict is unbuilt
-(`PLACEMENT_TERRAIN_RULE`) and a thing can stand where the original's cannot: it keeps the `0x40` flag, and
-a cell the save records as terrain the original never builds on goes back to the save's own record.
-The path and queue verdicts refuse `0x40` land, so the other three writers clear the whole word as the
-original does. The demolish sound is counted (`DEMOLISH_SOUND`).
+`.` cells as the original does, and it writes the reset as the original does, the whole flag word with it, since the
+placement verdict (Q37) puts a thing only on in-park bare ground or path. The demolish sound is counted (`DEMOLISH_SOUND`).
 
 **The object destructor `FUN_004dd0a0`** (one caller, `FUN_0050b780` at `0x0050b866`), in order: the
 item's built count down (`FUN_004d3d10`, record `+0x18`); the object chain unlink (`FUN_00519dc0`); **the

@@ -14107,3 +14107,28 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   (`Letter( font, lines, layout )`, F3). Re-taken on the rebased build: 12 of 139 layouts cut (date 6, money 5, build label
   1); the date, now row 448's "2.2.2000", loses its top row, 18 of 397 ink pixels (the money and label not re-probed). **Done 2026-11-12** (cloud lane
   c82, `alexah/1061-text-control-clips-to-box`; rebased `q-Q771`).
+- [x] **Q37. The placement terrain rule.** `ParkBuilding.Refusal` counts `PLACEMENT_TERRAIN_RULE` and lets a
+  thing stand on types 2, 7 and 30 and on land flagged `0x40`, outside the park. The original allows a
+  footprint only over in-park bare ground or path (`FUN_00535600`, `FUN_00535670` refusing `0x40` at
+  `0x005357c7`); whether every placement route goes through that verdict (its op-`0x104` branch) is
+  still open. When it is built, `Unstamp`'s two declared deviations go: keeping `0x40` where the original
+  clears the whole flag word, and giving terrain back its save's record rather than clearing it.
+  - **Note (fork review, 2026-09-30):** the `.hmp` adds nothing here: its mark plane equals `Info.Shape` in all 274 pictured items
+    (Q191).
+  - **Note (Q672):** ours refuses any path cell under a footprint (`ParkBuilding.Refusal`, "is a path"), where this item says
+    the original allows bare ground or path. Seen: the Belly Bounce with the pointer on (41,22) is refused here, "will not
+    fit at (40,20) - (40,21) is a path" (`q672/run3`), and taken by the original from the same pointer cell, 88181 to
+    87701 (`q635/orig/b-run.out` 1-4-put). Which of its cells may stand on a path there is not read.
+  - **Done (lane B run 22, b7, `q37/`, `PREDICTION.txt`; binary md5 `0dee1018`; decoded in the private Ghidra copy and
+    `testme.objdump`, `park-engine.md`, "Where a thing may stand"):** every offline put-down reaches the verdict in mode 4 (the
+    purchase's test pass `0x0052390e`, the move's `0x005239c4`, `0x204` a picture cell; the click refuses on `d48`,
+    `0x00524a63`). Mode 4 takes in-park bare ground or path, not NOMODIFY, with no track; the build clears a path first
+    (`Cell_Clear( 0, 0 )`, `0x0052910c`). Built: `ParkBuilding.BodyCellRefusal`, the path cleared in `Build`, and `Unstamp`'s
+    two deviations gone (the whole flag word cleared, no save's record given back; `ParkState.ClearRecord` went with its one
+    caller); a ride over scenery is refused and counted (`PLACEMENT_OVER_SCENERY`, Q449). Off-screen (lane B, `run3` on the final build, 6 of 6, as `run2` before the last counter):
+    the Belly Bounce carried with the pointer on (41,22) draws 14 squares, (40..42,21) blue over the path, none red; put down at
+    (40,20) for 500, (40..42,21) type 4 owned by (40,20), (39,21) 0x14 to 0x10, (43,21) 0x44 to 0x04; sold, bare ground with
+    flags 0; a camera refused outside the park (43,16), on rock (45,17), NOMODIFY (47,21) and a queue (50,22), built on (60,30);
+    no `PLACEMENT_TERRAIN_RULE` in the census. `run1` missed P2 to P4 through the script's `put` cell (recorded). The stock park
+    offers a ride 2,134 cells (`celltypes.py -s`). Not seen: the desk photograph and the original beside it (Q1509), the people
+    on a path taken up (Q1508).

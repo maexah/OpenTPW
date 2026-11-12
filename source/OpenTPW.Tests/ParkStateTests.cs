@@ -253,12 +253,12 @@ public class ParkStateTests
 		state.SetRecord( 48, 22, path with { Type = CellEdge.Footprint } );
 		Assert.AreEqual( second, state.BlockStamp( 48, 22 ), "a footprint is not one of the three writers' types" );
 
-		state.ClearRecord( 48, 22 );
+		state.SetRecord( 48, 22, path );
 		var third = state.BlockStamp( 48, 22 );
-		Assert.IsTrue( third > second, "giving the cell back to the save's path" );
+		Assert.IsTrue( third > second, "a footprint made path again" );
 
-		state.ClearRecord( 48, 22 );
-		Assert.AreEqual( third, state.BlockStamp( 48, 22 ), "and a cell already the save's stamps nothing" );
+		state.SetRecord( 48, 22, path );
+		Assert.AreEqual( third, state.BlockStamp( 48, 22 ), "and path written over path stamps nothing" );
 
 		// One block is 16 x 16 cells: (48,16)..(63,31) share (48,22)'s, and (47,22) and (48,32) do not.
 		Assert.AreEqual( third, state.BlockStamp( 63, 31 ) );

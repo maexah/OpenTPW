@@ -2488,18 +2488,16 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   - **Note (Q617):** the filter values are decoded (`render-states.md`, "Texture filtering"): MIN POINT but on a wrapped
     texture, MAG LINEAR but under word bit `0x20000`, MIP chosen once from `TEXTUREFILTERING` and the caps, LOD bias 0.
     Which MIP the reference install's caps give is not read live.
-- [ ] **Q37. The placement terrain rule.** `ParkBuilding.Refusal` counts `PLACEMENT_TERRAIN_RULE` and lets a
-  thing stand on types 2, 7 and 30 and on land flagged `0x40`, outside the park. The original allows a
-  footprint only over in-park bare ground or path (`FUN_00535600`, `FUN_00535670` refusing `0x40` at
-  `0x005357c7`); whether every placement route goes through that verdict (its op-`0x104` branch) is
-  still open. When it is built, `Unstamp`'s two declared deviations go: keeping `0x40` where the original
-  clears the whole flag word, and giving terrain back its save's record rather than clearing it.
-  - **Note (fork review, 2026-09-30):** the `.hmp` adds nothing here: its mark plane equals `Info.Shape` in all 274 pictured items
-    (Q191).
-  - **Note (Q672):** ours refuses any path cell under a footprint (`ParkBuilding.Refusal`, "is a path"), where this item says
-    the original allows bare ground or path. Seen: the Belly Bounce with the pointer on (41,22) is refused here, "will not
-    fit at (40,20) - (40,21) is a path" (`q672/run3`), and taken by the original from the same pointer cell, 88181 to
-    87701 (`q635/orig/b-run.out` 1-4-put). Which of its cells may stand on a path there is not read.
+- [ ] **Q1508. What a build over a path does to the people on it** (decode first; from Q37). A thing put down over a path
+  takes the path up (`Cell_Clear( 0, 0 )` at `0x0052910c`, then the stamp), and a guest or worker standing or walking there is
+  then on a type 4 cell. Ours moves nobody and counts it (`BUILD_OVER_PEOPLE_ON_A_PATH`, `ParkBuilding.Build`). Read what the placer, `Cell_Clear`'s path arm or the peeps'
+  own walk do with a person on such a cell (ejected, re-routed, left), then build it. Confirm: a guest held on (41,21) with
+  `pause`, the Belly Bounce put down at (40,20), the guest's state and cell after `step`.
+- [ ] **Q1509. A ride put down over a path, photographed and beside the original** (lane A; from Q37). Q37 was seen off-screen
+  only. On the desk: the Belly Bounce carried with the pointer on (41,22) in the stock park (its squares blue over the path row,
+  `q37/run3/p1-carry-over-path.png` off-screen), put down, and `cell 40 21`..`42 21`. In the original, the same pointer cell
+  (Q635's `b` run put it down there, `q635/orig/b-run.out` 1-4-put; its cells were not read): read the map cells (40..42,21)
+  and (39,21), (43,21) after the put-down and compare type, owner and links with ours.
 - [ ] **Q38. What building and selling look and sound like.** Counted, not built: the death particle
   (`DESTROY_PARTICLE_EFFECT`, `Info.DestroyParticleEffect`, 75-78, a world effect spread over the
   footprint) and the demolish sound (`DEMOLISH_SOUND`, `0x96`-`0x99` by size; Q1000 caught the pillar's sale in the original playing `0x98` once, category word 3, X 40 = 10 x the picture's width, `park-engine.md`, "The demolisher's per-cell tail, and its sale sound"). The build side's particle is
@@ -3143,6 +3141,8 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   (`ParkBuilding.cs`) counts it. Lost Kingdom's Wateride (`WhichTrackType` 2) and its go-karts (1) both reach this
   arm; its coasters (3) withdraw nought. Confirm: a Wateride sold with its track, and the go-karts, the bank beside
   the original's.
+  - **Note (Q37):** the body verdict now refuses a ride over a lower-priority thing and counts it there
+    (`PLACEMENT_OVER_SCENERY`, `ParkBuilding.BodyCellRefusal`); the original passes it (`0x00535d66`) and tears the thing down.
 
 - [ ] **Q450. Park screens: the buy window's gauges, the map's colours, the hover latch.** From the fork watch,
   2026-10-16 (`verify-ui-hud.md` M3, M4, C3). (1) The buy screen's stats panel is unbuilt (`ParkBuyScreen.cs`); its

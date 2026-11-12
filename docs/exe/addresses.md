@@ -859,6 +859,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00522ea0` | Hoarding pieces' loader FUN_00522e40: a named row's model made as item `0x4394` (17300) plus its row | OpenTPW/World/Park/ParkBoundaryHoarding.cs  |
 | `0x00522ed2` | Hoarding pieces' loader FUN_00522e40: a row with no name takes the row before's model | OpenTPW/World/Park/ParkBoundaryHoarding.cs OpenTPW.Tests/ParkBoundaryHoardingTests.cs  |
 | `0x005234f2` | Tool pass `FUN_005234d0`: clears the refusal latch `DAT_00816d50` at its start (with `d48`, `d58`), which its verdicts then set | OpenTPW/World/Park/ParkBuildMarkers.cs OpenTPW/World/Park/ParkBuildMode.cs  |
+| `0x005239a9` | Preview pass, the move's arm: the held item's `Info.OverwritePriority` into `DAT_00818c10`, which the verdict's mode 4 compares | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x00523dd3` | Tool pass, the patrol arm: the rectangle's test `FUN_00532a50` into the refusal latch `DAT_00816d50` | OpenTPW/World/Park/ParkPatrolTool.cs OpenTPW.Tests/ParkStaffWindowTests.cs  |
 | `0x00524a63` | Build commit: a red preview (`DAT_00816d48`) lays nothing, sound `0xaf` | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x00524a77` | Carry shell's button-up FUN_00524960: its one read of the down slot's flag DAT_008186d8, gating a sound | OpenTPW/World/Level.cs  |
@@ -888,6 +889,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00528584` | Demolisher FUN_00527ee0: FUN_00545610 frees the object's track ride entry, before the object goes | OpenTPW/World/Park/ParkBuilding.cs OpenTPW/World/Park/ParkTrackRideTable.cs  |
 | `0x00528f62` | Placer: start of the pairing of footprint bases 1, 0x40, 0x10, 4 with angles 0, 90, 180, 270 | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x00528f8b` | Placer: the angle-0 arm's base write, `1` (the pairing's other three at `0x00528fb7`, `0x00528fe7`, `0x0052900f`) | OpenTPW/World/Park/ParkBuilding.cs  |
+| `0x0052910c` | Placer, build pass: `Cell_Clear( 0, 0 )` on each marked cell before its stamp (a path there is taken up) | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x005292b2` | Placer sweep: the exit takes its turned bit as its direction | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x005293c3` | Placer sweep: the entrance takes its turned bit as its direction | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x00529744` | Placer: returns null when the entrance faces off the map | OpenTPW/World/Park/ParkBuilding.cs  |
@@ -931,20 +933,27 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0053525a` | Queue arm: first of the four entrance-bond probes | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x00535323` | Queue arm: last entrance-bond probe | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x00535597` | Queue arm: end | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x00535670` | Verdict `FUN_00535670` (`BuildTool_CellVerdict`): entry | OpenTPW/World/Park/ParkBuilding.cs OpenTPW/World/Park/ParkTrackAddOn.cs  |
+| `0x005356aa` | Verdict: NOMODIFY answers red at once for modes 4, 9 and 10 | OpenTPW/World/Park/ParkBuilding.cs OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x005356df` | Verdict `FUN_00535670`: mode `0x36` (the patrol tool, the patrol edges) answers the refusal latch `DAT_00816d50` alone | OpenTPW/World/Park/ParkBuildMarkers.cs  |
 | `0x005357c7` | Verdict `FUN_00535670`: the `0x40` outside-the-park test, first for every tool | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x00535811` | Verdict `FUN_00535670`: the parent redirect for track types 12 and 17, made inline after `FUN_004d0af0` fetches the cell's own track record | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x00535885` | Verdict `FUN_00535670`: `DAT_00816d58` copied into `DAT_00816d50`, after the outside-the-park test | OpenTPW/World/Park/ParkPathBuilding.cs OpenTPW.Tests/ParkPathToolTests.cs  |
 | `0x005358e9` | Queue verdict: the cash total skips queue over path | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x005358f1` | Queue verdict: end of that guard | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x00535bc3` | Verdict, mode 4 over track: blue only under the add-on flag `DAT_008187f8` | OpenTPW/World/Park/ParkBuilding.cs OpenTPW/World/Park/ParkTrackAddOn.cs  |
+| `0x00535c4c` | Verdict: map type 0 answers blue | OpenTPW/World/Park/ParkBuilding.cs  |
+| `0x00535d21` | Verdict: mode 4 over a path answers blue | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x00535d63` | Verdict: end of the path arm | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x00535d66` | Verdict: a thing's cell passes when its `Info.OverwritePriority` (`DAT_00818c14`) is below the held item's | OpenTPW/World/Park/ParkBuilding.cs  |
+| `0x00535d73` | Verdict: the overwrite-priority test, to here | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x00536140` | `FUN_00536100` chooses its axis: a tie runs along Y | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x005367ed` | `FUN_005367a0` leaves a bare cell alone | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x0053694b` | | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x00536a07` | The clear's queue arm zeroes the overlap counter under force | OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x00536a37` | `FUN_005367a0`'s forced queue arm refunds only while the owner's cell is typed | OpenTPW.Tests/ParkPathBuildingTests.cs OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x00536abf` | The clear's queue arm zeroes the overlap counter before its reset | OpenTPW/World/Park/ParkPathBuilding.cs  |
-| `0x00536bc9` | The clear's reset, which type 4 and the queue arm jump to and the path arm repeats: bare, unlinked, unflagged, unowned, tile 55 | OpenTPW/World/Park/ParkPathBuilding.cs  |
+| `0x00536bc9` | The clear's reset, which type 4 and the queue arm jump to and the path arm repeats: bare, unlinked, unflagged, unowned, tile 55 | OpenTPW.Tests/ParkSellTests.cs OpenTPW/World/Park/ParkPathBuilding.cs  |
 | `0x0053c755` | `FUN_0053c3f0`: the marker wave's phase gains 0.1 a frame unless paused | OpenTPW/World/Park/ParkBuildMarkers.cs  |
 | `0x0053c773` | `FUN_0053c3f0`: the phase store | OpenTPW/World/Park/ParkBuildMarkers.cs  |
 | `0x0053c7b1` | | OpenTPW.Tests/ParkStrandedTests.cs OpenTPW/World/Park/ParkBuildMarkers.cs  |

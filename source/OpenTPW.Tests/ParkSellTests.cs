@@ -216,7 +216,7 @@ public class ParkSellTests
 	/// it leaves".
 	/// </summary>
 	/// <remarks>
-	/// <b>Mutations:</b> clearing with <see cref="ParkState.ClearRecord"/> fails the first cell; the tile
+	/// <b>Mutations:</b> giving the save's record back fails the first cell; the tile
 	/// left at nought fails the tile; the drain keeping the node's counter fails the last assertion.
 	/// </remarks>
 	[TestMethod]
@@ -261,13 +261,13 @@ public class ParkSellTests
 	}
 
 	/// <summary>
-	/// <b>Land outside the park stays outside it.</b> The original clears the whole flag word and never
-	/// stands a thing on such land; here the placement verdict is unbuilt, so a thing can, and clearing the
-	/// flag would make that land part of the park.
+	/// <b>The clear takes the whole flag word</b>, the outside-the-park and NOMODIFY bits with it, as the reset does
+	/// (<c>FUN_005367a0</c>, <c>0x00536bc9</c>): a thing can only have stood on in-park bare ground or path, so nothing it
+	/// leaves is land outside the park.
 	/// </summary>
-	/// <remarks><b>Mutation:</b> clearing the whole word, as the original does, fails the assertion.</remarks>
+	/// <remarks><b>Mutation:</b> keeping the outside-the-park bit fails the assertion.</remarks>
 	[TestMethod]
-	public void ClearingAFootprintKeepsLandOutsideThePark()
+	public void ClearingAFootprintClearsTheWholeFlagWord()
 	{
 		var world = World();
 		var state = new ParkState( world );
@@ -276,8 +276,7 @@ public class ParkSellTests
 
 		ParkBuilding.Unstamp( state, (10, 10, 10, 10), 10, 10, BoughtThing );
 
-		Assert.AreEqual( ParkPathBuilding.OutsideThePark, (int)ParkState.CellFor( world, 10, 10 ).Flags,
-			"only the outside-the-park flag survives" );
+		Assert.AreEqual( 0, (int)ParkState.CellFor( world, 10, 10 ).Flags, "no flag survives" );
 	}
 
 	/// <summary>
@@ -325,29 +324,28 @@ public class ParkSellTests
 	}
 
 	/// <summary>
-	/// <b>Terrain the original never builds on comes back as it was.</b> (45,17), beside the gate, is saved
-	/// as type 7 inside the park; the unbuilt placement verdict lets a thing stand there, and selling it must
-	/// not leave walkable bare ground where the save has rock.
+	/// <b>A cleared cell is bare ground whatever the save had there.</b> (45,17), beside the gate, is saved as type 7 inside
+	/// the park, which the placement verdict refuses (<see cref="ParkBuilding.BodyCellRefusal"/>); a cell owned by a thing
+	/// is cleared to type nought all the same, as the demolisher's reset writes it.
 	/// </summary>
-	/// <remarks>
-	/// <b>Mutations:</b> clearing it like any other cell leaves type nought; giving back the type alone
-	/// leaves the entrance's direction behind.
-	/// </remarks>
+	/// <remarks><b>Mutation:</b> giving back the save's record leaves type 7.</remarks>
 	[TestMethod]
-	public void ClearingAFootprintGivesBackTerrainTheOriginalNeverBuildsOn()
+	public void ClearingAFootprintLeavesBareGroundWhateverTheSaveHad()
 	{
 		var world = World();
 		var state = new ParkState( world );
-		var saved = world.CellAt( 45, 17 );
 
-		Assert.AreEqual( 7, saved.Type, "the save has (45,17) as type 7" );
+		Assert.AreEqual( 7, world.CellAt( 45, 17 ).Type, "the save has (45,17) as type 7" );
 
 		// Stamped, and marked as an entrance facing south, as a one-cell Litter Bin is.
 		ParkBuilding.Stamp( state, (45, 17, 45, 17), 45, 17 );
 		state.SetRecord( 45, 17, state.Record( 45, 17 ) with { Type = CellEdge.RideEnd, Direction = 0x10 } );
 		ParkBuilding.Unstamp( state, (45, 17, 45, 17), 45, 17, BoughtThing );
 
-		Assert.AreEqual( saved, ParkState.CellFor( world, 45, 17 ), "it is the save's own cell again, type 7" );
+		var cleared = ParkState.CellFor( world, 45, 17 );
+
+		Assert.AreEqual( CellEdge.Nothing, cleared.Type, "bare ground" );
+		Assert.AreEqual( 0, (int)cleared.Direction, "facing nowhere" );
 	}
 
 	/// <summary>

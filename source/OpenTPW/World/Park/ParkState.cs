@@ -226,22 +226,6 @@ public sealed class ParkState
 	}
 
 	/// <summary>
-	/// Drops a cell's override, so that the save answers for it again - what selling a thing gives back to
-	/// a cell the save records as terrain the original never builds on (<see cref="ParkBuilding.Unstamp"/>).
-	/// Every other cell a sold thing stood on is written the cleared record instead, because the save's
-	/// record of it still names the thing, or names whatever the player has since changed.
-	/// </summary>
-	public void ClearRecord( int x, int y )
-	{
-		if ( !OnMap( x, y ) )
-			return;
-
-		StampTypeWrite( x, y, Record( x, y ).Type, _park?.CellAt( x, y ).Type ?? 0 );
-
-		_records.Remove( (y * ParkWorld.MapSize) + x );
-	}
-
-	/// <summary>
 	/// The cells changed since the park was loaded, by their place in <see cref="ParkWorld.Cells"/>, each as
 	/// <see cref="Record"/> answers it: what a park file written from this park says of its ground.
 	/// </summary>

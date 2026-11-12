@@ -248,10 +248,10 @@ public class ParkPathTests
 		Assert.IsTrue( ParkPaths.IsPath( ParkState.CellFor( world, 10, 10 ) ),
 			"a cell the player has laid path on should read as path" );
 
-		// And putting it back reaches the file again rather than writing the old value over the top.
-		state.ClearRecord( 10, 10 );
+		// And the file's own record written back reads as the file does.
+		state.SetRecord( 10, 10, world.CellAt( 10, 10 ) );
 
-		Assert.IsFalse( ParkPaths.IsPath( ParkState.CellFor( world, 10, 10 ) ), "cleared back to the file" );
+		Assert.IsFalse( ParkPaths.IsPath( ParkState.CellFor( world, 10, 10 ) ), "written back to the file's record" );
 	}
 
 	/// <summary>
