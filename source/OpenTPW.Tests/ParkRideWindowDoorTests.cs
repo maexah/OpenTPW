@@ -154,8 +154,8 @@ public class ParkRideWindowDoorTests
 	}
 
 	/// <summary>
-	/// <b>The ride window's title is lettered as <c>UI_SetTitle</c> letters it</b> (Q548; <c>FUN_0048d290</c>'s call at
-	/// <c>0x004ae937</c>): the Belly Bounce's name in font 5, (234, 239, 102), with the edge, centred in the stream's rect
+	/// <b>The ride window's title is lettered as <c>UI_SetTitle</c> letters it</b> (Q548; the load's call of <c>FUN_0048d290</c>
+	/// at <c>0x004ae937</c>): the Belly Bounce's name in font 5, (234, 239, 102), with the edge, centred in the stream's rect
 	/// (746, 74)-(1219, 153) widened by half its width, 236 (cut down from 236.5, as the visitors screen's 803 to 1276
 	/// measured 567 to 1512 in the original), either side: (510, 74)-(1455, 153).
 	/// </summary>

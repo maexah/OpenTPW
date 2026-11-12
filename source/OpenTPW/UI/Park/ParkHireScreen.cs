@@ -234,6 +234,7 @@ internal sealed class ParkHireScreen : UiWindow
 
 			// The add's pick of the first row, as the list fills on opening and on a tab; taken in Update.
 			PicksFirstRow = true,
+			TakesCursorKeys = true,
 
 			// The screen's handler keeps the list's 0x406 (0x0049b85e).
 			SortChanged = word => _sort = word

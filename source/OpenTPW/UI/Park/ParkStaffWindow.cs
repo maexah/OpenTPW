@@ -215,6 +215,8 @@ internal sealed class ParkStaffWindow : UiWindow, IObjectWindowSteps
 			Font = 5,
 			TextColour = new UiColour( 234, 239, 102 ),
 			TextShadow = true,
+			// The pointer on it turns it white and its leave yellow again (FUN_0048d2e0, 0x0048d340): not built, counted.
+			Entered = static () => Unimplemented.Report( "OBJECT_TITLE_HOVER" ),
 			LeftClicked = () => Verb( "STAFF_WINDOW_NAME_EDIT" )
 		} );
 

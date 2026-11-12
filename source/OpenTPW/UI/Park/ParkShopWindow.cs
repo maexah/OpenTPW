@@ -222,6 +222,8 @@ internal sealed class ParkShopWindow : UiWindow, IStatusBox, IObjectWindowSteps
 			TextShadow = true,
 
 			// The title's rename box (FUN_0048d2e0, given by FUN_0048d290): Q28.
+			// The pointer on it turns it white and its leave yellow again (FUN_0048d2e0, 0x0048d340): not built, counted.
+			Entered = static () => Unimplemented.Report( "OBJECT_TITLE_HOVER" ),
 			LeftClicked = static () => Unimplemented.Report( "RENAME_OBJECT" )
 		} );
 

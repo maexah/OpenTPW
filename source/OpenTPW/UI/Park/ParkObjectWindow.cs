@@ -209,7 +209,7 @@ internal sealed class ParkObjectWindow : UiWindow, IStatusBox, IObjectWindowStep
 		_title = Root.Add( new UiControl
 		{
 			Id = 0x3e28,
-			// The load's FUN_0048d290 letters it through UI_SetTitle (0x004ae937): font 5 in (234, 239, 102), with its shadow,
+			// The load's call of FUN_0048d290 (0x004ae937) letters it through UI_SetTitle: font 5 in (234, 239, 102), with its shadow,
 			// centred in the stream's rect (746 to 1219) widened by half its width either side (docs/exe/ui.md, "UI_SetTitle").
 			Rect = new UiRect( 510, 74, 1455, 153 ),
 			HelpText = 3,
@@ -219,6 +219,8 @@ internal sealed class ParkObjectWindow : UiWindow, IStatusBox, IObjectWindowStep
 
 			// A left click on the title opens the thing's rename box (FUN_0048d2e0, the helper every object
 			// window's title is given by FUN_0048d290). Renaming is not built (docs/QUEUE.md Q28): counted.
+			// The pointer on it turns it white and its leave yellow again (FUN_0048d2e0, 0x0048d340): not built, counted.
+			Entered = static () => Unimplemented.Report( "OBJECT_TITLE_HOVER" ),
 			LeftClicked = static () => Unimplemented.Report( "RENAME_OBJECT" )
 		} );
 

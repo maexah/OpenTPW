@@ -1680,11 +1680,28 @@ internal sealed class ParkGadget : UiWindow
 	/// read the american row. This reads the american row alone until Q697 moves the whole interface. The original's
 	/// 31-byte buffer is not modelled; no date reaches it.
 	/// </remarks>
-	internal static string DateOf( DateTime date, StringFile? table = null )
-		=> Localization.Format( table ?? AmericanText.Value, 448, (16, $"{date.Day}"), (17, $"{date.Month}"), (18, $"{date.Year}") );
+	internal static string DateOf( DateTime date, StringFile? table = null ) => DateIn( date, table ?? AmericanText.Value );
 
-	/// <summary>The american UITEXT table, read once at the first date lettered.</summary>
-	private static readonly Lazy<StringFile> AmericanText = new( () => new StringFile( "Language/american/UITEXT.str" ) );
+	/// <summary>
+	/// <see cref="DateOf"/> from <paramref name="table"/>; without one, from the English row, day first, and counted
+	/// (<c>GADGET_DATE_NO_AMERICAN_TABLE</c>): an install whose disc ships no <c>Language/american</c> (not every release is
+	/// known to) letters its date there, where the original would read its own tables.
+	/// </summary>
+	internal static string DateIn( DateTime date, StringFile? table )
+	{
+		(int, string)[] values = [(16, $"{date.Day}"), (17, $"{date.Month}"), (18, $"{date.Year}")];
+
+		if ( table != null )
+			return Localization.Format( table, 448, values );
+
+		Unimplemented.Report( "GADGET_DATE_NO_AMERICAN_TABLE" );
+		return Localization.Format( 448, values );
+	}
+
+	/// <summary>The american UITEXT table, read once at the first date lettered, or none where the install has none.</summary>
+	private static readonly Lazy<StringFile?> AmericanText = new( () => FileSystem.FileExists( AmericanTextPath ) ? new StringFile( AmericanTextPath ) : null );
+
+	private const string AmericanTextPath = "Language/american/UITEXT.str";
 
 	/// <summary>
 	/// The golden keys the player holds and the golden tickets they have not spent, read from their progress the way

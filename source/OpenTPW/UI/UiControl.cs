@@ -265,7 +265,7 @@ internal class UiControl
 	}
 
 	/// <summary>
-	/// The colour its text is lettered in now, and how far the text is moved across and down in the font's pixels:
+	/// The colour its text is lettered in now, and the offset across and down handed to its label in interface units (<see cref="UiText.Nudge"/>):
 	/// <see cref="TextColour"/> where it lies, unless a button letters by its state (<see cref="UiButton.LettersByState"/>).
 	/// </summary>
 	internal virtual (UiColour Colour, int Across, int Down) Lettering => (TextColour, 0, 0);
@@ -452,18 +452,18 @@ internal class UiButton : UiControl
 	/// <summary>
 	/// Whether its label is lettered by its state, as the original's button class (vtable <c>0x00705a50</c>) letters it
 	/// (<c>0x00668ad3</c>; <c>docs/exe/ui.md</c>, "A text button's lettering by state"): in <see cref="UiControl.TextColour"/> where
-	/// it lies, plain or down; in <see cref="PointerTextColour"/> one font pixel across and one down with the pointer on it;
-	/// in <see cref="UiControl.TextColour"/> two across and one down while pressed (not down); and disabled, as it was last
-	/// lettered. A button without it keeps <see cref="UiControl.TextColour"/> where it lies whatever its state: only the list
-	/// headings letter by state here (<c>docs/QUEUE.md</c> Q1163).
+	/// it lies, the pointer on it or not; in <see cref="DownTextColour"/> moved (1, 1) while down (checked); in
+	/// <see cref="UiControl.TextColour"/> moved (2, 1) while pressed with the pointer on it, down or not; and disabled, as it was
+	/// last lettered. The pointer alone never re-letters it. A button without it keeps <see cref="UiControl.TextColour"/> where it
+	/// lies whatever its state: only the list headings letter by state here (<c>docs/QUEUE.md</c> Q1163).
 	/// </summary>
 	public bool LettersByState { get; init; }
 
 	/// <summary>
-	/// The colour its label takes with the pointer on it, when it <see cref="LettersByState"/>: the class's <c>+0x154</c>,
+	/// The colour its label takes while down, when it <see cref="LettersByState"/>: the class's <c>+0x154</c>,
 	/// black from the constructor (<c>0x006688b3</c>), the caller's own colour from <c>FUN_00486660</c> (a list's headings).
 	/// </summary>
-	public UiColour PointerTextColour { get; init; } = UiColour.Black;
+	public UiColour DownTextColour { get; init; } = UiColour.Black;
 
 	/// <summary>The lettering it had when it was last enabled - what a disabled button keeps (state 1 sends no flags).</summary>
 	private (UiColour Colour, int Across, int Down)? _lastLettering;
@@ -478,10 +478,10 @@ internal class UiButton : UiControl
 			if ( !Enabled )
 				return _lastLettering ?? (TextColour, 0, 0);
 
-			// The original's getter (0x00668820) tests down (+0x139) before pressed, so a down button pressed reads as
-			// down: plain, or the pointer's with the pointer on it.
-			var lettering = !IsDown && Pressed ? (TextColour, 2, 1)
-				: Hovered ? (PointerTextColour, 1, 1)
+			// The press clears the pointer's flag (+0x139) and sets +0x138 bit 1 only while the pointer is inside, so the
+			// getter (0x00668820) reads pressed inside as 4 before down; the pointer's own setter never re-letters.
+			var lettering = Pressed && Hovered ? (TextColour, 2, 1)
+				: IsDown ? (DownTextColour, 1, 1)
 				: (TextColour, 0, 0);
 
 			_lastLettering = lettering;

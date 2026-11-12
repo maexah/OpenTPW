@@ -147,8 +147,8 @@ internal sealed class ParkObjectPreview
 	/// <summary>Whether the item's own name board was carried onto it.</summary>
 	public bool CarriesSign { get; }
 
-	/// <summary>The two pi the first angle is wrapped by (the double at <c>0x006fe7d8</c>).</summary>
-	public const double TwoPi = 6.2831855;
+	/// <summary>The two pi the first angle is wrapped by: float two pi as a double, the bytes at <c>0x006fe7d8</c> (6.2831854820251465).</summary>
+	public const double TwoPi = (double)6.2831855f;
 
 	/// <summary>
 	/// The angle the last preview of the session left: the original's record at <c>0x007afd08</c> is static, so its
@@ -156,20 +156,33 @@ internal sealed class ParkObjectPreview
 	/// </summary>
 	public static float LastAngle { get; internal set; }
 
-	/// <summary>The angle a new preview starts from, the last one's wrapped to two pi: <c>fmod( [0x007afd50], 6.2831855 )</c> (<c>0x00468e2f</c>).</summary>
+	/// <summary>The angle a new preview starts from, the last one's wrapped to two pi: <c>fmod( [0x007afd50], </c><see cref="TwoPi"/><c> )</c> (<c>0x00468e2f</c>).</summary>
 	public static float StartAngle( float last ) => (float)(last % TwoPi);
 
 	/// <summary>The angle the next preview starts from: the session's last, wrapped.</summary>
 	public static float NextStartAngle => StartAngle( LastAngle );
 
-	/// <summary>How far round it has turned, in radians. Every change is kept as <see cref="LastAngle"/>, as the record keeps it.</summary>
-	public float Angle
-	{
-		get => _angle;
-		private set => _angle = LastAngle = value;
-	}
+	/// <summary>
+	/// The angle a new preview starts from (<see cref="NextStartAngle"/>), kept as <see cref="LastAngle"/>: the build writes
+	/// the wrapped angle back into the record (<c>0x00468e36</c>).
+	/// </summary>
+	internal static float Begin() => LastAngle = NextStartAngle;
 
-	private float _angle;
+	/// <summary>
+	/// <paramref name="angle"/> turned by <paramref name="milliseconds"/>, kept as <see cref="LastAngle"/>: the frame writes
+	/// the record's angle (<c>0x00469093</c>, <c>FUN_00468e50</c>).
+	/// </summary>
+	internal static float Turn( float angle, float milliseconds )
+		=> LastAngle = angle + (milliseconds * ParkPreviewFit.RadiansPerMillisecond);
+
+	/// <summary>How far round it has turned, in radians. Every change is kept as <see cref="LastAngle"/>, as the record keeps it.</summary>
+	public float Angle { get; private set; }
+
+	/// <summary>
+	/// Whether a frame has been drawn: the first turns by nothing, as the original's first frame reads the clock into its
+	/// base and so turns by about nought (<c>0x00468e5c</c>), showing the start angle itself.
+	/// </summary>
+	private bool _drawn;
 
 	private ParkObjectPreview( int thingId, string modelPath, bool isPModel, bool carriesSign, LobbyModel model,
 		RideAnimations animations, ItemHeightMapFile heights )
@@ -193,7 +206,7 @@ internal sealed class ParkObjectPreview
 		// The first angle is the one the last panel left, wrapped to two pi (0x00468e2f;
 		// docs/exe/park-engine.md, the object window's preview).
 		var last = LastAngle;
-		Angle = NextStartAngle;
+		Angle = Begin();
 
 		Log.Info( $"Object preview: thing {thingId} starts at angle {Angle:F4}, the last panel left {last:F4}" );
 	}
@@ -348,7 +361,9 @@ internal sealed class ParkObjectPreview
 
 		_clock += Time.Delta * 1000.0;
 
-		Angle = _held ?? Angle + (Time.Delta * 1000f * ParkPreviewFit.RadiansPerMillisecond);
+		// Only the turn's first frame is held to nought here: whether the original's clip takes the same first frame was not read.
+		Angle = _held is { } held ? LastAngle = held : Turn( Angle, _drawn ? Time.Delta * 1000f : 0f );
+		_drawn = true;
 
 		Pose();
 

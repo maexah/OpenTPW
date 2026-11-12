@@ -1058,6 +1058,68 @@ public class ParkGadgetPressTests
 	}
 
 	/// <summary>
+	/// <b>The bar's buy button selects its tag's item on either half</b> (<c>FUN_004acc70</c>: on a screen it opens,
+	/// <c>0x004acd3c</c>; on the one open, <c>0x004ad1dd</c>): after the fill's pick of the top row, the item's row is the
+	/// list's selection, and <c>Update</c> hands it to the help. On Lost Kingdom's catalogue, a ride and a sideshow that are
+	/// not their tab's top row.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the tag's item not picked (<c>ParkGadget</c>'s <c>PickItem</c> call deleted); picked before the fill's pick.</remarks>
+	[TestMethod]
+	public void TheBuyButtonSelectsItsTagsItemOnEitherHalf()
+	{
+		var level = Level.Current;
+
+		try
+		{
+			var (_, scratch, scratchStack) = ParkFootprintPictureTests.BuyScreen();
+			scratch.PickTab( 0 );
+			var ride = BuyListOf( scratch ).Rows[2].Id;
+			scratch.PickTab( 2 );
+			var sideshow = BuyListOf( scratch ).Rows[1].Id;
+			scratchStack.Close( scratch );
+
+			var (stack, gadget) = AGadget();
+			var tags = gadget.Tags = new ParkTags( [.. ParkTags.Rows, new ParkTags.Row( 21, ParkTags.NoTag, 1, 0, 0xb, 0, 30000, 0 )] );
+
+			var first = tags.Said( 64, 0, 1000, item: ride )!;
+			Frame( stack, false, new Vector2( 1000, 100 ), 1.5f );
+			Time.PinWall( 2000 );
+			Assert.IsTrue( stack.ClickAt( 119, 941 ) );
+			Settle( gadget );
+			Assert.AreEqual( first, tags.OnShow );
+			Assert.IsTrue( stack.ClickAt( 565, 1172 ), "mb_buy" );
+			Settle( gadget );
+
+			var screen = stack.Windows.OfType<UI.ParkBuyScreen>().Single();
+			Assert.AreEqual( (0, ride), (screen.Tab, BuyListOf( screen ).Selected), "a screen it opens: the ride selected" );
+			screen.Update();
+			Assert.IsTrue( screen.HelpCensus().StartsWith( $"help item {ride} " ), screen.HelpCensus() );
+
+			Frame( stack, false, new Vector2( 1000, 100 ), 2.6f );
+			var second = tags.Said( 21, 0, 3000, item: sideshow )!;
+			Frame( stack, false, new Vector2( 1000, 100 ), 3.5f );
+			Time.PinWall( 3600 );
+			Assert.IsTrue( stack.ClickAt( 119, 941 ) );
+			Settle( gadget );
+			Assert.AreEqual( second, tags.OnShow );
+			Assert.IsTrue( stack.ClickAt( 565, 1172 ) );
+			Settle( gadget );
+
+			Assert.AreSame( screen, stack.Windows.OfType<UI.ParkBuyScreen>().Single(), "the screen that was open" );
+			Assert.AreEqual( (2, sideshow), (screen.Tab, BuyListOf( screen ).Selected), "the open screen: the sideshow selected" );
+			screen.Update();
+			Assert.IsTrue( screen.HelpCensus().StartsWith( $"help item {sideshow} " ), screen.HelpCensus() );
+		}
+		finally
+		{
+			Level.Current = level!;
+		}
+	}
+
+	private static UI.UiList BuyListOf( UI.ParkBuyScreen screen )
+		=> (UI.UiList)typeof( UI.ParkBuyScreen ).GetField( "_list", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance )!.GetValue( screen )!;
+
+	/// <summary>
 	/// <b>The bar's hire button</b> (<c>FUN_0048e0f0</c>, types 0xd to 0x11, which answer 2): the worn-rides tag
 	/// shows part 2 of the tag's picture and dresses the bar's first button as <c>mb_buy</c> with the help row of
 	/// its type; its click opens the hire screen on the mechanics' tab whatever tab it was last left on, hides the

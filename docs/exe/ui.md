@@ -444,9 +444,14 @@ its stale mip maps. Under opentpw.cfg's `graphics faithful` the copy is 1 whatev
 A button of class `0x00705a50` letters its label by its state each time it is set or changed. The constructor
 (`0x006688b3`) gives it two colours, `+0x14c` white and `+0x154` black (255), and an offset `+0x158`, `+0x159` of
 (1, 1) (`0x00668952`..`0x006689ac`). `0x00668ad3` takes the state from `0x00668820` (`lobby.md`, the state getter)
-and, through the table at `0x00668bd4`: 0 and 2 (plain, checked) letter it in `+0x14c` at (0, 0); 3 and 5 (the pointer
-on it) in `+0x154` at (`+0x158`, `+0x159`); 4 (pressed) in `+0x14c` at (`+0x158` + 1, `+0x159`), (2, 1); 1 (disabled)
-sends no flags, so the label keeps what it had. The flags `0x4c000` go to the label's text control (`0x0048fc40`:
+and, through the table at `0x00668bd4`: 0 and 2 (plain; the pointer on an unchecked button) letter it in `+0x14c` at
+(0, 0); 3 and 5 (checked, the pointer on it or not) in `+0x154` at (`+0x158`, `+0x159`); 4 (pressed with the pointer inside)
+in `+0x14c` at (`+0x158` + 1, `+0x159`), (2, 1); 1 (disabled) sends no flags, so the label keeps what it had. `+0x158` and
+`+0x159` are written only by the constructor, so the offsets are the constants (1, 1) and (2, 1). It letters only when
+`0x00668ad3` runs: from the `+0x138` setter `0x00668bec` (`0x00668c75`), `SetText` and the two colour setters. The pointer's
+flag `+0x139` has its own setter, `0x00668c99`, which never re-letters (it sends the label flag 1, which `0x0048fc40` ignores),
+so the pointer alone never moves or recolours the label: it moves only while held with the pointer inside, and dragged off
+while held it goes back to plain, or to the checked lettering. The flags `0x4c000` go to the label's text control (`0x0048fc40`:
 `0x40000` the colour, `0x4000` and `0x8000` the offset's two words). The base `SetText` (`0x0065f645`) runs after it
 (`0x00668d5f`, vtable `+0x24`). The setters `0x00668f5a` and `0x00668f7b`, called only from `FUN_00486660`
 (`0x00486749`, `0x00486751`), set both `+0x14c` and `+0x154` to the caller's colour; a sample of its 59 callers passes (255, 239, 0).
@@ -454,17 +459,40 @@ Which controls are of the class: every layout control of type 2 is a button (`hu
 `0x006688b3`; a list's headings are type 2 (op `0xc`). Of Lost Kingdom's screens OpenTPW builds, the only buttons lettered
 with a label of their own are the list headings (all-staff, all-items, visitors, hire, buy); the finance and park-status
 screens, whose toggles the fork watch named, are not built (`ParkCategoryScreens.Show`, `FINANCE_SCREEN`,
-`PARK_STATUS_SCREEN`), and the units of the offset's two words were not read.
+`PARK_STATUS_SCREEN`).
 
-**OpenTPW** (Q1163): a `UiButton` with `LettersByState` letters by its state (`UiButton.Lettering`): `TextColour` at (0, 0)
-plain or down, `PointerTextColour` at (1, 1) with the pointer on it (down or not), `TextColour` at (2, 1) pressed and not
-down, and disabled as it was last lettered. The offset is taken as the font's own pixels, each drawn as large as the text is
-(`UiText.Nudge`), since the original draws a font at its own size; not checked. A framed list heading (`UiList.AddHeading`
+**The offset's units.** `0x0048fc40` stores flag `0x4000`'s word at the label's `+0xde` (`0x0048fcb9`) and `0x8000`'s at
+`+0xe0` (`0x0048fcc9`). In each of the label's three placement cases (`0x0048f8c5`, `0x0048f950`, `0x0048f9c3`) across is
+`+0xde` x the screen's width `[0x00faa5c4]` / 2048 and down `+0xe0` x its height `[0x00faa5c0]` / 1536, each cut toward
+nought: interface units, as the control's own rect (`0x0048f47b`). The offset is not a translation: it moves an edge of the
+label's text box inside its bitmap (built at `0x0048fb79`..`0x0048fb90`) before the text engine aligns in it; the
+output rect (`0x0048fbb9`..`0x0048fc08`) has no offset term. With `+0xd8` 0 (left) the box's left is across and its top
+down; with 1 (centre) the left moves right by across and the top is down, the right unchanged; with 2 (right) the right
+is the width less across and the bottom the height less down, the top 0 (`0x0048f8c5`..`0x0048f91a`). The engine centres
+between the edges (`0x006ae675`..`0x006ae686` across, `0x006aebcb`..`0x006aebda` down, each halved), so a centred label
+moves about half the converted offset across, and the move down hangs on the down alignment: for a left or centre label
+top moves the whole offset, middle about half and bottom none; for a right label top none, middle about half up and
+bottom the whole offset up. The renderer wraps at the box's right less its left (`+0xa8`, `0x006ae152`), so the offset
+across narrows a wrapped label's width in every alignment. `FUN_00486660`
+sets a heading's label centred both ways (`0x004866cc`..`0x004866d2`), so a list heading pressed at 1024 x 768 gets 1 pixel
+across and 0 down and moves 0 or 1 pixel across by the halving's parity; checked, (1, 1) converts to (0, 0) there; at
+800 x 600 and 640 x 480 nothing moves. Not traced in full: the engine's `+0xac`/`+0xb4` read as the box's left and right
+from the alignment code, not from `0x006ae0f0`'s arguments.
+
+**OpenTPW** (Q1163): a `UiButton` with `LettersByState` letters by its state (`UiButton.Lettering`): `TextColour` at (2, 1)
+pressed with the pointer on it (down or not), else `DownTextColour` at (1, 1) down, else `TextColour` at (0, 0), the pointer
+on it or not; disabled, as it was last lettered. The offset is in interface units, cut toward nought at the virtual screen's
+scale, and moves the text by the edges of its box the label's alignment moves (`UiText.Nudge`): a centred text moves half
+of it, in fractions of a pixel where the original halves in whole ones. A wrapping text breaks at its box less the
+offset across (`UiText.WrapAreaWidth`). A framed list heading (`UiList.AddHeading`
 with a frame) letters by state in the colour handed over for both, (255, 239, 0). Every other button keeps its one
 `TextColour` where it lies: the lobby's new player dialog's two `b_ltoggle` options letter black always, which this class's
-white-then-black does not explain (Q1457). OpenTPW's state numbers are its mesh parts', not the getter's above (Q1458). The debug console's `control <id>` prints a heading's colour as drawn, its offset
-and its state. Run in a cloud container, off-screen (all-staff, `Name` heading 0x10): plain (0, 0), OpenTPW's state 0; the
-pointer on it (1, 1), its state 2 (`Highlighted`); held down (2, 1), its state 3, and the release sorted the list (`sort -1`); off it (0, 0); all in (255, 239, 0).
+white, and black moved (1, 1) when checked, does not explain (Q1457). `UiButton.State` (its mesh part, `Frame + State`) matches the getter but for a press: pressed with the pointer on it it gives
+3 where the original gives 4, and pressed with the pointer dragged off 4 where the original gives 0, or 5 checked (Q1458).
+The debug console's `control <id>` prints a heading's colour as drawn, its offset and its state. Run in a cloud container,
+off-screen (all-staff, `Name` heading 0x10), under the first reading, which moved the text (1, 1) under the pointer: held
+down (2, 1), OpenTPW's state 3, and the release sorted the list (`sort -1`); all in (255, 239, 0). The corrected rule has
+not been run.
 
 ## Escape game menu
 

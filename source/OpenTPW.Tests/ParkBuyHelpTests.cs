@@ -116,7 +116,7 @@ public class ParkBuyHelpTests
 		var panel = new Vector2( 300, 300 );
 		const string ape = "Pirate ShipYou can't afford to buy this item!";
 
-		Assert.AreEqual( Localization.Help( 0x90 ), Frame( stack, heading ), "ours: no row is picked as the list fills (Q232)" );
+		Assert.AreEqual( Localization.Help( 0x90 ), Frame( stack, heading ), "the heading is off the rows: its own row" );
 		Assert.AreEqual( "Bouncy CastleLeft-click to buy", Frame( stack, RowAt( list, 1100 ) ) );
 		Assert.AreEqual( Localization.Help( 0x90 ), Frame( stack, heading ), "the heading is off the rows: its own row (O2)" );
 		Assert.AreEqual( ape, Frame( stack, RowAt( list, 1101 ) ) );
@@ -129,6 +129,29 @@ public class ParkBuyHelpTests
 		SetBalance( 2000 );
 		Assert.AreEqual( "Pirate ShipLeft-click to buy", Frame( stack, RowAt( list, 1101 ), false ), "the bank moved: the state did" );
 		Assert.AreEqual( "help item 1101 posted 1101 state 3", screen.HelpCensus() );
+	}
+
+	/// <summary>
+	/// <b>The fill's pick is posted as soon as the pointer comes onto the row area</b>, before any row is under it (Q495,
+	/// built by Q232): one frame with the pointer on the strip under the last row letters the top row's line, the line the
+	/// pointer on the top row keeps.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the buy list without its first row's pick; the pick not taken in <c>Update</c>.</remarks>
+	[TestMethod]
+	public void TheTopRowsLineIsPostedWithThePointerOnTheStripUnderTheRows()
+	{
+		var (_, screen, stack) = ParkFootprintPictureTests.BuyScreen();
+		var list = ListOf( screen );
+		SetBalance( 1500 );
+
+		var top = list.Rows[0].Id;
+		var strip = new Vector2( (list.RowArea.Left + list.RowArea.Right) / 2f, list.RowArea.Bottom - 2f );
+		Assert.IsTrue( strip.Y > list.RowArea.Top + (System.Math.Min( list.Rows.Count, list.VisibleRows ) * list.RowHeight), "no row under the strip" );
+
+		var posted = Frame( stack, strip );
+		Assert.IsTrue( screen.HelpCensus().StartsWith( $"help item {top} posted {top} " ), screen.HelpCensus() );
+		Assert.AreNotEqual( "", posted, "a line posted" );
+		Assert.AreEqual( posted, Frame( stack, RowAt( list, top ) ), "the top row's own line" );
 	}
 
 	/// <summary>
@@ -166,7 +189,7 @@ public class ParkBuyHelpTests
 		screen.PickTab( 2 );
 
 		Assert.IsNull( screen.HelpPost( false, 1500, null, 0 ), "the tab is off the rows" );
-		Assert.IsNull( screen.HelpPost( true, 1500, null, 0 ), "back on the sideshows' rows with none selected" );
+		Assert.IsNull( screen.HelpPost( true, 1500, null, 0 ), "back on the rows before Update takes the new tab's pick" );
 		Assert.AreEqual( "help item 0 posted 1101 state -1", screen.HelpCensus() );
 	}
 

@@ -4597,9 +4597,12 @@ record at `[0x007b9f4c]`. `FUN_004864f0` runs `FUN_00468e50` on it each frame; `
   left, bottom, width, height, `+0x5c` `scale * sx/2`, `+0x60` `scale * sz/2`, `+0x64` `reach / (reach + hd)`,
   `+0x68` `scale * diagonal`, `+0x6c` `scale * reach`, `+0x70` the clock's last reading.
 - It triggers role 5 (M), entry 0, looped, at speed 1.0, on channel 0 (`FUN_004732a0`, `0x00468e11`).
-- The first angle is the angle the last panel left in the record, wrapped to two pi: `fmod( [0x007afd50], 6.2831855 )`
-  (`FUN_0067b24a` is the CRT's `_CIfmod`, `0x00468e2f`; the double is at `0x006fe7d8`). The record is static and its
-  angle is nought in the image, so only the first panel of a run starts from nought.
+- The first angle is the angle the last panel left in the record, wrapped to two pi: `fmod( [0x007afd50], 6.2831855f )`
+  (`FUN_0067b24a` is the CRT's `_CIfmod`, `0x00468e2f`; the double at `0x006fe7d8` is float two pi widened, 6.2831854820251465). The record is static and its
+  angle is nought in the image, so only the first panel of a run starts from nought. The build sets `[0x007afd08]` to 1
+  (`0x00468e25`); the first frame, seeing it, reads the clock into `+0x70` and clears it before reading the clock again
+  (`0x00468e5c`..`0x00468e6e`), so it turns by about nought and shows the start angle itself. OpenTPW's first
+  `ParkObjectPreview.Draw` turns by nothing.
 
 **`FUN_00468e50` turns and places it each frame.** It copies the kept root matrix back, turns it about y by the angle
 (`FUN_0046f420`: `x' = x cos a + z sin a`, `z' = z cos a - x sin a`), tips it about x by 45 degrees
@@ -4705,15 +4708,14 @@ the alpha byte `0x80` reaches the screen as 8/15, which is what a surface with f
 **What chooses the row.** The buy list carries the list flag `0x80`, and under it the list's proc answers the
 pointer's move (`0x10001`, and `0x10003`) through `FUN_006656a0`: the row under the pointer is selected with no press,
 which posts `0x401` when the row changes (`hud.md`, "The pointer over a list"). So a row is shown by resting the
-pointer on it, and the add's selection of the first row (`docs/QUEUE.md` Q232) shows the top row half a second after
+pointer on it, and the add's selection of the first row (built by Q232) shows the top row half a second after
 the list is filled.
 
 **OpenTPW** (Q233b): `ParkFootprintPicture` is control `0x1eb`, a child of the panel; its `Grid` is `FUN_0052c5b0`
 and its `Squares` the paint's arithmetic, on a surface the control's rectangle in whole pixels, drawn at 8/15.
 `ParkBuyScreen.RowSelected` and `Update` keep the waiting row and show it after more than 500 ms;
-`UiList.SelectsUnderPointer` is the flag, set on every list (`hud.md`, "The pointer over a list"), and `WindowStack` sends the move. It differs in two
-ways, each said at its site (the wait is real time, `Time.WallMilliseconds`, as the original's is); no row is
-selected as the list fills, so the panel stays empty until the pointer has been over a row (Q232). The model and the kind row `0x1ec` are not in the panel (Q158).
+`UiList.SelectsUnderPointer` is the flag, set on every list (`hud.md`, "The pointer over a list"), and `WindowStack` sends the move. It differs in one
+way, said at its site: the wait is real time, `Time.WallMilliseconds`, as the original's is. The model and the kind row `0x1ec` are not in the panel (Q158).
 The console's `footprint` prints the row shown, the row waiting, the cells and the block's place.
 
 **Confirmed in Lost Kingdom** (2026-10-06, a 1280 by 720 window, the pointer moved by XTEST, each number predicted

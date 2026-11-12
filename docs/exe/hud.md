@@ -309,7 +309,8 @@ american tables the original reads, so month.day.year with full stops, none padd
 "1.10.2002" on that date, written every frame where the original writes on a day's change and at set-up (the text is
 the same between them). **A deviation, said at the site:** the rest of the interface reads the English tables (Q697), so
 the Load Park list letters a date day first while the gadget letters it month first; in the original both read the
-american row. The 31-byte buffer is not modelled; no date fills it.
+american row. The 31-byte buffer is not modelled; no date fills it. An install without `Language/american` (not every
+release is known to ship it) letters the English row, day first, and counts `GADGET_DATE_NO_AMERICAN_TABLE` (`ParkGadget.DateIn`).
 
 ### The happiness gauge's two quads (Q244; fork watch 2026-10-19, verify-advisor-ui.md L3, verify-other-b.md M3)
 
@@ -1368,7 +1369,7 @@ is never judged: the list's does (`0x00665d22`), so a press on a list is a click
 | the plain list class, `FUN_0065bb6b` (made by `FUN_0065ab64`) | `0x11006` | with flag `0x80`, posts `0x200` with the row; without, the row under the point (`FUN_0065b93f`, `0x201`) |
 | a slider's track, `Slider_Callback` | `0x11006` | whatever the button: pages towards the point (`Slider_PageTowards`) |
 | the lobby's player slots and Quit Game, `0x004a6000`, `0x004a61d0` (type 1 in the stream at `0x00753c68`, not buttons) | `0x10006` | whatever the button: the slot, or the quit question |
-| an object window's title, `FUN_0048d2e0` (installed by `FUN_0048d290`, which eight windows call with their title's id; the ride window's is `0x3e28`) | `0x10006` | the left button: slot `+0x38` of the helper kept in the control's slot 0, the thing's rename box (`park-engine.md`, the name boxes). The move turns the title white (`FUN_0065c5d5`) and the leave puts it back (`FUN_00492d20`). OpenTPW counts the click, `RENAME_OBJECT` (Q28) |
+| an object window's title, `FUN_0048d2e0` (installed by `FUN_0048d290`, which eight windows call with their title's id; the ride window's is `0x3e28`) | `0x10006` | the left button: slot `+0x38` of the helper kept in the control's slot 0, the thing's rename box (`park-engine.md`, the name boxes). The move turns the title white (`FUN_0065c5d5`, `0x0048d340`) and the leave puts it back (`FUN_00492d20`, `0x0048d326`). OpenTPW counts the click, `RENAME_OBJECT` (Q28), and keeps the title yellow under the pointer, counted as `OBJECT_TITLE_HOVER` in the ride, shop and staff windows (filed by the run 22 review) |
 | the entry price screen's heading `0x4f3af`, `FUN_00499060` (installed by `FUN_00498d80`) | `0x10006` | the left button: `FUN_004990f0`, the park's rename box; the same white on the move. OpenTPW counts the click, `RENAME_PARK` (Q28) |
 | `FUN_004b3c10` (installed by `FUN_004b3cf0`, the staff and visitor locator) | `0x10006` | the left button: `FUN_004b79b0` or `FUN_004b6080` |
 | the game menu's rows, `MenuList_ChoiceCallback` | `0x10006` | **whatever the button**: sound `0xc1`, then the choice (`0x100001`) |
@@ -1934,7 +1935,8 @@ is not looked into.
 **OpenTPW** (`ParkBuyScreen.HelpPost`, asked by `WindowStack` after the control under the pointer has posted, the
 `UiWindow.HelpPost` hook): the same states and rows, the kind by `ParkBuyScreen.TypeNameOf`, the price the item file's
 as the list's (the record's `+0x04` agrees in all 50 shipped records), the tickets `Players.TicketsUnspent`. Its list
-picks no first row as it fills (Q232), so nothing is posted before the pointer has selected a row. A row's own
+picks its first row as it fills (`UiList.PicksFirstRow`, Q232), taken by `Update`, so the first row's help is posted as soon
+as the pointer comes onto the row area, as the original's. A row's own
 two lines stand at the top of the strip, as the original's (Q484, above). Measured
 (`q495/run1`, 15 of 15, `side-by-side.png`): every row's words as the original's frames.
 
@@ -3405,8 +3407,10 @@ it passes; where each glide began was not recorded, so it is consistent, not mea
 opened by V away from the rows reads `selected index -1` and counts `LIST_FIRST_ROW_SELECTED`; the pointer moved onto
 row 3 logs `List 0x1e497: row 39 at 2 picked under the pointer`; closed and opened again under the pointer resting
 there it reads `selected index -1` with no pick (`WindowStack` hands a list the point only on a frame the pointer
-moved), and Down and then Home leave it at -1 (no list takes a key). Neither the pick at rest nor the keys is built or
-counted: Q1428 and Q1429.
+moved), and Down and then Home leave it at -1 (no list takes a key). Neither the pick at rest nor the keys is built
+(Q1428 and Q1429); each is counted where it is reached: `LIST_FILL_UNDER_RESTING_POINTER` where a fill's pick lands with
+the pointer on the row area (`UiList`), `LIST_CURSOR_KEYS` where End, Home, Up or Down goes down while a list with the
+flag `0x200` is shown and no box has the keys (`UiList.TakesCursorKeys`, `WindowStack`).
 
 **OpenTPW** (Q232, lane c77, a cloud container with no Ghidra, no original and no display to photograph): the
 visitors, buy and Load and Save Park lists set `UiList.PicksFirstRow`. The buy screen's `Update` takes the posted
@@ -4440,7 +4444,7 @@ binary): `row 42 New Visitor: $ 684 0 512`, `row 38 1: $ 306 1 122`, ... `row 37
 its bars 0.5, 0.125, 0.33, 0.902, 1.0, 0.714, 0.527 and 0.5 (the file's happiness); the number centred (0.497), the cash
 right (0.974), the rides left (0.034) (`q371/side-by-side.png`: the original, this, main). Main's build (`run-control2`)
 lettered 0 and the cash and happiness as bare numbers, every one from the right, and drew no bar. The rows are 56 units
-apart, as the original's 55.8 (Q377, "The rows' font and height"). **Not built**: the first row picked as the list fills
+apart, as the original's 55.8 (Q377, "The rows' font and height"). The first row is picked as the list fills
 (Q232). The scrollbar is built (Q919; "The list's scrollbar", "The other lists' bars").
 
 **OpenTPW** (Q372): `Peep.StayAt`, `ParkVisitorsScreen.HoursIn` and `TimeText`; `RowOf`'s `rewrite` shifts the stay.

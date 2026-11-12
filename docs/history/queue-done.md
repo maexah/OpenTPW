@@ -14012,3 +14012,11 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `Time.Delta` (rule 10: the per-frame half step becomes its time-based equivalent, said at the site). Confirm under Proton
   first (`campoi.py` in first person: the yaw after a held Left of known length, the position after a held Up at zoom 110),
   then ours' `camcorder` census against it.
+- [x] **Q601. The gadget's date is written with the machine's culture; the original's reads "4.13.2002".** Seen in
+  Q707's runs (`q707/p707t/side-by-side.png`): ours letters `GameCalendar.Now.ToShortDateString()` (`ParkGadget.ShowDate`),
+  "4/18/2002" on this machine, and would letter another order on a machine of another culture; the original's frames read
+  "4.4.2002" to "4.29.2002" (`q707/p707t/orig/O/g-*.png`). Decode the original's date writer for the gadget, then write
+  the date its way whatever the machine.
+  Done by Q527 (closed in the run 22 review, 2026-11-12): `ParkGadget.DateOf` letters UITEXT 448 from the american table
+  as `Gadget_SetDateAndTrend` (`0x004a0e30`) does, month.day.year whatever the machine's culture (`hud.md`, "The date's
+  lettering"). The frame check is Q1388.

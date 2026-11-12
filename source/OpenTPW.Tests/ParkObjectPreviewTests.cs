@@ -192,6 +192,46 @@ public class ParkObjectPreviewTests
 		Assert.AreEqual( 1.1504440f, ParkObjectPreview.StartAngle( 20f ), 1e-5f );
 	}
 
+	/// <summary>
+	/// The two pi is float two pi widened to a double (the bytes at 0x006fe7d8, 6.2831854820251465), so float two pi itself
+	/// wraps to nought exactly: the double literal 6.2831855, above it, keeps it whole.
+	/// </summary>
+	[TestMethod]
+	public void FloatTwoPiWrapsToNought()
+	{
+		Assert.AreEqual( 6.2831854820251465, ParkObjectPreview.TwoPi );
+		Assert.AreEqual( 0f, ParkObjectPreview.StartAngle( 6.2831855f ) );
+	}
+
+	/// <summary>
+	/// A preview begins at the session's last angle wrapped and keeps it as the last; each turn keeps the angle it reaches as
+	/// the last, so the next preview begins there: <c>LastAngle</c> 7 begins at 0.7168145, a second at 0.4 rad a second
+	/// turns it to 1.1168145, and the next begins there. A preview that never writes the session's angle, or begins at
+	/// nought, gets each wrong.
+	/// </summary>
+	[TestMethod]
+	public void APreviewBeginsAndTurnsTheSessionsAngle()
+	{
+		var before = ParkObjectPreview.LastAngle;
+
+		try
+		{
+			ParkObjectPreview.LastAngle = 7f;
+			var begun = ParkObjectPreview.Begin();
+			Assert.AreEqual( 0.7168145f, begun, 1e-5f, "begun" );
+			Assert.AreEqual( 0.7168145f, ParkObjectPreview.LastAngle, 1e-5f, "the last, once begun" );
+
+			Assert.AreEqual( 1.1168145f, ParkObjectPreview.Turn( begun, 1000f ), 1e-5f, "turned a second" );
+			Assert.AreEqual( 1.1168145f, ParkObjectPreview.LastAngle, 1e-5f, "the last, once turned" );
+
+			Assert.AreEqual( 1.1168145f, ParkObjectPreview.Begin(), 1e-5f, "the next begun" );
+		}
+		finally
+		{
+			ParkObjectPreview.LastAngle = before;
+		}
+	}
+
 	/// <summary>The session keeps the last panel's angle, and the next panel starts from it, not from nought.</summary>
 	[TestMethod]
 	public void TheNextPreviewStartsFromTheSessionsLastAngle()

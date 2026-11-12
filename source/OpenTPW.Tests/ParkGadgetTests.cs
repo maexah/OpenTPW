@@ -144,6 +144,25 @@ public class ParkGadgetTests
 	}
 
 	/// <summary>
+	/// <b>Without the american table the date is lettered from the English row and counted</b>, not thrown: 10 January
+	/// 2002 reads "10.1.2002", day first, and <c>GADGET_DATE_NO_AMERICAN_TABLE</c> goes up by one; read from a table, nothing
+	/// is counted.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the missing table not counted; counted with a table; the American order kept by hand.</remarks>
+	[TestMethod]
+	public void WithoutTheAmericanTableTheDateIsTheEnglishRowCounted()
+	{
+		static int Counted() => Unimplemented.Summary.FirstOrDefault( entry => entry.What == "GADGET_DATE_NO_AMERICAN_TABLE" ).Times;
+
+		var before = Counted();
+		Assert.AreEqual( "10.1.2002", UI.ParkGadget.DateIn( new DateTime( 2002, 1, 10 ), null ) );
+		Assert.AreEqual( before + 1, Counted(), "the English row counted" );
+
+		Assert.AreEqual( "1.10.2002", UI.ParkGadget.DateIn( new DateTime( 2002, 1, 10 ), new StringFile( "Language/american/UITEXT.str" ) ) );
+		Assert.AreEqual( before + 1, Counted(), "a table read, nothing counted" );
+	}
+
+	/// <summary>
 	/// <b>The gadget letters the park's date when it is built</b>: tick 208 is 10 January 2000 (208 x 15,000 / 4 seconds
 	/// is nine days and a little), so "1.10.2000", and nothing is counted for it.
 	/// </summary>

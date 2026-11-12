@@ -609,11 +609,11 @@ filed the items that cite it.
   `0x4f3af` is empty, and its remark says "left empty and counted"; the original titles it with the name of the thing
   at world `+0x1da732`, `mParkGates` (`ParkWorld`), and its help row 191 reads "Park name - left-click to edit", so
   the title is the park's name and its edit is Q28's. The name is lettered by `UI_SetTitle` (`0x00485d20`, called at `0x00498e4c`): yellow, with the edge, in
-  the stream's rect widened by half its width either side (749..1221 to 513..1457), where ours letters the empty heading white (Q676). `ParkGadget.ShowDate` prints the machine's short date (Q527). `ParkBuyScreen`'s description panel `0x1ea` draws its frame and the footprint picture, and neither the item's turning model nor its kind row `0x1ec`.
+  the stream's rect widened by half its width either side (749..1221 to 513..1457), where ours letters the empty heading white (Q676). The gadget's date is lettered from the american UITEXT 448 and no longer counted (Q527). `ParkBuyScreen`'s description panel `0x1ea` draws its frame and the footprint picture, and neither the item's turning model nor its kind row `0x1ec`.
   **Counted since Q865** (each where it is drawn: `SCRAP_VALUE_DEPRECIATION` at the object window's scrap row, gone since Q1054,
-  `ENTRY_PRICE_TITLE_PARK_NAME`, `GADGET_DATE_UITEXT_448`, `BUY_SCREEN_ITEM_MODEL` and `BUY_SCREEN_ITEM_KIND_ROW`, the last two for every row the panel is filled for, land and mystery rows too); **what is left is each build**,
+  `ENTRY_PRICE_TITLE_PARK_NAME`, `GADGET_DATE_UITEXT_448`, gone since Q527, `BUY_SCREEN_ITEM_MODEL` and `BUY_SCREEN_ITEM_KIND_ROW`, the last two for every row the panel is filled for, land and mystery rows too); **what is left is each build**,
   and a count goes when its build lands: letter the
-  park's name in the heading (`UI_SetTitle`); write the date from UITEXT 448; turn the item's model in the buy panel and write its kind row `0x1ec` (`ITEMTYPES.str`, item `+0x90`). Three rows are model-and-string pairs of their own (`FUN_004ab1b0`, `0x004ab55f`..`0x004ab654`, `FUN_00486410` then `FUN_00485b00`): a mystery ride builds item 100 and writes UITEXT `0x89` "??? Mystery Ride! ???"; Buy Land (row -1) builds item 101 and writes `0x86` "Buy Land"; Clear Land (row -2) builds item 102 and writes `0x87` "Clear Land".
+  park's name in the heading (`UI_SetTitle`); turn the item's model in the buy panel and write its kind row `0x1ec` (`ITEMTYPES.str`, item `+0x90`). Three rows are model-and-string pairs of their own (`FUN_004ab1b0`, `0x004ab55f`..`0x004ab654`, `FUN_00486410` then `FUN_00485b00`): a mystery ride builds item 100 and writes UITEXT `0x89` "??? Mystery Ride! ???"; Buy Land (row -1) builds item 101 and writes `0x86` "Buy Land"; Clear Land (row -2) builds item 102 and writes `0x87` "Clear Land".
   Confirm each: its name leaves `unimplemented` after opening a ride's window, the entry-price screen and the buy screen.
   From Q130e, seen beside the original's lists: the hire list's wages are bare numbers too ("$ 63" there); a buy
   row with no state shows an empty box there and nothing here; Buy Land's price is `[0x0078560c]`, 10 there and 0
@@ -883,8 +883,8 @@ filed the items that cite it.
   list the pointer rests on selects the row under it (`0x10001`, taken at the next pump, after the add's pick): the
   fill's first add hides the list's scroll bar and that re-runs the hover test with the list linked (`FUN_006589f9`).
   A point over no row leaves the selection. Ours hands a list the point only on a frame the pointer moved
-  (`WindowStack`), so a list opened under a resting pointer keeps the fill's pick: count it where it is reached until
-  built. Confirm: the visitors list opened by V under a pointer resting on row 3, `control 1e497` reading index 2,
+  (`WindowStack`), so a list opened under a resting pointer keeps the fill's pick: counted where the fill's pick lands
+  with the pointer on the row area (`LIST_FILL_UNDER_RESTING_POINTER`, the run 22 review), which the build removes. Confirm: the visitors list opened by V under a pointer resting on row 3, `control 1e497` reading index 2,
   beside the original's (`+0x14c`) and a screenshot each.
 
 - [ ] **Q1429. End, Home, Up and Down move a list's highlight (piece (3) of Q232).** Decoded in Q871. The cursor
@@ -898,7 +898,8 @@ filed the items that cite it.
   the end is the last row (Down on the last row changes nothing and posts nothing); a row outside the window becomes
   the top row, the top no more than count less visible rows; the scroll bar follows; the screen gets `0x401` when the
   selection changes and `0x405` when the top row moves. The visitors, all-staff, all-items and hire lists (`0x291`);
-  not the buy (`0x91`) or Load/Save Park (`0x81`) lists. Until built, count the keys where they are reached. Confirm:
+  not the buy (`0x91`) or Load/Save Park (`0x81`) lists. Counted until built (`LIST_CURSOR_KEYS`, `UiList.TakesCursorKeys`,
+  the run 22 review), which the build removes. Confirm:
   the visitors list opened by V, then Down and Home, the highlighted row predicted first and read from memory
   (`+0x14c`) beside ours' `control 1e497`; a screenshot each.
 
@@ -909,7 +910,10 @@ filed the items that cite it.
   half a second later, the help bar on the top row's help once the pointer comes onto the rows), a tab's click on the
   buy screen with the pointer on the tab (Q495's O9: the original's bar hidden there; look whether ours keeps the
   tab's row), and the Load Park list's first saved park. A message-bar tag naming an item (none listed does) is not
-  reachable in Lost Kingdom.
+  reachable in Lost Kingdom. Look too at a left click on the strip under the rows (the run 22 review): with the first
+  row picked it now activates that row (`UiList.LeftClickedAt`, flag `0x80`), so the Load Park list loads its first park
+  and the visitors list opens the first guest's window, as the decode says (the `0x400` arms read the selected index);
+  nobody has seen it in either game.
 
 - [ ] **Q754. The lobby's build label letters one pixel right of the original's.** From the Q752 review (finding 2).
   GAME8.bf4's 'v' has left 0, and the original's "v 2.0" has its ink at 751 to 772 of the 800 x 600 picture
@@ -2192,27 +2196,27 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   what they are, then build them with `WorldParticles`. Not read: whether the draw `0x00546280` runs for a ride out of view,
   and which families reach `FUN_00549db0`. Confirm: Dino Karts or the Hot Pot beside the original's, the cars launched and
   removed, `particles` against `original/emitters.py`.
-- [ ] **Q1456. A list heading's lettering by state, photographed beside the original's (from Q1163).** Q1163 moves a framed
-  heading's text (1, 1) font pixels with the pointer on it and (2, 1) pressed, in (255, 239, 0) throughout (`UiButton.Lettering`,
-  `UiText.Nudge`); it was built and read in the console's `control` line in a cloud container, never seen. Hover and hold the
-  all-staff list's "Name" heading in both games (`docs/TOOLING.md`, "Hovering and pressing a control off-screen", for ours) and
-  set the frames side by side: the text moves right and down by the same amount in each, at the same set and scale. If the
-  original's moves by more or less than a font pixel at its scale, the offset's units are not the font's (`ui.md`, "A text
-  button's lettering by state"): read them at `0x0048fc40` and fix `UiText.Nudge`.
+- [ ] **Q1456. A list heading's lettering by state, photographed beside the original's (from Q1163).** Q1163 letters a framed
+  heading in (255, 239, 0) throughout, plain under the pointer, moved (2, 1) interface units pressed with the pointer on it
+  and (1, 1) while down (`UiButton.Lettering`, `UiText.Nudge`); the units were read in the run 22 review (`ui.md`, "A text
+  button's lettering by state", "The offset's units"): at 1024 x 768 a pressed centred heading moves 0 or 1 pixel across and
+  none down, at 800 x 600 none. It was read in the console's `control` line in a cloud container, never seen. Hover and hold
+  the all-staff list's "Name" heading in both games at 1024 x 768 (`docs/TOOLING.md`, "Hovering and pressing a control
+  off-screen", for ours) and set the frames side by side: no move under the pointer, the same move held, at the same set and scale.
 - [ ] **Q1457. The new player dialog's two options letter black always (from Q1163).** `NewPlayerDialog` letters its
   `b_ltoggle` options "Instant Action" and "Full Simulation" (`0x70d`, `0x70e`) black in every state, and the options screen's
-  lines too. A type-2 button's label is lettered white where it lies and black with the pointer on it unless `FUN_00486660`
+  lines too. A type-2 button's label is lettered white, and black moved (1, 1) when checked (down), unless `FUN_00486660`
   sets its colours (`ui.md`, "A text button's lettering by state"; the setters' only caller). Read whether the dialog's text
   is the button's own label or a label control beside it (the lobby dialog's builder, and `0x00668f5a`/`0x00668f7b`'s callers
-  again), and photograph the dialog in the original with the pointer on and off an option. If the class letters it, set
-  `LettersByState` with its colours; if not, say why at the site.
-- [ ] **Q1458. A button's state numbers against the original's getter (from Q1163).** `lobby.md`'s row for `0x00668820` reads
-  the parts as 1 disabled, 2 checked, 3 checked with the pointer on it, 4 pressed, 5 the pointer on it, else 0, the checked
-  bit tested before pressed. `UiButton.State` numbers 2 the pointer on it, 5 down, and pressed with the pointer on it 3 (not 4),
-  and its mesh part is `Frame + State`. Read the getter again: if the row is right, every button's hover and down parts are
-  drawn swapped here unless the meshes' parts are ordered to match, so read a `b_*` mesh's parts beside the original's frames
-  of one button plain, hovered and down; correct whichever is wrong (the row or `State`), and `UiButton.Lettering`'s
-  comment with it.
+  again), and photograph the dialog in the original with each option chosen: whether the chosen one letters black and moved
+  while the other letters white. If the class letters it, set `LettersByState` with its colours; if not, say why at the site.
+- [ ] **Q1458. A button's pressed parts against the original's getter (from Q1163).** `lobby.md`'s row for `0x00668820`
+  (corrected in the run 22 review): 2 the pointer on it, 3 the pointer on it and checked, 4 pressed with the pointer inside,
+  5 checked, 1 disabled, else 0. `UiButton.State` matches it but for a press: pressed with the pointer on it it gives 3 (the
+  original 4: the press clears `+0x139`, `0x006690a0`), and pressed with the pointer dragged off 4 (`HeldDown`; the original 0,
+  or 5 checked: leaving while held clears `+0x138` bit 1, `0x00669278`). The mesh part is `Frame + State`, so it is a drawing
+  question: read a `b_*` mesh's parts beside the original's frames of one button pressed on it and dragged off, and make
+  `State`'s pressed cases match.
 - [ ] **Q1165. The arrival manager reads this sweep's rain (from Q570).** From the run 22 review of Q570 (`review22/q570`,
   finding 1). In the original the weather (thing 7) turns in the sweep's walk, before the tail, and the tail's arrival
   manager then reads its drops (`FUN_004cf5b0`, `0x004cf609` World_Weather, `0x004cf60e` `mov ecx,[eax+0x30]`, k 0.8 or 1.2
@@ -2364,7 +2368,7 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   `buy 1104 44 25 180`, `openthing 13`, a few seconds, `openthing 43`), photograph the second window's first frame in
   each, and set beside it the log's `starts at angle` (ours) and `[0x007afd50]` (the original's, `fmod` of it at
   `0x00468e2f`). Predict from the log before looking: the second model is turned by that angle, not square to the
-  panel. Also check the double at `0x006fe7d8` is 6.2831855 as `docs/exe/park-engine.md` writes it (Ghidra).
+  panel. Ours' first frame turns by nothing, as the original's (`0x00468e5c`), so both show the logged angle itself.
 
 ## D. Alexah's list: decode first, then build (two sessions each)
 
@@ -3480,11 +3484,6 @@ state machine.
   through a park's menu, where ours holds them (`Audio.HoldPlaced`) and lets their samples pass unheard. Read what
   `[manager + 0x60]` points to and who writes it, then measure the original's mix in a paused Lost Kingdom park
   (`mixer.py`: the sea's channel volume and distance with the menu open).
-- [ ] **Q601. The gadget's date is written with the machine's culture; the original's reads "4.13.2002".** Seen in
-  Q707's runs (`q707/p707t/side-by-side.png`): ours letters `GameCalendar.Now.ToShortDateString()` (`ParkGadget.ShowDate`),
-  "4/18/2002" on this machine, and would letter another order on a machine of another culture; the original's frames read
-  "4.4.2002" to "4.29.2002" (`q707/p707t/orig/O/g-*.png`). Decode the original's date writer for the gadget, then write
-  the date its way whatever the machine.
 - [ ] **Q694. Move to the newest NeoVeldrid (1.3.1 on 2026-10-26).** Alexah, 2026-10-25: 1.3.0 released 2026-10-24, 1.3.1 by
   2026-10-26 (`lib/nvwatch.py` reports newer ones); we are on 1.2.1 (`OpenTPW.Common`'s
   and `OpenTPW`'s references). 1.3.0's notes list Native AOT and trimming support (#104) and a backend-aware

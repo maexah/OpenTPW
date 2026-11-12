@@ -351,7 +351,7 @@ internal sealed class UiList : UiControl
 	/// <para>
 	/// A framed heading letters by its state (<see cref="UiButton.LettersByState"/>) in the colour handed over for both, as
 	/// <c>FUN_00486660</c> sets the button's two colours to its caller's (<c>0x00486749</c>, <c>0x00486751</c>): the same colour
-	/// where it lies, moved (1, 1) with the pointer on it and (2, 1) pressed (<c>docs/exe/ui.md</c>, "A text button's lettering by state").
+	/// where it lies, moved (1, 1) while down and (2, 1) pressed with the pointer on it (<c>docs/exe/ui.md</c>, "A text button's lettering by state").
 	/// </para>
 	/// </remarks>
 	internal UiButton AddHeading( int column, UiRect rect, string text, string? mesh = null, int? font = null,
@@ -364,7 +364,7 @@ internal sealed class UiList : UiControl
 			Font = font ?? RowFont,
 			TextColour = colour ?? UiColour.White,
 			LettersByState = mesh != null,
-			PointerTextColour = colour ?? UiColour.White,
+			DownTextColour = colour ?? UiColour.White,
 			TextAcross = mesh != null ? TextAlign.Centre
 				: column < ColumnAligns.Length ? ColumnAligns[column]
 				: column == 0 ? TextAlign.Start : TextAlign.End,
@@ -703,6 +703,12 @@ internal sealed class UiList : UiControl
 			return;
 		}
 
+		// After the fill the original re-runs the hover test, so a list opened under a pointer resting on its rows selects
+		// the row under it (FUN_006589f9; docs/QUEUE.md Q1428). Here the point reaches a list only on a frame the pointer
+		// moves: not built, counted where the fill's pick lands with the pointer on the row area.
+		if ( VirtualScreen.ToPixels( RowArea, Anchor, VerticalAnchor ).Contains( Input.Mouse.Position.X, Input.Mouse.Position.Y ) )
+			Unimplemented.Report( "LIST_FILL_UNDER_RESTING_POINTER" );
+
 		// Slot 0 is under the visible count and the row count, so FUN_0066525c takes the top row's index, places the
 		// highlight there, and posts only when that moves the selection.
 		_highlightSlot = 0;
@@ -719,6 +725,13 @@ internal sealed class UiList : UiControl
 	/// <see cref="SelectionChanged"/> hears it only when the screen calls <see cref="TakePosted"/>, after the fill.
 	/// </summary>
 	internal bool PicksFirstRow { get; init; }
+
+	/// <summary>
+	/// Whether it carries the list flag <c>0x200</c> (the visitors, all-staff, all-items and hire lists, <c>0x291</c>), which
+	/// takes End, Home, Up and Down while it is shown (<c>FUN_00665b51</c>; <c>docs/QUEUE.md</c> Q1429). Not built: the
+	/// keys are counted where they reach such a list (<c>LIST_CURSOR_KEYS</c>, <see cref="WindowStack"/>).
+	/// </summary>
+	internal bool TakesCursorKeys { get; init; }
 
 	// The index the add's pick posted, -1 for none waiting.
 	private int _posted = -1;

@@ -993,6 +993,10 @@ internal sealed class WindowStack : Panel
 	/// as its tick by sending itself the same message the tick sends (0x004a6d00), so it clicks as
 	/// the tick does. With no box to type into, the keys are the scene's - see <see cref="KeysWithoutFocus"/>.
 	/// </summary>
+	/// <summary>Whether <paramref name="control"/> is shown and is, or holds, a list that takes the cursor keys.</summary>
+	private static bool ShowsCursorKeyList( UiControl control )
+		=> control.Visible && (control is UiList { TakesCursorKeys: true } || control.Children.Any( ShowsCursorKeyList ));
+
 	private void Keyboard()
 	{
 		var front = _windows.Count > 0 ? _windows[^1] : null;
@@ -1008,6 +1012,10 @@ internal sealed class WindowStack : Panel
 
 		if ( front == null || focus == null )
 		{
+			// A shown list with the flag 0x200 takes End, Home, Up and Down (UiList.TakesCursorKeys, Q1429): not built, counted.
+			if ( Input.KeysPressed.Any( key => key is Key.Home or Key.End or Key.Up or Key.Down ) && _windows.Any( window => window.Root is { } root && ShowsCursorKeyList( root ) ) )
+				Unimplemented.Report( "LIST_CURSOR_KEYS" );
+
 			KeysWithoutFocus?.Invoke();
 			return;
 		}

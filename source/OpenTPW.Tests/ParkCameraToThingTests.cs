@@ -1,4 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NeoVeldrid;
 using OpenTPW.UI;
 using System;
 using System.Collections.Generic;
@@ -672,6 +673,85 @@ public class ParkCameraToThingTests
 			Time.PinWall( 40000 );
 			_stack.Update();
 		}
+	}
+
+	/// <summary>
+	/// <b>The two list pieces left of Q232 are counted where they are reached</b>: a list filled with the pointer resting on
+	/// its row area counts <c>LIST_FILL_UNDER_RESTING_POINTER</c> (Q1428) and one filled with the pointer away does not;
+	/// Down with the visitors list shown counts <c>LIST_CURSOR_KEYS</c> (Q1429) and Left, which no list takes, does not.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> either not counted; the fill counted wherever the pointer is; every key counted.</remarks>
+	[TestMethod]
+	public void AListsPickUnderARestingPointerAndItsCursorKeysAreCounted()
+	{
+		for ( var n = 0; n < 3; ++n )
+			Assert.AreNotEqual( 0, _people.Admit( 42 + n, 5 + n ) );
+
+		var keys = typeof( Input ).GetProperty( nameof( Input.KeysPressed ) )!;
+		var resting = Times( "LIST_FILL_UNDER_RESTING_POINTER" );
+
+		try
+		{
+			Input.Mouse = new() { Position = new Vector2( 5, 5 ) };
+			var away = new ParkVisitorsScreen( _stack );
+			_stack.Open( away );
+			Assert.AreEqual( resting, Times( "LIST_FILL_UNDER_RESTING_POINTER" ), "filled with the pointer away" );
+
+			var list = (UiList)typeof( ParkVisitorsScreen ).GetField( "_list", Private )!.GetValue( away )!;
+			var onRows = RowMiddle( list, 1 );
+			_stack.Close( away );
+
+			Input.Mouse = new() { Position = onRows };
+			var under = new ParkVisitorsScreen( _stack );
+			_stack.Open( under );
+			Assert.AreEqual( resting + 1, Times( "LIST_FILL_UNDER_RESTING_POINTER" ), "filled under the resting pointer" );
+
+			var pressed = Times( "LIST_CURSOR_KEYS" );
+			keys.SetValue( null, new List<Key> { Key.Left } );
+			_stack.Update();
+			Assert.AreEqual( pressed, Times( "LIST_CURSOR_KEYS" ), "Left" );
+
+			keys.SetValue( null, new List<Key> { Key.Down } );
+			_stack.Update();
+			Assert.AreEqual( pressed + 1, Times( "LIST_CURSOR_KEYS" ), "Down" );
+
+			_stack.Close( under );
+		}
+		finally
+		{
+			keys.SetValue( null, new List<Key>() );
+			Input.Mouse = new();
+		}
+	}
+
+	/// <summary>
+	/// <b>The pointer coming onto an object window's title is counted</b>: the original's handler turns the title white on
+	/// the move and yellow again on the leave (<c>FUN_0048d2e0</c>, <c>0x0048d340</c>), which is not built here. Counted once
+	/// as the pointer comes onto it, not again while it stays, not for the window's other parts.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the title's entry not counted; counted each frame the pointer stays.</remarks>
+	[TestMethod]
+	public void ThePointerComingOntoAnObjectWindowsTitleIsCounted()
+	{
+		var window = new ParkObjectWindow( _stack, 13 );
+		_stack.Open( window );
+
+		var title = Find( window.Root, 0x3e28 );
+		var middle = new Vector2( (title.Rect.Left + title.Rect.Right) / 2f, (title.Rect.Top + title.Rect.Bottom) / 2f );
+		var before = Times( "OBJECT_TITLE_HOVER" );
+
+		Input.Mouse = new() { Position = new Vector2( middle.X, title.Rect.Bottom + 200f ) };
+		_stack.Update();
+		Assert.AreEqual( before, Times( "OBJECT_TITLE_HOVER" ), "the pointer off the title" );
+
+		Input.Mouse = new() { Position = middle };
+		_stack.Update();
+		_stack.Update();
+		Assert.AreEqual( before + 1, Times( "OBJECT_TITLE_HOVER" ), "the pointer on the title two frames" );
+
+		_stack.Close( window );
+		Input.Mouse = new();
+		_stack.Update();
 	}
 
 	/// <summary>

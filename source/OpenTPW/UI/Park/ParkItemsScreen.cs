@@ -268,6 +268,7 @@ internal sealed class ParkItemsScreen : UiWindow
 			// The add picks the top row as the first goes in (FUN_0066403b), so each fill highlights the row sorted first.
 			// The screen's handler FUN_00495360 has no 0x401 arm: nothing takes the pick, and it is the highlight alone.
 			PicksFirstRow = true,
+			TakesCursorKeys = true,
 
 			// Each tab's list record carries flag 0x80 (0x00750ab8, 0x00750ba0, 0x00750ca0): the row under the moving
 			// pointer is picked, the highlight alone as the add's pick is.
