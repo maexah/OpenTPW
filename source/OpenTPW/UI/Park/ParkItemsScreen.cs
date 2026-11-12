@@ -252,6 +252,10 @@ internal sealed class ParkItemsScreen : UiWindow
 		var list = Root.Add( new UiList
 		{
 			Id = 400,
+
+			// Flag 0x10 in the stream (0x291): a sorted list, so its headings click Select3 (WindowStack.Release).
+			Sorted = true,
+
 			Rect = rect,
 			RowArea = rows,
 			Columns = edges,

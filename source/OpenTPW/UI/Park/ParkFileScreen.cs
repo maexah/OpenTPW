@@ -75,7 +75,7 @@ internal abstract class ParkFileScreen : UiWindow
 			RowFont = RowFont,
 			RowHeight = UiList.RowHeightOf( RowFont ),
 
-			// The list's flags carry 0x80.
+			// The list's flags carry 0x80, and not 0x10 (0x81), so it is not Sorted.
 			SelectsUnderPointer = true,
 			Activated = RowClicked
 		} );

@@ -135,6 +135,10 @@ internal sealed class ParkStaffScreen : UiWindow
 		_list = Root.Add( new UiList
 		{
 			Id = 0x321,
+
+			// Flag 0x10 in the stream (0x291): a sorted list, so its headings click Select3 (WindowStack.Release).
+			Sorted = true,
+
 			Rect = new UiRect( 272, 181, 1817, 801 ),
 			HelpText = 124,
 			Mesh = UiMesh.Get( "list_allstaff" ),

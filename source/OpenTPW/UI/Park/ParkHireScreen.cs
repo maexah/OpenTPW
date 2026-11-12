@@ -207,6 +207,10 @@ internal sealed class ParkHireScreen : UiWindow
 		_list = Root.Add( new UiList
 		{
 			Id = 0x248e,
+
+			// Flag 0x10 in the stream (0x291): a sorted list, so its headings click Select3 (WindowStack.Release).
+			Sorted = true,
+
 			Rect = new UiRect( 1017, 179, 1813, 930 ),
 			Mesh = UiMesh.Get( "list_hirestaff" ),
 			RowArea = new UiRect( 1043, 441, 1729, 911 ),

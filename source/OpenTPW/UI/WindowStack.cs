@@ -933,12 +933,11 @@ internal sealed class WindowStack : Panel
 		// A button tells its parent it was clicked, and UI_Init's hook on every message (0x00485780)
 		// clicks on that message whoever it was for. The purple buttons are not buttons to the
 		// original - they take the pointer themselves and tell nobody - so they are silent.
-		// A deviation (Q711; hud.md, "Which window the click sound is for"): the hook picks the sound by the RECEIVER's
-		// style bit 0x10, and a list's heading buttons report to the list, which carries it, so the original plays Select3
-		// (0xbd) for a heading; here a heading is a plain button and plays BUTTON01.
+		// The hook picks the sound by the RECEIVER's style bit 0x10 (0x004857cb; hud.md, "Which window the click sound is
+		// for"): a list's heading reports to the list, so a heading of a sorted list plays Select3 (0xbd).
 		if ( pressed is UiButton { Clicks: true } button )
 		{
-			UiSounds.Click( toggle: button.Toggles || button.ClicksSelect3 || pressed.Parent is UiRadioGroup );
+			UiSounds.Click( toggle: button.Toggles || button.ClicksSelect3 || pressed.Parent is UiRadioGroup or UiList { Sorted: true } );
 
 			if ( button.Toggles )
 				button.IsDown = !button.IsDown;

@@ -13459,3 +13459,20 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   Confirm: a guest at happiness 90 deciding, set 5 for eleven sweeps and no sooner than 101 sweeps again; a screenshot
   of the jump, beside the original's.
   Built (c55, cloud): `PeepBehaviour.JumpsForJoy`; the screenshot is Q1340.
+- [x] **Q711. A list heading clicks Select3 (`0xbd`) in the original; ours clicks `BUTTON01` (`0x1f`).** From the fork watch,
+  2026-10-19 (`verify-audio-fx.md` M2, "MISS (live in our code)"; `docs/exe/hud.md`, "Which window the click sound is for").
+  **Insert next to Q402**, whose 2026-10-16 note asks which list rows make style `0x10` and whether ours set `Toggles`: this
+  answers it for the headings. The click hook (`0x00485780`) plays on every message `0x100` by the RECEIVER's own style word,
+  bit `0x10` (`0x004857cb`) giving `Select3` (`0xbd`), else `0x1f`. A list heading is a button (op `0xc`,
+  `( 2, 1, n+0x10 )`, `0x006606a8`..`0x006606b2`) whose parent is the list, and every sorted list record carries `0x10` (walked
+  `0x00750ab8`, `0x00750ba0`, `0x00750ca0`, type 7, flags `0x291`; the buy list `0x91`, the rest `0x291`). So a
+  heading click plays `Select3`. Ours: the headings (`UiList.AddHeading`, `AddFramedHeading`; hire, buy, all-staff, all-items,
+  visitors) are plain `UiButton`s with `Toggles` false and parent `UiList`, so `WindowStack.Release` plays
+  `UiSounds.Click( toggle: false )` = `0x1f` (said at both sites). Build the rule the original has, not a per-button flag: toggle
+  when the receiver (the parent) is a list flagged `0x10`. A radio group's children already toggle (`UiRadioGroup`). Not heard in
+  either game yet. Confirm: a heading clicked on the hire list, caught by the disk driver, beside the original.
+  - **Done (cloud lane c57, 2026-11-12):** `UiList.Sorted` is the list's style bit `0x10`, set on the hire, buy, all-staff,
+    all-items and visitors lists (Load and Save Park's `0x81` lacks it), and `WindowStack.Release` plays `Select3` for a button
+    whose parent is a sorted list. Tests `AHeadingClicksBySortedListsStyleNotItsOwn`, `EveryListScreensHeadingClicksSelect3`;
+    an off-screen run's console `click` replied `click sound 189` on every heading and 31 on the all-things button. Not heard:
+    no disk driver or original in the container, so the Confirm beside the original is still open.
