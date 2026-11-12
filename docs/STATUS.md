@@ -42,10 +42,23 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the maintainer's pre-commit hook: grep it by Q-number.
 
-- **Q684 (the map's six switches and two pickers, its first piece):** in a cloud container (lane c107; no Ghidra, no original, no photograph; the run's output was not kept), `ParkMapOverlayTests` (five, needing the game) pass, and five bugs put back by hand (a word starting at 0, the switch's XOR made an OR, a lifted pick keeping its value, the help row's held test dropped, the opener not putting the pickers down) each failed one or more. Merged here after Q683, its second row is the chain's `UiButton.HelpWhenOn`, answered by `ShownHelp` over a button that is on, held or not (Q772, review fixes group M; `hud.md`, op 0x12), so a held switch's row is 268, not 267, and the held-test bug no longer applies; a switch's or pick's row is posted by its release (`WindowStack.Release`), not by a change of state alone. Off-screen (`consolerun.py`, Space by `xdotool`): the map opened on `layers 0x01 staff 1 metric 1`; the console's clicks on shops then rides read `0x03` then `0x02`, the guard twice `staff 3` then `staff 0`, excitement `metric 2`, each with click sound 189; the census then `6x MAP_OVERLAY`; Escape and Space again reopened on `layers 0x02 staff 0 metric 2` (`7x`); under the pointer the help row read 268 "Left-click to hide rides" on the rides switch down, 267 "show" after it went up, 280 on the chosen handyman. Not checked: the buttons drawn down and up (no display to photograph; Q1573), the original's own frames and words (no original here; the rules are `hud.md`'s, "The map's overlay", not read in Ghidra), and the staff switch's second row measured not shown in the original (`q431`), which the button class's reading does not explain (Q1573). The overlay's painting is Q1572.
+- **Q448 (`REPAIREFFECT` and `BUMP 17`):** in a cloud container (no Ghidra, no original, no photograph, nothing heard;
+  the runs' output was not kept), `RideScriptRepairEffectTests` (seven, one needing the game: the corpus's 70 scripts,
+  70 x 1 and 70 x 0, `VAR_ONRIDE` sixth in each; jungle's `BUMP 17` only `Wateride.RSE`'s 0, 1, 1, 0) and
+  `ParkTrackPieceClipTests.Bump17WalksBothMouthsWithOneClip` pass, and ten bugs put back by hand (the show's polarity,
+  the picker given the speed word, five variables let through, `BUMP 17`'s polarity, `+0xe6` from nought, 17 behind the
+  bumper record, the store after the walk, the other mouth at rest, the case dropped, the particle ungated) each failed
+  a test. Off-screen (`consolerun.py`): a Splish Splash on (32,26) with the karts' loop and its queue joined to a path
+  opened, and its `BUMP 17 0` put 16 pieces to clip 5, a break's `BUMP 17 1` put them at rest, the repair's
+  `REPAIREFFECT 1` started the global rides' 111 and 211 and its `BUMP 17 0` ran the water again; a broken Belly Bounce's
+  repair played 111 (`hammer2.mp2`) and 211 (`tp_riderepaired`), flags `0x0`, then the picker with 0 aboard nothing; the
+  census held no `REPAIREFFECT at` nor `BUMP at 33`, `155`, `201`, `219`, and one `REPAIREFFECT_PARTICLE` a repair. Not
+  checked: the particle and `FUN_00556a80`'s place (Q1576, Ghidra); the water and the sounds beside the original (Q1577);
+  the picker with riders aboard in a run (tests only).
 
 ## Numbers (take counts fresh; these go stale within a day)
 
+- Linux, 2026-11-12, Q448 (`capped.sh`; ride script REPAIREFFECT and BUMP 17; eight tests added, seven needing no game; built in a cloud container, re-gated here after Q684): with the game, 5768 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5770; with no game named, 2489 passed, 0 failed, 3281 skipped.
 - Linux, 2026-11-12, Q684 (`capped.sh`; the map's overlay switches and pickers, first piece; five tests added, needing the game; built in a cloud container, merged by an agent onto Q683 and here after the a11 photo pack): with the game, 5760 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5762; with no game named, 2482 passed, 0 failed, 3280 skipped.
 - Linux, 2026-11-12, the a11 photo pack (`capped.sh`; no test added, photographs beside the original; merged here after the review fixes of group R): with the game, 5755 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5757; with no game named, 2482 passed, 0 failed, 3275 skipped.
 - Linux, 2026-11-12, review fixes group R (`capped.sh`; one test added on balance, needing the game; after group Q): with the game, 5755 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5757; with no game named, 2482 passed, 0 failed, 3275 skipped.

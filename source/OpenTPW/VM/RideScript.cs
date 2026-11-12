@@ -2410,6 +2410,10 @@ public sealed class RideScript
 				SetReverb( operands[0] );
 				break;
 
+			case Opcode.REPAIREFFECT:
+				RepairEffect( Value( operands[0] ) );
+				break;
+
 			case Opcode.SETOBJPARAM:
 				SetObjectParameter( operands );
 				break;
@@ -2580,9 +2584,9 @@ public sealed class RideScript
 	/// <para>
 	/// The selector is fetched unresolved, as <c>COAST</c>'s is: a variable or a value outside 1..17, and 15, whose
 	/// table entry is the error logger, are the engine's "RSSE: Unknown bumper ride command", counted. <b>Only the
-	/// bumper family is built</b>: on a go-kart or water ride every <c>BUMP</c> but 5 is a counted no-op, because their
-	/// cars end a go by steering to buoys, which nothing here does. <c>BUMP 5</c> reads the thing, not a record
-	/// (<c>0x00554836</c>), so every ride answers it.
+	/// bumper family is built</b>: on a go-kart or water ride every <c>BUMP</c> but 5 and 17 is a counted no-op, because their
+	/// cars end a go by steering to buoys, which nothing here does. <c>BUMP 5</c> (<c>0x00554836</c>) and <c>BUMP 17</c>
+	/// (<see cref="TrackPieces"/>) read the thing, not a record, so every ride answers them.
 	/// </para>
 	/// </summary>
 	private void Bump( RideInstruction instruction, IReadOnlyList<RideOperand> operands )
@@ -2595,6 +2599,13 @@ public sealed class RideScript
 			// The thing's mIsTrackRideValid into the register, no record read (0x0055483c): answered before the
 			// record test, for a kart or water ride as for a bumper ride.
 			Result = TrackRideValid;
+			return;
+		}
+
+		if ( selector == 17 )
+		{
+			// Reads the thing, not a bumper record (0x0055470b): answered before the record test, for a water ride too.
+			TrackPieces( Value( argument ) );
 			return;
 		}
 
@@ -2692,15 +2703,134 @@ public sealed class RideScript
 				Result = Bumpers.RemoveACar( handle );
 				break;
 
-			case 17:
-				// A coaster-like ride's track pieces set running or still; no bumper ride has any.
-				Unimplemented.Report( "BUMP_17_TRACK_PIECES" );
-				break;
-
 			default:
 				++NotImplemented;
 				Unimplemented.Report( $"{Name}: RSSE: Unknown bumper ride command" );
 				break;
+		}
+	}
+
+	/// <summary>
+	/// <c>BUMP 17</c>'s last operand, the script's 16-bit <c>+0xe6</c>: <c>0xffff</c> from the script loader
+	/// (<c>FUN_005587f0</c>) and again from a park's load (<c>0x00559f29</c>), so the first <c>BUMP 17</c> after either walks.
+	/// </summary>
+	private int _trackPiecesLast = -1;
+
+	/// <summary>
+	/// Where <c>BUMP 17</c> puts its ride's track pieces to a clip: the thing's two pieces' walks
+	/// (<see cref="ParkTrackTool.PlayPiecesOfRide"/>), answering how many pieces were played, or null with no park or no
+	/// such thing. A test sets a recorder of its own.
+	/// </summary>
+	internal static Func<int, bool, int?> PlayTrackPieces = ( thing, running )
+		=> ParkState.Current is { } state ? ParkTrackTool.PlayPiecesOfRide( state, thing, running ) : null;
+
+	/// <summary>
+	/// <c>BUMP 17</c> (<c>0x005549ed</c>): the operand against <c>+0xe6</c>; equal does nothing, otherwise it is stored and
+	/// both pieces' walks run, <c>FUN_0052a490</c> then <c>FUN_0052a700</c>, with 1 (role 5, looped) for an operand of nought
+	/// and 0 (rest) for any other (<c>0x00554a1a</c>..<c>0x00554a47</c>; docs/exe/park.md, "The pieces' clips"). The result
+	/// register is left alone: whether the arm writes it was not read; in Lost Kingdom's <c>Wateride.RSE</c> each of the four is
+	/// followed by a write or a <c>TEST</c> before any branch on it (Q1576).
+	/// </summary>
+	private void TrackPieces( int value )
+	{
+		// The field is a word: an operand outside 16 bits (none shipped: the four are literals 0 and 1) would compare
+		// in a width not read.
+		if ( value is < short.MinValue or > ushort.MaxValue )
+			Unimplemented.Report( "BUMP_17_WIDE_OPERAND" );
+
+		if ( value == _trackPiecesLast )
+			return;
+
+		_trackPiecesLast = value;
+
+		var running = value == 0;
+		var played = PlayTrackPieces( ThingId, running );
+
+		if ( played is null )
+		{
+			++NotImplemented;
+			Unimplemented.Report( $"{Name}: BUMP 17, with no placed thing {ThingId} to walk" );
+			return;
+		}
+
+		Log?.Info( $"{Name}: BUMP 17 {value} put {played} track pieces {(running ? "to clip 5, looped" : "at rest, clip 0xc")}" );
+	}
+
+	/// <summary>The global <c>cat_rides</c> effects <c>REPAIREFFECT</c> plays with a non-zero operand (<c>0x0055631a</c>, <c>0x0055634c</c>).</summary>
+	internal static readonly int[] RepairShowEffects = [111, 211];
+
+	/// <summary>
+	/// What <c>REPAIREFFECT</c> sounds for <paramref name="value"/>, a script declaring <paramref name="slots"/> variables
+	/// and holding <paramref name="onRide"/> in its sixth: with a non-zero value the global rides' 111 and 211; with nought,
+	/// where it declares more than five, the <c>SINGLESCREAM</c> picker <c>FUN_00551320</c> with (the sixth, 1, 1), so
+	/// grid step nought (75, 79, 83 or 87 by the number aboard, nought with none); else nothing is picked.
+	/// </summary>
+	internal static (int[] GlobalRides, bool Picks, int Scream) RepairSounds( int value, int slots, int onRide )
+	{
+		if ( value != 0 )
+			return (RepairShowEffects, false, 0);
+
+		if ( slots <= RepairOnRideSlot )
+			return ([], false, 0);
+
+		return ([], true, ParkAudio.SingleScreamEffectFor( onRide, 1, 1 ));
+	}
+
+	/// <summary>
+	/// The variable <c>REPAIREFFECT</c>'s nought reads by its place, not its name (<c>0x0055635f</c>): the sixth, which every
+	/// shipped script that runs it declares as <c>VAR_ONRIDE</c> (<c>RideScriptRepairEffectTests</c>).
+	/// </summary>
+	internal const int RepairOnRideSlot = (int)RideVariables.VAR_ONRIDE;
+
+	/// <summary>
+	/// <c>REPAIREFFECT</c> (93, <c>0x005562a6</c>; docs/exe/park.md, "`REPAIREFFECT` (93)"): the repair's particle on for a
+	/// non-zero value and off for nought (<c>FUN_00556de0</c>), then the sounds of <see cref="RepairSounds"/> at the thing.
+	/// The two sounds' handles are dropped, as the original drops them: nothing stops them with the script.
+	/// </summary>
+	/// <remarks>
+	/// <b>The particle is not built</b>: the spawn takes the thing's particle id at its <c>+0x68</c> and a place from the
+	/// model, neither read, so a non-zero value on a placed thing counts <c>REPAIREFFECT_PARTICLE</c>, and nought has no
+	/// particle to stop (<c>+0xcc</c> is never set here). The sounds play at the middle of the thing's cells, where a
+	/// scream sounds (<see cref="ParkObjects.TrySoundPlace"/>, <c>FUN_00556af0</c>): the original takes the place from
+	/// <c>FUN_00556a80</c>, which reads the same <c>[[[record+8]+4]+0x78]</c> chain and is otherwise not read (Q1576).
+	/// The register is left alone; whether the handler writes it was not read (Q1576).
+	/// </remarks>
+	private void RepairEffect( int value )
+	{
+		// FUN_00556de0's spawn is gated on the thing handle (+0xac); the sounds after it are not.
+		if ( value != 0 && ThingId != 0 )
+		{
+			++NotImplemented;
+			Unimplemented.Report( "REPAIREFFECT_PARTICLE" );
+		}
+
+		var (globalRides, picks, scream) = RepairSounds( value, Slots, VariableAt( RepairOnRideSlot ) );
+
+		if ( globalRides.Length == 0 && !picks )
+		{
+			Log?.Info( $"{Name}: REPAIREFFECT {value}: no sound, the script declares {Slots} variables" );
+			return;
+		}
+
+		if ( ParkObjects.Current is not { } objects || !objects.TrySoundPlace( ThingId, out var at ) )
+		{
+			// The original indexes its model table with no guard here, so a script with no model faults.
+			++NotImplemented;
+			Unimplemented.Report( $"{Name}: REPAIREFFECT, with no placed thing {ThingId} to sound from" );
+			return;
+		}
+
+		foreach ( var effect in globalRides )
+		{
+			var started = ParkAudio.Current?.StartScriptSound( Id, ParkAudio.GlobalRidesType, effect, at, out _ );
+			Log?.Info( $"{Name}: REPAIREFFECT {value}: global rides {effect} {started?.ToString() ?? "with no park audio"}" );
+		}
+
+		if ( picks )
+		{
+			var played = ParkAudio.Current?.SingleScream( VariableAt( RepairOnRideSlot ), 1, at, 1 );
+			Log?.Info( $"{Name}: REPAIREFFECT {value}: the scream picker with {VariableAt( RepairOnRideSlot )} aboard, effect {scream}, "
+				+ $"{(played is null ? "with no park audio" : played.Value ? "played" : "nothing played")}" );
 		}
 	}
 

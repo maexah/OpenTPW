@@ -14418,3 +14418,38 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   '1.10.2002' (`control 20`); the file it saved, loaded in the original, read "1.10.2002" at ticks 17063 and 17069 and
   "1.11.2002" from 17073. "12.31.2002" (ours tick 25233, the original 25236..25248): ours' census `101 x 22 in a box 94 x
   20 ... OVER`, and both games cut it the same way, the leading "1"'s flag lost at the box's left end, the rest whole.
+- [x] **Q448. Ride script: REPAIREFFECT and BUMP 17.** From the fork watch, 2026-10-16 (`verify-audio-fx.md` A1 and
+  C1, `verify-world.md` L6). Both are counted by the dispatch's per-instruction report (`RideScript.cs`: "REPAIREFFECT
+  at N", "Wateride: BUMP at N"; `BUMP_17_TRACK_PIECES` is the bumper rides' alone, and the water ride has no bumper
+  record, `RideScript.cs:2337-2345`), both reached by Lost Kingdom's own rides. **REPAIREFFECT** (table entry 93,
+  `0x005562a6`; FileFormats `vm/instructions.md`): the particle on for a non-zero value and off for nought
+  (`0x00556de0`); **show** also plays global rides 111 and 211 at the model; **hide** plays the SINGLESCREAM picker
+  `0x00551320` with (`VAR_ONRIDE`, 1, 1), so only column 0 (75, 79, 83, 87 by the number aboard, silent with none),
+  and only when the script declares more than five variables. Our `park.md` has the polarity right; the other fork,
+  which follows the Mac, has it backwards. Jungle Bouncy runs `REPAIREFFECT 1` and later `0`. **BUMP 17**
+  (`0x005549ed`): the operand against `[script+0xe6]`; equal does nothing, otherwise it is stored and the circuit
+  walks `0x0052a490` and `0x0052a700` run with f = 1 for an operand of 0 and 0 for any other; reset to -1 at load
+  (`0x00559f29`); track edits run the same walks. Jungle's `Wateride.RSE` issues it four times (0, 1, 1, 0). Confirm:
+  Bouncy's repair limb and the Wateride, beside the original. Decode `0x0052a490` and `0x0052a700` to `docs/exe/`
+  first if they are not there. Building BUMP 17 for the Wateride also needs the water ride's track record, which the
+  code does not have (the Q257r paragraph under Q420).
+  - **Note (fork watch 2026-10-18, `verify-audio-fx.md` F5):** REPAIREFFECT's two sounds (global rides 111 and 211, `0x0051bfc0` at
+    `0x0055631a` and `0x0055634c`) **drop both returned handles**: nothing stores them, so nothing can stop them with the
+    owner. Do not tie them to the owner. Whether 111 and 211 loop (effect flag `0x8`) was not read; if they do, the
+    original never stops them.
+  - **Note (Q781, 2026-10-28):** the two walks are decoded and built (`park.md`, "The pieces' clips";
+    `ParkTrackTool.PlayPieces`, f = 1 plays role 5 looped, 0 rests): BUMP 17 is the walks from both mouths after its
+    `+0xe6` test (`0x00554a1a`..`0x00554a47`), and it reads the thing itself, not a bumper record (`esi`, `0x0055470b`), so it
+    can be built before the rest of the water ride's `BUMP`. Until it is, Splish Splash's water never flows by its script.
+  **Done 2026-11-12** (cloud lane c108): `BUMP 17` is answered before the bumper-record test (`RideScript.TrackPieces`):
+  the operand against `+0xe6` (-1 from the loader and a load), equal does nothing, otherwise stored and both pieces' walks
+  run with clip 5 for nought and rest for any other (`ParkTrackTool.PlayPiecesOfRide`). `REPAIREFFECT` has its case
+  (`RideScript.RepairEffect`): non-zero plays the global rides' 111 and 211 at the thing (handles dropped), nought the
+  scream picker with (`VAR_ONRIDE`, 1, 1) where the script declares more than five variables; the particle is counted
+  (`REPAIREFFECT_PARTICLE`, Q1576). `RideScriptRepairEffectTests` (the corpus: 70 scripts, 70 x 1 and 70 x 0, `VAR_ONRIDE`
+  sixth in each; jungle's `BUMP 17` is `Wateride.RSE`'s alone, 0, 1, 1, 0) and
+  `ParkTrackPieceClipTests.Bump17WalksBothMouthsWithOneClip`. Off-screen in a cloud container: a Splish Splash on (32,26)
+  with the karts' loop and its queue joined opened and its `BUMP 17 0` put 16 pieces to clip 5, a break's `BUMP 17 1` put
+  them at rest, the repair's `REPAIREFFECT 1` started 111 and 211 and its `BUMP 17 0` ran them again; a broken Belly
+  Bounce's repair played 111 and 211, then the picker with 0 aboard nothing. Not photographed nor heard beside the
+  original (Q1577).

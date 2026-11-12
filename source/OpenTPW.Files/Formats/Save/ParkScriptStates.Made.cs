@@ -74,6 +74,8 @@ public sealed partial class ParkScriptStates
 		Dword( ModelHandleDword, modelHandle );
 		Dword( ReverbDword, script.Reverb ?? -1 );
 		PutInt16( record, 0xe4, 1000 );
+		// BUMP 17's last operand: the original writes the word as it stands, and its load writes 0xffff over it (0x00559f29),
+		// so this writes the load's value; the bytes differ from the original's file, what a load makes of them does not.
 		PutInt16( record, 0xe6, 0xffff );
 
 		using var stream = new MemoryStream();

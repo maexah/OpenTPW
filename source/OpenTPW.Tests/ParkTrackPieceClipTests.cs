@@ -237,4 +237,26 @@ public class ParkTrackPieceClipTests
 		Assert.AreEqual( 7, _clips.Count );
 		Assert.IsTrue( _clips.All( c => !c.Running ), "an open loop's pieces rest" );
 	}
+
+	/// <summary>
+	/// <c>BUMP 17</c>'s walks (<see cref="ParkTrackTool.PlayPiecesOfRide"/>) run both mouths with the one clip, whatever the
+	/// circuit: on the open loop the mouth's six and the other mouth's (28,25), all running for an operand of nought, all at
+	/// rest for any other; a thing the park does not hold walks nothing. Made to fail by walking the mouth alone, by the
+	/// other mouth's walk resting as the closing click's does, or by inverting the clip.
+	/// </summary>
+	[TestMethod]
+	public void Bump17WalksBothMouthsWithOneClip()
+	{
+		var (state, ride) = Open();
+		_clips.Clear();
+
+		Assert.AreEqual( 7, ParkTrackTool.PlayPiecesOfRide( state, ride.ThingId, running: true ) );
+		CollectionAssert.AreEqual( Loop[..6].Append( (28, 25) ).Select( c => (c.Item1, c.Item2, true) ).ToArray(), _clips );
+
+		_clips.Clear();
+		Assert.AreEqual( 7, ParkTrackTool.PlayPiecesOfRide( state, ride.ThingId, running: false ) );
+		Assert.IsTrue( _clips.All( c => !c.Running ), "an operand other than nought rests every piece" );
+
+		Assert.IsNull( ParkTrackTool.PlayPiecesOfRide( state, ride.ThingId + 100, running: true ) );
+	}
 }

@@ -60,7 +60,7 @@ public sealed partial class ParkAudio
 	{
 		3 => _rides,
 		4 => _levelAmbient,
-		5 => _globalRides,
+		GlobalRidesType => _globalRides,
 		6 => _kids,
 		7 => _staff,
 		8 => _ambient,
@@ -946,6 +946,9 @@ public sealed partial class ParkAudio
 
 	/// <summary>The name an interface voice is started under (<see cref="PlayInterfaceSound"/>), where a script's is its id.</summary>
 	internal const int InterfaceOwner = -1;
+
+	/// <summary>A script sound's type for the global <c>cat_rides</c> (<c>FUN_005573d0</c>'s case 5).</summary>
+	internal const int GlobalRidesType = 5;
 
 	/// <summary>The type a script names <c>cat_ui</c> by (<c>FUN_005573d0</c>), the category <c>UI_PlaySound</c> plays in.</summary>
 	private const int InterfaceType = 9;
