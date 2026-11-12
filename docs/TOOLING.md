@@ -442,6 +442,14 @@ Read this before aiming a click or comparing two pictures. Each fact names the i
 Each was found by trial in the item named, and cost a run to find.
 
 - **The console's `walk` in a cloud container** (Q14, `lib/consolerun.py`): `40 park jungle`, `3 camcorder 481.897 166.285` (the path, so a short walk crosses no shut edge; `camcorder 500 500` stops at y 510 on the first walk), then `walk 1 0 N`. Each of the N steps is a fixed sixtieth of a second (`Time.StepDelta`), 0.667 units, whatever the frame rate (xvfb's 13 to 14 frames a second too), so N = 60 walks 40 units and `stand=` can be predicted from N before it is read back; it walks under `pause` as well, so a paused walk then a grab photographs a crossing.
+- **The lobby fly-in's black, read and grabbed in a cloud lane** (Q61, `lib/consolerun.py`, off-screen; llvmpipe draws the
+  frames, 12 to 14 a second): `1 island 0` (Lost Kingdom), `2 attract off`, `2 settle`, `1 orbit 3.1` (a turn of about 0.3 rad,
+  so state 2 starts within a second), `0.1 enter`, then `state` lines (`fade=`, `fadeTarget=`, `fadeAlpha=`) and
+  `!import -window root <abs path>.png` grabs (ImageMagick on the run's Xvfb; a 1280 x 1024 grab costs about a third of a
+  second, so grabs every 0.4 s outlast a 3 s flight). Escape mid-flight: `1.9 state` after the `enter`, then
+  `0.05 !w=$(xdotool search --onlyvisible --name . | head -1); xdotool windowfocus --sync $w key Escape`; the cancel's line is
+  `Lobby camera: Escape cancelled the leave ...`, and works over the player slots too (nobody playing). The frames' mean
+  brightness: PIL's `ImageStat` on `convert("L")`.
 - **A fade's steps read in a run** (Q509, `lib/consolerun.py`, off-screen): `40 park jungle`, `2 speech 5` (his voice starts 0.8 s after the line is
   given, so a quieten sooner finds nothing), `0.02 quieten`, then `0.04 voices` lines: a stepping voice reads `fading <volume>`; the
   quietened advisor reads 0 at once and is gone at the worker's first wake (his volume is set to 0 first), so an effect voice's fade shows the steps. `sounddetail N` sets

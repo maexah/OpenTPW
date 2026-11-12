@@ -283,6 +283,10 @@ public class LobbyCameraMode : CameraMode
 			_firstPass = false;
 			Attract( islands );
 
+			// The attract flight writes the fade's target nought (LobbyFade).
+			_fadeTarget = 0f;
+			LobbyFade.Step( 0f );
+
 			FieldOfView = LensOf( settings );
 			return;
 		}
@@ -303,7 +307,14 @@ public class LobbyCameraMode : CameraMode
 
 		// Leaving for a park runs the original's own two states in front of the ordinary orbit, and
 		// while they run they decide the heading and the distance instead of it - see LeaveForPark.
+		// States 0 and 1 want no fade; state 2 writes its own target in StepLeaving (LobbyFade).
+		if ( _leaving != Leaving.FlyingIn )
+			_fadeTarget = 0f;
+
 		var angle = _leaving == Leaving.No ? _orbitTime * SpinSpeed : StepLeaving( settings );
+
+		if ( !Paused )
+			LobbyFade.Step( _fadeTarget );
 
 		var radius = _leaving == Leaving.FlyingIn ? _leaveRadius : settings.SpinRadius;
 		var vertical = _leaving == Leaving.FlyingIn ? _leaveVertical : settings.VerticalOffset;
@@ -362,6 +373,12 @@ public class LobbyCameraMode : CameraMode
 	private static float _leaveRadius;
 	private static float _leaveVertical;
 	private static Action? _whenArrived;
+
+	/// <summary>The fade's target this pass, the render camera's <c>+0x60</c>: nought but in state 2 (<see cref="LobbyFade"/>).</summary>
+	private static float _fadeTarget;
+
+	/// <summary>The fade's target as the last pass left it, for a test. A pure getter.</summary>
+	internal static float FadeTarget => _fadeTarget;
 
 	// How long the leave has run, in seconds and passes, for the log lines that time its phases.
 	private static float _leaveSeconds;
@@ -495,12 +512,13 @@ public class LobbyCameraMode : CameraMode
 			return _leaveAngle;
 		}
 
-		// State 2 also darkens the screen as the radius closes on 8 (the render camera's +0x60, 0x005e052f), which
-		// nothing here draws yet.
-		Unimplemented.Report( "LOBBY_FLY_IN_FADE" );
-
 		_leaveRadius = Decayed( _leaveRadius, RadiusDecay, Time.Delta );
 		_leaveVertical = Decayed( _leaveVertical, VerticalDecay, Time.Delta );
+
+		// State 2 darkens the screen as the radius closes on 8: the render camera's +0x60 (0x005e052f), the whole of it just
+		// before the park is asked for (LobbyFade). Taken from the radius after this pass's decay, which is our reading of
+		// the order.
+		_fadeTarget = _leaveRadius < ArrivedRadius ? 1f : LobbyFade.Target( _leaveRadius, settings.SpinRadius );
 
 		if ( _leaveRadius < ArrivedRadius )
 		{
@@ -914,6 +932,8 @@ public class LobbyCameraMode : CameraMode
 		_lookAt = SeedLookAt;
 		_placed = true;
 		_firstPass = true;
+		_fadeTarget = 0f;
+		LobbyFade.Forget();
 	}
 
 	/// <summary>The render camera's seed eye, (500, 100, 500) y-up in the original (<c>FUN_005d8b50</c>, <c>docs/exe/lobby.md</c>), as ours has it.</summary>
@@ -955,6 +975,8 @@ public class LobbyCameraMode : CameraMode
 		_leaveAngle = 0f;
 		_leaveRadius = 0f;
 		_leaveVertical = 0f;
+		_fadeTarget = 0f;
+		LobbyFade.Forget();
 	}
 
 	/// <summary>

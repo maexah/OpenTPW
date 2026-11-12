@@ -3404,6 +3404,9 @@ public class Level
 		// The solid geometry, then everything see-through, then the sprites.
 		Entity.RenderWorld();
 
+		// The park-entry fly-in's black, over the view and under the interface; nought, and so not drawn, outside it.
+		LobbyFade.Draw();
+
 		RenderOverTheWorld( Hud, () => global::Global.Render.CommandList.ClearDepthStencil( 1 ), DrawPreviews, DrawActiveWarning,
 			() => Entity.All.ForEach( entity => entity.RenderOverlay() ) );
 	}

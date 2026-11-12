@@ -341,8 +341,8 @@ island** (`[3] == 0`) takes the **attract** path; otherwise the **globe** state 
 
 OpenTPW builds both, branching on the same condition in `LobbyCameraMode.Update`: attract is `Attract`, and
 the island state machine is the orbit (state 0), `LeaveForPark` and `StepLeaving` (states 1 and 2, with the
-gate's M1 on arrival) and `CancelLeave` (`0x005e1890`), all in front of the shared `FUN_005e1210` ease. Not
-built: state 2's darkening of the screen (`LOBBY_FLY_IN_FADE`, `docs/QUEUE.md` Q61).
+gate's M1 on arrival) and `CancelLeave` (`0x005e1890`), all in front of the shared `FUN_005e1210` ease. State 2's
+darkening of the screen is `LobbyFade` (Q61, "Escape cancels the fly-in" below).
 
 ### The object
 
@@ -697,7 +697,13 @@ camera's update (`0x005d8cb0`) eases `+0x5c` toward it by an eighth of the gap p
 the delta), and while it is above 0 sets bit `0x80000` of `0x008bcbc8` and writes a black colour with alpha
 `min( +0x5c >> 8, 255 )` to `0x008bd4e4`, which `Render_DrawView` hands to the renderer's `+0x28` with the screen's size -
 a black rectangle over the view. The cancel does not touch it; the next state-0 update sets the target to 0 and it lifts
-over about 42 passes. **Not built** (`LOBBY_FLY_IN_FADE`, `docs/QUEUE.md` Q61).
+over about 42 passes. **OpenTPW** (Q61): `LobbyFade` holds the value as a fraction of `0x10000`, `StepLeaving` writes
+the target from the radius after that pass's decay (the order inside `0x005e052f`-`0x005e05b4` against the decay is our
+reading) and 1 at arrival, every other lobby pass writes 0, and the eighth a pass is `Time.SmoothingFactor( 4.0059 )`, an
+eighth a pass at the original's 30 passes a second (rule 10). The rectangle is drawn after the world and before the
+interface (`Level.Render`); that the original's interface is drawn over it is our reading of `Render_DrawView`, not
+checked. The console's `state` carries `fade=`, `fadeTarget=` and `fadeAlpha=`; `Lobby fade:` lines log the alpha leaving
+and reaching 0 and 255. Not yet set beside the original's frames (`docs/QUEUE.md` Q1472).
 
 **Unsettled.**
 - Whether the engine's idle default replays a lobby gate's M1 by itself. `FUN_0044e410( 3 )` in the lobby loop calls

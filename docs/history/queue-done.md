@@ -12315,6 +12315,28 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   open. The engine finds a bounce rider's node by id in `0x800` ("Where a rider is drawn"); `ModelFile.FindNode` is
   that lookup and `RideNodes` the stored positions at rest (Q175b), not the animated pose a rider needs. A walk's riders
   are placed by `FUN_005580a0` from the posed nodes since Q585 (`ride-operation.md`, "Where a walk's rider is drawn").
+- [x] **Q61. The park-entry fly-in darkens the screen, and nothing here draws it.** Found by Q41's decode
+  (`docs/exe/lobby.md`, "Escape cancels the fly-in"). State 2 sets the render camera's `+0x60` to
+  `clamp( (1 - (r - 8) / (SPINRADIUS - 8)) x 65536, 0, 65535 )` (`0x005e052f`), states 0 and 1 set it to 0, and
+  `0x005d8cb0` eases `+0x5c` toward it by an eighth of the gap per lobby pass and draws a black rectangle over the
+  view with alpha `min( +0x5c >> 8, 255 )` (`0x008bd4e4`, drawn at `0x00576e54`). So the flight fades to black as it
+  closes on the gate, and a cancel lifts it. Counted as `LOBBY_FLY_IN_FADE`. The ease is per pass, not per second:
+  convert it through `Time.SmoothingFactor` and say so (rule 10). Confirm: `step` into the flight, screenshots at
+  three radii with mean brightness falling, then Escape and the brightness back within a second.
+  - **Note (play test 2026-10-21, note 2):** no golden key animation at entry; the key puff is drawn since Q669, so
+    what is left of the note is this fade.
+  Built: `LobbyFade` (target `clamp( 1 - (r - 8) / (SPINRADIUS - 8), 0, 0xffff/0x10000 )` from the radius after the pass's
+  decay, 1 at arrival, 0 in every other lobby pass and the attract flight; alpha `min( v >> 8, 255 )`; the eighth a pass as
+  `Time.SmoothingFactor( 4.0059 )`, `-30 ln( 7/8 )`, an eighth a pass at the original's 30 a second, said at the site), drawn
+  as a black quad after the world and before the interface (`Level.Render`), cleared at every lobby build and end; the
+  console's `state` reads `fade=`, `fadeTarget=`, `fadeAlpha=`, and `Lobby fade:` lines log alpha leaving and reaching 0 and
+  255. `LOBBY_FLY_IN_FADE` is gone. Six tests in `LobbyFadeTests` (the target from 8 not 0, the high byte held at 255, the
+  ease per second, 42 passes from full black to 0, state 2's target and arrival's whole, a new lobby clear); five bugs put back
+  by hand each failed one. Off-screen runs (cloud, llvmpipe, the commit's build): alpha 0, 51 at radius 49.94 and 199 at 18.24,
+  frame means 69.4, 57.4, 29.8; Escape mid-flight, alpha 120 after it, 0 the next second, frame mean 48.1 to 62.2. Not checked: the order of
+  the target against the decay inside `0x005e052f`, the interface drawn over the black in the original, and anything beside
+  the original's frames (no original, no Ghidra in the lane): Q1472. **Done 2026-11-12** (cloud lane c88,
+  `alexah/1067-lobby-fly-in-fade`).
 
 ## E. Large
 
