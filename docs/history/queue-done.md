@@ -12260,6 +12260,17 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   No game run.
   Done 2026-10-11 on Alexah's word, at the week-end audit's close: the file is `docs/history/CLEANUP-PLAN.md`, as it was
   written, and `docs/history/README.md` lists it.
+- [x] **Q75. The 2026-09-12 review's Phase F, what is left.** Opportunistic, never alone. Left: `content/textures/test.png`; `.editorconfig`'s `end_of_line = crlf` with no
+  `.gitattributes`; and, to LABEL as dead by CODE rather than delete (rule 3), `Public/ModelFile.cs` and
+  `Public/MapFile.cs` (both unreferenced), `Render/Primitives/Cube.cs` and `ReadUIntN`. `Singleton.cs` is used by
+  `UI/Cursor.cs`, though nothing reads its `Instance`. Left to Alexah's call, not to be started: `.gitignore` for `.claude/`,
+  `.vscode/` and `.mcp.json`.
+  Also left (the 2026-09-26 staleness audit): the `PreferredBackend` setting in `App.config` and `Settings.settings`,
+  which nothing reads (`Settings.Default` is read for `GamePath` and `GameWindowSize` only). Label it as dead by CODE
+  at its sites; remove it only on Alexah's word.
+  Done 2026-11-12 (cloud lane c124): `test.png` removed with its `THIRD-PARTY-NOTICES.md` row (history still carries
+  it); the `crlf` line had already gone (`.editorconfig` says `lf`, `.gitattributes` sets `eol=lf`); the five leftovers
+  labelled at their sites and held there by `DeadByCodeLeftoverTests` (IL scan, put-back checked). Left: Q1648.
 
 ## C. Alexah's list: cause known, one session each
 

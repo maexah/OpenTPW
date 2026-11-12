@@ -1,5 +1,9 @@
 ﻿namespace OpenTPW.Files;
 
+/// <summary>
+/// Dead by CODE: nothing constructs it. The game reads <c>.md2</c> with <see cref="OpenTPW.ModelFile"/>
+/// (<c>Formats/Model/ModelFile.cs</c>); this one logs a header and keeps a fixed four vertices and two faces.
+/// </summary>
 public sealed class ModelFile : BaseFormat
 {
 	public ModelFileData Data;

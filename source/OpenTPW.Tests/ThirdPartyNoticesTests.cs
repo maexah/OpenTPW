@@ -72,21 +72,37 @@ public class ThirdPartyNoticesTests
 		Assert.AreEqual( 0, missing.Length, "no row in THIRD-PARTY-NOTICES.md for: " + string.Join( ", ", missing ) );
 	}
 
-	/// <remarks>The files git tracks, not the folder's: a disc image or screenshots left beside them are not the repository's.
-	/// A copy of the tree without its <c>.git</c> (the mutation runs') has the folder's own files, which are the tracked ones.</remarks>
-	[TestMethod]
-	public void EveryTrackedFileUnderContentHasARow()
+	/// <summary>The files under <c>content/</c> git tracks, not the folder's: a disc image or screenshots left beside them are not
+	/// the repository's. A copy of the tree without its <c>.git</c> (the mutation runs') has the folder's own files, which are the tracked ones.</summary>
+	private static string[] TrackedContent()
 	{
 		var root = RepoFiles.Root();
 		var listing = RepoFiles.Run( "git", "-C", root, "ls-files", "--", "content" );
-		var files = listing is { Exit: 0 } && listing.Value.Output.Length > 0
+
+		return listing is { Exit: 0 } && listing.Value.Output.Length > 0
 			? listing.Value.Output.Split( '\n', StringSplitOptions.RemoveEmptyEntries ).Select( f => f.Trim() ).ToArray()
 			: Directory.GetFiles( Path.Join( root, "content" ), "*", SearchOption.AllDirectories ).Select( f => Path.GetRelativePath( root, f ).Replace( '\\', '/' ) ).ToArray();
+	}
+
+	[TestMethod]
+	public void EveryTrackedFileUnderContentHasARow()
+	{
+		var files = TrackedContent();
 		var covered = Covered().Where( c => c.StartsWith( "content/" ) ).ToArray();
 		var missing = files.Where( file => !covered.Any( c => PathCovers( c, file ) ) ).ToArray();
 
 		Assert.IsTrue( files.Length > 20, $"git listed only {files.Length} files under content/" );
 		Assert.AreEqual( 0, missing.Length, "no row in THIRD-PARTY-NOTICES.md for: " + string.Join( ", ", missing ) );
+	}
+
+	/// <summary>A row left behind when its file is removed names a licence for nothing the repository holds.</summary>
+	[TestMethod]
+	public void EveryContentRowNamesATrackedFile()
+	{
+		var files = TrackedContent();
+		var stale = Covered().Where( c => c.StartsWith( "content/" ) ).Where( c => !files.Any( file => PathCovers( c, file ) ) ).ToArray();
+
+		Assert.AreEqual( 0, stale.Length, "THIRD-PARTY-NOTICES.md names what content/ does not hold: " + string.Join( ", ", stale ) );
 	}
 
 	[TestMethod]

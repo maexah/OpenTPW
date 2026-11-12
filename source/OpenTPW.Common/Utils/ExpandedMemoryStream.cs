@@ -48,6 +48,7 @@ public sealed class ExpandedMemoryStream : MemoryStream
 		return BitConverter.ToUInt32( ReadBytes( 4, bigEndian ), 0 );
 	}
 
+	/// <summary>Dead by CODE: nothing calls it.</summary>
 	public uint ReadUIntN( int n, bool bigEndian = false )
 	{
 		return BitConverter.ToUInt32( ReadBytes( n, bigEndian ), 0 );

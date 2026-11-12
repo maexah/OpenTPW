@@ -50,6 +50,7 @@ namespace OpenTPW {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("Vulkan")]
+        // Dead by CODE: nothing reads it; the renderer is always Vulkan. A regeneration from Settings.settings drops this line.
         public string PreferredBackend {
             get {
                 return ((string)(this["PreferredBackend"]));

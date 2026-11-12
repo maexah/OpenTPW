@@ -42,7 +42,6 @@ covers in `code` marks: package ids, or a path under `content/` where `*` stands
 | `content/shaders/**` | OpenTPW's shaders (shipped) | MIT | OpenTPW's own, under `LICENSE.md` |
 | `content/icons/archive.png`, `content/icons/document.png`, `content/icons/folder.png`, `content/icons/image.png`, `content/icons/model.png`, `content/icons/ride.png`, `content/icons/save.png`, `content/icons/settings.png`, `content/icons/sound.png`, `content/icons/strings.png` | the file browser's icons (not shipped) | MIT | in the repository since the upstream project's 2022 and 2023 commits (Alex Guthrie); the files name Inkscape and GIMP as their makers; their origin is not recorded beyond that |
 | `content/icon-sm.tga`, `content/icon.ico`, `content/icon.png`, `content/icon.tga` | the program's icon in four forms (`icon.ico` is built into `OpenTPW.exe`) | MIT | as above: the upstream project's, made with GIMP by the file's own comment; origin not recorded beyond that |
-| `content/textures/test.png` | a 4096 x 4096 test image (not shipped) | MIT | in the repository since the upstream project's first texture commit, 2022-03-06; origin not recorded |
 
 ## Appendix A: the MIT licence
 

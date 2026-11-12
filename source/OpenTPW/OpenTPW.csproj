@@ -76,9 +76,8 @@
 		spelling the code uses, and ContentDir finds them there rather than in whatever directory the game
 		happened to be started from.
 
-		Deliberately narrow, and note that anything left in content\shaders ships. content\textures,
-		content\icons and the disc image beside them are read by no code at all, and the disc image on its own
-		is half a gigabyte.
+		Deliberately narrow, and note that anything left in content\shaders ships. content\icons and the disc
+		image beside it are read by no code at all, and the disc image on its own is half a gigabyte.
 	-->
 	<ItemGroup>
 		<Content Include="..\..\content\shaders\**\*" LinkBase="content\shaders">

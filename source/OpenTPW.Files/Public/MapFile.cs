@@ -1,5 +1,6 @@
 ﻿namespace OpenTPW;
 
+/// <summary>Dead by CODE: nothing constructs it, and its <see cref="ReadFromStream"/> reads nothing.</summary>
 public sealed class MapFile : BaseFormat
 {
 	// Guesswork / placeholders

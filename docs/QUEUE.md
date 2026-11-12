@@ -1111,7 +1111,6 @@ filed the items that cite it.
   starts on animation 0, which its remarks give as a deviation no shipped bank reaches. Dead by content today:
   build it as the original's or leave the count, on Alexah's word.
 
-
 - [ ] **Q1316. The handyman loaded walking to litter or sweeping: his walk off photographed, and the job itself (from Q1154).**
   Q1154 made one loaded in state 8 or 9 fall to idle (`StaffBehaviour.Step`'s default arm, counted as
   `HANDYMAN_LITTER_STATE_8` and `_9`, a deviation said at the site) and confirmed it by census only, off-screen in a cloud
@@ -2286,14 +2285,15 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   Read by the week-end audit (2026-10-11), not re-measured: `wad.md`'s name length and the `mFlags` `0x8` bit read
   corrected. Still to judge: `saves.md`'s version `85`, its "sixth person model is the visitor", `0x14E`, and
   `vm/info.md`'s per-script variable ids.
-- [ ] **Q75. The 2026-09-12 review's Phase F, what is left.** Opportunistic, never alone. Left: `content/textures/test.png`; `.editorconfig`'s `end_of_line = crlf` with no
-  `.gitattributes`; and, to LABEL as dead by CODE rather than delete (rule 3), `Public/ModelFile.cs` and
-  `Public/MapFile.cs` (both unreferenced), `Render/Primitives/Cube.cs` and `ReadUIntN`. `Singleton.cs` is used by
-  `UI/Cursor.cs`, though nothing reads its `Instance`. Left to Alexah's call, not to be started: `.gitignore` for `.claude/`,
-  `.vscode/` and `.mcp.json`.
-  Also left (the 2026-09-26 staleness audit): the `PreferredBackend` setting in `App.config` and `Settings.settings`,
-  which nothing reads (`Settings.Default` is read for `GamePath` and `GameWindowSize` only). Label it as dead by CODE
-  at its sites; remove it only on Alexah's word.
+- [ ] **Q1648. The two parts of Q75 that are Alexah's call.** Not to be started without Alexah's word: a `.gitignore`
+  for `.claude/`, `.vscode/` and `.mcp.json` (none of the three is in it, 2026-11-12); and whether the `PreferredBackend`
+  setting, labelled dead by CODE in `App.config`, `Settings.settings` and `Settings.Designer.cs` by Q75, is removed. If it
+  is, remove it from all three and drop it from `DeadByCodeLeftoverTests`. No game run.
+- [ ] **Q1649. Q1111 and Q452 are in both queue files, so the queue sweep refuses every commit.** On `a27a188` each is
+  unticked here and ticked in `docs/history/queue-done.md` (Q452's two copies are the same; Q1111's differ in the first
+  line only), so `tools/maintainer/queue-sweep.py` finds them twice and refuses any commit that stages this file. Q75's
+  commit was swept by hand with that check eased for those two alone. Both landed (STATUS, Numbers): take the two
+  unticked copies out of this file, keeping anything they hold that the ticked copies do not. No game run.
 - [ ] **Q204. Load the area-only notes only in their area.** Claude Code loads a `.claude/rules/*.md` file whose
   `paths:` front matter matches an open file, and no other time. Move the sections of `CLAUDE.local.md` (and any of
   `CLAUDE.md`) that serve one area only - the capture recipe, the original under Proton, the 2.0 patch's evidence - into
