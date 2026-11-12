@@ -1050,12 +1050,12 @@ filed the items that cite it.
   back to his decide and counts nothing; its summary gives the two tests as the original's. Build the third, or
   count it. Confirm: a ride put to state 2 with a mechanic sent to it, his state read in both games.
 
-- [ ] **Q273. A node's direction is normalised in another order and width than the original's.** From the week-end
-  audit (stage 4; read twice from the listing). `FUN_00556b90` sums (x*x + y*y) + z*z, keeps the root as a float
-  and divides each element by that float (`0x00556cba`, `0x00556cc6`, `0x00556ccc`). `RideNodes` sums
-  (z*z + y*y) + x*x and divides by the double root, and its comment says the build takes the third element's
-  square first. The last bit of a saved direction can differ. Confirm: a written model record's direction words
-  compared bit for bit with the original's save of the same park.
+- [ ] **Q1268. A node's direction words compared with the original's (the rest of Q273).** From Q273, split in cloud lane
+  c37 (no original there). A type 2 particle record's emitter words, written by ours and by the original from the same
+  park at the same tick, compared bit for bit; and a node posed by a clip, which Q273's census (rest poses only) did not
+  reach, checked for a word the earlier rule would have changed. Under 24-bit precision the sum and root would round
+  otherwise: the precision in force at `0x00556cba` is not measured (`park-engine.md`, "Which rounding is live is not
+  settled").
 
 - [ ] **Q274. A sprite the writer makes takes its first turn at once, where the original's waits one interval.**
   From the week-end audit (stage 4; read twice from the listing). The constructor `FUN_004758f0` writes `0x3e` to

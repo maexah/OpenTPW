@@ -3565,6 +3565,12 @@ from that start in no other word outside the running ones: (0, 25, 30) for the S
 (-30, 25, 0) turned 270, (-34, 19, 0) for its node 1, (0, 23, -19) for the Hyenas' node 5. The Spray's
 direction's x is -0.0113: -11 times 40 over 1024 is nought, where a shift down would give -1.
 
+**The length, ours** (Q273): `RideNodes.UnitOf` sums the squares in that order at 53 bits (Proton's precision), keeps the
+root as a float and divides each element by it. Against a double root and the third square first, 1,228 of the 8,216
+directions a census of every shipped model's nodes at rest takes (four themes, turns 0, 90, 180 and 270, each node in
+the four spaces) differ in a bit, 515 of them distinct, and none in a word times 1024 (`__ftol`), which is all a caller
+keeps: no shipped particle's aim changes at rest. Not compared with the original's words (Q1268).
+
 **What OpenTPW writes.** `RideScript.WrittenEmitters` asks for a type 2 record's emitter with the direction of
 its node (`ParkParticles.Spawn.Direction`), and `Edit.Start` then makes no draw and writes the three words.
 `ParkParticles.Aim` reads them; the console's `emitters` prints each emitter's.
