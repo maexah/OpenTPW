@@ -260,10 +260,11 @@ american tables the original reads, so month.day.year with full stops, none padd
 "1.10.2002" (`q526/orig/a-2-loaded-gadget.png`). It is the row the Load Park list writes a save's date with (`saves.md`,
 "The list is the folder").
 
-**OpenTPW** (Q527): `ParkGadget.DateOf` fills row 448 by those three tokens from `GameCalendar.Now`, written every frame
-where the original writes on a day's change and at set-up (the text is the same between them). It reads the English
-tables (`{16}.{17}.{18}`, Q697), so it letters day.month.year, "10.1.2002" on that date: **a deviation, said at the site**,
-gone when the american tables are read. The 31-byte buffer is not modelled; no date fills it.
+**OpenTPW** (Q527): `ParkGadget.DateOf` fills the american row 448 by those three tokens from `GameCalendar.Now`, so
+"1.10.2002" on that date, written every frame where the original writes on a day's change and at set-up (the text is
+the same between them). **A deviation, said at the site:** the rest of the interface reads the English tables (Q697), so
+the Load Park list letters a date day first while the gadget letters it month first; in the original both read the
+american row. The 31-byte buffer is not modelled; no date fills it.
 
 ### The happiness gauge's two quads (Q244; fork watch 2026-10-19, verify-advisor-ui.md L3, verify-other-b.md M3)
 

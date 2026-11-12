@@ -44,16 +44,16 @@ Only the item just landed is here. Every earlier item's account is in `docs/hist
 
 - **Q527 (the gadget's date lettered from UITEXT 448):** in a cloud container (no Ghidra, no original, no display; the
   run's output was not kept), `TheDateIsLetteredFromRow448`, `TheGadgetLettersTheParksDateWhenBuilt` and
-  `TheGadgetRewritesItsDateOnAFrame` (all needing the game) pass, and four bugs put back by hand (day and month swapped,
-  the machine's short date with the count back, the day padded, written only at the build) each failed one. An
-  off-screen run (`consolerun.py`, `park jungle`) read `control 0x20 ... reads '8.2.2000'` at `date=2000-02-08` and
-  `reads '10.1.2002'` after `clock 17055` (`date=2002-01-10`), with no `GADGET_DATE_UITEXT_448` in the census. Ours
-  letters day.month.year from the English tables (Q697) where the original letters month.day.year from the american:
-  a deviation said at the site. Not seen on screen, in either game: Q1388.
+  `TheGadgetRewritesItsDateOnAFrame` (all needing the game) pass, and five bugs put back by hand (day and month swapped,
+  the machine's short date with the count back, the day padded, written only at the build, the English table by
+  default) each failed one. An off-screen run (`consolerun.py`, `park jungle`) read `control 0x20 ... reads '2.8.2000'`
+  at `date=2000-02-08` and `reads '1.10.2002'` after `clock 17055` (`date=2002-01-10`), month.day.year as the original's,
+  with no `GADGET_DATE_UITEXT_448` in the census. The gadget reads the american row while the rest of the interface
+  reads the English tables (Q697): a deviation said at the site. Not seen on screen, in either game: Q1388.
 
 ## Numbers (take counts fresh; these go stale within a day)
 
-- Linux (cloud container, as user `tester`), 2026-11-12, Q527 (two tests added and one replaced, all needing the game; after review fixes group F): with the game, 5415 passed, 2 failed, 2 skipped of 5419; with no game named, 2345 passed, 2 failed, 3072 skipped. The two failures are this container's, and fail the same on `origin/main` as `tester`: `AnExceptionBeforeTheMainLoopIsLoggedAndEndsTheRunWithExit1` (no libEGL) and `ACopyStartedOnAFolderAnotherProcessHoldsIsRefused` (the one-copy mutex cannot be opened, an `IOException`). The run's output was not kept.
+- Linux (cloud container, as user `tester`), 2026-11-12, Q527 with its american-row follow-up (two tests added and one replaced, all needing the game; after review fixes group F): with the game, 5415 passed, 2 failed, 2 skipped of 5419; with no game named, 2345 passed, 2 failed, 3072 skipped. The two failures are this container's, and fail the same on `origin/main` as `tester`: `AnExceptionBeforeTheMainLoopIsLoggedAndEndsTheRunWithExit1` (no libEGL) and `ACopyStartedOnAFolderAnotherProcessHoldsIsRefused` (the one-copy mutex cannot be opened, an `IOException`). The run's output was not kept.
 - Linux, 2026-11-12, review fixes group F (`capped.sh`; three tests added, one needing the game; after group E): with the game, 5415 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5417; with no game named, 2347 passed, 0 failed, 3070 skipped.
 - Linux, 2026-11-12, review fixes group E (`capped.sh`; four tests added, one needing the game; after group D): with the game, 5412 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5414; with no game named, 2345 passed, 0 failed, 3069 skipped.
 - Linux, 2026-11-12, review fixes group D (`capped.sh`; three tests added, one needing the game; after Q732): with the game, 5408 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5410; with no game named, 2342 passed, 0 failed, 3068 skipped.

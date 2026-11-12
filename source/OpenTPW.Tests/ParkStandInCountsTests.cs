@@ -159,12 +159,12 @@ public class ParkStandInCountsTests
 			GameCalendar.Rebase( 208 );
 			var gadget = new ParkGadget( _stack );
 			_stack.Open( gadget );
-			Assert.AreEqual( "10.1.2000", FindOrNull( gadget.Root, 0x20 )!.Text );
+			Assert.AreEqual( "1.10.2000", FindOrNull( gadget.Root, 0x20 )!.Text );
 
 			GameCalendar.Rebase( 1000 );
 			_stack.Update();
 
-			Assert.AreEqual( "13.2.2000", FindOrNull( gadget.Root, 0x20 )!.Text );
+			Assert.AreEqual( "2.13.2000", FindOrNull( gadget.Root, 0x20 )!.Text );
 			Assert.AreEqual( before, Times( "GADGET_DATE_UITEXT_448" ), "no longer a stand-in" );
 		}
 		finally

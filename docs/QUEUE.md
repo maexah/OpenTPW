@@ -1593,8 +1593,7 @@ filed the items that cite it.
 - [ ] **Q1388. The gadget's date, both gadgets on one date.** Split from Q527, whose lettering is built
   (`ParkGadget.DateOf`, UITEXT 448 by tokens 16, 17 and 18; `docs/exe/hud.md`, "The date's lettering"). Not
   photographed: no display, no original in that lane. Confirm by both gadgets on one date, as `q526/side-by-side.png`
-  does: predict the original's "1.10.2002" and ours "10.1.2002" on 10 January 2002 while ours reads the English tables
-  (Q697), the same "1.10.2002" once it reads the american ones. Look too at the lettering's fit in the text rect
+  does: predict "1.10.2002" in both on 10 January 2002 (ours reads the american row 448 for the gadget alone). Look too at the lettering's fit in the text rect
   (182, 1061)-(383, 1103) for the longest date, "12.31.2002", which no frame has shown.
 - [ ] **Q529. A loaded park's weather runs on from the file's.** From Q528 (`saves.md`, "OpenTPW's writer, the weather
   thing"): the original's load reads all of the weather thing over its constructor's (`Weather_Serialise`,

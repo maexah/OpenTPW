@@ -1652,21 +1652,21 @@ internal sealed class ParkGadget : UiWindow
 
 	/// <summary>
 	/// A date as the gadget letters it: UITEXT row <c>0x1c0</c> (448) with the day as parameter 16, the month as 17 and
-	/// the year as 18, none padded (the call at <c>0x004a0ea1</c>; docs/exe/hud.md, "The date's lettering"). The row is
-	/// <c>{17}.{16}.{18}</c> in the american tables the original reads, so month.day.year with full stops, and
-	/// <c>{16}.{17}.{18}</c> in the English ones.
+	/// the year as 18, none padded (the call at <c>0x004a0ea1</c>; docs/exe/hud.md, "The date's lettering"), from the
+	/// american tables the original reads, whose row is <c>{17}.{16}.{18}</c>: month.day.year with full stops,
+	/// "1.10.2002" on 10 January 2002. <paramref name="table"/> is another table to read the row from.
 	/// </summary>
 	/// <remarks>
-	/// <b>A deviation:</b> <see cref="Localization"/> reads the English tables (Q697), so with no
-	/// <paramref name="table"/> this letters 10 January 2002 "10.1.2002" where the original letters "1.10.2002". The
-	/// original's 31-byte buffer is not modelled; no date reaches it.
+	/// <b>A deviation:</b> the rest of the interface reads the English tables (<see cref="Localization"/>, Q697), so
+	/// the Load Park list letters a save's date day first while this letters it month first; in the original both
+	/// read the american row. This reads the american row alone until Q697 moves the whole interface. The original's
+	/// 31-byte buffer is not modelled; no date reaches it.
 	/// </remarks>
 	internal static string DateOf( DateTime date, StringFile? table = null )
-	{
-		(int, string)[] values = [(16, $"{date.Day}"), (17, $"{date.Month}"), (18, $"{date.Year}")];
+		=> Localization.Format( table ?? AmericanText.Value, 448, (16, $"{date.Day}"), (17, $"{date.Month}"), (18, $"{date.Year}") );
 
-		return table is null ? Localization.Format( 448, values ) : Localization.Format( table, 448, values );
-	}
+	/// <summary>The american UITEXT table, read once at the first date lettered.</summary>
+	private static readonly Lazy<StringFile> AmericanText = new( () => new StringFile( "Language/american/UITEXT.str" ) );
 
 	/// <summary>
 	/// The golden keys the player holds and the golden tickets they have not spent, read from their progress the way
