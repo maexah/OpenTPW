@@ -2308,8 +2308,8 @@ file's own words and each channel's clip as a load ends (`ParkRides.Restore`, th
 lookup records are left the file's.
 
 **Deviations, each said at its site.** Bit `0x8` is never set, and a file's is kept. A clip promoted from the
-queue is bound whether or not its model is in view. As a clip is started the other channels' clips mark their nodes again, which `FUN_00472f60` does not do (a track bit two channels' clips share goes with the outgoing clip there). Where a channel the file
-had idle is started, its unnamed last clip's marks cannot be told from another idle channel's, and all go. A
+queue is bound whether or not its model is in view. A clip started takes off the channel's last clip and binds the new one, nothing else, as `FUN_00472f60` does (`0x004730a9`, `0x00473117`), so a track bit two channels' clips share goes with the outgoing clip (Q277). Where a channel the file
+had idle is started, its unnamed last clip's marks cannot be told from another idle channel's, and all go; there, and only there, the other channels' clips mark their nodes again in their place. A
 thing bought whose model will not read declares no tables (`SAVE_PARK_MADE_MODEL_TABLES`, counted), and so no
 head.
 

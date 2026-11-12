@@ -14,7 +14,7 @@ public class ParkModelTablesTests
 {
 	private const string Theme = "jungle";
 	private const string ShippedPark = "levels/jungle/Easymode.TPWI";
-	private const int CrazyApe = 1101, JungleSpray = 1303;
+	private const int CrazyApe = 1101, JungleSpray = 1303, Totem = 1110;
 
 	private BaseFileSystem data = null!;
 	private ParkWorld shipped = null!;
@@ -285,7 +285,10 @@ public class ParkModelTablesTests
 		Assert.AreEqual( (0xa1u, 0xa0u), (file[7], again.Words( [-1f] )[7]) );
 	}
 
-	/// <summary>Of a model's several channels, a clip started on one leaves the marks the others' clips account for, whether its own last clip is named or not.</summary>
+	/// <summary>
+	/// Of a model's several channels, a clip started on one leaves the marks only the others' clips account for,
+	/// whether its own last clip is named or not; one clip on two lanes loses its marks with either.
+	/// </summary>
 	[TestMethod]
 	public void AClipStartedOnOneLaneLeavesTheOthers()
 	{
@@ -317,12 +320,18 @@ public class ParkModelTablesTests
 			Assert.IsTrue( onlySecond.All( node => (words[node] & ParkModelTables.TrackBits) == 0 ), $"named {named}" );
 		}
 
-		// Two lanes on one clip: the one taken off leaves the other's marks standing.
+		// Two lanes on one clip: the one taken off takes the marks the other's shares with it.
 		var shared = new ParkModelTables.Running( model, 3 );
 
 		shared.Started( 0, first, 0f );
 		shared.Started( 1, first, 0f );
+		Assert.IsTrue( first.Tracks.All( track => (shared.Words( [3f, 3f, Ended] )[track.Node] & ParkModelTables.Tracked) != 0 ) );
+
 		shared.Started( 1, clips.Clip( 2, 0 )!, 3f );
+		Assert.IsTrue( first.Tracks.All( track => (shared.Words( [3f, 3f, Ended] )[track.Node] & ParkModelTables.TrackBits) == 0 ) );
+
+		// Started again on the lane that kept it, the clip marks its nodes once more.
+		shared.Started( 0, first, 9f );
 		Assert.IsTrue( first.Tracks.All( track => (shared.Words( [3f, 3f, Ended] )[track.Node] & ParkModelTables.Tracked) != 0 ) );
 
 		// A channel past the model's own is nobody's.
@@ -331,6 +340,52 @@ public class ParkModelTablesTests
 		fresh.Started( 3, second, 0f );
 		fresh.Started( -1, second, 0f );
 		CollectionAssert.AreEqual( before, fresh.Words( [3f, 3f, Ended] ) );
+	}
+
+	/// <summary>
+	/// The totem's two clips that share nodes, on two of its channels, and a third clip started in place of one of
+	/// them: the one taken off takes the track bits of the nodes both move, the other channel's clip is not bound again (<c>FUN_00472f60</c> binds only the new clip,
+	/// <c>0x00473117</c>), and its own nodes keep theirs. Where the outgoing clip is not named, every track bit goes
+	/// and the others' clips put theirs back, so the shared nodes keep them there.
+	/// </summary>
+	[TestMethod]
+	public void ATrackTwoChannelsShareGoesWithTheClipTakenOff()
+	{
+		var (model, clips, _) = Load( Totem );
+		var kept = clips.Clip( 5, 0 )!;
+		var outgoing = clips.Clip( 9, 1 )!;
+		var keptNodes = kept.Tracks.Select( track => track.Node ).ToArray();
+		var outgoingNodes = outgoing.Tracks.Select( track => track.Node ).ToArray();
+		var both = keptNodes.Intersect( outgoingNodes ).ToArray();
+		var onlyKept = keptNodes.Except( outgoingNodes ).ToArray();
+		var onlyOutgoing = outgoingNodes.Except( keptNodes ).ToArray();
+
+		Assert.AreEqual( (2, 1, 2), (both.Length, onlyKept.Length, onlyOutgoing.Length), "two nodes both clips move, one the first alone, two the second alone" );
+		var incoming = clips.Clip( 5, 4 )!;
+
+		Assert.IsFalse( incoming.Tracks.Any( track => keptNodes.Contains( track.Node ) || outgoingNodes.Contains( track.Node ) ), "the clip started in its place moves neither's nodes" );
+
+		var running = new ParkModelTables.Running( model, 4 );
+
+		running.Started( 0, kept, 0f );
+		running.Started( 1, outgoing, 0f );
+
+		var file = running.Words( [3f, 3f, Ended, Ended] );
+
+		Assert.IsTrue( keptNodes.Concat( outgoingNodes ).All( node => (file[node] & ParkModelTables.Tracked) != 0 ), "both clips' nodes marked" );
+
+		foreach ( var named in new[] { true, false } )
+		{
+			var replaced = new ParkModelTables.Running( file, [kept, named ? outgoing : null, null, null] );
+
+			replaced.Started( 1, incoming, 3f );
+
+			var words = replaced.Words( [9f, 1f, Ended, Ended] );
+
+			Assert.IsTrue( onlyKept.All( node => (words[node] & ParkModelTables.Tracked) != 0 ), $"named {named}: the kept clip's own node" );
+			Assert.IsTrue( onlyOutgoing.All( node => (words[node] & ParkModelTables.TrackBits) == 0 ), $"named {named}: the outgoing clip's own nodes" );
+			Assert.IsTrue( both.All( node => ((words[node] & ParkModelTables.Tracked) != 0) == !named ), $"named {named}: the nodes both clips move" );
+		}
 	}
 
 	/// <summary>A clip's raw tracks and hide list are read whether or not this reader reads a channel of them.</summary>
@@ -556,4 +611,5 @@ public class ParkModelTablesTests
 		CollectionAssert.Contains( unplaced, "levels/hallow/upgrades/ogre/ogre.MD2:ogrepipe01" );
 		Assert.IsFalse( unplaced.Any( name => name.StartsWith( "levels/jungle/" ) ), "none of Lost Kingdom's" );
 	}
+
 }
