@@ -3150,29 +3150,22 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
     (by the listing, not run; an original defect). `0x0048ee20` sends every held tag message 5 at the load and at teardown:
     whether that lands on a live challenge object is unproven. `0x0048ede0`'s branch is dead by CODE.
 
-- [ ] **Q448. Ride script: REPAIREFFECT and BUMP 17.** From the fork watch, 2026-10-16 (`verify-audio-fx.md` A1 and
-  C1, `verify-world.md` L6). Both are counted by the dispatch's per-instruction report (`RideScript.cs`: "REPAIREFFECT
-  at N", "Wateride: BUMP at N"; `BUMP_17_TRACK_PIECES` is the bumper rides' alone, and the water ride has no bumper
-  record, `RideScript.cs:2337-2345`), both reached by Lost Kingdom's own rides. **REPAIREFFECT** (table entry 93,
-  `0x005562a6`; FileFormats `vm/instructions.md`): the particle on for a non-zero value and off for nought
-  (`0x00556de0`); **show** also plays global rides 111 and 211 at the model; **hide** plays the SINGLESCREAM picker
-  `0x00551320` with (`VAR_ONRIDE`, 1, 1), so only column 0 (75, 79, 83, 87 by the number aboard, silent with none),
-  and only when the script declares more than five variables. Our `park.md` has the polarity right; the other fork,
-  which follows the Mac, has it backwards. Jungle Bouncy runs `REPAIREFFECT 1` and later `0`. **BUMP 17**
-  (`0x005549ed`): the operand against `[script+0xe6]`; equal does nothing, otherwise it is stored and the circuit
-  walks `0x0052a490` and `0x0052a700` run with f = 1 for an operand of 0 and 0 for any other; reset to -1 at load
-  (`0x00559f29`); track edits run the same walks. Jungle's `Wateride.RSE` issues it four times (0, 1, 1, 0). Confirm:
-  Bouncy's repair limb and the Wateride, beside the original. Decode `0x0052a490` and `0x0052a700` to `docs/exe/`
-  first if they are not there. Building BUMP 17 for the Wateride also needs the water ride's track record, which the
-  code does not have (the Q257r paragraph under Q420).
-  - **Note (fork watch 2026-10-18, `verify-audio-fx.md` F5):** REPAIREFFECT's two sounds (global rides 111 and 211, `0x0051bfc0` at
-    `0x0055631a` and `0x0055634c`) **drop both returned handles**: nothing stores them, so nothing can stop them with the
-    owner. Do not tie them to the owner. Whether 111 and 211 loop (effect flag `0x8`) was not read; if they do, the
-    original never stops them.
-  - **Note (Q781, 2026-10-28):** the two walks are decoded and built (`park.md`, "The pieces' clips";
-    `ParkTrackTool.PlayPieces`, f = 1 plays role 5 looped, 0 rests): BUMP 17 is the walks from both mouths after its
-    `+0xe6` test (`0x00554a1a`..`0x00554a47`), and it reads the thing itself, not a bumper record (`esi`, `0x0055470b`), so it
-    can be built before the rest of the water ride's `BUMP`. Until it is, Splish Splash's water never flows by its script.
+- [ ] **Q1576. `REPAIREFFECT`'s particle and place (from Q448).** Decode in Ghidra: `FUN_00556de0`'s spawn (`0x005562a6`'s
+  first call), which thing it looks up from `+0xac`, what its `+0x68` is (the particle id), the place it resolves from the
+  model at `+0xc8`, and whether a second non-zero value over a live `+0xcc` stops the first; and `FUN_00556a80`, where
+  the two sounds and the picker are placed (ours uses the scream's place, `FUN_00556af0`, which reads the same
+  `[[[record+8]+4]+0x78]` chain). Then build the particle (`RideScript.RepairEffect`, counted `REPAIREFFECT_PARTICLE`
+  now) and its stop on nought and at the script's end, and move the sounds if the place differs. Also read whether the
+  handler or `BUMP 17`'s arm writes the result register (both leave it alone here; no shipped use reads it first).
+  Confirm: Lost Kingdom's Belly Bounce broken and mended, the particle in a frame beside the original's.
+
+- [ ] **Q1577. Splish Splash's water by its script, and the repair's sounds, beside the original (from Q448; the
+  desk's).** A photograph pair: a Splish Splash bought on (32,26) with the karts' loop ((34,25), (34,29), (28,29),
+  (28,25)) and its queue joined to a path from (38,23) to (32,23), opened (its `BUMP 17 0` runs the water, clip 5),
+  then broken (`BUMP 17 1`, still) and mended (running again), two frames 1.4 s apart at each state, in both games
+  (`docs/TOOLING.md`, "A kit's loop and the hoardings", for the original's side). And the repair heard: the
+  original's Belly Bounce mended with nobody aboard and with riders, `hammer2`/`rep_rustybolt` and `tp_riderepaired` at
+  the repair's start and the picker's 75 to 87 at its end. Ours was measured only by its log in a cloud container.
 
 - [ ] **Q449. Building over scenery, and tearing down a water track.** From the fork watch, 2026-10-16
   (`verify-world.md` C2 and C3). (1) The placement check (`0x00535d66` to `0x00535d73`) passes a new thing over

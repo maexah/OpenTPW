@@ -1104,7 +1104,7 @@ What OpenTPW plays of it is `audio.md`, "A script's sounds".
 
 `DIPMUSIC` at `0x005564c0` resolves its operand, stores the low byte at frame **`+0xb9`**, and calls `FUN_0051e710`, which is only `DAT_00803ac8 = 1; DAT_00803ad0 = value`. **The frame byte is its lifetime**: `FUN_00558500` tests `+0xb9` and calls `FUN_0051e710(0)`, so a script's death un-dips the music. All 8 shipped uses pass a literal 1.
 
-### `REPAIREFFECT` (93) at `0x005562a6` — unbuilt; it falls to the counted dispatch default
+### `REPAIREFFECT` (93) at `0x005562a6` — the sounds built, the particle counted
 
 One operand, shipped **70x value 1 and 70x value 0**. It does **not** block — no rewind, no `+0x98`, and its only unusual exit is the `NOP` handler — so this is a different failure from `TRIGWAITANIM`: **it would take an access violation rather than park.**
 
@@ -1121,6 +1121,21 @@ One operand, shipped **70x value 1 and 70x value 0**. It does **not** block — 
                                  none (fork watch 2026-10-16, verify-audio-fx.md A1).
 
 **`+0xcc` is the repair particle's handle** — a frame field, one slot, and `FUN_00558500` clears it on death. The killer is `FUN_00556a80`: it does `*(*(*(arg + 8) + 4) + 0x78)` with **no guard**, and its argument is `thingTable[frame+0xc8]` at `0x7a4610` — a table filled at runtime, indexed by the script's model handle with no guard. The sound side is safe (`FUN_0051bfc0` is `Sound_PlayEffect`, guarded on `DAT_00802bc8`/`DAT_00802bd4`), but that does not rescue it.
+
+**Shipped (Q448, every `.RSE` read):** 70 scripts run it, each once with 1 and once with 0, a literal; every one declares
+more than five variables with `VAR_ONRIDE` sixth, so the slot the nought reads by its place is the number aboard
+(`RideScriptRepairEffectTests`). Lost Kingdom's Belly Bounce (`Bouncy.RSE`) and Splish Splash (`Wateride.RSE` @210, 1,
+`WAIT 3000`, @214, 0) run it on the repair. **The two sounds are one-shots**: OpenTPW's category reader reads flags
+`0x0` for the global rides' 111 and 211 (the run below), so the dropped handles leave nothing playing on.
+**OpenTPW** (`RideScript.RepairEffect`, `RepairSounds`): a non-zero value plays 111 and 211 as script sounds of type 5
+(the global `cat_rides`) with their handles dropped; nought, where the script declares more than five variables, plays
+the picker as `SINGLESCREAM`'s grid with (the sixth, 1, 1). Both at the middle of the thing's cells, where a scream sounds
+(`FUN_00556af0`): `FUN_00556a80` reads the same `[[[record+8]+4]+0x78]` chain and is otherwise not read (Q1576). **Not
+built: the particle** (the thing's `+0x68` and the model's place are not read; a non-zero value on a thing counts
+`REPAIREFFECT_PARTICLE`, and nought has nothing at `+0xcc` to stop; Q1576). Measured in ours off-screen (Q448; the
+run's output was not kept): a broken Belly Bounce's repair played `hammer2.mp2` (111) and `tp_riderepaired` (211), then
+the picker with 0 aboard played nothing; a broken Splish Splash's played `rep_rustybolt.m` and `tp_riderepaired`. Not
+heard beside the original (Q1577).
 
 ### The lights (82-85) — decoded, unshipped
 
@@ -1451,7 +1466,7 @@ A list node comes from `DAT_00877b8c`: `+0` peep, `+4` handle, `+8` seat node (-
 | 13 | `FUN_00545100( h, v * 30 )` | The duration; the register gets `v` unscaled. |
 | 14 | `FUN_00545100( h, -v )` | Laps, stored negative; the register gets `v`. |
 | 16 | `FUN_0054ad90( h, 1 )` | The operand is fetched and ignored. Removes the first empty car and answers 1; with none, removes the first car whatever it carries and answers **0**. |
-| 17 | `FUN_0052a490`, `FUN_0052a700` | Only when `v` differs from the script's `+0xe6`, which it stores: the ride's track pieces to anim 5 (`v` 0) or `0xc`. |
+| 17 | `FUN_0052a490`, `FUN_0052a700` | Only when `v` differs from the script's `+0xe6`, which it stores: the ride's track pieces to anim 5 (`v` 0) or `0xc`. It reads the thing, not a record, so a water ride answers it. OpenTPW: `RideScript.TrackPieces`, `ParkTrackTool.PlayPiecesOfRide` (Q448). |
 
 **The chain, for the Hot Pot's `bumper.RSE`.** `BUMP 7` @12 opens it; `BUMP 4` @55 launches cars up to
 `VAR_CAPACITY`. Each admission is `BUMP 1 VAR_LETMEON` @102, then `BUMP 12` @108, which puts the boarding list into
@@ -2406,9 +2421,14 @@ call from the arming through two runs (`O-brkA.log`); the closing click's 8 call
 1.4 s apart (`O-9-closed-a.png`, `-b`, `O-crops.txt`).
 **OpenTPW** (Q781, `ParkTrackTool.PlayPieces`, `PlayPiecesAfterWalk`, `WalkAfterAddOn`, `ParkTrackPieces.PlayClip`): both
 walks, after the closing click and an add-on's put-down; a piece is made at rest, and clip 5 runs its `M` clips through
-`MeshAnimator` on the park's clock, restarted from frame 0. Not built: the closed loop's edit (`TRACK_EDIT_CLOSED_LOOP`) and
-`BUMP 17` (Q448: a kart or water ride's every `BUMP` is counted here, so Splish Splash's water never flows by its script;
-whether a loaded park's pieces take their saved model records' channel in the original is not read: after a load the script's `BUMP 17 0` is skipped by its `+0xe6` test, which the record keeps (`saves.md`, "A script's record"), and ours makes every loaded piece at rest).
+`MeshAnimator` on the park's clock, restarted from frame 0, and `BUMP 17`'s two walks (Q448, `PlayPiecesOfRide`: from the
+mouth, then the other mouth, so a closed loop's eight pieces are each played twice). Not built: the closed loop's edit
+(`TRACK_EDIT_CLOSED_LOOP`). A load writes `+0xe6` back to `0xffff` (`0x00559f29`, "What a loaded script holds"), so the
+first `BUMP 17` after it walks; whether a loaded park's pieces take their saved model records' channel before that is not
+read, and ours makes every loaded piece at rest. Measured in ours off-screen (Q448; the run's output was not kept): a
+Splish Splash bought on (32,26) with the karts' loop and its queue joined opened, and its script's `BUMP 17 0` (@33) put
+16 pieces to clip 5; a break's `BUMP 17 1` (@201) put them at rest, the repair's `BUMP 17 0` (@219) running again. Not
+photographed (Q1577).
 
 **The carried ride's first track cells** (`TrackRide_CarrySquares`, `0x005286a0`, from `BuildTool_Placer` at `0x00529c65`
 and `0x00529ce1`): each mouth's 2 x 2 cells, by op 0x10b (karts) or 0x110 (water) with step 5 for the preview's squares,

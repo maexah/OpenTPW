@@ -42,10 +42,23 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the maintainer's pre-commit hook: grep it by Q-number.
 
-- **Q1154 (a handyman loaded walking to litter or sweeping falls to idle):** in a cloud container (no Ghidra, no original, no photograph; the run's output was not kept), `AHandymanLoadedInALitterStateFallsToIdleAndDecidesOnTheNextSweep` (two rows, needing the game) passes, and three bugs put back by hand (the state kept, the decide made on the falling turn, the clock taken as the stamp) each failed it. Off-screen, the stock park with handyman 25 written to state 9 (`parkfile.thing_set`) loaded as a player's newest file: paused on mGameTick 755 the census read him `9`, `st 0x9`, with no `HANDYMAN_LITTER_STATE_9` counted; resumed, the log said he fell to idle on 756 and left idle for Walking on 757, idle since 0, the census `Walking`; the park saved on 775 and that file loaded read him `Walking`, `st 0x1`, and he walked on with the count still 1. A file saved paused before his first sweep kept `mState` 9 (its `mTargetLitterCell` read nought, as in the file it came from, so that field was not tested). Not checked: a photograph of him walking off (no display here, Q1316), Alexah's `New Save.TPWS` (not in this container; the stock park's one handyman stood in), and the original's walk and sweep, which this deviates from (`0x004d741f`, `0x004d742a`, taken from the item and `docs/exe/ride-operation.md`, not read in Ghidra).
+- **Q448 (`REPAIREFFECT` and `BUMP 17`):** in a cloud container (no Ghidra, no original, no photograph, nothing heard;
+  the runs' output was not kept), `RideScriptRepairEffectTests` (seven, one needing the game: the corpus's 70 scripts,
+  70 x 1 and 70 x 0, `VAR_ONRIDE` sixth in each; jungle's `BUMP 17` only `Wateride.RSE`'s 0, 1, 1, 0) and
+  `ParkTrackPieceClipTests.Bump17WalksBothMouthsWithOneClip` pass, and ten bugs put back by hand (the show's polarity,
+  the picker given the speed word, five variables let through, `BUMP 17`'s polarity, `+0xe6` from nought, 17 behind the
+  bumper record, the store after the walk, the other mouth at rest, the case dropped, the particle ungated) each failed
+  a test. Off-screen (`consolerun.py`): a Splish Splash on (32,26) with the karts' loop and its queue joined to a path
+  opened, and its `BUMP 17 0` put 16 pieces to clip 5, a break's `BUMP 17 1` put them at rest, the repair's
+  `REPAIREFFECT 1` started the global rides' 111 and 211 and its `BUMP 17 0` ran the water again; a broken Belly Bounce's
+  repair played 111 (`hammer2.mp2`) and 211 (`tp_riderepaired`), flags `0x0`, then the picker with 0 aboard nothing; the
+  census held no `REPAIREFFECT at` nor `BUMP at 33`, `155`, `201`, `219`, and one `REPAIREFFECT_PARTICLE` a repair. Not
+  checked: the particle and `FUN_00556a80`'s place (Q1576, Ghidra); the water and the sounds beside the original (Q1577);
+  the picker with riders aboard in a run (tests only).
 
 ## Numbers (take counts fresh; these go stale within a day)
 
+- Linux, 2026-11-12, Q448 (a cloud container, `dotnet test` as user `tester` on a copy it owns; eight tests added, one needing the game): with the game, 5493 passed, 2 failed (`AnExceptionBeforeTheMainLoopIsLoggedAndEndsTheRunWithExit1`, no libEGL, and `ACopyStartedOnAFolderAnotherProcessHoldsIsRefused`, both failing in this container on origin/main too), 2 skipped (the macOS and Windows folder tests) of 5497; with no game named, 2384 passed, 2 failed (the same two), 3111 skipped. Not yet re-gated on a desk.
 - Linux, 2026-11-12, Q1154 (`capped.sh`; no test added (tests changed); built in a cloud container, re-gated here after Q282): with the game, 5484 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5486; with no game named, 2379 passed, 0 failed, 3107 skipped.
 - Linux, 2026-11-12, Q282 (`capped.sh`; one test added, needing the game; built in a cloud container, re-gated here after Q272): with the game, 5484 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5486; with no game named, 2379 passed, 0 failed, 3107 skipped.
 - Linux, 2026-11-12, Q272 (`capped.sh`; three tests added, needing the game; built in a cloud container, re-gated here after Q225): with the game, 5483 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5485; with no game named, 2379 passed, 0 failed, 3106 skipped.

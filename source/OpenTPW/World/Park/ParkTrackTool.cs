@@ -304,6 +304,24 @@ public static class ParkTrackTool
 	}
 
 	/// <summary>
+	/// <c>BUMP 17</c>'s pair of walks (<c>0x00554a1a</c>..<c>0x00554a47</c>): from the mouth, then from the other mouth, both
+	/// with <paramref name="running"/>, whatever the circuit's walk last answered. Answers how many pieces were played, or null
+	/// where the park holds no thing <paramref name="thingId"/>.
+	/// </summary>
+	public static int? PlayPiecesOfRide( ParkState state, int thingId, bool running )
+	{
+		if ( !state.TryObject( thingId, out var ride ) )
+			return null;
+
+		var played = PlayPieces( state, ride.CellX, ride.CellY, ride.Angle, fromOtherMouth: false, running );
+		played.AddRange( PlayPieces( state, ride.CellX, ride.CellY, ride.Angle, fromOtherMouth: true, running ) );
+
+		Log.Info( $"Track: ride thing {thingId}'s BUMP 17 walks put {played.Count} pieces {(running ? "to clip 5, looped" : "at rest, clip 0xc")}" );
+
+		return played.Count;
+	}
+
+	/// <summary>
 	/// An add-on's put-down's walk of its ride's circuit (<c>0x00524c46</c>..<c>0x00524d68</c>): the circuit walked, its
 	/// answer settled (<see cref="Settle"/>), then the pieces' clips, 5 from the mouth where the walk answered 1, else at
 	/// rest from both mouths (<c>0x00524d19</c>..<c>0x00524d47</c>). Answers the walk's answer and its steps.
