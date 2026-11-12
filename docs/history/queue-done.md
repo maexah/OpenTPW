@@ -12145,6 +12145,43 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q155. The other readers of the speed word, and the play rate (decoded in Q897; Q875 built the word and its first readers).**
+  Found by the 2026-09-26 staleness audit. Q875 keeps the word per script and reads it in `WAIT`, the three scream readings, the
+  bumper ride's performance and the wear (`park.md`, "What a loaded script holds"). What reads the word and does not yet here:
+  the `TOUR` record's `+0x50` (`0x005517c0`, `FUN_0055d9b0`; `TOUR` is itself unbuilt and counted),
+  `COAST`'s ride (`0x005517e1` and `INITIALISE`'s `0x00554aab`, `FUN_0043b2b0`; `COAST_RIDE_SPEED`), the bounce riders' sine (`0x00557c03`, `ride-operation.md`,
+  "The bounce riders' height") and the walk placer's divisor (`0x0055823e`) (both `WALK_RIDER_SPEED_DIVISOR`); check each against the files before building it. With a divisor
+  of 1.1 a `WAITANIM` of a clip under 300 ms waits for weeks in the original, and waits one turn here by Alexah's decision (2026-11-04; counted `WAITANIM_SPEED_WRAP`; `park.md`, "`WAITANIM` is NOT `TRIGANIM` with a wait"). Confirm: the Belly Bounce's clips at their rate in the running game against the original's.
+  From Q166: every trigger hands the divisor (`[ESP+0x14]`, 0.5 + 0.01 × speed, `0x00551cdc`) to the channel as its
+  play rate (built in Q1039: `RideScript.StartAnimation` passes `DivisorOf( Speed )`, where it passed 1.0) - `TRIGANIM` `0x00552952`, `WAITANIM` `0x00552a9f`, `LOOPANIM` `0x00552be4`, `TRIGWAITANIM` `0x00552d2f`,
+  `TRIGANIM_CH` `0x00553190`, `WAITANIM_CH` `0x00553325`, `LOOPANIM_CH` `0x00553465`, `TRIGWAITANIM_CH` `0x00553624` -
+  of which the six built ones (all but the two unused `_CH` waits) hand it; the deadlines of `TRIGANIM` `0x005529ac`, `WAITANIM`
+  `0x00552acd`, `TRIGWAITANIM` `0x00552d94`, `TRIGANIM_CH` `0x005531ee` and `TRIGWAITANIM_CH` `0x00553682` divide by
+  it; Q1060 built `TRIGANIM`'s, `TRIGWAITANIM`'s and `TRIGANIM_CH`'s (`RideScript.TriggerDeadline`, the floored clip-less-300 divided and cut; the `ANIM_TRIGGER_SPEED_DEADLINE` count is gone), `WAITANIM`'s was built before, and `TRIGWAITANIM_CH`'s, which no shipped script uses, is unbuilt (the ride window's
+  `RIDE_SPEED_SCALES_WAITS` count went with Q875's `WAIT`). `WAITANIM` is built in the original's order (`RideScript.AnimationWait`: `fdiv`
+  `0x00552acd`, `_ftol`, unsigned compare with 300 at `0x00552ad6`; at word 60 a 400 ms clip waits 300, a 1000 ms clip 636), a clip under 300 ms waits one turn here where the original waits days (Alexah's decision, 2026-11-04;
+  `WAITANIM_SPEED_WRAP`, counted by Q876). The speed push of an upgrade's completion (`0x004dfabc`, when the new tier's `InitSpeed` is above nought)
+  is counted `RIDE_UPGRADE_COMPLETION` and unbuilt: build it with that item or here. `COAST`'s ride is counted (`COAST_RIDE_SPEED`); the scheduler's channel speed is built (Q1061); whether a Lost Kingdom coaster reaches `COAST` here is unchecked. The unbuilt
+  `TRIGANIMSPEED` passes its rate / 1000 × the divisor (`0x00552f6e`), and its deadline, the length × 1000 / its rate,
+  does not divide by it. The length a trigger answers does not depend on it (`FUN_00472f60`,
+  `0x0047323e`..`0x00473258`).
+  From Q174: `+0xe4` is the play rate in thousandths. After every due turn of a script with a model the scheduler writes
+  `(0.5 + 0.01 × speed) × +0xe4 / 1000` into every channel's queued speed `+0x30` (`0x00551789`), which a promotion
+  and a loop's replay start at (built in Q1061 with the factor fixed at 1000: `RideScript.WriteChannelSpeeds`). `TRIGANIMSPEED`, unbuilt and counted, would leave its rate
+  there (jungle `Gates` 4000), and the factor would then be a field. The Easymode Belly Bounce was saved looping at 1.1; its `LOOPANIM 2, 0` @43 skips on the saved key
+  (`park.md`, "Where OpenTPW's animation state parts from the engine's", difference 4), and its later triggers hand 1.1 too since Q1039. With a divisor other than 1, a clip under 300 ms or no model makes
+  `WAITANIM`'s qword sum wrap `+0xa0` (`park.md`, "`WAITANIM` is NOT `TRIGANIM` with a wait").
+  - **Note (Q243's census, 2026-11-12):** beside `COAST_RIDE_SPEED`, the scheduler counts `TRACK_RIDE_SPEED_PUSH` (`RideScriptScheduler.cs`):
+    `FUN_00545180`'s push into a kart's or a water ride's record of the track-ride table, where only the bumper rides' are built.
+  **Done (first piece, 2026-11-12, cloud lane c114, `alexah/1093-speed-word-readers`).** Checked against the files first (every `.RSE` of the four themes' wads,
+  read through `RideScriptFile` by a scratch reader; `docs/exe/park.md`, "OpenTPW keeps the word"): `COAST` is in twelve scripts, Lost Kingdom's `Coaster1`, `Coaster3`
+  and `Minecart`, which name no speed and take `InitSpeed` 60 from `rides/Rides.sam`; no coaster is in the Instant Action catalogue or `Easymode.TPWI`. The coaster
+  push's count was backwards: it fired at a divisor other than 1, but `FUN_0043b2b0` acts only on a word other than the node's setting (`0x0043b2c6`), made 60.
+  Built: `RideState.Speed` (made 60) and `RideState.PushSpeed`, called at `COAST 8` and every due visit; a change counts `COAST_RIDE_SPEED` (the cap and the run
+  it redoes are unbuilt). Tests: `CoasterSpeedPushTests` (7, six needing the game: the three coasters' `InitSpeed` and their shipped scripts run by the
+  scheduler) and `AnimTriggerSpeedCountTests.CoastsPushCountsOnlyAWordOtherThanTheCoastersSetting` (rows 50, 60, 75, was 50 and 60 under the old rule);
+  four bugs put back by hand each failed them. The bounce riders' sine is Q511's (its lift carries the term; only the Belly Bounce, word 60, reaches it in
+  the stock park). Left, with the rest of this item, in Q1608.
 
 ## B. Docs and comments
 

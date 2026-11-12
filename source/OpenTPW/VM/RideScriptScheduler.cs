@@ -22,8 +22,8 @@ namespace OpenTPW;
 /// <b>What a due visit does.</b> After the turn it writes the channel speed (<see cref="RideScript.WriteChannelSpeeds"/>) and pushes the
 /// script's speed word into its thing's bumper ride (<c>0x00551844</c>) and into its <c>SPAWNCHILD</c> child (found through this same
 /// registry, by the child id at <c>+0x0c</c>, <c>0x00551888</c>); a visit not due does neither (<c>0x005516f6</c>). The engine pushes
-/// nothing into the script's sound (<c>+0x14</c>). <b>Not built</b>: the <c>TOUR</c> record and the coaster push (<c>COAST_RIDE_SPEED</c>,
-/// Q155), a kart's or a water ride's record taking the word (<c>TRACK_RIDE_SPEED_PUSH</c>), and the particle objects hung off a script;
+/// nothing into the script's sound (<c>+0x14</c>). The coaster push keeps the node's setting (<see cref="RideState.PushSpeed"/>).
+/// <b>Not built</b>: the <c>TOUR</c> record, what a changed coaster setting redoes (<c>COAST_RIDE_SPEED</c>), a kart's or a water ride's record taking the word (<c>TRACK_RIDE_SPEED_PUSH</c>), and the particle objects hung off a script;
 /// inventing them would put motion in the world that nothing asked for - see <see cref="RideScript"/> for the same reasoning about
 /// world-touching opcodes.
 /// </para>
@@ -366,13 +366,15 @@ public sealed class RideScriptScheduler
 				entry.Script.WriteChannelSpeeds();
 
 				// Then, on a due visit only (a visit not due jumps from 0x005516f6 to 0x0055188f), the word goes on: into the
-				// script's coaster (0x005517e1; not built, Q155), its thing's bumper ride (0x00551844) and its SPAWNCHILD child
+				// script's coaster (0x005517e1, its setting kept), its thing's bumper ride (0x00551844) and its SPAWNCHILD child
 				// (0x00551888; a handle the list does not hold leaves the store to address 0xc0, which is not built).
 				if ( _entries.Contains( entry ) )
 				{
 					// The coaster push needs +0xe0, which only a COAST 8 sets (0x00554a9f); Initialised stands for it. Whether the
 					// engine's park load restores +0xe0 was not read, so a loaded coaster past its COAST 8 may count differently.
-					if ( entry.Script.Initialised && RideScript.DivisorOf( entry.Script.Speed ) != 1f )
+					// The push changes the node only when the word differs from its setting (FUN_0043b2b0, 0x0043b2c6), and
+					// what a change redoes (the cap, the track's run) is not built.
+					if ( entry.Script.Initialised && entry.Script.Ride?.PushSpeed( entry.Script.Speed ) == true )
 						Unimplemented.Report( "COAST_RIDE_SPEED" );
 
 					if ( entry.Script.TrackRide != 0 )
