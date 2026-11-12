@@ -1886,15 +1886,14 @@ filed the items that cite it.
   strings' widths, `uitree.py`), then size `UiText`'s texture to the box by the same two divisions and clip at its edge, the grey
   copy inside it. Confirm beside the original under Proton: one control whose string is wider than its box, predicting the last
   visible column, and the bug put back.
-- [ ] **Q772. A toggle that is on shows its op 0x12 help row, and the new player dialog's chosen toggle then shows none.** From
-  the fork watch 2026-10-28 (verify-hz-ui-hud L3; static read, never seen on screen: no frame of the dialog exists). The button
-  class's help getter `0x00669410` answers `+0x94` (op 0x12) when its state byte `+0x138` is exactly 1 (on, not held) and `+0x90`
-  (op 0x11) otherwise (Q684's note has the chain). The new player dialog's tree `0x753f50` gives every control op 0x12 -1 and the
-  two mode toggles (`0x70d` Instant Action, `0x70e` Full Simulation, flags `0x11`) op 0x11 358 and 359, so the original's help bar
-  shows 358 or 359 over the toggle that is OFF (and while one is held down) and the empty text over the chosen one. Ours
-  (`NewPlayerDialog.cs`, `HelpText` 358 and 359 on both) shows the row on either, now marked at the site. Build: the help row of
-  the chosen toggle empty. Confirm: first shoot the original's dialog with the pointer on each toggle in each mode (the help bar's
-  text), predicting the chosen one empty; then ours the same, the bug put back.
+- [ ] **Q1444. The new player dialog's help bar over each toggle, photographed in both games.** Split from Q772 (cloud lane
+  c81, 2026-11-12), which built the rule from a static read and confirmed it by the console alone. Shoot the original's
+  new player dialog with the pointer on each toggle before a pick, after picking Instant Action and after picking Full
+  Simulation, and one held down (the help bar's text), predicting the chosen one empty and the held one its row; then ours
+  the same (`pointer` in the lobby prints the row, its text and `(down)`), and once with the dialog's `HelpWhenOn = -1`
+  taken out. If the original shows a row over the chosen toggle, the layout's op 0x12 or the getter's reading is wrong:
+  read `0x753f50`'s stream and `0x00669410` again before changing anything. Also reconcile `hud.md`'s staff switch
+  (`b_route`, second help 87, measured not shown by `q431/confirm.py`) with the same getter, as the Q684 note asks.
 - [ ] **Q951. A sold or moved coaster's pylons stay standing.** From an outside review of `1efacc58` (Alexah, 2026-10-30;
   source-established, checked by the Sentinel against `c67821bf`). `ParkCoasterPylons` (Q817) builds its pylon entities once, when a
   park loads (`Level.cs:473`), and takes them down only on its own `OnDelete` at unload (`TakeDown`). A sale (`ParkBuilding.Demolish`)

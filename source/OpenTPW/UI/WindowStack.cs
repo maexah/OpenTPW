@@ -595,10 +595,10 @@ internal sealed class WindowStack : Panel
 		// Ours: a control's row changed under a pointer at rest is posted at once. The original posts the hovered control's
 		// row again when a button with flag 0x10 is let go (0x10004: 0x00669172 calls the sink's +0x1c, 0x00492320); whether
 		// it posts at any other change is not decoded (docs/exe/hud.md, "The help bar holds one posted row").
-		if ( pointed != _pointed || (hit != null && hit.HelpText != _pointedRow) )
+		if ( pointed != _pointed || (hit != null && hit.ShownHelp != _pointedRow) )
 		{
 			_pointed = pointed;
-			_pointedRow = hit?.HelpText ?? -1;
+			_pointedRow = hit?.ShownHelp ?? -1;
 			PostHelp( _pointedRow, [] );
 		}
 

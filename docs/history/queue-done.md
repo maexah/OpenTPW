@@ -13794,3 +13794,25 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   Bounce' lettered font 5 in (234, 239, 102) with the edge", size (443,37), 945 x 720 / 1536 as predicted. The photograph
   beside the original's is Q1440 (no display or original in the lane). **Done 2026-11-12** (cloud lane c80,
   `alexah/1059-ride-window-title`).
+- [x] **Q772. A toggle that is on shows its op 0x12 help row, and the new player dialog's chosen toggle then shows none.** From
+  the fork watch 2026-10-28 (verify-hz-ui-hud L3; static read, never seen on screen: no frame of the dialog exists). The button
+  class's help getter `0x00669410` answers `+0x94` (op 0x12) when its state byte `+0x138` is exactly 1 (on, not held) and `+0x90`
+  (op 0x11) otherwise (Q684's note has the chain). The new player dialog's tree `0x753f50` gives every control op 0x12 -1 and the
+  two mode toggles (`0x70d` Instant Action, `0x70e` Full Simulation, flags `0x11`) op 0x11 358 and 359, so the original's help bar
+  shows 358 or 359 over the toggle that is OFF (and while one is held down) and the empty text over the chosen one. Ours
+  (`NewPlayerDialog.cs`, `HelpText` 358 and 359 on both) shows the row on either, now marked at the site. Build: the help row of
+  the chosen toggle empty. Confirm: first shoot the original's dialog with the pointer on each toggle in each mode (the help bar's
+  text), predicting the chosen one empty; then ours the same, the bug put back.
+  Built: the button class's getter rule (`UiButton.ShownHelp`): a button that carries its layout's op 0x12
+  (`UiButton.HelpWhenOn`) answers it while on and not held (`IsDown` and not `Pressed`, state byte exactly 1) and its op
+  0x11 row otherwise; a button that does not carry one (null, every other screen's) keeps `HelpText` in every state, as
+  before. The window stack posts `ShownHelp`, so a pick's release re-posts at once (as `0x00669172` does). The dialog's two
+  toggles carry 358 and 359 as op 0x11 and -1 as op 0x12, taken from this item's text (`0x753f50` not read here: no
+  Ghidra, no `testme.exe` in the lane). The console's lobby `pointer` now also prints the posted help row, its text and
+  `(down)` for a button that is down. Tests: `AToggleShowsItsSecondRowOnlyWhileItIsOnAndNotHeld` (no game) and
+  `TheNewPlayerDialogsChosenToggleShowsNoHelpRow` (the game); the dialog's -1 rows taken out failed the second (`(1, 358)`
+  for `(1, -1)`), the held state ignored failed both. Off-screen run (`consoledrive.py`, real X moves and clicks): before a
+  pick 358 and 359; Instant Action picked, -1 over it and 359 over the other; Full Simulation picked, -1 over it and 358
+  over Instant Action; Full Simulation held down 359, let go -1; the dialog's -1 rows put back, 358 or 359 over the chosen
+  one throughout. Not photographed, and the original not shot (no original, no display in the lane): Q1444. **Done
+  2026-11-12** (cloud lane c81, `alexah/1060-toggle-help-row`).

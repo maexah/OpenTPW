@@ -44,7 +44,7 @@ The stream argument is **16-bit opcodes compiled into the executable**, not a fi
     op 0xe,f [rect] like 6/7
     op 0x10  [short n][rect] type 6, id n|0x11100000, RECURSE
     op 0x11  [dword] the UIHELPTEXT row
-    op 0x12  [dword] the help row a toggle shows while it is on (the button class's getter `0x00669410`: state byte `+0x138` == 1 gives `+0x94`, else `+0x90`; -1 posts the empty text; fork watch 2026-10-28, verify-hz-ui-hud L3)
+    op 0x12  [dword] the help row a toggle shows while it is on (the button class's getter `0x00669410`: state byte `+0x138` == 1 gives `+0x94`, else `+0x90`; -1 posts the empty text; fork watch 2026-10-28, verify-hz-ui-hud L3). Ours: `UiButton.HelpWhenOn`, the rule in `UiButton.ShownHelp`; carried so far by the new player dialog's toggles alone (-1 each, Q772), every other button null and shown its op 0x11 row in every state
 
 ### Operand sizes, read out of `UI_ParseTreeStream` rather than inferred
 

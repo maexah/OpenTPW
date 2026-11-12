@@ -2146,9 +2146,9 @@ public static class DebugConsole
 				Reply( $"tutorial: {(GameOptions.Current.Tutorial ? "on" : "off")}" );
 				break;
 
-			// Where the pointer is and the control under it, so a real press can be predicted before it is made. In a park,
-			// also the cursor, the help bar's posted row and what it shows, and whose a right press there would be: the interface's, or
-			// the park's, which arms the quick click.
+			// Where the pointer is and the control under it, so a real press can be predicted before it is made, and the help
+			// bar's posted row and what it shows. Outside a park, also whether a button under it is down; in a park, the cursor
+			// and whose a right press there would be: the interface's, or the park's, which arms the quick click.
 			case "pointer":
 				var pointerStack = Level.Current?.Hud?.Children.OfType<UI.WindowStack>().FirstOrDefault();
 
@@ -2162,8 +2162,9 @@ public static class DebugConsole
 				}
 
 				Reply( $"pointer: at ({Input.Mouse.Position.X:F0},{Input.Mouse.Position.Y:F0}), over "
-					+ (pointerStack?.Hovered is { } over ? $"control 0x{over.Id:x}"
-						: pointerStack?.ModalUp == true ? "no control, and a modal window takes the press" : "the view") );
+					+ (pointerStack?.Hovered is { } over ? $"control 0x{over.Id:x}" + (over is UI.UiButton { IsDown: true } ? " (down)" : "")
+						: pointerStack?.ModalUp == true ? "no control, and a modal window takes the press" : "the view")
+					+ $", help row {pointerStack?.HelpRow ?? -1} \"{pointerStack?.HelpBarText}\"" );
 				break;
 
 			// The help bar as it was last drawn: its text's lines, the width they were wrapped at in the font's pixels and

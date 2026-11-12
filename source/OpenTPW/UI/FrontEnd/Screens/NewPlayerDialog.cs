@@ -19,6 +19,10 @@ namespace OpenTPW.UI;
 /// Simulation, as 0x004a6b80 only asks whether Instant Action is the choice.
 /// </para>
 /// <para>
+/// Each toggle's help (358, 359) is its op 0x11 row and its op 0x12 row is -1, so the help bar is empty over the chosen
+/// one and shows the row over the other, or over one held down (<see cref="UiButton.HelpWhenOn"/>).
+/// </para>
+/// <para>
 /// The tick (0x004a6b80) takes the trailing spaces off the name and does nothing if that leaves it
 /// empty; otherwise it makes the player and closes the dialog and the slots. The name box's
 /// contents are the name whatever they are, so ticking without typing makes a player called "Type
@@ -123,8 +127,8 @@ internal sealed class NewPlayerDialog : UiWindow
 		{
 			Id = InstantAction,
 			Rect = new UiRect( 764, 405, 1206, 476 ),
-			// Deviation, Q772 (a static read): the original's chosen toggle shows no help.
 			HelpText = 358,
+			HelpWhenOn = -1,
 			Mesh = UiMesh.Get( "b_ltoggle" ),
 			Text = Localization.Get( UIStrings.InstantAction ),
 			Font = DialogFont,
@@ -136,6 +140,7 @@ internal sealed class NewPlayerDialog : UiWindow
 			Id = 0x70e,
 			Rect = new UiRect( 764, 498, 1206, 569 ),
 			HelpText = 359,
+			HelpWhenOn = -1,
 			Mesh = UiMesh.Get( "b_ltoggle" ),
 			Text = Localization.Get( UIStrings.FullSimulation ),
 			Font = DialogFont,
