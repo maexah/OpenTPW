@@ -4,7 +4,7 @@ How the original game boots: `WinMain` takes a single-instance lock, builds the 
 
 ## WinMain — `WinMain_Main` 0x0045a960
 
-1. 0x0045f640 takes a `CreateMutexA` lock, so only one copy runs.
+1. 0x0045f640 takes a `CreateMutexA` lock, so only one copy runs. OpenTPW takes one keyed per game folder, before its log opens, and says why in a box where the original quits without a word (`OneCopy`, Q995).
 2. Setup: creates players (`Players_Construct`); sets the flag word (`Flags_LoadDefaults`); reads `save\config.tcf` (0x00424930); registers `MSWHEEL_ROLLMSG`. The install's `safemode.bat` copies `safemode.tcf`, 32 bytes, over `config.tcf`.
 3. Message loop (`GetMessageA` once, `0x0045ab2a`; `PeekMessageA` here and in three other loops, `FUN_00479260`,
    `FUN_004798e0` and `FUN_005f86e0`, whose waits are not traced; Q194). When idle and running (`DAT_007a1a14` bit 1):
