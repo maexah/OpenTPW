@@ -78,6 +78,36 @@ public class SaveTroubleTests
 		Assert.IsFalse( SaveTrouble.Pending );
 	}
 
+	/// <summary>
+	/// <b>A park the writer refuses says so in words of its own</b> (Q1200): not the folder's sentence, told once a visit as the game's own
+	/// failures are and every time where asked, and the folder's failure after it has its own sentence back.
+	/// </summary>
+	[TestMethod]
+	public void AParkTheWriterRefusesIsToldAsNotSavedInItsOwnWords()
+	{
+		SaveTrouble.ParkRefused();
+		Assert.IsTrue( SaveTrouble.Pending );
+		Assert.AreEqual( $"PARK NOT SAVED\n\n{SaveTrouble.ParkRefusedWhy}", SaveTrouble.Take() );
+		Assert.AreNotEqual( "The save folder cannot be written.", SaveTrouble.ParkRefusedWhy );
+
+		SaveTrouble.ParkRefused();
+		Assert.IsNull( SaveTrouble.Take(), "the game's own second one (the autosave) is not told again this visit" );
+
+		SaveTrouble.ParkRefused();
+		SaveTrouble.Asked();
+		Assert.IsNotNull( SaveTrouble.Take(), "Save Park and Alt+S are told whenever" );
+
+		BlockTheThemeFolder();
+		SaveFolder.WritePark( 0, "Test", "jungle", "jungle", [1] );
+		SaveTrouble.Asked();
+		Assert.AreEqual( "PARK NOT SAVED\n\nThe save folder cannot be written.", SaveTrouble.Take(), "the folder's own words come back" );
+
+		SaveFolder.WritePark( 0, "Test", "jungle", "jungle", [1] );
+		SaveTrouble.ParkRefused();
+		SaveTrouble.Asked();
+		Assert.AreEqual( $"PARK NOT SAVED\n\n{SaveTrouble.ParkRefusedWhy}", SaveTrouble.Take(), "the later park's words are told" );
+	}
+
 	/// <summary>The notice's name is handed out with its text, once, and a failure carries none.</summary>
 	[TestMethod]
 	public void ANoticeKeepsItsNameUntilTaken()

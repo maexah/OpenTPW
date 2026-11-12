@@ -117,7 +117,11 @@ internal static class LaunchReport
 
 		var display = desktop is { } d ? $"{d.Width} x {d.Height} at {d.RefreshRate} Hz" : "not known";
 
-		return $"Display: {how}, the game {window.X} x {window.Y}, the desktop {display}";
+		// Written as the display is applied, before SDL's resize is pumped: a full screen's size there is the window's before it
+		// (Q1200), and Display's own line after the resize says the size it was put at.
+		var size = mode == DisplayMode.Windowed ? "" : " before its resize";
+
+		return $"Display: {how}, the game {window.X} x {window.Y}{size}, the desktop {display}";
 	}
 
 	/// <summary>
