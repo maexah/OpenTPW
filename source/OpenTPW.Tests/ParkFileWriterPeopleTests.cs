@@ -207,10 +207,10 @@ public class ParkFileWriterPeopleTests
 		var like = shipped.Sprites.Where( sprite => sprite.Type == picture.Type )
 			.OrderByDescending( sprite => (sprite.Bank == picture.Bank && sprite.SpriteNumber == picture.SpriteNumber ? 4 : 0) + (sprite.Set == picture.Set ? 2 : 0) ).First();
 
-		Assert.AreEqual( (madeGuest.SpriteSlot, 0x14, 0, script.Interval, 1f, 1f, BitConverter.ToInt32( shipped.SpriteRecordOf( like.Slot )!, 0xbc )),
+		Assert.AreEqual( (madeGuest.SpriteSlot, 0x14, unchecked((int)(shipped.Clock.Reading!.Value + 0x3e)), script.Interval, 1f, 1f, BitConverter.ToInt32( shipped.SpriteRecordOf( like.Slot )!, 0xbc )),
 			(BitConverter.ToInt32( raw, 4 ), BitConverter.ToInt32( raw, 0x1c ), BitConverter.ToInt32( raw, 0x7c ), BitConverter.ToInt32( raw, 0x80 ),
 			BitConverter.ToSingle( raw, 0xa4 ), BitConverter.ToSingle( raw, 0xa8 ), BitConverter.ToInt32( raw, 0xbc )),
-			"its slot, the timer, due at once, the interval, the scale and the set byte of the nearest sprite the file holds" );
+			"its slot, the timer, due one default interval after the file's clock, the interval, the scale and the set byte of the nearest sprite the file holds" );
 
 		var record = written.RecordOf( guest )!;
 
@@ -241,6 +241,59 @@ public class ParkFileWriterPeopleTests
 		CollectionAssert.AreEqual( before[0xc].Concat( new[] { hire } ).Order().ToList(), sets[0xc].ToList(), "the staff's" );
 		CollectionAssert.AreEqual( before[0x1b].ToList(), sets[0x1b].ToList(), "a researcher is no guard" );
 		CollectionAssert.AreEqual( before[0xb].ToList(), sets[0xb].ToList(), "the objects' set is the file's" );
+	}
+
+	/// <summary>
+	/// A sprite made here is due one default interval, <c>0x3e</c>, after the clock the file is written with, as the
+	/// original's constructor stores its clock plus that interval (<c>FUN_004758f0</c>, <c>0x004759df</c>), whatever
+	/// interval the sprite runs at: a guest's on 100 and a balloon's on <c>0x4a</c> both. A kept guest's sprite keeps
+	/// the file's word.
+	/// </summary>
+	[TestMethod]
+	public void AMadeSpriteIsDueOneIntervalAfterTheClockItIsWrittenWith()
+	{
+		var catalogue = new ParkItemCatalogue( "jungle", FileSystem );
+		var states = shipped.ThingStates( catalogue.ChannelsFor );
+		var clock = unchecked(shipped.Clock.Reading!.Value + 5000);
+		var things = new ParkFileWriter.RunningThings( [.. shipped.Objects], shipped.ScriptStates.Tick, shipped.ScriptStates.NextHandle,
+			[.. shipped.ScriptStates.Order.Select( handle => shipped.ScriptStates.For( handle )!.Value ).Select( saved => new WrittenScript(
+				saved.Handle, saved.Position, saved.CallIndex, saved.HeapIndex, saved.Result, saved.Stack, saved.Variables, saved.WaitDeadline,
+				saved.AnimationDeadline, saved.LoopingKey, saved.AnimationMark, saved.TimerDeadline, saved.Limbo, saved.InLimbo, saved.Bounce,
+				saved.Bouncing, saved.BounceBase, saved.BounceNode, saved.Walk, saved.Heads ) )],
+			states, [.. states.Things.Select( thing => new WrittenModel( thing.Slot, thing.Channels, thing.HoardingFlags, thing.HoardingProgress ) )],
+			clock );
+
+		var people = new ParkPeople( shipped ) { BankAt = Bank };
+		var guest = people.Admit( 47, 21 );
+		people.SpriteFor( guest )!.Interval = 100;
+
+		var kept = people.Guests.Values.First( peep => peep.ThingId != guest && people.SpriteFor( peep.ThingId ) != null );
+		var balloon = Balloon.Make( kept.ThingId, 4, now: 0 )!;
+		balloon.Sprite.Interval = 0x4a;
+		kept.Balloon = balloon;
+		kept.BalloonLife = 40;
+
+		var body = ParkFileWriter.Body( shipped, Running( people ) with { Things = things }, out var report );
+		var written = new ParkWorld( body );
+
+		Assert.IsNull( written.Problem );
+		Assert.AreEqual( (1, 1), (report!.Value.Made, report.Value.Balloons), "one guest made and one balloon, or the words below prove nothing" );
+		Assert.AreEqual( clock, written.Clock.Reading, "the file is written with the clock given" );
+
+		var guestSlot = written.People.Single( person => person.ThingId == guest ).SpriteSlot;
+		var balloonSlot = written.People.Single( person => person.ThingId == kept.ThingId ).Guest!.Value.BalloonScript;
+		var keptSlot = written.People.Single( person => person.ThingId == kept.ThingId ).SpriteSlot;
+		int Word( int slot, int at ) => BitConverter.ToInt32( written.SpriteRecordOf( slot )!, at );
+
+		Assert.AreEqual( (unchecked((int)(clock + 0x3e)), 100), (Word( guestSlot, 0x7c ), Word( guestSlot, 0x80 )),
+			"the made guest's: due at the clock plus 0x3e, at its own interval" );
+		Assert.AreEqual( (unchecked((int)(clock + 0x3e)), 0x4a), (Word( balloonSlot, 0x7c ), Word( balloonSlot, 0x80 )),
+			"the made balloon's: the same deadline, at its own interval" );
+		Assert.AreEqual( BitConverter.ToInt32( shipped.SpriteRecordOf( keptSlot )!, 0x7c ), Word( keptSlot, 0x7c ), "a kept sprite's is the file's" );
+
+		// Read back: the written file loads, and the made guest is on their sprite again.
+		TestRun.DeleteEvery<ParkPeople>();
+		Assert.IsNotNull( new ParkPeople( written ).SpriteFor( guest ) );
 	}
 
 	/// <summary>A guard hired joins the guards' set too.</summary>

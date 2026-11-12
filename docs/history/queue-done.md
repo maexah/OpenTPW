@@ -13339,3 +13339,12 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   and Down twice in Save Park's box leave the name, keep the screen open and count 1 and 2 under their own names; two bugs
   put back by hand (the keys uncounted, Down counted as Up) each failed it. The read is Q1260. Done as Q1164 in cloud
   lane c35.
+- [x] **Q274. A sprite the writer makes takes its first turn at once, where the original's waits one interval.**
+  From the week-end audit (stage 4; read twice from the listing). The constructor `FUN_004758f0` writes `0x3e` to
+  `+0x80` (`0x004759c4`) and the clock plus that `0x3e` to `+0x7c` (`0x004759df`). `ParkWorld.People`'s made sprite
+  leaves `+0x7c` nought, says the constructor does, and writes no `+0x80`. Confirm: a guest made here and saved,
+  the two words read in the file and beside the original's for a guest it made.
+  **Done 2026-11-12 (cloud lane c38, `alexah/1017-made-sprite-first-turn-waits`).** `ParkWorld.MadeSprite` writes
+  `+0x80` = `0x3e` and `+0x7c` = the written `CLOK` reading plus `0x3e` (`ParkFileWriter` hands `PutPeople` the clock it
+  writes); a guest admitted off-screen and saved read back `+0x7c` 44640 against `CLOK` 44578. Not checked: the
+  original's words for a guest it made (no original here), filed as Q1272.

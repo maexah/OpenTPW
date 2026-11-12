@@ -31,7 +31,7 @@
     track(p)          the track-rides module: (bytes, [chunk types], the ride's ten words, [car], leaving, boarding);
                       a car is dict(handle, w = its 43 words, raw, tail = the five words after, riders = [(peep, seat)])
     models(p)         the ride system module: (header, {handle: dict(raw, item, flags, nodes, looks, shared, chan)})
-    head(p, slot)     a sprite's kind, bank, program word, state, flags, place and raw record, or None
+    head(p, slot)     a sprite's kind, bank, program word, state, flags, place, due (+0x7c), interval (+0x80) and raw record, or None
     particle_density(p) the particles module's density (header +0x20; the original's loaded park runs at it, Q703)
     emitters(p)       the particles module's live emitters: (used chain [(slot, count, effect, (x, h, z) in units,
                       life, particles)], free head, next count); emitter_words(p, slot) is the 16-bit words where
@@ -149,10 +149,10 @@ def models(p):
             shared=struct.unpack_from('<II', raw, 0x2f), chan=[struct.unpack_from('<IiiIIIfiiIf', raw, 0x37 + 8 * l + 4 * n + 44 * c) for c in range(ch)])
     return hdr, out
 def head(p, slot):
-    """a sprite's (kind, bank, +0x08, state +0x18, flags +0xc4, place) or None"""
+    """a sprite's (kind, bank, +0x08, state +0x18, flags +0xc4, place, due +0x7c, interval +0x80) or None"""
     if slot not in p.sprite: return None
     r = bytes(p.b[p.sprite[slot]:p.sprite[slot] + 280]); u = lambda o: struct.unpack_from('<I', r, o)[0]
-    return dict(kind=u(0xac), bank=u(0xb0), word=u(0x08), state=u(0x18), flags=u(0xc4), place=struct.unpack_from('<3f', r, 0x88), raw=r)
+    return dict(kind=u(0xac), bank=u(0xb0), word=u(0x08), state=u(0x18), flags=u(0xc4), place=struct.unpack_from('<3f', r, 0x88), due=u(0x7c), interval=u(0x80), raw=r)
 def _particles(p):
     b = p.b; o = p.spend + 4; assert b[o:o+4] == b'LCTP', b[o:o+4]
     assert struct.unpack_from('<II', b, o+4) == (1, 0x9e68)
