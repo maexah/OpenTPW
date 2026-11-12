@@ -175,6 +175,12 @@ internal class UiControl
 	/// </summary>
 	public bool StopsPointer { get; init; }
 
+	/// <summary>
+	/// Whether the hit test passes over it and everything under it, as the original's skips a control flagged <c>0x2</c>
+	/// (<c>FUN_0065db25</c>; <c>docs/exe/hud.md</c>, "The hit test's order").
+	/// </summary>
+	internal virtual bool SkipsPointer => false;
+
 	/// <summary>Whether the pointer stops at it, rather than passing through to whatever is under it.</summary>
 	internal virtual bool TakesMouse => Clicked != null || LeftClicked != null || Entered != null || HelpText >= 0 || Outline != null || StopsPointer;
 
@@ -273,7 +279,7 @@ internal class UiControl
 	/// <summary>The front-most control under a point that takes the pointer, if any.</summary>
 	internal UiControl? HitTest( float x, float y )
 	{
-		if ( !Visible )
+		if ( !Visible || SkipsPointer )
 			return null;
 
 		for ( int i = Children.Count - 1; i >= 0; --i )
@@ -437,11 +443,13 @@ internal class UiButton : UiControl
 	/// </summary>
 	internal virtual bool ClicksSelect3 => false;
 
-	/// <summary>
-	/// Enabled or not. The original's hit test skips a disabled button (flag 0x2) and everything under it, so the pointer
-	/// passes over it to whatever is behind - no hover, no help row, no glint (<c>docs/QUEUE.md</c> Q66).
-	/// </summary>
 	internal override bool TakesMouse => true;
+
+	/// <summary>
+	/// A disabled button (flag <c>0x2</c>, set by <c>0x0065da8d</c>) is passed over with everything under it, so the
+	/// pointer reaches whatever is behind: no hover, no help row, no glint.
+	/// </summary>
+	internal override bool SkipsPointer => !Enabled;
 
 	internal override int State => !Enabled ? Disabled
 		: Pressed ? (Hovered ? HighlightedDown : HeldDown)
@@ -758,8 +766,7 @@ internal sealed class UiSlider : UiControl
 
 	/// <summary>
 	/// Whether it can be moved at all. A slider that is switched off shows its thumb in the disabled
-	/// part of its mesh and lets the pointer through, the way the original's disabled button does (a
-	/// button here still takes it, <c>docs/QUEUE.md</c> Q66): the options screen's resolution only means
+	/// part of its mesh and lets the pointer through, as a disabled button does: the options screen's resolution only means
 	/// anything in full screen, so elsewhere it is shown but dead.
 	/// </summary>
 	public bool Enabled

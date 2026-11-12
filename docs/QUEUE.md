@@ -2686,13 +2686,12 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   game's folder, before building either. Confirm: Ctrl+H held, the help bar unchanged until it is let go; a screenshot.
   Until F8 and the chord are built, count each where it is let go (`AGENTS.md` rule 4): nothing binds either, so the
   press reaches nothing and nothing says so (the 2026-09-26 staleness audit).
-- [ ] **Q66. A disabled button takes the pointer.** Found by Q42's review. The original's hit test (`0x0065db25`) skips a
-  control flagged `0x2` - a disabled button, `0x0065da8d` - with everything under it, so the pointer passes over it to
-  whatever is behind: no hover, no help row, no glint. Here `UiButton.TakesMouse` is true whatever `Enabled` is, said at
-  the site; the island panel's greyed arrows for an Instant Action player are the case in the lobby, and a press there
-  still ends at the panel's outline, so nothing but the hover differs. Before changing the hit test, check every park
-  window whose root takes no pointer: a press on a greyed button there would fall through to the world. Confirm: an
-  Instant Action player's pointer on a grey arrow, no help row; a screenshot.
+- [ ] **Q1548. Photograph Q66's grey arrow beside the original's.** Split from Q66 (cloud lane c103, no display and no
+  original there). An Instant Action player in the lobby, the pointer resting on the island panel's grey left arrow:
+  ours (since Q66) shows no glint, no highlight and no help row, the console's `pointer` reading `over control
+  0x1e0e7`; the original's, by `0x0065db25`, the same. Take both frames, side by side, and the same with the gadget's
+  retract cross under the pointer through an arm's slide in (its glint and help row 481 should no longer start; not
+  checked off-screen).
 
 - [ ] **Q240. The postcard. Decode first.** From Q139. The gadget's postcard button is counted
   (`POSTCARD_BUTTON`), Ctrl+P under the full-screen view is counted (`FULL_SCREEN_VIEW_POSTCARD`), Ctrl+P over the

@@ -340,3 +340,7 @@ belongs to or at the end. Grep it by area or Q-number; never read it whole.
   and the writer leaves the sprite out by the same rule (`ParkPeople.RidesWithoutASprite`). The `guests` census line
   ends `RIDES WITHOUT A SPRITE, body not drawn`. Seen off-screen only, on the stock park with its Belly Bounce's flag
   cleared in a copy; not photographed (Q1540).
+- **A disabled button is passed over by the pointer, as the original's** (Q66): the hit test skips a `UiButton` that is not
+  `Enabled` with all it holds, as `0x0065db25` skips a control flagged `0x2`, so the pointer reaches what is behind: no
+  hover, no help row, no glint. An Instant Action player's grey island arrows read `over control 0x1e0e7`, the panel's
+  L, off-screen, and a press there goes no further. The photograph is Q1548.

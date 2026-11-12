@@ -370,8 +370,7 @@ internal sealed class ParkGadget : UiWindow
 		// Coming in the original switches this button off, calling the control's vtable+0x14 with 0 exactly
 		// as it does for the readouts that are shown but never clicked, and it stays drawn through the slide
 		// until the handle stands over it; here it is switched off through the slide and hidden at rest in
-		// (see BuildIn), and switched off it still stops the pointer, doing nothing but its glint and help
-		// row 481 (Q66), where the original's hit test passes over it. The red cross it shows is not the disabled part of b_retract: b_retract.md2's six
+		// (see BuildIn), and switched off the hit test passes over it to the arm, as the original's. The red cross it shows is not the disabled part of b_retract: b_retract.md2's six
 		// nodes are b_retract, disable, hilite, hidown, helddown and down - UiButton's own order - so part
 		// 0 is the NORMAL look, and a button that closes something simply looks like a cross.
 		_retract = _arm.Add( new UiButton

@@ -4626,7 +4626,7 @@ the button's disabled part, `0x00668820`) has the node (459,800)..(612,953) disa
 bare one, on the same files. Both draw the looped rides' move grey and the bare one's blue (`run2/window-*.png`,
 `orig/a-5-kartwindow.png`, `a-9-splashwindow.png`, `b-5-splashwindow.png`). A click on the greyed move does nothing in
 either: the window stays, ours' hand is empty and the original's frame carries nothing. The original's pointer passes over the disabled button (its help line
-reads another control under it, no help row); ours keeps it and shows the move's help row (Q66). Ours enables it by
+reads another control under it, no help row), and so does ours since Q66 (`UiButton.SkipsPointer`). Ours enables it by
 `ParkTrackPieces.MayMove`.
 
 **The condemned hide, the door at the track's status and the call button down, in both games on one file** (Q1112,

@@ -391,7 +391,9 @@ with no message the red top sits on the neck; with one, an icon block stands bet
 whatever the parent's own region says, keeps the LAST child that answers, and answers itself only when no child did.
 Children are linked at the tail (`FUN_0065f447`), so in stream order. Under the body: the gauge `0x1e`, the date
 `0x20`, the arm `0x21`, the six buttons' panel `0x25`. So the panel answers before the arm where they meet, the arm
-before the date (the date's x 331 to 361 with the arm in), and any child before the body's outline.
+before the date (the date's x 331 to 361 with the arm in), and any child before the body's outline. Ours skips a
+disabled button with all it holds (`UiButton.SkipsPointer`, Q66), a slider's thumb among them; a slider switched off takes
+no pointer itself; no other control of ours carries the flag.
 
 **Measured in the original** with the path tool armed and RMB cancel on (`[0x0078d911]` 1), reading the mode object
 `[0x007b05d8]`, which a right click that reaches the park replaces: a quick right click on the body's bare metal, the
@@ -405,8 +407,8 @@ bar read row 476. The arm out was not tried there.
 rectangles (`UiControl.StopsPointer`). The arm slides ("The arm's handler", Q427). Not the original's: at rest in, the arm
 and its end draw nothing, where the original draws them fitted to their narrowed rectangles behind the body and the
 handle (the film of Q427 shows the arm's mesh squeezed to its rectangle through a slide), and the retract button is
-hidden at rest in; through the slide in it is drawn switched off, as the original's, but stops the pointer, doing
-nothing (and starts its glint and help row 481 for the 0.22 s, Q66), where the original's hit test passes over it. A carried panel is at depth 3, its parts at 5 and theirs at 7
+hidden at rest in; through the slide in it is drawn switched off and the hit test passes over it to the arm, as the
+original's (Q66). A carried panel is at depth 3, its parts at 5 and theirs at 7
 (Q445, "The arm's handler"): behind the body, and its parts behind the retract button. A tag stands
 on the mast and lifts the top (`ParkGadget.PutTags`), and the top's right click takes every tag off.
 
