@@ -297,7 +297,7 @@ public class RideScriptWalkTests
 		return new RideScriptFile( new MemoryStream( memory.ToArray() ) );
 	}
 
-	/// <summary>The walk placer's and the bounce sine's reads of the speed word are not built (<c>0x0055823e</c>, <c>0x00557c03</c>): a rider in a slot of a script at a divisor other than 1 counts.</summary>
+	/// <summary>The walk placer's read of the divisor is not built (<c>0x0055823e</c>, docs/QUEUE.md Q1608): a rider in a slot of a script at a divisor other than 1 counts.</summary>
 	[TestMethod]
 	[DataRow( 50, 0 )]
 	[DataRow( 60, 1 )]

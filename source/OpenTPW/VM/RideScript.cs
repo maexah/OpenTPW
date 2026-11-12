@@ -1923,8 +1923,8 @@ public sealed class RideScript
 		{
 			ref var walking = ref _walk[slot];
 
-			// The walk placer divides by the divisor for every slot in use (0x0055823e), and a bouncing rider's sine does (0x00557c03,
-			// RIDER_BOUNCE, which nothing else counts); neither is built (docs/QUEUE.md Q155).
+			// The walk placer reads the divisor for every slot in use (0x0055823e; what it divides is not read, docs/QUEUE.md Q1608). A
+			// bouncing rider's sine reads the word too (0x00557c03), counted with the lift it belongs to (RIDER_BOUNCE, Q511).
 			if ( walking.State != WalkState.Free && DivisorOf( Speed ) != 1f )
 				Unimplemented.Report( "WALK_RIDER_SPEED_DIVISOR" );
 
@@ -2561,8 +2561,8 @@ public sealed class RideScript
 			case 8:
 				// The original looks the ride up here and keeps the handle. The caller has already
 				// supplied one, so all that is left is to record that the script asked. It also hands the ride the script's
-				// speed word (0x00554aab), which is not built (docs/QUEUE.md Q155).
-				if ( DivisorOf( Speed ) != 1f )
+				// speed word (0x00554aab); a word other than the node's setting would redo its cap, which is not built.
+				if ( Ride.PushSpeed( Speed ) )
 					Unimplemented.Report( "COAST_RIDE_SPEED" );
 
 				Initialised = true;

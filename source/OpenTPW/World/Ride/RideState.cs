@@ -98,6 +98,36 @@ public sealed class RideState
 	public int Refused { get; private set; }
 
 	/// <summary>
+	/// The speed setting a coaster's node is made with: <c>FUN_004368f0</c> calls <c>FUN_0043c3d0( node, 0x3c )</c>
+	/// (docs/exe/ride-operation.md, "A coaster's, a track ride's and an upgraded ride's excitement").
+	/// </summary>
+	public const int MadeSpeed = 60;
+
+	/// <summary>
+	/// The speed setting the coaster's node holds, its <c>+0x30</c>: <see cref="MadeSpeed"/> until a push changes it.
+	/// A loaded park's coaster starts at it too; whether the coasters module's load puts a saved setting back was not read.
+	/// </summary>
+	public int Speed { get; private set; } = MadeSpeed;
+
+	/// <summary>
+	/// <c>FUN_0043b2b0( ride, speed )</c>, the script's speed word handed to its coaster at <c>COAST 8</c> (<c>0x00554aab</c>)
+	/// and at every due visit (<c>0x005517e1</c>). It acts only when the word differs from the node's setting
+	/// (<c>0x0043b2c6</c>), and answers whether it did. On a change the original's <c>FUN_0043c3d0</c> sets the speed cap
+	/// <c>+0x34</c> and marks the track's run to be redone; no coaster is simulated here, so the caller counts that
+	/// (<c>COAST_RIDE_SPEED</c>). The replay's bit <c>0x8000</c>, under which the original pushes nothing, is set only by
+	/// the online park load (dead by CONTENT offline), so it is not kept.
+	/// </summary>
+	public bool PushSpeed( int word )
+	{
+		if ( word == Speed )
+			return false;
+
+		Speed = word;
+
+		return true;
+	}
+
+	/// <summary>
 	/// <c>COAST_GETQUEUE</c>, op 2 - <c>FUN_0043b1f0</c>. The room left, clamped at zero, which is what
 	/// the trailing <c>((int)x &lt; 0) - 1 &amp; x</c> in the original computes. <b>This is room
 	/// remaining, not queue length</b>, so a script that branches on zero is branching on "full".

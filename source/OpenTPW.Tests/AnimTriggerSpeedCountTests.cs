@@ -372,14 +372,16 @@ public class AnimTriggerSpeedCountTests
 	}
 
 	/// <summary>
-	/// <c>COAST</c>'s initialise and the scheduler's due visits hand a script's speed word to a ride (<c>0x005517e1</c>, <c>0x00554aab</c>); none is built, so each counts at a
-	/// divisor other than 1 and not at 50. Over ticks 1..9 the script (id 1) is visited due twice (1 and 9), so a word of 60 counts the initialise and two visits; a visit not due pushes nothing
+	/// <c>COAST</c>'s initialise and the scheduler's due visits hand a script's speed word to its coaster (<c>0x005517e1</c>, <c>0x00554aab</c>), which acts only on a word
+	/// other than its setting, made 60 (<c>0x0043b2c6</c>); what it then redoes is not built, so each change counts once. Over ticks 1..9 the script (id 1) is visited due
+	/// twice (1 and 9): a word of 50 changes the setting at the initialise and not again, and 60, the divisor 1.1, changes nothing. A visit not due pushes nothing
 	/// (<c>0x005516f6</c>). The scheduler's write into the channels (<c>0x00551789</c>) is built (Q1061) and counts nothing at any word.
 	/// </summary>
 	[TestMethod]
-	[DataRow( 50, 0 )]
-	[DataRow( 60, 3 )]
-	public void CoastsReadsOfTheSpeedWordCountAtADivisorOtherThanOne( int speed, int coast )
+	[DataRow( 50, 1 )]
+	[DataRow( 60, 0 )]
+	[DataRow( 75, 1 )]
+	public void CoastsPushCountsOnlyAWordOtherThanTheCoastersSetting( int speed, int coast )
 	{
 		FileSystem = GameData.Required();
 
@@ -400,12 +402,13 @@ public class AnimTriggerSpeedCountTests
 			scheduler.Advance( 1000f );
 
 		Assert.AreEqual( coast, Times( "COAST_RIDE_SPEED" ), "the initialise and the two due visits" );
+		Assert.AreEqual( speed, script.Ride.Speed, "the coaster holds the pushed word" );
 		Assert.AreEqual( 0, Times( "SCHEDULER_CHANNEL_SPEED" ), "built: the channels hold the rate" );
 
 		Unimplemented.Forget();
 	}
 
-	/// <summary>A script that holds a <c>RideState</c> but has run no <c>COAST</c> has no coaster (<c>+0xe0</c> is nought), so the visit's coaster push counts nothing at any word.</summary>
+	/// <summary>A script that holds a <c>RideState</c> but has run no <c>COAST</c> has no coaster (<c>+0xe0</c> is nought), so the visit's coaster push counts nothing, even at a word other than the made setting.</summary>
 	[TestMethod]
 	public void AScriptThatRanNoCoastPushesNoCoasterSpeed()
 	{
@@ -415,7 +418,7 @@ public class AnimTriggerSpeedCountTests
 
 		var script = new RideScript( Build( 1, Word( Opcode.WAIT ), 100000, Word( Opcode.END ) ) )
 		{
-			Speed = 60,
+			Speed = 50,
 			Ride = new RideState()
 		};
 
