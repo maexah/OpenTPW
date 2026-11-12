@@ -83,7 +83,7 @@ Version 12, `FUN_005aff50`. Defaults come from the progress object constructor `
 | `+0x1c` | 4 | golden tickets | tickets **spent** |
 | `+0x20` | 4 | golden keys | keys **given outright** |
 | `+0x24` | 1 | mode | 1 = Instant Action, 0 = Full Simulation |
-| `+0x25` | 1 | swear filter | default 1. Set after the read, `FUN_005afd70` loads `%s\Language\%s\swears.txt` and `alloweds.txt` through `FUN_005d3140`, and clears it when `swears.txt` fails to open (`alloweds.txt`'s answer is ignored, `0x005d3226`). The path's language is the registry's `Language` value (`0x005c0d00`: 0x409 "American", 0x809 "English"). A disc copy has no `Data\Language\American\swears.txt`, so it writes 0; the US installer copies the lists there (`USEnglish\Setup\bffl.fls`), so an installed game keeps 1 |
+| `+0x25` | 1 | swear filter | default 1. Set after the read, `FUN_005afd70` loads `%s\Language\%s\swears.txt` and `alloweds.txt` through `FUN_005d3140`, and clears it when `swears.txt` fails to open (`alloweds.txt`'s answer is ignored, `0x005d3226`). The path's language is the registry's `Language` value (`0x005c0d00`: 0x409 "American", 0x809 "English"). A disc copy has no `Data\Language\American\swears.txt`, so it writes 0; the US installer copies the lists there (`USEnglish\Setup\bffl.fls`), so an installed game keeps 1. OpenTPW (Q731): `PlayerFile.LoadSwearFilter`, run by `SaveFolder.LoadPlayer` after a whole read with the language taken as 0x409 (no registry is read); a short read counts `PLAYER_SWEAR_FILTER_AFTER_SHORT_READ` (Q1220) |
 | `+0x4c` | 1 | first park not started | default 1 |
 | — | 4 | N | theme count, starts 0 |
 | — | var | themes | N × (dword name length + name chars + theme record) |

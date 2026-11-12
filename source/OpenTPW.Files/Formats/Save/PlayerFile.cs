@@ -56,9 +56,8 @@ public sealed class PlayerFile
 	public bool InstantAction;
 
 	/// <summary>Whether swearing is filtered out of what the player types (swears.txt, alloweds.txt). On for a new player.
-	/// NOT MATCHED: the original clears it after a read when <c>Data\Language\&lt;language&gt;\swears.txt</c> does not open
-	/// (<c>FUN_005afd70</c>, <c>0x005afeba</c>..<c>0x005aff37</c>; <c>docs/exe/saves.md</c>), so a disc copy writes 0 where an
-	/// installed game keeps 1. This keeps what it read, and writes 1 for a new player; nothing here reads the flag.</summary>
+	/// <see cref="Read"/> keeps what the file holds; the player's load then runs <see cref="LoadSwearFilter"/>, which clears
+	/// it where the swear list does not open. Nothing here filters what is typed.</summary>
 	public bool FilterSwearing = true;
 
 	/// <summary>Set until the player's first park starts, when the state machine clears it (0x005b0cc0). On for a new player.</summary>
@@ -206,6 +205,25 @@ public sealed class PlayerFile
 		}
 
 		return park;
+	}
+
+	/// <summary>
+	/// The swear list under the game's folder for a Windows language, as the profile loader names it: 0x409 reads
+	/// <c>American</c>, any other <c>English</c> (<c>0x005c0d00</c>; <c>docs/exe/saves.md</c>, the <c>+0x25</c> row).
+	/// </summary>
+	public static string SwearListPath( int windowsLanguage )
+		=> $@"data\Language\{(windowsLanguage == 0x409 ? "American" : "English")}\swears.txt";
+
+	/// <summary>
+	/// The swear filter's load after a profile read (<c>FUN_005afd70</c>, <c>0x005afeba</c>..<c>0x005aff37</c>): with
+	/// <see cref="FilterSwearing"/> set, the swear list is opened, and where it does not open the flag is cleared.
+	/// A flag read clear is left clear and nothing is opened. alloweds.txt's answer is ignored (<c>0x005d3226</c>), so it is not asked.
+	/// </summary>
+	/// <param name="swearListOpens">Whether <see cref="SwearListPath"/> opens; asked only with the flag set.</param>
+	public void LoadSwearFilter( Func<bool> swearListOpens )
+	{
+		if ( FilterSwearing && !swearListOpens() )
+			FilterSwearing = false;
 	}
 
 	public static PlayerFile Read( Stream stream )

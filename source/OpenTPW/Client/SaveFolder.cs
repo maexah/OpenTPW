@@ -41,6 +41,10 @@ internal static class SaveFolder
 	private const string PlayerFileName = "gms.dat";
 	private const string EasyModeName = "easymode.TPWI";
 
+	// Deviation: the original takes the swear list's language from the registry's Language (0x005c0d00); OpenTPW reads
+	// no registry and takes 0x409, the value the US installer writes (tools/play-the-original/tpw-setup.sh does the same).
+	internal const int SwearListLanguage = 0x409;
+
 	// What a park file's name holds: the original's search is "*" and then ".TPW*" (0x00f7b948, 0x007479f8).
 	private const string ParkPattern = ".TPW";
 
@@ -146,6 +150,20 @@ internal static class SaveFolder
 			return whole( stream );
 		}
 		catch ( Exception e ) when ( e is EndOfStreamException or InvalidDataException )
+		{
+			return false;
+		}
+	}
+
+	/// <summary>Whether the game's file at <paramref name="path"/> opens for reading, as the original's open of the swear list asks.</summary>
+	private static bool Opens( string path )
+	{
+		try
+		{
+			using var stream = File.OpenRead( path );
+			return true;
+		}
+		catch ( Exception e ) when ( e is IOException or UnauthorizedAccessException )
 		{
 			return false;
 		}
@@ -530,7 +548,18 @@ internal static class SaveFolder
 			var file = PlayerFile.Read( stream );
 
 			if ( !file.IsComplete )
+			{
 				Log.Warning( $"Saves: {path} ended early or is not a player, so only what came before that was read" );
+
+				// Whether the original's loader reaches its swear list after a read that stopped is not read (FUN_005afd70).
+				Unimplemented.Report( "PLAYER_SWEAR_FILTER_AFTER_SHORT_READ" );
+				return file;
+			}
+
+			var swears = PlayerFile.SwearListPath( SwearListLanguage );
+			var wasSet = file.FilterSwearing;
+			file.LoadSwearFilter( () => Opens( GameDir.GetPath( swears ) ) );
+			Log.Info( $"Saves: {path}: swear filter read {(wasSet ? 1 : 0)}, {swears} {(wasSet ? (file.FilterSwearing ? "opens" : "does not open") : "not asked")}, kept {(file.FilterSwearing ? 1 : 0)}" );
 
 			return file;
 		}

@@ -13175,3 +13175,12 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   a park file, not a behaviour. Said at `PutSprite` and in `saves.md` ("A walk's rider is saved with a sprite where the
   original saves none or another place, a deviation"). Confirm: a park saved with the Mayan Spinner and the Jungle Spray
   holding riders, the sprite table beside the original's.
+- [x] **Q731. The swear filter's load after a profile read.** From the run 7 review (Q709 3, VERIFY-11). `FUN_005afd70`
+  (`0x005afeba..0x005aff37`): with `+0x25` set, open `Data\Language\<language>\swears.txt` (the language from the
+  registry's `Language`, `0x005c0d00`: 0x409 "American", else "English"); when it does not open, clear `+0x25`
+  (alloweds.txt's answer is ignored, `0x005d3226`). Build the same test on `PlayerFile.FilterSwearing` after a read. A
+  disc copy (the reference install, `~/Games/TPWorld`) has no `Language/american/swears.txt` and writes 0; the US
+  installer copies the lists there from `USEnglish/Filter/American` (`USEnglish/Setup/bffl.fls`), so an installed game
+  keeps 1. Confirm: gms.dat offset 0x13 after a park save equals the original's on the same folder. (Said at the site:
+  `PlayerFile.FilterSwearing`'s comment, "NOT MATCHED". The docs are corrected: `docs/exe/saves.md` `+0x25` row,
+  `docs/exe/hud.md` "Spending golden tickets", "The save".)
