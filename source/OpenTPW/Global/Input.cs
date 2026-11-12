@@ -9,6 +9,10 @@ public static partial class Input
 	public static KeyboardInfo Keyboard { get; internal set; } = new();
 
 	public static float Forward { get; set; }
+	/// <summary>
+	/// A and D as a sideways amount. <b>Dead by CODE</b> (rule 3): read by nothing in the game since Q17, whose camcorder has no strafe
+	/// (<c>0x0042b82a</c>); the orbit reads the keys itself. Tests set it to prove the camcorder ignores it.
+	/// </summary>
 	public static float Right { get; set; }
 
 	internal static List<InputButton> LastKeysDown { get; set; } = new();

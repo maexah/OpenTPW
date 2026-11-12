@@ -2154,8 +2154,9 @@ public sealed class ParkState
 
 	/// <summary>
 	/// The cell a thing is linked into (<see cref="StandOn"/>), or null for one on none - the cell list the original
-	/// relinks a person into as their position's cell changes (<c>FUN_0050b6a0</c>). The park's counts do not read it:
-	/// <c>FUN_004fa990</c> reads the position (<see cref="PeepBehaviour.OnACountingCell(FixedVector)"/>).
+	/// relinks a person into as their position's cell changes (<c>FUN_0050b6a0</c>). The park's counts and a needs turn's region
+	/// effects do not read it: <c>FUN_004fa990</c> and <c>0x00501691</c> read the position (<see cref="PeepBehaviour.OnACountingCell(FixedVector)"/>,
+	/// <see cref="ParkPeople.CellEffects"/>).
 	/// </summary>
 	public (int X, int Y)? CellOf( int thingId )
 		=> _cellOf.TryGetValue( thingId, out var cell ) ? (cell % ParkWorld.MapSize, cell / ParkWorld.MapSize) : null;

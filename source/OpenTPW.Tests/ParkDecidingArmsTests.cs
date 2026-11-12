@@ -44,13 +44,13 @@ public class ParkDecidingArmsTests
 	/// One guest made on a cell of the shipped park, Deciding at happiness 50 with their choice held off, and a
 	/// turn of the park's own behaviour on the seed given.
 	/// </summary>
-	private (Peep Guest, Action<int> Turn, ParkPeople People) DecidingAt( int x, int y, int seed )
+	private (Peep Guest, Action<int> Turn, ParkPeople People) DecidingAt( int x, int y, int seed, Random? random = null )
 	{
 		var world = Park();
 		var people = new ParkPeople( world );
 		var guest = people.Guests[people.Admit( x, y )];
 		var walk = people.AnyWalkFor( guest.ThingId )!;
-		var behaviour = new PeepBehaviour( world, new Random( seed ),
+		var behaviour = new PeepBehaviour( world, random ?? new Random( seed ),
 			new ParkAdmission( new ParkBalance( "jungle", easyMode: true ), world.Economy!.Value.AdmissionFee ),
 			state: people.State )
 		{
@@ -119,12 +119,15 @@ public class ParkDecidingArmsTests
 
 	/// <summary>
 	/// <b>The jump ends the turn</b> (the return after <c>0x004fecea</c>): a guest who jumps is not also counted
-	/// for the vomit the same turn would have reached.
+	/// for the vomit the same turn would have reached, and the turn's one draw is taken all the same (<c>0x004fecb4</c>).
 	/// </summary>
+	/// <remarks><b>Mutation:</b> the draw moved below the jump's test fails the last assert.</remarks>
 	[TestMethod]
 	public void TheJumpEndsTheTurnBeforeTheVomit()
 	{
-		var (guest, turn, _) = DecidingAt( 47, 22, SeedWhere( roll => roll % 3 == 0 ) );
+		var seed = SeedWhere( roll => roll % 3 == 0 );
+		var random = new Random( seed );
+		var (guest, turn, _) = DecidingAt( 47, 22, seed, random );
 		guest.TimeStartedIdling = 1000;
 		guest.Vomit = 100f;
 		guest.Happiness = 90f;
@@ -133,6 +136,11 @@ public class ParkDecidingArmsTests
 		turn( guest.TimeOfLastSpotAnim + 101 );
 		Assert.AreEqual( (PeepState.PlayingSpotAnimation, from), (guest.State, Counted( "DECIDE_VOMIT" )),
 			"jumped, and the vomit's test not reached" );
+
+		// The turn's one draw is taken before the jump's tests (0x004fecb4), so the park's one generator stands one on.
+		var expected = new Random( seed );
+		expected.Next();
+		Assert.AreEqual( expected.Next(), random.Next(), "the jumping turn still took its draw" );
 	}
 
 	/// <summary>
@@ -512,6 +520,30 @@ public class ParkDecidingArmsTests
 
 		Assert.AreEqual( (2, 1, 1, 0, 0), (HappinessAt( 0, 0 ), HappinessAt( 1, 0 ), HappinessAt( 0, -1 ), HappinessAt( 1, 1 ),
 			HappinessAt( 2, 0 )) );
+	}
+
+	/// <summary>
+	/// <b>The region effects are those of the guest's position, not the cell list they are linked into</b> (<c>0x00501691</c>,
+	/// <c>0x0050169d</c> read the thing's bytes <c>+7</c> and <c>+5</c>, as the counting test does): with effect 0 stamped round
+	/// 55, 30, a guest standing there but linked three cells off gains its 2, and one linked there but standing three off nothing.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> reading the link first (the rule before the run 22 review) fails both halves.</remarks>
+	[TestMethod]
+	public void TheRegionEffectsAreThePositionsCellNotTheLink()
+	{
+		var people = new ParkPeople( Park() );
+
+		people.State.StampEffect( 0, 55, 30 );
+
+		var guest = people.Guests[people.Admit( 58, 30 )];
+
+		people.State.StandOn( guest.ThingId, 58, 30 );
+		guest.Navigator.Position = FixedVector.AtCell( 55, 30 );
+		Assert.AreEqual( 2, people.CellEffects( guest ).Happiness, "linked three off, standing on the stamp" );
+
+		people.State.StandOn( guest.ThingId, 55, 30 );
+		guest.Navigator.Position = FixedVector.AtCell( 58, 30 );
+		Assert.AreEqual( 0, people.CellEffects( guest ).Happiness, "linked into the stamp, standing three off" );
 	}
 
 	/// <summary>

@@ -275,9 +275,12 @@ public sealed class ParkFlags : ModelEntity
 
 	private float? _shown;
 
+	/// <summary>The phase the flags wave at where there is a sea: its <see cref="ParkSea.FlagsPhase"/>, wrapped at 20, not the sea's own.</summary>
+	internal static float? SeaPhaseFor( ParkSea? sea ) => sea?.FlagsPhase;
+
 	protected override void OnUpdate()
 	{
-		Phase = PhaseAfter( ParkSea.Current?.FlagsPhase, Phase, Time.Delta, GameClock.Paused );
+		Phase = PhaseAfter( SeaPhaseFor( ParkSea.Current ), Phase, Time.Delta, GameClock.Paused );
 
 		var wind = ParkWeather.Current?.WindDirection;
 		if ( wind != _seen )

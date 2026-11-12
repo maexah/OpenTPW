@@ -1647,7 +1647,10 @@ public sealed class PeepBehaviour
 	/// <b>Deviation:</b> a position off the 128 x 128 map counts nobody. The original packs the two bytes as they are,
 	/// so a byte of 128 or more would read a cell of another row; that arm is counted as <c>COUNTING_CELL_OFF_MAP</c>.
 	/// </remarks>
-	internal bool OnACountingCell( FixedVector position )
+	internal bool OnACountingCell( FixedVector position ) => OnACountingCell( State, position );
+
+	/// <summary>The same rule of a park in hand - <see cref="OnACountingCell(FixedVector)"/>, which the staff window's pick-up asks too.</summary>
+	internal static bool OnACountingCell( ParkState state, FixedVector position )
 	{
 		var (x, y) = position.Cell;
 		if ( x < 0 || y < 0 || x >= ParkWorld.MapSize || y >= ParkWorld.MapSize )
@@ -1656,7 +1659,7 @@ public sealed class PeepBehaviour
 			return false;
 		}
 
-		return Peep.CountsOn( State.Record( x, y ).Type );
+		return Peep.CountsOn( state.Record( x, y ).Type );
 	}
 
 	/// <summary>

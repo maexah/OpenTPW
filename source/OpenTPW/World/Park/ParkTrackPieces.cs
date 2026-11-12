@@ -171,10 +171,14 @@ public sealed class ParkTrackPieces : Entity
 	/// <summary>
 	/// Whether the ride window lets a ride be moved - <c>TrackRide_MayMove</c> (<c>FUN_0052c2b0</c>): any ride but a kart or
 	/// water one may; one of those may only while each of its mouths, the <see cref="StationOf"/> mouth and then the other
-	/// mouth, holds one track link alone (<c>Cell_CountMaskBits</c> on the track record), as a bought ride's do, so a run
-	/// laid from either greys the move. At a turn other than the four it tests the ride's own cell twice; a cell off the
-	/// map holds no link.
+	/// mouth, holds one track link alone (<c>Cell_CountMaskBits</c>, all eight bits of the track record's neighbour byte,
+	/// <c>0x005227aa</c>..<c>0x005227dd</c>), as a bought ride's do, so a run laid from either greys the move. At a turn other
+	/// than the four it tests the ride's own cell twice.
 	/// </summary>
+	/// <remarks>
+	/// <b>Deviation:</b> a mouth off the map holds no link here. The original masks the cell id to 16 bits and reads the record
+	/// it lands on (<c>0x0052c347</c>, <c>0x0052c3f0</c>), so an x past 127 reads a cell of the next row.
+	/// </remarks>
 	public static bool MayMove( ParkState state, int trackType, int x, int y, int angle )
 	{
 		if ( trackType is not (ItemDescriptionFile.CarTrack or ItemDescriptionFile.WaterTrack) )
@@ -186,7 +190,7 @@ public sealed class ParkTrackPieces : Entity
 	}
 
 	private static int LinksAt( ParkState state, (int X, int Y) at )
-		=> ParkState.OnMap( at.X, at.Y ) ? CellEdge.Links( state.Record( at.X, at.Y ).TrackNeighbours ) : 0;
+		=> ParkState.OnMap( at.X, at.Y ) ? System.Numerics.BitOperations.PopCount( (uint)state.Record( at.X, at.Y ).TrackNeighbours ) : 0;
 
 	/// <summary>
 	/// Lays a bought kart or water ride's station and both mouths on the track grid, as the place commit does

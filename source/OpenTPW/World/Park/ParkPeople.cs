@@ -3186,12 +3186,12 @@ public sealed partial class ParkPeople : Entity
 
 	/// <summary>
 	/// The happiness, illness and hunger words of the region effects on the guest's cell, which their needs turn adds
-	/// (<c>FUN_004d8410</c> at <c>0x005016ba</c>, the cell of the thing's own bytes). A cell off the map has none.
+	/// (<c>FUN_004d8410</c> at <c>0x005016ba</c>, the cell of the thing's own bytes <c>+5</c> and <c>+7</c>: its position, not the cell
+	/// list it is linked into, as <see cref="PeepBehaviour.OnACountingCell(FixedVector)"/> reads it). A cell off the map has none.
 	/// </summary>
 	internal (short Happiness, short Illness, short Hunger) CellEffects( Peep peep )
 	{
-		var (x, y) = State.CellOf( peep.ThingId )
-			?? (peep.Navigator.Position.X >> 16, peep.Navigator.Position.Y >> 16);
+		var (x, y) = peep.Navigator.Position.Cell;
 
 		if ( (uint)x >= ParkWorld.MapSize || (uint)y >= ParkWorld.MapSize )
 			return default;

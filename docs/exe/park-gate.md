@@ -50,7 +50,9 @@ position, not automatically counted because they are riding.
 
 **OpenTPW** (Q1332): `PeepBehaviour.OnACountingCell( FixedVector )` is this predicate, once, on the person's position
 (the cell list they are linked into is not read); the gate's census, the staff outside, the change of mind, the needs
-turn and a new guest's first state all ask it. A position off the map counts nobody there and is counted as
+turn, a new guest's first state and the staff window's PICK UP (`ParkStaffWindow.CanBePickedUp`, the call at
+`0x00505bf8`, through its static form) all ask it. The needs turn's region effects read the same position bytes
+(`0x00501691`, `0x0050169d`; `ParkPeople.CellEffects`). A position off the map counts nobody there and is counted as
 `COUNTING_CELL_OFF_MAP` (Q1333), where the original's byte pack would read another row's cell.
 
 ## The later close check

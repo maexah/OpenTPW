@@ -1275,8 +1275,8 @@ round. While any of them is in state 8 the state-11 turn does not run: no mood, 
 **In OpenTPW** `PeepBehaviour.PlaySpotAnimation` is `FUN_004fc800` without its step 1: the yawn
 (`PeepBehaviour.Yawns`, `ParkAudio.Yawn`, at the level `ParkAudio.PutOff` stands in with), the request
 (`Peep.NextAnimation`), the saved state and SetState(8), which stamps `TimeOfLastSpotAnim`. `PeepBehaviour.Step`'s
-case for state 8 is the return. The queue turn's two arms and the deciding turn's empty hand call it; the deciding
-turn's other two do not yet (5 and 7: Q224, Q226). A guest in state 8 is held by a thing when the saved state is (`PeepBehaviour.HeldByAThing( Peep )`),
+case for state 8 is the return. The queue turn's two arms, the deciding turn's happy jump (5, Q224) and its empty hand
+call it; the deciding turn's 7 does not yet (Q226). A guest in state 8 is held by a thing when the saved state is (`PeepBehaviour.HeldByAThing( Peep )`),
 so `ParkPeople.Depart` refuses a jumping queuer.
 
 **Measured in the running game** (`q98bconfirm.py`, two runs, guests made with `admit` and sent with `send`, happiness
@@ -2450,7 +2450,7 @@ its reader `FUN_00402d70`; the same ranges refer to the world pointer `[0x008023
 | `0x00501ea9` | SetState, case `0xb` | `+0x1fc` (`mTimeStartedIdling`) = mGameTick | the same |
 | `0x004fc869` | `FUN_004fc800`, a spot animation | `+0x208` = mGameTick | the same, through `SetState` |
 | `0x00501d35` | `FUN_005019f0`, case 8 | over when mGameTick > `+0x208` + 10, unsigned | `PeepBehaviour.Step` |
-| `0x004fecca` | `FUN_004fec90`, the deciding turn | the happy jump's gap, mGameTick − `+0x208` > 100 | `CountBeforeLeaving`, the gap counted, the jump not built (Q224) |
+| `0x004fecca` | `FUN_004fec90`, the deciding turn | the happy jump's gap, mGameTick − `+0x208` > 100 | `PeepBehaviour.JumpsForJoy` (Q224) |
 | `0x004ff3fa`, `0x004ff49d` | the same | `+0x1fc` = mGameTick (no wander; empty-handed) | `Decide` |
 | `0x004ff428` | the same | the chooser asked when mGameTick > `+0x1fc` + 30 | `Decide` |
 | `0x005002fe` | `FUN_004ffff0`, the queue turn | the mood gap, mGameTick − `+0x208` > 30, and the window on `+0x1fc` | `QueueTurn` |

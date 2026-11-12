@@ -2295,7 +2295,7 @@ park. A save never resumes in first person: loading zeroes `gui_CameraFlags` (`0
 In first person (`gui_CameraFlags & 0x16` set and `& 0x3c` clear, `0x0042b3fc`..`0x0042b40c`) the key polls
 (`0x0042b32d`..`0x0042b3ee`, rows of the camera table `0x00748158`) turn and walk: Left and keypad 9 (actions 6 and
 `0x12`) take `0.0012 x dt` off the yaw and Right and keypad 7 (7 and `0x13`) add it (`0x0042b417`, `0x0042b432`), dt
-the frame's milliseconds clamped 1 to 100 (`0x0042b2bf`..`0x0042b2ed`): 1.2 radians a second. Up and keypad 1 (0 and
+the frame's milliseconds, 1 if not above 0 and 100 if above 200 (`0x0042b2bf`..`0x0042b2ed`, `0x006fdd9c` = 200; 101 to 200 kept whole): 1.2 radians a second. Up and keypad 1 (0 and
 `0x15`) walk forward 0.1 and Down and keypad 3 (1 and `0x16`) back 0.1; the across term is the 0.0 left on the stack
 (`0x0042b82a`), so nothing strafes. The pointer's turn word `0x00790ae0` is twice its excess past ±0.4 (`fadd
 st(0),st`, `0x0042b89c`, `0x0042b8bd`) with `& 0x3c` clear, and 3.5 times its excess past ±0.2 with it set
@@ -3362,7 +3362,9 @@ object's cached queue length `+0x40` is above nought): `FUN_00530120` lets the q
 flag `DAT_0081d7a8` is raised, and `FUN_0052fe50` drives op `0x32` — `ClearCell` under force, which bypasses
 NOMODIFY, unlinks no neighbour, and zeroes the cell's mask, direction, owner and flags. **Each cell refunds
 `Costs.QueueCell * pct / 100`, and then one cell's worth is debited** (`FUN_004d01f0`), so a queue of N cells
-returns N−1 — the node the placer laid for nothing. The Belly Bounce's four return 225, while the bank's `+0x114`,
+returns N−1 — the node the placer laid for nothing, at the ride's percentage: the stock Belly Bounce's four return 111
+(4 x 37 − 37, at 50 per cent; 225 was the 100 per cent reading, before the percentage was decoded; the total is not
+measured in the original), while the bank's `+0x114`,
 which gates the debit (`0x004d01f3`), is non-zero. A cell refunds only while its owner cell is typed (`0x00536a37`),
 which the drain, coming before the footprint passes, always finds. Each pop measures the queue again and puts out
 whoever stands past its end: `ride-operation.md`, "The sale's drain".
@@ -5240,7 +5242,7 @@ clamped from `stexture` at `TEXTUREQUALITY` 0 or 1, lit by the park's lighter. *
 two faces a cell say its are: from camera B (on the flags' +z side, the sun travelling +z) both games show the side whose
 normal faces away from the sun, ambient alone, the flags' boxes ours (84.5, 65.0, 73.5) and (106.1, 93.7, 101.0) against the
 original's (86.0, 63.9, 72.2) and (109.5, 95.5, 101.9) at the wind held at 0 and both phases at 5 (`q493/side-by-side.png`).
-The phase is `ParkSea.Phase`, as the original's two are equal at every read; the angle is `ParkWeather.WindDirection`,
+The phase is `ParkSea.FlagsPhase`, stepped beside the sea's and wrapped at 20 (Q504; `ParkFlags.SeaPhaseFor`); the angle is `ParkWeather.WindDirection`,
 which a loaded park takes from the file's `mWindDir` (139 in the stock park; `weather.md`). Phase 5 against 25 moved the
 boxes 0.00, 5 against 15 7.36 and 8.14 (the original's 7.44 and 6.98). Ours is sharper than the original's frame, whose logo
 reads blurred (not looked into). **The flags turn to a new wind eased, where the original's jump** (Q643, a deviation at

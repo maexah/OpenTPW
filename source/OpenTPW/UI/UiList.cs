@@ -72,8 +72,9 @@ internal sealed class UiList : UiControl
 	internal bool[] TextColumns { get; init; } = [];
 
 	/// <summary>
-	/// The style bit <c>0x10</c> of the list's layout flags (<c>+0x48</c>): set on all seven sorted list records (buy <c>0x91</c>, the
-	/// rest <c>0x291</c>), clear on the Load and Save Park list's <c>0x81</c>. The click hook (<c>0x00485780</c>) picks the click by the
+	/// The style bit <c>0x10</c> of the list's layout flags (<c>+0x48</c>): set on the seven list records of the five screens built here
+	/// (buy <c>0x91</c>, the rest <c>0x291</c>), clear on the Load and Save Park list's <c>0x81</c>; a list built later sets it from its
+	/// own record (others carry it, the resting staff's <c>0x00756bee</c> among them). The click hook (<c>0x00485780</c>) picks the click by the
 	/// style of the control the click is told to, and a heading tells its list, so a heading of a list with it plays <c>Select3</c>
 	/// (<c>hud.md</c>, "Which window the click sound is for").
 	/// </summary>

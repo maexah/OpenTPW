@@ -417,6 +417,65 @@ public class ScriptSoundTests
 		Time.Now = nowBefore;
 	}
 
+	/// <summary>Draws nought every time: each wait its variation's shorter bound, each pick the first.</summary>
+	private sealed class Noughts : Random
+	{
+		public override int Next() => 0;
+
+		public override int Next( int maxValue ) => 0;
+
+		public override int Next( int minValue, int maxValue ) => minValue;
+
+		public override long NextInt64( long maxValue ) => 0;
+
+		public override double NextDouble() => 0.0;
+	}
+
+	/// <summary>
+	/// <b>A script chain's child whose wait is nought is pruned in the pass that makes it</b> (<c>0x006c3ac5</c>, the tick's prune at
+	/// <c>0x006bdc23</c>): the start's child leaves the list empty and the voice let go as it is made, and the next pass makes the next
+	/// child from the empty list and prunes it too. A <c>cat_rides</c> chain whose waits begin at nought, on the End's node 9, drawn
+	/// nought throughout.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> no prune after the start's child (<c>ParkAudioScripts</c>'s start); a tick that makes a child from
+	/// the empty list and skips the prune.</remarks>
+	[TestMethod]
+	public void AChainChildWithNoWaitIsPrunedInThePassThatMakesIt()
+	{
+		var nowBefore = Time.Now;
+
+		WithAParksAudio( park =>
+		{
+			Time.Now = 100f;
+			park.ScriptRandom = new Noughts();
+
+			var rides = park.Rides!;
+			var effect = rides.EffectIds.First( id => (rides.FlagsOf( id ) & 0x416) == 0x4 && rides.VariationsOf( id ).Count > 0
+				&& rides.VariationsOf( id ).All( variation => Math.Min( variation.GapMin, variation.GapMax ) == 0 ) );
+			var nodes = RideNodes.Load( "levels/jungle/features/end", "End", (BaseFileSystem)FileSystem, false, [] )!;
+			var script = new RideScript( Build(
+				Word( Opcode.ADDOBJ ), 3, 9, effect, 40,
+				Word( Opcode.END ) ) ) { Effects = new RideEffects(), Nodes = nodes, Id = 917 };
+
+			script.Turn( 0f );
+
+			var sound = script.Effects!.Records.Single( record => record.Tag == 40 ).Sound!;
+
+			Assert.AreEqual( 1, sound.Samples, $"effect {effect}: its first child" );
+			Assert.IsTrue( sound.ListEmpty, $"effect {effect}: pruned as the start makes it" );
+			Assert.IsNull( sound.Voice );
+
+			Time.Now += 0.016f;
+			park.ServeScriptSounds();
+
+			Assert.AreEqual( 2, sound.Samples, "the next pass makes a child from the empty list" );
+			Assert.IsTrue( sound.ListEmpty, "and prunes it in that pass" );
+			Assert.IsNull( sound.Voice );
+		} );
+
+		Time.Now = nowBefore;
+	}
+
 	/// <summary>
 	/// <b>A stop on the pass that empties a script's chain cuts no child</b>: the prune deletes the newest child without
 	/// stopping its channel (<c>0x006bdc3e</c>) and the stop walks only the list (<c>0x006bd9b0</c>). The level's

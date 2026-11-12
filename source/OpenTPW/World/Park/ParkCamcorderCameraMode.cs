@@ -36,7 +36,8 @@ namespace OpenTPW;
 /// has two first-person sub-branches, chosen by <c>flags &amp; 0x3c</c> (<c>0x0042b836</c>): clear, it
 /// sets an eye height and turns by twice the pointer's excess past the +/-0.4 bands; set, it turns by
 /// 3.5 times the excess past +/-0.2 and sets no eye height. This follows the first. Its turn rate, its
-/// walk speed and its keys differ from the original's (Left and Right turn there; here nothing turns them):
+/// walk speed and its keys differ from the original's (Left and Right turn there and Up and Down walk; here nothing turns
+/// them and W and S walk, <see cref="Input.Forward"/>):
 /// each is marked where it is defined (docs/QUEUE.md Q1161). Neither strafes.
 /// </para>
 /// </summary>

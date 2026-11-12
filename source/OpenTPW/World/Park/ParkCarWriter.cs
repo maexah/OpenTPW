@@ -66,8 +66,9 @@ internal static class ParkCarWriter
 		{
 			var model = Model( car.Mesh );
 			var players = boats?.AnimationsOf( car.Index ) ?? Players( item, car, model, files, now );
-			// Reaches ParkRides.WrittenChannel as every other channel does; no test drives a car's channel through it.
-			var channel = players?.Channel( 0 ) is { } running ? ParkRides.WrittenChannel( running, CarChannel, reading, now, seeded: false ) : CarChannel;
+			// Reaches ParkRides.WrittenChannel as every other channel does; no test drives a car's channel through it. A resumed car's
+			// channel is seeded by the load (ParkRides.ResumeCar), a made one's by its first queue; CarChannel's own queued speed is nought.
+			var channel = players?.Channel( 0 ) is { } running ? ParkRides.WrittenChannel( running, CarChannel, reading, now, seeded: running.SpeedWritten ) : CarChannel;
 
 			ParkThingStates.ModelTables? tables = null;
 

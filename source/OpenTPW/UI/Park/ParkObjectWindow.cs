@@ -575,8 +575,10 @@ internal sealed class ParkObjectWindow : UiWindow, IStatusBox, IObjectWindowStep
 
 		// FUN_004e2400: the age-bucket scrap percentage (FUN_004e2290) times the item's build price (+0x1b8), over 100,
 		// lettered as money by row 449, "$ {P13}" (FUN_00490250): what a sale would give back now.
+		var scrapValue = ParkScrap.Value( item.BuildPrice, ParkScrap.Percent( state, placed, item ) );
+
 		if ( _stats.TryGetValue( 0x3e23, out var scrap ) )
-			scrap.Text = ParkItemsScreen.Money( ParkScrap.Value( item.BuildPrice, ParkScrap.Percent( state, placed, item ) ) );
+			scrap.Text = ParkItemsScreen.Money( scrapValue );
 
 		// The two condition gauges that are fully derived. Both are 0..100 in the save and the
 		// original maps them onto a 0..1024 bar with ((v & 0xff) << 10) / 100, so as a proportion
@@ -613,7 +615,7 @@ internal sealed class ParkObjectWindow : UiWindow, IStatusBox, IObjectWindowStep
 		// the top, so a wrong offset would look exactly like a healthy ride. The number is the check,
 		// not the picture.
 		Log.Info( $"Ride window: thing {ThingId} stats age {(placed.Built.IsSet ? state.AgeInDays( placed ) : -1)} days," +
-			$" users {users?.Text ?? "-"}, scrap {item.BuildPrice}," +
+			$" users {users?.Text ?? "-"}, scrap {scrapValue}," +
 			$" built {placed.Built.Year}-{placed.Built.Month:D2}-{placed.Built.Day:D2}," +
 			$" repair {placed.StateOfRepair:R}, life {placed.RemainingLife:R}" );
 	}

@@ -68,7 +68,7 @@ public class ParkRideWindowMoveTests
 	/// Only track types 1 and 2 are asked: a flat ride and a coaster may be moved with no station laid at all, where a kart
 	/// ride whose mouths hold nothing may not. At a turn not one of the four the ride's own cell is asked, twice.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> the coaster asked too; an unlaid mouth taken as one link; another turn taken as 0.</remarks>
+	/// <remarks><b>Mutations:</b> the coaster asked too; an unlaid mouth taken as one link; another turn taken as 0; the four cardinal bits counted alone.</remarks>
 	[TestMethod]
 	public void OnlyAKartOrWaterRideIsAsked()
 	{
@@ -83,6 +83,12 @@ public class ParkRideWindowMoveTests
 
 		turned.SetRecord( 30, 24, turned.Record( 30, 24 ) with { TrackNeighbours = 0x04 } );
 		Assert.IsTrue( ParkTrackPieces.MayMove( turned, 1, 30, 24, 45 ), "and with one link there" );
+
+		// Cell_CountMaskBits counts all eight bits (0x005227aa..0x005227dd): a diagonal bit beside the one link is a second.
+		turned.SetRecord( 30, 24, turned.Record( 30, 24 ) with { TrackNeighbours = 0x04 | 0x02 } );
+		Assert.IsFalse( ParkTrackPieces.MayMove( turned, 1, 30, 24, 45 ), "a cardinal and a diagonal bit, two" );
+		turned.SetRecord( 30, 24, turned.Record( 30, 24 ) with { TrackNeighbours = 0x80 } );
+		Assert.IsTrue( ParkTrackPieces.MayMove( turned, 1, 30, 24, 45 ), "a diagonal bit alone, one" );
 	}
 }
 

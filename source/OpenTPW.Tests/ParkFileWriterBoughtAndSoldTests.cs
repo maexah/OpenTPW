@@ -960,6 +960,19 @@ public class ParkFileWriterBoughtAndSoldTests
 			.Made!.Single( placed => placed.Object.Object.ThingId == ape.ThingId ).Channels[0];
 
 		Assert.AreEqual( (0, 0x1c), (held.Role, held.Flags) );
+		Assert.AreEqual( 1f, held.QueuedSpeed, "a bought channel's nought that nothing wrote takes the fallback" );
+
+		// Once the scheduler's visit has written its speed, the nought a start-at-once trigger leaves is a written one, and the
+		// engine saves it as it stands (0x00473408, 0x004644bd).
+		rides.Scheduler.Find( handle )!.WriteChannelSpeeds();
+		Assert.AreNotEqual( 0f, apePlayers.Channel( 0 )!.DeferredSpeed, "the visit's divisor" );
+		apePlayers.Trigger( 0, 0, AnimTimeControl.StartAtOnceFlag, 1f, rides.LoadedAt );
+
+		var cleared = rides.Written( shipped, kept, ChannelsFor, state.HoardingFor,
+			[.. bought.Select( placed => new ParkRides.BoughtThing( new ParkWorld.MadeObject( placed, "A", "B" ), 1, 1, "x" ) )], gone, null )!
+			.Made!.Single( placed => placed.Object.Object.ThingId == ape.ThingId ).Channels[0];
+
+		Assert.AreEqual( 0f, cleared.QueuedSpeed, "a written nought is saved as the engine holds it" );
 
 		var body = ParkFileWriter.Body( shipped, new ParkFileWriter.Running( shipped.GameTick, false, 13, 0, shipped.Camera.Saved!.Value,
 			People: new ParkPeople( shipped ).Written( id => true ), Things: things ) );

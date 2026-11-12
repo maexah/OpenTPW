@@ -144,6 +144,12 @@ public sealed class AnimTimeControl
 	/// <summary>The speed the queued clip will play at - the engine's <c>+0x30</c>, which its dumper does not name.</summary>
 	public float DeferredSpeed { get; private set; }
 
+	/// <summary>
+	/// Whether anything has written <see cref="DeferredSpeed"/> since the channel was made - a queue, the scheduler's
+	/// store after a turn, or the load's seed. A clear of the queue leaves it set: the nought it leaves is a written one.
+	/// </summary>
+	public bool SpeedWritten { get; private set; }
+
 	/// <summary>Whether this channel is running nothing at all.</summary>
 	public bool IsIdle => AnimID == RideAnimations.NoRole;
 
@@ -359,13 +365,18 @@ public sealed class AnimTimeControl
 		DeferredAnimID = role;
 		DeferredSubAnim = entry;
 		DeferredSpeed = speed;
+		SpeedWritten = true;
 	}
 
 	/// <summary>
 	/// Writes the queued speed alone, as the scheduler does after a turn (<c>FUN_00474020</c>'s store at <c>0x00474037</c>): the role, the entry and
 	/// the flags stay, and so does a queue that is empty, which now holds a speed.
 	/// </summary>
-	public void WriteQueuedSpeed( float speed ) => DeferredSpeed = speed;
+	public void WriteQueuedSpeed( float speed )
+	{
+		DeferredSpeed = speed;
+		SpeedWritten = true;
+	}
 
 	/// <summary>The queued role alone goes back to the sentinel (<c>FUN_00473270</c>'s store at <c>0x00473292</c>): the entry, the flags and the speed stay.</summary>
 	public void ClearRole() => DeferredAnimID = RideAnimations.NoRole;

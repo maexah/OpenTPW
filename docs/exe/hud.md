@@ -1367,7 +1367,7 @@ control constructor stores the layout's flags at `+0x48` (`0x0065bd2c`) and the 
 
 - **A list's heading** is a button (op `0xc`, `( 2, 1, n+0x10 )`, `0x006606a8`..`0x006606b2`) whose parent is the list, and every sorted
   list record carries `0x10` (walked `0x00750ab8`, `0x00750ba0`, `0x00750ca0`: type 7, flags `0x291`; buy `0x91`, the rest `0x291`). A heading
-  click plays **`0xbd`**. Q711 built the rule: a button whose parent is a `UiList` with `Sorted` (the seven records' `0x10`; Load and Save Park's `0x81` lacks it) plays `Select3` (`WindowStack.Release`); the console's `click` reply names the sound it asked for.
+  click plays **`0xbd`**. Q711 built the rule: a button whose parent is a `UiList` with `Sorted` (the `0x10` of the seven list records of the five screens built here; Load and Save Park's `0x81` lacks it; more type-7 records carry it, unbuilt: the resting staff's `0x00756bee`, `0x00752660`, `0x00758b16`, `0x00758fe8`, `0x00759408` at `0x91` and `0x0075435a`, `0x007589b8` at `0x11`) plays `Select3` (`WindowStack.Release`); the console's `click` reply names the sound it asked for.
 - **The scroll bar's arrows** are buttons built under the type-3 bar (op 9 `0x0065dd7b( 3, 0x10, 1 )`, `0x00660495`..`0x006604a1`; ops 6 and 7,
   the arrows, `( 2, 0x21, 1|2 )`, `0x0066024b`..`0x00660257`; op 8, the thumb, `( 2, 1, 3 )`, `0x006602f5`). Every button constructor (`0x006688b3`)
   sets `+0x13c` 500 and `+0x140` 125 (`0x00668902`, `0x0066890f`); only a button with flag `0x20` (the arrows') repeats. The release posts `0x100`

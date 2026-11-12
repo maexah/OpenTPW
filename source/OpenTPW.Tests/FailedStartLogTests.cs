@@ -186,6 +186,11 @@ public class FailedStartLogTests
 
 			using ( var held = OneCopy.Open( game, out var unknown ) )
 			{
+				// A machine whose system will not say (a named mutex's files under /tmp/.dotnet another user made) is the
+				// product's own "cannot be told; this one runs", not a fault of the lock.
+				if ( held is null && unknown is not null )
+					Assert.Inconclusive( unknown );
+
 				Assert.IsNotNull( held, unknown ?? "this process holds the folder" );
 
 				var (exit, output) = Start( folder, Variables(), "--game", game );

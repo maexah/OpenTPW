@@ -293,6 +293,8 @@ public class ParkSeaTests
 			sea.Update();
 			Assert.AreEqual( 0.2f, sea.Phase, 0.0001f, "the sea's wrapped at 4π" );
 			Assert.AreEqual( ParkSea.SeaPeriod + 0.2f, sea.FlagsPhase, 0.0001f, "the flags' not yet" );
+			Assert.AreEqual( ParkSea.SeaPeriod + 0.2f, ParkFlags.SeaPhaseFor( sea )!.Value, 0.0001f, "the flags read their own phase, not the sea's 0.2" );
+			Assert.IsNull( ParkFlags.SeaPhaseFor( null ), "with no sea they step their own" );
 
 			sea.SetPhase( 19.8f );
 			Assert.AreEqual( 19.8f - ParkSea.SeaPeriod, sea.Phase, 0.0001f, "a phase set is wrapped for the sea" );

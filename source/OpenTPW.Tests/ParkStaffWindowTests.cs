@@ -497,6 +497,12 @@ public class ParkStaffWindowTests
 
 		state.SetRecord( x, y, cell with { Type = 1 } );
 
+		// Off the map the record reads as type 0, which an inline test of the type would count; the one rule does not.
+		var standing = member.Navigator.Position;
+		member.Navigator.Position = FixedVector.AtCell( ParkWorld.MapSize, y );
+		Assert.IsFalse( ParkStaffWindow.CanBePickedUp( member, state ), "off the map" );
+		member.Navigator.Position = standing;
+
 		foreach ( var (activity, can) in new[] { (StaffActivity.Idle, true), (StaffActivity.GoingOnStrike, false), (StaffActivity.OnStrike, false),
 			(StaffActivity.Held, false), (StaffActivity.Repairing, false), (StaffActivity.Resting, true), ((StaffActivity)0x12, false) } )
 		{

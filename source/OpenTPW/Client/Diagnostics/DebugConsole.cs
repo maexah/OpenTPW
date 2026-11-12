@@ -2405,7 +2405,7 @@ public static class DebugConsole
 				Reply( $"sea: corner {sea.CornerText} phase {sea.Phase:0.000} flags {sea.FlagsPhase:0.000} from {sea.Folder} words {sea.Census()}" );
 				break;
 
-			// The gates' flags: how many, their phase (the sea's), the angle they stand at and the weather's wind it eases to,
+			// The gates' flags: how many, their phase (the sea's flags phase, wrapped at 20), the angle they stand at and the weather's wind it eases to,
 			// and the folder; `flags wind <degrees>` holds the weather's wind there and stands the flags at it at once, as the
 			// original's frames were taken with its mWindDir held, and `flags wind free` lets it go.
 			case "flags":

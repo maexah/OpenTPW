@@ -1158,7 +1158,7 @@ public sealed class ParkRides : Entity
 			for ( var index = 0; index < channels.Length; ++index )
 			{
 				channels[index] = animations?.Channel( index ) is { } channel
-					? WrittenChannel( channel, channel.Started ? MadeChannel : NeverStartedChannel, Reading, now, seeded: false )
+					? WrittenChannel( channel, channel.Started ? MadeChannel : NeverStartedChannel, Reading, now, seeded: channel.SpeedWritten )
 					: MadeChannel;
 			}
 
@@ -1445,16 +1445,19 @@ public sealed class ParkRides : Entity
 
 	/// <summary>One channel as the engine keeps it - see <see cref="Written"/>.</summary>
 	/// <param name="seeded">
-	/// Whether the load put the file's queued speed on this channel (<see cref="Resume(RideAnimations, SavedThing)"/>): a loaded
-	/// thing's channel, whose <paramref name="file"/> is its record. False for a made channel, whose <paramref name="file"/> is a fallback.
+	/// Whether the channel's queued speed has been written (<see cref="AnimTimeControl.SpeedWritten"/>): always for a loaded thing's
+	/// channel, which the load seeds (<see cref="Resume(RideAnimations, SavedThing)"/>); for a made one, once a queue or the scheduler's
+	/// visit has written it. False only for a made channel nothing has written, whose <paramref name="file"/> is a fallback.
 	/// </param>
 	internal static SavedChannel WrittenChannel( AnimTimeControl channel, SavedChannel file, Func<float, uint> reading, int now, bool seeded )
 	{
-		// What is queued behind it; with nothing queued the engine leaves the last queue's clip and flags behind,
-		// which a channel here does not keep, so the file's stay. Its speed is the engine's +0x30 as it stands, which it saves whatever
-		// it holds: the load's seed or the scheduler's last write (RideScript.WriteChannelSpeeds), or the nought a promotion or a
-		// start-at-once trigger left until the script's next due visit (0x004738af, 0x00473408). A made channel no visit has reached
-		// holds a nought no load put there, and takes the fallback (docs/exe/saves.md, "OpenTPW's writer, the objects", a model).
+		// What is queued behind it; with nothing queued the engine leaves the last queue's flags behind, which a channel here
+		// does not keep, so the file's stay. A promotion or a start-at-once trigger zeroes the clip too, and the file's clip is
+		// written here all the same: a deviation where the file holds a non-zero clip with nothing queued. Its speed is the
+		// engine's +0x30 as it stands, which it saves whatever it holds: the load's seed or the scheduler's last write
+		// (RideScript.WriteChannelSpeeds), or the nought a promotion or a start-at-once trigger left until the script's next due
+		// visit (0x004738af, 0x00473408). A made channel nothing has yet written holds a nought nobody put there, and takes the
+		// fallback (docs/exe/saves.md, "OpenTPW's writer, the objects", a model).
 		var queued = channel.HasQueued
 			? (Role: channel.DeferredAnimID, Entry: channel.DeferredSubAnim, Flags: channel.DeferredFlags, Speed: channel.DeferredSpeed)
 			: (Role: ParkThingStates.NoRole, Entry: file.QueuedEntry, Flags: file.QueuedFlags,

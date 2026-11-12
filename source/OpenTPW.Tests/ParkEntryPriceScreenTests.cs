@@ -6,7 +6,7 @@ namespace OpenTPW.Tests;
 
 /// <summary>
 /// The entry price screen's loans button (<c>0x4f3ac</c>, <c>FUN_00498d80</c>), disabled in Instant Action, game type 2
-/// (<c>0x00499008</c>..<c>0x00499030</c>; <c>docs/exe/hud.md</c>, "The entry price screen's controls"). These read the shipped
+/// (<c>0x00499008</c>..<c>0x00499030</c>; <c>docs/exe/hud.md</c>, "The four built screens, and what walking their streams alone could not give"). These read the shipped
 /// game's meshes and are skipped where there is no installation - see <see cref="GameData"/>.
 /// </summary>
 [TestClass]

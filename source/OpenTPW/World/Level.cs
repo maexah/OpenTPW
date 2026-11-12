@@ -451,7 +451,7 @@ public class Level
 		_ = ParkSea.For( Balance, TextureQuality() );
 		load.Mark( "sea" );
 
-		// The gates' flags, which wave at the sea's phase.
+		// The gates' flags, which wave at the flags' phase the sea steps beside its own.
 		_ = ParkFlags.For( TextureQuality() );
 		load.Mark( "flags" );
 

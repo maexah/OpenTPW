@@ -26,7 +26,7 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 
 - Park and saving: no loan screen or day's end; litter guests drop is not drawn or written (Q1288); a written park holds no coaster bought, a bought kart or water ride's pieces have no model records and a loaded kart's cars stay the file's, and some voices and puffs are not written (Q993; the kart and water ride are written since Q858); seventy-two of the advisor's 155 polled messages are built.
 - Map and windows: the map's overlay, hover and click are decoded, not built (Q684, Q685); five of the nine object windows are unbuilt (Q31b, Q960, Q961).
-- Guests: the deciding turn's happy jump, vomit, fireworks and pranks and four queue turns are counted (Q224, Q226, Q228); a failed route is not revived (Q996); queues lose more happiness than the original's (Q746).
+- Guests: the deciding turn's vomit, fireworks and pranks and four queue turns are counted (Q226, Q228); a failed route is not revived (Q996); queues lose more happiness than the original's (Q746).
 - Building: a coaster's committed stacked pylon, its loop pylon and the other edit tools are not run in the original (Q1013; a pylon moved, and carried onto another's cell, stamps nothing, Q1001, and the kits', the hoardings' and a plain pylon's made in play stamp nothing in it, Q891, Q840); a carried member of staff shows nothing; a bought thing's sparkles are not drawn (Q683); the buy screen's panel has no model (Q158, counted since Q865); a played coaster's track is not drawn (Q594), nor a stacked or loop pylon (Q820); the face normals the original works out again at a placing light nothing (Q819).
 - Lobby, keys and interface: the fly-in's fade (Q61) and F8 (Q65) are unbuilt; some keys and lists act differently from the original's (Q232, Q1404); some meshes are drawn both-sided (Q613). No video or networking.
 - Sound: a per-effect repeat delay that is really a priority (Q43); most of a park file's live voices are counted, not put back (Q741).
@@ -46,6 +46,7 @@ Only the item just landed is here. Every earlier item's account is in `docs/hist
 
 ## Numbers (take counts fresh; these go stale within a day)
 
+- Linux, 2026-11-12, review fixes group I (`capped.sh`; four tests added, needing the game; after Q231): with the game, 5520 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5522; with no game named, 2392 passed, 0 failed, 3130 skipped.
 - Linux, 2026-11-12, Q231 (`capped.sh`; six tests added, two needing the game; built in a cloud container, re-gated here after Q503): with the game, 5516 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5518; with no game named, 2392 passed, 0 failed, 3126 skipped.
 - Linux, 2026-11-12, Q503 (`capped.sh`; two tests added, one needing the game; built in a cloud container, re-gated here after Q661): with the game, 5510 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5512; with no game named, 2388 passed, 0 failed, 3124 skipped.
 - Linux, 2026-11-12, Q661 (`capped.sh`; two tests added, needing the game; built in a cloud container, re-gated here after Q737): with the game, 5508 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5510; with no game named, 2387 passed, 0 failed, 3123 skipped.
