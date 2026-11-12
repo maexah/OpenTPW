@@ -6095,18 +6095,27 @@ change your mind about the last section of path you placed you can press the bac
 `global-speech-transcripts.tsv`). Both setters withdraw it with the other nine when the mode changes, the heavy at
 `0x0052f279` and the light `FUN_0052f580` at `0x0052f5f3` (each behind `cmp [0x0081ae2c], mode`), so a third click
 that puts the tool away (a run onto a path, the anchor clicked) posts it and takes it back in the same click.
+Backspace's pop changes the mode too (`FUN_0052fe50`: `FUN_0052f200( 0x34, 1 )` at `0x0052ff08` for modes 1 and 3, then
+`FUN_0052f580( mode, 1 )` at `0x0052ffce`), so a Backspace that takes up a run withdraws it; one with only the first
+entry left does not (it writes the count back and re-arms the same mode, `0x0052fecf`, `0x005300a6`). The sale's drain
+(`FUN_00527ee0`) arms mode 3 (`FUN_0052f200( 3, 0 )`, `0x00527fa5`), a change from any other mode, and pops with the same
+`FUN_0052fe50` (`0x00527fc1`, `0x00527fd0`), so it withdraws it too.
 
 **OpenTPW** (`ParkBuildMode.CountClick`, called by `RunPath` and `RunQueue` past the refusal; the row
-`ParkAdvisorMessages.BackspaceTip`; `ParkBuildMode.Arm` withdraws it): the same. `Level.ForgetPark` calls
-`ParkBuildMode.LeavePark`, which keeps the counter and **empties the pending list, a deviation** (the original keeps
-the list across a load too, so a Backspace in the next park before its first click would take up a line between the
-last park's cells). Off-screen on the stock park (`q1047-b5/run2-fixed`): the path tool's third click logged
+`ParkAdvisorMessages.BackspaceTip`; `ParkBuildMode.WithdrawToolMessages` withdraws it, from `Arm` on a change of
+mode, from `UndoPathRun` and `UndoQueueRun` after a successful pop and from `DrainQueue`): the same. `Level.ForgetPark`
+calls `ParkBuildMode.LeavePark`, which keeps the counter and empties the pending list on every load. The original
+empties the list at a park's entry (`FUN_0052f050`, `0x0052f169`, state 9) but keeps it across a load into the running
+park (the Load Park list: `q1038` run 3 to run 4; Restart Park by `boot.md`'s states 0xd/0xe), so a Backspace before the
+reloaded park's first click would take up a line between the last park's cells. **Here every load empties it, a chosen
+fix, a deviation for in-park loads only.** Off-screen on the stock park (`q1047-b5/run2-fixed`): the path tool's third click logged
 `post message=214 subject=0 score=1000 threshold=25 tick=763 result=queued`, the advisor said response 433, sample 464,
 and `tool off` cut him off (`withdraw message=214 cleared=0 cut=1 slaps=1`); two clicks, `park jungle`, then the queue
 edit on (50,22) read `3 pending, 2 clicks` and its first run posted it (`4 pending, 3 clicks`); Q1046's binary read
 `0 clicks` after the load and posted nothing (`run3-control`). Tests: `ParkQueueCounterTests`
 (`TheThirdAnchoredClickPostsTheBackspaceTipAndPuttingTheToolAwayTakesItBack`, `TheFourthClickPostsNothing`,
-`ThePathToolsThirdClickPostsTheSameTip`, `TheClickCounterOutlivesAParkAndTheListDoesNot`).
+`ThePathToolsThirdClickPostsTheSameTip`, `TheClickCounterOutlivesAParkAndTheListDoesNot`, the two Backspace and the two drain
+withdrawals, `ABackspaceThatTakesUpNothingLeavesTheTip`, `AChangeOfToolWithdrawsTheTipAndTheSameToolKeepsIt`).
 
 What each pass does to a path:
 

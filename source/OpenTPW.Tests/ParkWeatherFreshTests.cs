@@ -200,7 +200,7 @@ public class ParkWeatherFreshTests
 
 	/// <summary>
 	/// <b>A file with a nought stamp forecasts on its first sweep</b>, as Restart Park's at tick nought does in the original
-	/// (<c>docs/exe/weather.md</c>, "A park's first days"): its quality stands, unapplied, until that forecast lands on 94.
+	/// (<c>docs/exe/weather.md</c>, "A park's first days"), its quality standing unapplied.
 	/// </summary>
 	/// <remarks><b>Mutations:</b> the roll applied at the load (stamped, so it waits its three days).</remarks>
 	[TestMethod]

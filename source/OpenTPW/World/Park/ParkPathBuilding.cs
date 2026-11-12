@@ -1221,6 +1221,10 @@ public static class ParkPathBuilding
 		if ( !ParkBuildMode.TryPopRun( out var end, out var start ) )
 			return "backspace: nothing laid since the path tool anchored";
 
+		// The pop arms 0x34 (FUN_0052f200( 0x34, 1 ), 0x0052ff08) and then the mode again (FUN_0052f580, 0x0052ffce), a
+		// change of mode, so the tool's advisor messages go; a pop with only the first entry left changes none.
+		ParkBuildMode.WithdrawToolMessages();
+
 		var removed = UndoRun( state, park, end, start );
 
 		ParkBuildMode.AnchorAt( start.X, start.Y );
@@ -1534,6 +1538,11 @@ public static class ParkPathBuilding
 		// the Belly Bounce. The cursor mode 3 sets is the demolisher's to put back.
 		Unimplemented.Report( "QUEUE_DRAIN_ADVISOR_0xCB" );
 
+		// That arm is a change of mode unless mode 3 is armed already, and each pop below arms 0x34 and then mode 3 again
+		// (FUN_0052fe50, 0x0052ff08): either withdraws the tool's advisor messages (ParkBuildMode.WithdrawToolMessages).
+		if ( ParkBuildMode.Current != ParkBuildMode.Queue || (cached > 0 && pending.Count > 1) )
+			ParkBuildMode.WithdrawToolMessages();
+
 		if ( cached <= 0 )
 			return 0;
 
@@ -1783,6 +1792,10 @@ public static class ParkPathBuilding
 
 		if ( !ParkBuildMode.TryPopRun( out var end, out var start ) )
 			return "backspace: nothing laid since the queue tool anchored";
+
+		// The pop arms 0x34 (FUN_0052f200( 0x34, 1 ), 0x0052ff08) and then mode 3 again (FUN_0052f580, 0x0052ffce), a
+		// change of mode, so the tool's advisor messages go; a pop with only the first entry left changes none.
+		ParkBuildMode.WithdrawToolMessages();
 
 		var onPath = ParkState.OnMap( start.X, start.Y ) && ParkState.CellFor( park, start.X, start.Y ).Type == PathType;
 		var removed = 0;

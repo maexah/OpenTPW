@@ -440,9 +440,11 @@ public class ParkGateTests
 
 	/// <summary>
 	/// <b>The end of the park</b> (<c>FUN_005168f0</c>): world state 4, <c>VAR_BREAKSTAT</c> 1 on every object a guest may be
-	/// offered and on nothing else, and the gate's <c>VAR_COMMAND</c> 2 (<c>FUN_00519ef0( 0, 1 )</c>), the door itself not moved.
+	/// offered and on nothing else, a pending delete freed, and the gate's <c>VAR_COMMAND</c> 2 (<c>FUN_00519ef0( 0, 1 )</c>),
+	/// the door itself not moved.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> the gate given 0 (the door's close); the door shut; every object broken; none.</remarks>
+	/// <remarks><b>Mutations:</b> the gate given 0 (the door's close); the door shut; every object broken; none; the pending
+	/// delete left.</remarks>
 	[TestMethod]
 	public void TheEndBreaksTheRidesGuestsChooseAndCommandsTheGateTwo()
 	{
@@ -462,9 +464,11 @@ public class ParkGateTests
 		Assert.IsTrue( visitable.Count > 0 && other.Length > 0, $"{visitable.Count} visitable, {other.Length} not" );
 		Assert.IsTrue( others.Values.All( script => script[ParkRideOperation.BreakStatVariable] == 0 ) );
 
+		state.DeleteThing( state.NextThingId() );
 		state.EndThePark();
 
 		Assert.AreEqual( (ParkState.EndedWorldState, 2, false), (state.WorldState, gate["VAR_COMMAND"], state.ParkIsClosed) );
+		Assert.AreEqual( 0, state.DeletedThingIds.Count, "the pending delete freed" );
 		Assert.IsTrue( visitable.All( id => others[id][ParkRideOperation.BreakStatVariable] == 1 ), "every object a guest may be offered" );
 		Assert.IsTrue( other.All( id => others[id][ParkRideOperation.BreakStatVariable] == 0 ), "and nothing else" );
 	}
@@ -494,6 +498,61 @@ public class ParkGateTests
 
 			Assert.AreEqual( tick + 20, state.GameTick, $"ended {ended}: the clock" );
 			Assert.AreEqual( ended, moved == 0, $"ended {ended}: {moved} of {before.Length} guests moved" );
+
+			people.Delete();
+			Entity.ApplyDeletions();
+		}
+	}
+
+	/// <summary>
+	/// <b>In world state 4 no member of staff, ride or the advisor takes a turn either</b> (<c>0x0051639e</c>): over twenty
+	/// sweeps of the stock park, every member of staff stands where they were, no ride told <c>VAR_BROKEN</c> breaks down in
+	/// its turn and the advisor's list is as it was; the same sweeps of the park running move a member, break a ride down
+	/// and tick the advisor.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> the staff's turns, <see cref="ParkPeople.TakeTheRidesTurns"/> or the advisor's <c>Tick</c> left
+	/// running in state 4.
+	/// </remarks>
+	[TestMethod]
+	public void InAnEndedParkNoMemberOfStaffRideOrAdvisorTakesATurn()
+	{
+		foreach ( var ended in new[] { false, true } )
+		{
+			var world = World();
+			var others = new Dictionary<int, RideScript>();
+
+			foreach ( var thing in world.Objects.Where( o => o.ThingId != world.ParkGates ) )
+			{
+				using var rse = data.OpenRead( "levels/jungle/rides/bouncy/bouncy.RSE" );
+				others[thing.ThingId] = new RideScript( new RideScriptFile( rse ) );
+			}
+
+			var (people, state, _) = Park( empty: false, others: others );
+			var lines = state.AdvisorMessages = new ParkAdvisorMessages( new SettingsFile( "Advisor/Advisor.sam" ), tutorial: () => true );
+			lines.Post( ParkAdvisorMessages.BackspaceTip, state.GameTick );
+
+			if ( ended )
+				state.EndThePark();
+
+			// Every ride told it has broken: its own turn reads VAR_BROKEN and takes it out of state 0 (BreakDown).
+			foreach ( var script in others.Values )
+				script.Set( ParkRideOperation.BrokenVariable, 1 );
+
+			string Variables() => string.Join( ",", state.Objects.OrderBy( o => o.ThingId ).Select( o => o.State ) );
+
+			var staff = people.Staff.Select( member => member.Navigator.Position ).ToArray();
+			var (variables, advisor) = (Variables(), lines.Census());
+
+			for ( var i = 1; i <= 20; ++i )
+				people.Sweep( i * ParkPeople.ThingTickEvery );
+
+			var moved = people.Staff.Select( member => member.Navigator.Position ).Zip( staff ).Count( pair => pair.First != pair.Second );
+
+			Assert.IsTrue( staff.Length > 0, "the stock park has staff" );
+			Assert.AreEqual( ended, moved == 0, $"ended {ended}: {moved} of {staff.Length} members moved" );
+			Assert.AreEqual( ended, Variables() == variables, $"ended {ended}: the rides' states" );
+			Assert.AreEqual( ended, lines.Census() == advisor, $"ended {ended}: the advisor" );
 
 			people.Delete();
 			Entity.ApplyDeletions();

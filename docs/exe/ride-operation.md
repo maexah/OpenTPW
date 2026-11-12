@@ -4475,10 +4475,13 @@ buys one point and loses 10. Only the withdrawal is gated, so with withdrawals o
   unless its state is already 4 or the End feature stands (`ParkEndFeature.Current`); `ParkState.WorldState` is the
   running state, the file's at the load and written back by the save (`ParkFileWriter.Running.WorldState`). The end sets
   4, counts the end screen (`PARK_END_SCREEN`, Q1424) and the render flag (`PARK_END_RENDER_FLAG`), writes `VAR_BREAKSTAT`
-  1 through the script of every object a guest may be offered (`+0x32 & 4`, the door's set: this page's "every live ride
-  guests can choose" read so, not checked in the disassembly, Q1425), counts a pending delete it finds
-  (`PARK_END_PENDING_DELETES`: ours are freed at each sweep's end, before the tail that turns the month, so none is
-  pending), and writes the gate's `VAR_COMMAND` 2, the door left as it was. In state 4 the sweep gives no guest, member of
+  1 through the script of every object a guest may be offered (`+0x32 & 4`, the door's set: the end's walk calls
+  `FUN_004e0db0` only on an object, `+2 == 3`, live, `+3 == 0`, with `+0x32 & 4`, `0x005169a0`..`0x005169b3`), frees the
+  pending deletes as the sweep's end does (`FreeDeletedThings`: the end's loop `0x005169f7`..`0x00516acf` empties the same
+  list, count `0x00801f44`, and does `FUN_00516200`'s unlink and free inline; ours are freed at each sweep's end, before
+  the tail that turns the month, so none is pending), and writes the gate's `VAR_COMMAND` 2, the door left as it was. A
+  park loaded in state 4 runs on with no end screen put back (`FUN_0048adb0`), counted `PARK_END_SCREEN_PUT_BACK` (Q1424);
+  in state 4 the arrival manager calls no load and stops a held one, counted `ARRIVALS_IN_AN_ENDED_PARK`. In state 4 the sweep gives no guest, member of
   staff, ride or the advisor a turn and the weather does not turn (its walk's turn, `ParkLoop.Tail`), while `mGameTick`,
   the arrival manager's tail, the staff pool, the gate's retry, the free list, the calendar and the bank go on; the music
   and the crowd's voice read the running state. The advisor's record `0x6a` is counted on every month that finds the park

@@ -46,6 +46,37 @@ public class ParkArrivalsRingTests
 	}
 
 	/// <summary>
+	/// <b>A park ended in this session drops nobody</b>: the arrival manager reads the running world state, not the file's
+	/// (0 here), so a load of three held as the park ends makes no guest and counts no arrival; the original's load of
+	/// nobody and its vehicle are counted, <c>ARRIVALS_IN_AN_ENDED_PARK</c>. <see cref="EachGuestDroppedIsAnArrivalOfTheMonth"/>
+	/// is the same load in a running park.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the arrival manager reading the file's state (<c>park.WorldState</c>).</remarks>
+	[TestMethod]
+	public void AParkEndedInTheSessionDropsNobody()
+	{
+		var world = new ParkWorld( Body() );
+		var state = new ParkState( world );
+		var people = new ParkPeople( world, new ParkBalance( "jungle", easyMode: true ), null, state );
+
+		Time.Paused = false;
+		Time.StepFrames = 0;
+		GameClock.Rebase();
+		Frame( 0f );
+
+		people.HoldTheLoad( 3 );
+		state.EndThePark();
+
+		var (guests, counted) = (people.Peeps.Count, Unimplemented.Summary.FirstOrDefault( gap => gap.What == "ARRIVALS_IN_AN_ENDED_PARK" ).Times);
+
+		for ( var i = 0; i < 4; ++i )
+			Sweep( people );
+
+		Assert.AreEqual( (0, 0, guests), (world.WorldState, state.MonthArrivals.Total, people.Peeps.Count) );
+		Assert.IsTrue( Unimplemented.Summary.FirstOrDefault( gap => gap.What == "ARRIVALS_IN_AN_ENDED_PARK" ).Times > counted );
+	}
+
+	/// <summary>
 	/// <b>Each guest the vehicle drops adds one to the month</b>, as it is made: a load of three held, the first sweep
 	/// summons the bus (no script here, so it answers unloading), the next three make a guest apiece and the month goes
 	/// 1, 2, 3, and the sweep that lets the load go adds nothing. The close then puts the three on the money rings' slot

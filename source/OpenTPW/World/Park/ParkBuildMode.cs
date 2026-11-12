@@ -67,6 +67,23 @@ public static class ParkBuildMode
 	public static bool RefusalLatched { get; set; }
 
 	/// <summary>
+	/// What a change of mode withdraws: ten advisor messages (<c>FUN_0052f200</c>, <c>0x0052f245</c>..<c>0x0052f326</c>; the
+	/// light setter <c>FUN_0052f580</c> the same). Of them the patrol tool's <c>0xc1</c> and the third click's <c>0xd6</c> are
+	/// posted here, so they are the ones withdrawn, which cuts the advisor off where he says one. <see cref="Arm"/> calls it on
+	/// a change of mode, and so do Backspace's pop and the sale's drain, which swap the mode out and back
+	/// (<see cref="ParkPathBuilding.UndoPathRun"/>, <see cref="ParkPathBuilding.UndoQueueRun"/>).
+	/// </summary>
+	internal static void WithdrawToolMessages()
+	{
+		if ( Level.Current?.ParkState?.AdvisorMessages is not { } lines )
+			return;
+
+		var now = (long)(GameClock.Now * 1000);
+		lines.Withdraw( ParkAdvisorMessages.PatrolTool, now, () => Advisor.Current?.StopSpeaking() );
+		lines.Withdraw( ParkAdvisorMessages.BackspaceTip, now, () => Advisor.Current?.StopSpeaking() );
+	}
+
+	/// <summary>
 	/// Arms a mode, and <b>clears the anchor</b>.
 	///
 	/// <para>
@@ -78,15 +95,8 @@ public static class ParkBuildMode
 	/// </summary>
 	public static string Arm( int mode, int serves = 0 )
 	{
-		// A change of mode withdraws ten advisor messages (FUN_0052f200, 0x0052f245..0x0052f326; the light setter
-		// FUN_0052f580 the same); of them the patrol tool's 0xc1 and the third click's 0xd6 are posted here, so they are the
-		// ones withdrawn, which cuts the advisor off where he says one.
-		if ( mode != Current && Level.Current?.ParkState?.AdvisorMessages is { } lines )
-		{
-			var now = (long)(GameClock.Now * 1000);
-			lines.Withdraw( ParkAdvisorMessages.PatrolTool, now, () => Advisor.Current?.StopSpeaking() );
-			lines.Withdraw( ParkAdvisorMessages.BackspaceTip, now, () => Advisor.Current?.StopSpeaking() );
-		}
+		if ( mode != Current )
+			WithdrawToolMessages();
 
 		// Installing a tool runs a pass under the old mode first, which clears the latch (FUN_0046d5a0, 0x0046d5e8);
 		// putting a tool away installs the idle handler, which runs none. The original's install is followed by hover
@@ -250,9 +260,10 @@ public static class ParkBuildMode
 	/// original keeps its global across a load, so the third click can fall in the next park.
 	/// </summary>
 	/// <remarks>
-	/// <b>A deviation:</b> the original keeps the pending list across a load too (<c>q1038</c> run 3 to run 4), so a
-	/// Backspace in the next park before its first click would take up a line between another park's cells. Here the
-	/// list is emptied.
+	/// <b>A deviation, for in-park loads only:</b> the original empties the list at a park's entry (<c>FUN_0052f050</c>,
+	/// <c>0x0052f169</c>, boot state 9) but keeps it across a load into the running park (the Load Park list: <c>q1038</c>
+	/// run 3 to run 4; Restart Park by <c>boot.md</c>'s states 0xd/0xe), so a Backspace before the reloaded park's first
+	/// click would take up a line between the last park's cells. Here every load empties it, a chosen fix.
 	/// </remarks>
 	public static void LeavePark()
 	{

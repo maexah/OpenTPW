@@ -240,6 +240,9 @@ public sealed class ParkWeather : Entity
 	/// of their target draws no rain until the weather next changes (<c>docs/exe/saves.md</c>, "A file loaded with its drops
 	/// at their target draws no rain"). <c>mRainSoundHandle</c>, <c>mPType</c> and <c>mOverridden</c> are not taken (see
 	/// <see cref="ParkWorld.PutWeather"/>); <see cref="Snowing"/> is left false, the record holding no particle mode (only hallow snows, and its load is not checked).
+	/// <b>A deviation:</b> a file the original saved in rain holds its voice's stale handle (<c>+0x54</c>, <c>0x00512387</c>),
+	/// which keeps the original's own rain voice silent until the drops end or it snows (<c>FUN_005131f0</c> starts one only
+	/// over a nought handle); this takes it as nought, so the next rain starts that voice. No shipped file holds one.
 	/// </summary>
 	private void RunOnFrom( ParkWorld.WeatherState file )
 	{
@@ -376,8 +379,9 @@ public sealed class ParkWeather : Entity
 
 	/// <summary>
 	/// Whether <paramref name="now"/> is past <paramref name="instant"/>, both <c>FILETIME</c>s of the park calendar: the
-	/// weather's compare (<c>FUN_005fc570</c> at <c>0x005129c5</c>), read in <c>docs/exe/weather.md</c> as "past". A tick's stamp is
-	/// whole seconds, 3750 of them a tick at the shipped rate, so no shipped lead or warning lands on one exactly.
+	/// weather's compare (<c>FUN_005fc570</c> at <c>0x005129c5</c>), strict: <c>jbe</c> at <c>0x005fc584</c> answers false on
+	/// equality. A tick's stamp is whole seconds, 3750 of them a tick at the shipped rate, so no shipped lead or warning lands
+	/// on one exactly.
 	/// </summary>
 	internal static bool Past( long now, long instant ) => now > instant;
 

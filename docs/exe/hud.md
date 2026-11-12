@@ -266,8 +266,10 @@ to 0..5. `DAT_00752e2c` keeps the last index (999 before the first) and `DAT_007
 | 4 | 3001 to 4000 | (255, 255, 150) |
 | 5 | above 4000 | (255, 255, 255) white |
 
-The six words were read out of the image on 2026-09-14 (the plan of that day, `docs/history/current-task-archive.md`,
-"P2"); not read again since.
+The six words were read out of the image on 2026-09-14 and again on 2026-11-12 (`objdump -s` of `0x00752e2c`: `e7030000`, then
+`ff0000ff fa5a00ff ffaf00ff ffc800ff ffff96ff ffffffff`). The call at `0x004a0b30`..`0x004a0b55` pushes `0xff` and the word's
+bytes 2, 1, 0, and `0x0065c5d5` stores its arguments in order, so byte 0 is the first channel; the builder's yellow for `0x30`
+(`0x004a22a0`: `0xff, 0, 0xff, 0xff`, (255, 255, 0)) shows that channel is red.
 
 **The price in hand, `0x30`.** The call's second half (`0x004a0d38`..`0x004a0d94`) reads the run total `DAT_0081af4c`
 (`FUN_0052fbc0`). -9999 hides `0x30` (the patrol tool's `FUN_0052fb90`, and the Clear Area hover `0x00523c18`, mode
@@ -280,12 +282,20 @@ tool's prices it in full (`0x0052398b`). The build tools' passes add to it and t
 
 **OpenTPW** (Q403): `ParkGadget.BalanceBand` and `BalanceColours` colour `0x2f` each frame. `ParkGadget.CostInHand` shows
 the carried item's price (nought for an unmoved mystery ride), lettered `"$ {n}"`, yellow, font slot 2, right-aligned
-against the right edge `CostPlace` moves to the lettering's end; the label's own alignment is not read, so right-aligned is
-a choice. A candidate or worker in the hand, or the patrol tool, hides it. The path, queue and track tools' run total is
+against the right edge `CostPlace` moves to the lettering's end, as the original's frames show it: "$ 375" ends under "88102"'s
+end in `q540/orig/b-1-before-click.png` and "$ 0" under "50000"'s in `q709/orig/a-place.png` (measured by eye on crops;
+the label's alignment field is not decoded). A candidate or worker in the hand, or the patrol tool, hides it. The path, queue and track tools' run total is
 counted as `GADGET_RUN_TOTAL` and hidden (Q541). This game shows the price from the first frame of a carry, where the
 original's total is what the tool start (`0x0052f087`, nought) and the first preview pass wrote; and it is set every frame
-where the original letters it on a change of the balance and on every third message `0x1e`. Not yet seen beside the
-original (Q1436).
+where the original letters it on every third message `0x1e` when the total has changed (`0x004a0d44`), and moves it only when
+the balance has (`0x004a0ae5`). **A deviation, the balance's colour:** the original colours `0x2f` only when the band differs
+from `DAT_00752e2c`, which only `Gadget_ShowMoney` reads and writes (`0x004a0b28`, `0x004a0b60`) and nothing resets (message
+`0x15` resets `0x007cb2dc` and `0x007cb2e0` only; the builder `FUN_004a1d70`, run at each park's entry, paints `0x2f` white,
+`0x004a2202`..`0x004a2218`). So in a later park of the same session whose first band equals the last one shown (0 to 4), the
+original letters the balance white until the band changes, and a balance of exactly nought at a park's first show stays
+white (the colour block is skipped while the balance equals `0x007cb2dc`, `0x004a0ae5`, which `0x15` sets to nought). Here
+the colour is set every frame, the stale cache not reproduced, a chosen fix. Read from the disassembly only. Not yet seen
+beside the original (Q1436).
 ### The date's lettering, `0x20` (Q527)
 
 `Gadget_SetDateAndTrend` (`0x004a0e30`) letters the date at the same two times as it sets the arrow (above): through

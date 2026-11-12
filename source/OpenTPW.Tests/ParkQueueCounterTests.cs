@@ -53,8 +53,7 @@ public class ParkQueueCounterTests
 	{
 		var park = World();
 		var state = new ParkState( park );
-		var ride = new ParkWorld.CatalogueObject( ThingId: 77, CatalogueId: 1100, RawX: 19 << 8, RawY: 11 << 8, Angle: 0,
-			EntryPos: (ushort)MapStep.CellId( 20, 11 ), ExitPos: (ushort)MapStep.CellId( 20, 14 ) );
+		var ride = Ride();
 
 		state.AddObject( ride );
 		ParkBuilding.Stamp( state, (19, 11, 20, 14), 19, 11 );
@@ -70,6 +69,11 @@ public class ParkQueueCounterTests
 	}
 
 	private static ParkWorld.MapCell At( ParkWorld park, int x, int y ) => ParkState.CellFor( park, x, y );
+
+	/// <summary>Thing 77, the ride <see cref="Placed"/> stands.</summary>
+	private static ParkWorld.CatalogueObject Ride()
+		=> new( ThingId: 77, CatalogueId: 1100, RawX: 19 << 8, RawY: 11 << 8, Angle: 0,
+			EntryPos: (ushort)MapStep.CellId( 20, 11 ), ExitPos: (ushort)MapStep.CellId( 20, 14 ) );
 
 	/// <summary>
 	/// <b>Every click's run starts on its anchor, already queue, and the stamp adds 1 to it</b> (<c>0x005346f5</c>), so
@@ -396,9 +400,151 @@ public class ParkQueueCounterTests
 	}
 
 	/// <summary>
+	/// <b>A Backspace that takes up a run withdraws the tip</b>: the pop arms <c>0x34</c> and then the mode again
+	/// (<c>FUN_0052fe50</c>: <c>FUN_0052f200( 0x34, 1 )</c> at <c>0x0052ff08</c>, <c>FUN_0052f580</c> at <c>0x0052ffce</c>),
+	/// a change of mode, which withdraws <c>0xd6</c> (<c>0x0052f279</c>).
+	/// </summary>
+	/// <remarks><b>Mutation:</b> <see cref="ParkPathBuilding.UndoQueueRun"/> withdrawing nothing (the tip stays posted).</remarks>
+	[TestMethod]
+	public void BackspaceOnTheQueueToolWithdrawsTheTip()
+	{
+		using var clock = new SimulationClockScope();
+		var (_, state) = Placed();
+		var lines = Advisor( state );
+		ParkBuildMode.Clicks = 2;
+
+		StringAssert.Contains( ParkPathBuilding.RunQueue( 20, 7 ), "laid 3" );
+		StringAssert.Contains( lines.Census(), "slot=214/subject=0 " );
+
+		StringAssert.Contains( ParkPathBuilding.UndoQueueRun(), "took up the queue run" );
+		StringAssert.Contains( lines.Census(), "pending=0 ", "withdrawn by the pop's change of mode" );
+	}
+
+	/// <summary><b>The path tool's Backspace withdraws it the same way</b> (the same pop, mode 1).</summary>
+	/// <remarks><b>Mutation:</b> <see cref="ParkPathBuilding.UndoPathRun"/> withdrawing nothing.</remarks>
+	[TestMethod]
+	public void BackspaceOnThePathToolWithdrawsTheTip()
+	{
+		using var clock = new SimulationClockScope();
+		var (_, state) = Placed();
+		var lines = Advisor( state );
+		ParkBuildMode.Arm( ParkBuildMode.Path );
+
+		ParkPathBuilding.RunPath( 11, 10 );
+		ParkPathBuilding.RunPath( 13, 10 );
+		ParkPathBuilding.RunPath( 13, 12 );
+		ParkPathBuilding.RunPath( 11, 12 );
+		StringAssert.Contains( lines.Census(), "slot=214/subject=0 " );
+
+		StringAssert.Contains( ParkPathBuilding.UndoPathRun(), "took up the run" );
+		StringAssert.Contains( lines.Census(), "pending=0 " );
+	}
+
+	/// <summary>
+	/// <b>A Backspace with only the tool's first cell left changes no mode</b>, so the tip stays: that pop writes the
+	/// count back and re-arms the same mode (<c>0x0052fecf</c>, <c>0x005300a6</c>).
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the withdrawal before <see cref="ParkBuildMode.TryPopRun"/> rather than after its success.</remarks>
+	[TestMethod]
+	public void ABackspaceThatTakesUpNothingLeavesTheTip()
+	{
+		using var clock = new SimulationClockScope();
+		var (_, state) = Placed();
+		var lines = Advisor( state );
+		ParkBuildMode.Clicks = 2;
+		ParkBuildMode.CountClick();
+
+		StringAssert.Contains( ParkPathBuilding.UndoQueueRun(), "nothing laid" );
+		StringAssert.Contains( lines.Census(), "slot=214/subject=0 " );
+	}
+
+	/// <summary>
+	/// <b>A change of mode to one other than None withdraws the tip</b>: the path tool's third click posts it, and the
+	/// placer's hand-over to the queue tool (<c>FUN_0052f580( 3 )</c> at <c>0x0052529e</c>) takes it back
+	/// (<c>cmp [0x81ae2c], esi</c> at <c>0x0052f239</c>, then <c>0x0052f279</c>). <b>Re-arming the same mode keeps it.</b>
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations</b> of <see cref="ParkBuildMode.Arm"/>'s guard: <c>mode != Current</c> narrowed to <c>mode == None</c>; the
+	/// withdrawal moved under <c>if ( mode == None )</c> (both keep it at the hand-over); the guard dropped (withdraws on the
+	/// same-mode re-arm).
+	/// </remarks>
+	[TestMethod]
+	public void AChangeOfToolWithdrawsTheTipAndTheSameToolKeepsIt()
+	{
+		using var clock = new SimulationClockScope();
+		var (_, state) = Placed();
+		var lines = Advisor( state );
+		ParkBuildMode.Arm( ParkBuildMode.Path );
+
+		ParkPathBuilding.RunPath( 11, 10 );
+		ParkPathBuilding.RunPath( 13, 10 );
+		ParkPathBuilding.RunPath( 13, 12 );
+		ParkPathBuilding.RunPath( 11, 12 );
+		StringAssert.Contains( lines.Census(), "slot=214/subject=0 " );
+
+		ParkBuildMode.Arm( ParkBuildMode.Path );
+		StringAssert.Contains( lines.Census(), "slot=214/subject=0 ", "the same mode withdraws nothing" );
+
+		ParkBuildMode.ArmAt( ParkBuildMode.Queue, 77, 20, 10 );
+		StringAssert.Contains( lines.Census(), "pending=0 ", "path to queue is a change" );
+	}
+
+	/// <summary>A ride whose entrance stands on bare ground (15,8): no queue, so the drain pops nothing.</summary>
+	private static ParkWorld.CatalogueObject Unqueued( ParkWorld park )
+	{
+		Assert.AreEqual( CellEdge.Nothing, At( park, 15, 8 ).Type );
+		return Ride() with { ThingId = 78, EntryPos = (ushort)MapStep.CellId( 15, 8 ) };
+	}
+
+	/// <summary>
+	/// <b>The sale's drain withdraws the tip</b> when its arm of mode 3 (<c>FUN_0052f200( 3, 0 )</c>, <c>0x00527fa5</c>)
+	/// changes the mode, here from the path tool, though the ride has no queue and nothing is popped.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the drain withdrawing nothing; withdrawing only when it pops.</remarks>
+	[TestMethod]
+	public void TheSalesDrainFromAnotherToolWithdrawsTheTip()
+	{
+		using var clock = new SimulationClockScope();
+		var (park, state) = Placed();
+		var lines = Advisor( state );
+		ParkBuildMode.Arm( ParkBuildMode.Path );
+		ParkBuildMode.Clicks = 2;
+		ParkBuildMode.CountClick();
+		StringAssert.Contains( lines.Census(), "slot=214/subject=0 " );
+
+		Assert.AreEqual( 0, ParkPathBuilding.DrainQueue( state, park, Unqueued( park ), 100 ) );
+		StringAssert.Contains( lines.Census(), "pending=0 " );
+	}
+
+	/// <summary>
+	/// <b>With the queue tool armed, the drain withdraws the tip only when it pops</b> (<c>0x00527fc1</c>, each pop a swap
+	/// to <c>0x34</c> and back, <c>0x0052ff08</c>): a ride with no queue pops nothing and keeps it; thing 77's queue, its
+	/// node and the run laid from it, is popped and withdraws it.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> withdrawing on every drain (the first half); the drain withdrawing nothing (the second).</remarks>
+	[TestMethod]
+	public void TheSalesDrainUnderTheQueueToolWithdrawsOnlyWhenItPops()
+	{
+		using var clock = new SimulationClockScope();
+		var (park, state) = Placed();
+		var lines = Advisor( state );
+		ParkBuildMode.Clicks = 2;
+
+		StringAssert.Contains( ParkPathBuilding.RunQueue( 20, 7 ), "laid 3" );
+		StringAssert.Contains( lines.Census(), "slot=214/subject=0 " );
+
+		Assert.AreEqual( 0, ParkPathBuilding.DrainQueue( state, park, Unqueued( park ), 100 ) );
+		StringAssert.Contains( lines.Census(), "slot=214/subject=0 ", "no queue: nothing popped, and mode 3 stands" );
+
+		ParkPathBuilding.DrainQueue( state, park, Ride(), 100 );
+		StringAssert.Contains( lines.Census(), "pending=0 ", "a laid run is popped" );
+	}
+
+	/// <summary>
 	/// <b>The click counter outlives a park</b>, as the original's global does across a load (<c>q1038</c>: run 3's
 	/// <c>c5-east</c> 6, run 4's <c>d0-before</c> 6), so the third click can fall in the next park; the pending list is
-	/// emptied, a deviation said at <see cref="ParkBuildMode.LeavePark"/>.
+	/// emptied, as the original's park entry empties it (a deviation for an in-park load, said at
+	/// <see cref="ParkBuildMode.LeavePark"/>).
 	/// </summary>
 	/// <remarks><b>Mutations:</b> <see cref="Level.ForgetPark"/> calling <see cref="ParkBuildMode.Forget"/>; the counter zeroed in <see cref="ParkBuildMode.LeavePark"/>; the list kept.</remarks>
 	[TestMethod]

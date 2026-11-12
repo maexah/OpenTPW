@@ -894,6 +894,12 @@ public sealed class ParkState
 		VisitorsToDate = park?.NumberOfVisitorsToDate ?? 0;
 		ParkIsClosed = park is not null && park.ParkClosed != 0;
 		WorldState = park?.WorldState ?? 0;
+
+		// A park loaded in state 4 has the end's screen put back over it (FUN_004815e0 -> FUN_0048adb0, docs/exe/saves.md):
+		// not built (Q1424), so it runs on with no screen.
+		if ( WorldState == EndedWorldState )
+			Unimplemented.Report( "PARK_END_SCREEN_PUT_BACK" );
+
 		GameTick = park?.GameTick ?? 0;
 		RandomSeed = unchecked((uint)(park?.RandomSeed ?? 0));
 
@@ -1937,7 +1943,7 @@ public sealed class ParkState
 	/// <summary>
 	/// The end of the park, <c>FUN_005168f0</c> (<c>docs/exe/ride-operation.md</c>, "The end of the park"): world state 4; the end
 	/// screen and a render flag, counted; then the people's part (<see cref="ParkEnded"/>): <c>VAR_BREAKSTAT</c> 1 on the rides,
-	/// the pending deletes (<see cref="EmptyPendingDeletes"/>) and the gate's <c>VAR_COMMAND</c> 2. <see cref="ParkIsClosed"/>
+	/// the pending deletes freed (<see cref="FreeDeletedThings"/>) and the gate's <c>VAR_COMMAND</c> 2. <see cref="ParkIsClosed"/>
 	/// is not moved: the gate's end path writes the command alone (<c>FUN_00519ef0( 0, 1 )</c>, <c>0x00519f17</c>).
 	/// </summary>
 	internal void EndThePark()
@@ -1954,21 +1960,7 @@ public sealed class ParkState
 		if ( ParkEnded is { } ended )
 			ended();
 		else
-			EmptyPendingDeletes();
-	}
-
-	/// <summary>
-	/// The end's emptying of the pending-delete list. Ours frees a sweep's deleted ids at that sweep's end
-	/// (<see cref="FreeDeletedThings"/>), before the tail that turns the month, so the list is empty whenever the bank ends
-	/// the park; one that is not is counted, <c>PARK_END_PENDING_DELETES</c>, and left as it is.
-	/// </summary>
-	internal void EmptyPendingDeletes()
-	{
-		if ( _deletedIds.Count == 0 )
-			return;
-
-		Log.Info( $"Park: {_deletedIds.Count} deleted ids pending as the park ends" );
-		Unimplemented.Report( "PARK_END_PENDING_DELETES" );
+			FreeDeletedThings();
 	}
 
 	/// <summary>

@@ -1082,7 +1082,7 @@ OpenTPW runs written over and records added and taken out. **Afresh** means writ
 
 | Part | Play here changes | A writer here |
 |---|---|---|
-| The header | `mGameTick`, `mParkClosed`, `mNumberOfVisitorsToDate`; the five staff heads and `mFirstObject` as things are made and gone; the arrival vehicles' handles | patched. `mRandomSeed` is the park's generator as it stands (`ParkState.RandomSeed`), which only the leavers' summons draws here: every other system keeps a generator of its own (Q443) |
+| The header | `mGameTick`, `mParkClosed`, `mNumberOfVisitorsToDate`, `mWorldState` (4 once the park has ended, Q404); the five staff heads and `mFirstObject` as things are made and gone; the arrival vehicles' handles | patched. `mRandomSeed` is the park's generator as it stands (`ParkState.RandomSeed`), which only the leavers' summons draws here: every other system keeps a generator of its own (Q443) |
 | The object controls | an item's standing count and first-build stamp; its researched flag (`+0x10`) and tier (`+0x14`) as the lab has them | patched; the researched flag and tier by `PutLab` (Q701) for each item the lab answers |
 | The staff pool | every candidate, the top-up's counts and mark | written slot for slot from `ParkStaffPool`; an empty slot keeps its bytes and loses `mValid` |
 | The clock and arrival fields | the date, the arrival timer | patched: the timer's mark, count and flag are written, and the clock's `mMonthAtLastUpdate` and `mDayAtLastUpdate` ("OpenTPW's writer, the calendar's fields"); its start, session and rate are the file's |
@@ -1261,7 +1261,8 @@ over the copy, never the one held.
   running language's legal text; `BILZ`, the body's length, the block's length, then 15, 9, 0, 0; and the body
   through .NET's `ZLibStream`. **A deviation:** the stream is not the original's byte for byte, having no memory
   level 9 ("The writer", "Measured"); the header still reads 9, and the original loads it.
-- **Written from the running park:** `mGameTick`, `mParkClosed` (1 or 0), `mNumberOfVisitorsToDate`, the economy
+- **Written from the running park:** `mGameTick`, `mParkClosed` (1 or 0), `mNumberOfVisitorsToDate`, `mWorldState` (4
+  once the park has ended: `FUN_005168f0` writes it at `0x00516939`), the economy
   thing's `mBalance`, and of the camera module the zoom, the rotation and the point's two ground coordinates. The
   camera's flags, the point's height, the saved point and the saved rotation are the file's.
 - **The rotation is written as the orbit camera's yaw negated.** Measured: at nought the two games show the same

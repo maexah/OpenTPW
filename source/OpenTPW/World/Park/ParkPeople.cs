@@ -1774,8 +1774,13 @@ public sealed partial class ParkPeople : Entity
 		if ( _blocked == null || _behaviour.Park is not { } park )
 			return;
 
+		// The running state, not the file's: a park ended in this session stops here too. The original's load of nobody, its
+		// vehicle and its dropping of a held load in state 4 are not built.
 		if ( State.WorldState == NoArrivalsWorldState )
+		{
+			Unimplemented.Report( "ARRIVALS_IN_AN_ENDED_PARK" );
 			return;
+		}
 
 		var tick = State.GameTick;
 
@@ -2897,14 +2902,15 @@ public sealed partial class ParkPeople : Entity
 
 	/// <summary>
 	/// The people's part of the end of the park (<see cref="ParkState.EndThePark"/>, <c>FUN_005168f0</c>), in its order:
-	/// <c>VAR_BREAKSTAT</c> 1 on every live ride guests can choose (<c>FUN_004e0db0</c>), the pending deletes
-	/// (<see cref="ParkState.EmptyPendingDeletes"/>), then the gate's <c>VAR_COMMAND</c> 2 (<c>FUN_00519ef0( 0, 1 )</c>,
+	/// <c>VAR_BREAKSTAT</c> 1 on every live ride guests can choose (<c>FUN_004e0db0</c>), the pending deletes freed
+	/// (<see cref="ParkState.FreeDeletedThings"/>: the end's loop <c>0x005169f7</c>..<c>0x00516acf</c> does
+	/// <c>FUN_00516200</c>'s work inline), then the gate's <c>VAR_COMMAND</c> 2 (<c>FUN_00519ef0( 0, 1 )</c>,
 	/// <c>0x00519f17</c>..<c>0x00519f66</c>), which writes nothing else.
 	/// </summary>
 	/// <remarks>
-	/// "Guests can choose" is <c>docs/exe/ride-operation.md</c>'s word for the set; it is read here as the door's own,
-	/// an object a guest may be offered (<c>+0x32 &amp; 4</c>, <see cref="ParkWorld.CatalogueObject.IsVisitable"/>), and that
-	/// reading is not checked in the disassembly (Q1425).
+	/// The set is the door's own, an object a guest may be offered: the end's walk calls <c>FUN_004e0db0</c> only on a thing
+	/// that is an object (<c>+2 == 3</c>), live (<c>+3 == 0</c>) and has <c>+0x32 &amp; 4</c> (<c>0x005169a0</c>..<c>0x005169b3</c>),
+	/// <see cref="ParkWorld.CatalogueObject.IsVisitable"/> over <see cref="ParkState.ObjectsInChainOrder"/>.
 	/// </remarks>
 	internal void EndThePark()
 	{
@@ -2919,7 +2925,7 @@ public sealed partial class ParkPeople : Entity
 				broken.Add( thing.ThingId );
 		}
 
-		State.EmptyPendingDeletes();
+		State.FreeDeletedThings();
 
 		if ( GateScript is { } gate )
 			gate.Set( ParkRides.GateCommand, ParkRides.GateEnds );

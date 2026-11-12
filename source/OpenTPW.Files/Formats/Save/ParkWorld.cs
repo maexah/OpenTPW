@@ -2821,7 +2821,8 @@ public sealed partial class ParkWorld : IParkInitialState
 	/// <summary>
 	/// The weather thing's <c>mWindDir</c>, degrees in [0, 360) - model 15, thing 7 in every park file, which the
 	/// header's <c>mWeather</c> names (<c>FUN_00512010</c> reads it; FileFormats <c>saves.md</c>, "The weather"). Null
-	/// where the file holds no such thing.
+	/// where the file holds no such thing. <b>Dead by CODE</b> since Q529: the park reads the whole record
+	/// (<see cref="WeatherRecord"/>); only <c>ParkFlagsTests</c> reads this.
 	/// </summary>
 	public float? WindDirection { get; private set; }
 

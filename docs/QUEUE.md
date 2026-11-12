@@ -1246,9 +1246,9 @@ filed the items that cite it.
 - [ ] **Q1436. The balance's colour and the price in hand, beside the original.** Q403's split piece (built in a cloud
   container with no display, so nothing was photographed). Photograph this game's gadget with the balance held at 500 and
   at 5000 (orange (250, 90, 0) and white predicted) and with Jurassic Tours carried from the buy list as a mystery ride
-  ("$ 0") and once bought ("$ 3000"), each beside the original on the same file. Check there: the six colours against the
-  image's table `0x00752e30` (read once, 2026-09-14), the label's alignment inside `0x30` (right-aligned here is a choice),
-  and whether the original shows the price from the carry's first frame or only after the first pointer move.
+  ("$ 0") and once bought ("$ 3000"), each beside the original on the same file. Check there whether the original shows
+  the price from the carry's first frame or only after the first pointer move, and, if wanted, the balance's colour in a
+  second park of one session (the original's stale band cache, `hud.md`, a deviation here).
 
 - [ ] **Q419. The hire screen's candidate box is empty.** From the run review, 2026-10-16. On the same file the
   original's hire screen shows the chosen candidate's figure where this game's box is black (`q412/run-fix2/3-screen.png`
@@ -1274,14 +1274,15 @@ filed the items that cite it.
   `0x0048a740`, stream `0x0074fb20`) with the `s_bkrupt` banner (`bankrupt.MD2`, mesh `0xf3a7aff4`, its window-animation
   table `0x0074fc38`); the handler's right click and Escape putting the full-screen view on; in state 4 Escape opening the
   game menu and F3 and Ctrl+P read not (`0x004a2942`); a park loaded in state 4 put back under it (`FUN_0048adb0`).
-  Counted, `PARK_END_SCREEN`. OpenTPW registers no language mesh yet. Confirm: the stock park held in the red to its end
+  Counted, `PARK_END_SCREEN` at the end and `PARK_END_SCREEN_PUT_BACK` at a load of a park saved ended (Q404 writes
+  `mWorldState` 4, so a Lost Kingdom park saved after its end reaches it). OpenTPW registers no language mesh yet. Confirm: the stock park held in the red to its end
   (`docs/TOOLING.md`, "Recipes", the Q404 line), photographed beside the original's.
-- [ ] **Q1425. What Q404 read from the doc's words, checked in the disassembly (split from Q404).** (1) The set the end
-  gives `VAR_BREAKSTAT` 1 (`FUN_005168f0`'s walk to `FUN_004e0db0`): ours is the door's, `+0x32 & 4`. (2) The advisor's
+- [ ] **Q1425. What Q404 read from the doc's words, checked in the disassembly (split from Q404).** (The end's set and
+  its pending-delete list were read in the run 22 review: the door's set, `0x005169a0`..`0x005169b3`, and the ids freed,
+  `0x005169f7`..`0x00516acf`.) (2) The advisor's
   record `0x6a` (`0x0059aee7`): how it is constructed (line, forced, score), and whether it can be said with the advisor's
   turn skipped in state 4; counted, `ADVISOR_PARK_ENDED_IN_THE_RED`. (3) The render flag `0x00763f84` and what reads it;
-  counted, `PARK_END_RENDER_FLAG`. (4) Which list the end empties, and whether it frees the ids or drops them; ours counts
-  `PARK_END_PENDING_DELETES` when its deleted ids are pending. (5) The order the bank's broadcast reaches the bank's
+  counted, `PARK_END_RENDER_FLAG`. (5) The order the bank's broadcast reaches the bank's
   handler and the advisor.
 
 - [ ] **Q455. A click on the tab already down lifts it.** From the week-end audit (D4, `VERIFY-15a.md` Q364 1).
@@ -1531,9 +1532,8 @@ filed the items that cite it.
   saved in rain and loaded with its drops 460 of 450, no voice and no level until the next change). Not done there:
   q528's `run3/q528-fix2.TPWS` loaded here and in the original, a frame of each (the original draws no rain until 17097,
   `q528/orig/e-rain-film.png`; ours should draw none either, `ParkWeather.StepRain` handing the rain a level only on a
-  step) and the delivery on 17097 read in both; the compare's equality at `0x005129c5` (`FUN_005fc570`) read in Ghidra
-  (said "past" in `weather.md`, unreachable at the shipped rate); and a hallow file saved in snow, loaded (the record holds
-  no particle mode, so ours loads it as not snowing).
+  step) and the delivery on 17097 read in both; and a hallow file saved in snow, loaded (the record holds no particle
+  mode, so ours loads it as not snowing).
 - [ ] **Q1388. The gadget's date, both gadgets on one date.** Split from Q527, whose lettering is built
   (`ParkGadget.DateOf`, UITEXT 448 by tokens 16, 17 and 18; `docs/exe/hud.md`, "The date's lettering"). Not
   photographed: no display, no original in that lane. Confirm by both gadgets on one date, as `q526/side-by-side.png`
@@ -1605,7 +1605,8 @@ filed the items that cite it.
   (8 only when `[0x0079c658] & 1`), -999 skipping the show and -9999 (the patrol tool's `FUN_0052fb90`, and the Clear Area hover, `0x00523c18`) hiding it
   (`0x004a0d68`..`0x004a0d74`); carrying a mystery ride sets it to nought (`0x0052360a`), so the original shows "$ 0"
   (`q709/orig/a-place.png`; Q709 built the carry's skipped money test and not this display); the build tools are type 3 (`park-engine.md`, "The build-tool interaction mode is
-  object type 3"). Build it with Q403 or after it; what is left to read is how often message `0x1e` comes against the pass.
+  object type 3"). Q403 built `0x30` (`ParkGadget.CostInHand`); the tools' total is counted there as `GADGET_RUN_TOTAL`:
+  replace that count. What is left to read is how often message `0x1e` comes against the pass.
   From Q542: the total is `DAT_0081af4c` (`FUN_0052fba0` adds, `FUN_0052fbc0` reads); the path and queue passes never
   zero it, `FUN_004a0db0`'s message `0x1e` does (`0x004a0dee`), calling `FUN_004a0ab0` first on every third one (the
   counter `[0x007cb2e0]`, reset at `0x004a0de2`, which message `0x15` also zeroes, `0x004a0e02`). A red square's second

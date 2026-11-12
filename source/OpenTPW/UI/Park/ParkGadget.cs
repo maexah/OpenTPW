@@ -75,7 +75,7 @@ namespace OpenTPW.UI;
 /// <b>The bank balance beside it IS built.</b> 0x2f is the lettering and 0x32 the currency icon, and the
 /// number is <see cref="ParkState.Balance"/>: the save's own <c>mBalance</c>, moved by every admission
 /// fee, charge, cost and refund - one number, as in the original (see <see cref="ShowMoney"/>), lettered in one of six
-/// colours by the thousands it holds (<see cref="BalanceColour"/>, Q403). <b>0x30</b> is the price of the item in the hand,
+/// colours by the thousands it holds (<see cref="BalanceColours"/>, Q403). <b>0x30</b> is the price of the item in the hand,
 /// yellow, hidden with nothing carried (<see cref="CostInHand"/>, Q403); the build tools' run total it also shows in the
 /// original is counted (Q541). <b>0x31</b>, the trend arrow, is built (Q674; see <see cref="ShowMoney"/>).
 /// </para>
@@ -617,8 +617,8 @@ internal sealed class ParkGadget : UiWindow
 			Font = CountFont,
 			TextColour = new UiColour( 255, 255, 0 ),
 
-			// Lettered against the right edge the original moves to the balance's end: a CHOICE, as the label's own
-			// alignment is not read (docs/exe/hud.md, "The balance's colour and the price in hand").
+			// Lettered against the right edge the original moves to the balance's end, right-aligned as the original's frames
+			// show it (docs/exe/hud.md, "The balance's colour and the price in hand").
 			TextAcross = TextAlign.End,
 			Visible = false
 		} );
@@ -1790,6 +1790,8 @@ internal sealed class ParkGadget : UiWindow
 		(_trend.Frame, _dollar.Frame, _moneyLogged) = (trend, sign, true);
 
 		// The colour by the band (0x004a0ab0, the table at 0x00752e30), and 0x30's price, its right edge at the lettering's.
+		// A deviation: the original colours only on a change of band against a cache no park entry resets (DAT_00752e2c), so a
+		// later park can start white; this colours every frame (docs/exe/hud.md, "The balance's colour and the price in hand").
 		var band = BalanceBand( balance );
 		var cost = CostInHand( level );
 
