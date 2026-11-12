@@ -562,6 +562,7 @@ public static class DebugConsole
 						: control.Text is { Length: > 0 } lettered ? $" reads '{lettered.Replace( "\n", " / " )}'" : "")
 					+ (control.Mesh is { } drawnMesh ? $" mesh {drawnMesh.Name} frame {control.Frame}" : "")
 					+ (control is UI.UiList scrolled ? $" list: {scrolled.ScrollCensus()}" : "")
+					+ (Hidden( control ) ? " hidden" : "")
 					+ (control.Text is { Length: > 0 } && control is not UI.UiEdit
 						? $" lettered font {control.Font} in ({control.TextColour.R}, {control.TextColour.G}, {control.TextColour.B}) "
 							+ (control.TextShadow ? "with" : "without") + " the edge"
@@ -3330,6 +3331,18 @@ public static class DebugConsole
 	}
 
 	/// <summary>The control with <paramref name="id"/> in the tree under <paramref name="control"/>, or null - for `control`.</summary>
+	/// <summary>Whether a control or any control above it is not shown, so it is neither drawn nor takes the pointer.</summary>
+	private static bool Hidden( UI.UiControl? control )
+	{
+		for ( ; control != null; control = control.Parent )
+		{
+			if ( !control.Visible )
+				return true;
+		}
+
+		return false;
+	}
+
 	private static UI.UiControl? FindControl( UI.UiControl? control, int id, bool shown = false )
 	{
 		if ( control == null || (shown && !control.Visible) )

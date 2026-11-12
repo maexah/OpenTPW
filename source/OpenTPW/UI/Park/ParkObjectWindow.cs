@@ -171,6 +171,9 @@ internal sealed class ParkObjectWindow : UiWindow, IStatusBox
 	/// <summary>The ride's door, <c>b_door</c> (<c>0x3e38</c>): down while the ride is closed.</summary>
 	private readonly UiButton? _door;
 
+	/// <summary>Show the track, <c>b_track</c> (<c>0x3e2a</c>): shown only for a ride that runs on a track (<see cref="ShowsTheTrack"/>).</summary>
+	private readonly UiButton? _track;
+
 	/// <summary>The model turning in the preview, built when the window first draws a thing and let go when it shows another.</summary>
 	private ParkObjectPreview? _model;
 
@@ -301,6 +304,8 @@ internal sealed class ParkObjectWindow : UiWindow, IStatusBox
 
 			if ( id == 0x3e38 )
 				_door = verb;
+			else if ( id == 0x3e2a )
+				_track = verb;
 		}
 
 		Root.Add( new UiButton
@@ -392,6 +397,9 @@ internal sealed class ParkObjectWindow : UiWindow, IStatusBox
 		ShowSettings();
 		FillStats();
 		ShowTheDoor();
+
+		if ( _track != null )
+			_track.Visible = ShowsTheTrack( TrackTypeOfItem() );
 
 		// Said out loud so a test can pair what is on screen with what the window thinks it is showing.
 		// A region that changed when the arrows were pressed proves something moved, not that the
@@ -893,6 +901,13 @@ internal sealed class ParkObjectWindow : UiWindow, IStatusBox
 		2 => 461,
 		_ => 427
 	};
+
+	/// <summary>
+	/// Whether the window shows <c>b_track</c>: <c>FUN_004ad4e0</c> sets the control's visibility (<c>UI_SetVisible</c>,
+	/// <c>0x0065d9dd</c>) to the item's <c>Bumper.WhichTrackType</c> (+0x9c) not nought (<c>0x004ad648</c>..<c>0x004ad667</c>), so a
+	/// flat ride's window leaves the place empty and a kart, water or coaster ride's shows it.
+	/// </summary>
+	internal static bool ShowsTheTrack( int trackType ) => trackType != 0;
 
 	private int TrackTypeOfItem() =>
 		Level.Current is { } level && level.ParkState is { } state

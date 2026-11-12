@@ -7,7 +7,8 @@ indented by depth: its address, its rectangle (+0xc, four shorts, 2048 x 1536 la
 vtable. A meter's skin (vtable 0x006feeb8, FUN_00477ff0) adds its kept rectangle (+0x18), its value of 100 (+0x120)
 and its matrix's two scales. Children are +0x5c, siblings +0x54 (bar.py). Made for Q636 (docs/exe/hud.md, "The skill bar
 `0x2482`"). GLOBAL may be ADDR+OFF, the root's pointer at [ADDR] + OFF: the lobby's root is 0x00f82884+4 (Q752, the version
-label, rect (1984 - w, 1472 - h, 1984, 1472))."""
+label, rect (1984 - w, 1472 - h, 1984, 1472)). A control whose flags +0x48 have bit 0 clear, as UI_SetVisible( 0 ) leaves them
+(0x0065d9dd), ends its line ` hidden` (Q1105)."""
 import struct, sys
 pid = int(sys.argv[1])
 f = open(f'/proc/{pid}/mem', 'rb', buffering=0)
@@ -26,7 +27,8 @@ print(f'[{glob:#010x}] = {root:#010x}')
 def walk(c, d):
     text, skin = rd(c + 0x98)[0], rd(c + 0x9c)[0]
     vt = rd(skin)[0] if skin else 0
-    print('  ' * d + f'{c:08x} rect {rd(c + 0xc, "4h")} skinrect {rd(c + 0x30, "4h")} text {text:08x} skin {skin:08x} vt {vt:08x}')
+    print('  ' * d + f'{c:08x} rect {rd(c + 0xc, "4h")} skinrect {rd(c + 0x30, "4h")} text {text:08x} skin {skin:08x} vt {vt:08x}'
+          + ('' if rd(c + 0x48)[0] & 1 else ' hidden'))
     if vt == 0x006feeb8:
         m = rd(skin + 0xdc, '16f')
         print('  ' * d + f'  meter kept {rd(skin + 0x18, "4h")} value {rd(skin + 0x120, "f")[0]:.2f} scale x {m[0]:.6g} y {m[5]:.6g}')

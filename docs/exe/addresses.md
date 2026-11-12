@@ -335,6 +335,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004acdae` | Buy screen opener FUN_004acc70: letters control 0x200 with the balance as the screen is made, as the timer's tick does | OpenTPW/UI/Park/ParkBuyScreen.cs  |
 | `0x004ad606` | The ride window sets its door down while `mCanLoad` is nought (`Button_SetDown`, from here) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004ad622` | The ride window's door position (to here) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
+| `0x004ad648` | The ride window shows `b_track` only when the item's `Bumper.WhichTrackType` is not nought (from here; `park-engine.md`, "The ride window's verbs, shown and hidden") | OpenTPW.Tests/ParkRideWindowTrackTests.cs OpenTPW/UI/Park/ParkObjectWindow.cs  |
+| `0x004ad667` | The ride window's `b_track` visibility (to here) | OpenTPW.Tests/ParkRideWindowTrackTests.cs OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004ad890` | The ride window's own stats fill (ride vtable `0x006ffbe8` `+0xc`; the shared opener `0x0048cea0` calls it at `0x0048cf55`): fills the stats table's labels and insets its four gauges (0, 10) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004ade7d` | FUN_004ade40, the ride window: Users last month sums the object's customers ring, +0x1a8, over its last min( filled, 30 ) finished days | OpenTPW/UI/Park/ParkObjectWindow.cs OpenTPW/World/Park/ParkObjectRings.cs  |
 | `0x004ade83` | FUN_004ade40, Users last month: MOV EDI,0x1e, the thirty days asked for | OpenTPW/UI/Park/ParkObjectWindow.cs  |
@@ -1216,6 +1218,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00658f97` | | OpenTPW/UI/Screens/GameMenu.cs  |
 | `0x00659a58` | | OpenTPW/UI/UiMesh.cs  |
 | `0x0065d3a3` | | OpenTPW/UI/UiControl.cs  |
+| `0x0065d9dd` | `UI_SetVisible`: a control shown or hidden by flag `+0x48` bit 0 (`lobby.md`; `hud.md`) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x0065da8d` | | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
 | `0x0065f8b2` | Base control proc, the press: a control's flag 0x8 skips the double click's test | OpenTPW/UI/WindowStack.cs  |
 | `0x0065f8c7` | Base control proc: a press within 500 ms of the button's stamp is a double click's second (0x10007) | OpenTPW.Tests/LeftClickTests.cs OpenTPW.Tests/ParkFirstPersonRightClickTests.cs  |

@@ -4368,6 +4368,36 @@ staff 0x40, visitor 1 - so the arrows walk every thing of that class without clo
 The ride-window door and its ordinary closed warning are implemented in Q92; see
 [ride-window-door.md](ride-window-door.md) for the callback, status colours and verification boundaries.
 
+### The ride window's verbs, shown and hidden
+
+Read 2026-11-12 (Q1105) in `testme.objdump`. **`FUN_004ad4e0` sets which verbs are shown** (`UI_SetVisible`,
+`0x0065d9dd`, flag `+0x48` bit 0). The window's thing is `[0x007c2658]` and its item is `FUN_004dd4e0`, the descriptor
+found by the thing's word `+0xe`. It runs when the window opens (`0x004ae975`) and whenever the window's status `+8` changes. That status is
+`FUN_00485f60( thing, 2 )`, compared and stored at `0x004ae0e0`..`0x004ae0fb` (the statuses are in
+[ride-window-door.md](ride-window-door.md)). `b_erase` is never touched.
+
+- **Status 3, condemned** (`0x004ad509`..`0x004ad5a8`): `UI_SetVisible( 0 )` on the other seven, door, queue, track,
+  call-mechanic, move, ride-it and upgrade, and nothing else.
+- **Any other status.** All seven are shown, with these settings:
+  - **`b_track` (`0x3e2a`)** is shown only when the item's `Bumper.WhichTrackType` (`+0x9c`) is not nought
+    (`0x004ad648`..`0x004ad667`). In the jungle that is Dino Karts (1), Splish Splash (2) and the three coasters (3).
+    A flat ride's window keeps the control but does not draw it, and it takes no click.
+  - The door is disabled at statuses `0x19` and `0x1a`, the track's (`0x004ad5bc`..`0x004ad5c4`); otherwise it follows
+    `mCanLoad` as [ride-window-door.md](ride-window-door.md) says.
+  - `b_callmech` is set down (`0x00668bec`) at statuses `0x11`..`0x15`, the mechanic's (`0x004ad684`..`0x004ad6ac`).
+  - `b_move` is enabled only when `FUN_0052c2b0( thing )` answers non-zero (`0x004ad6df`..`0x004ad6fd`). That routine
+    starts at 1 and, for track types 1 and 2 alone, tests a track cell beside the station, chosen by the ride's angle
+    `+0x10` (`0x0052c2c1`..`0x0052c35f`, `FUN_00522790`); the rest is unread (Q1111).
+
+**Measured in both games on one file** (Q1105, `q1105/`): ours' stock park with a TV Sim (Aztec Mayhem, item 1104) and a
+Dino Karts (1150) bought, saved, and loaded in the original. The original's tree (`uitree.py PID 0x007c24c8`, which prints
+` hidden` for bit 0 clear) has the node (625,800)..(779,953) hidden for the TV Sim and shown for the karts, and it is the
+only hidden node of 49. Ours' `control 3e2a` ends ` hidden` and ` mesh b_track` alone. Both games draw the same thing:
+the third place is empty for the TV Sim and holds the button for the karts (`q1105/orig/b-2-tvwindow.png`,
+`c-2-kartwindow.png`; `q1105/run1/window-tvsim.png`, `window-karts.png`). The original also draws the karts' `b_move`
+greyed, and ours does not (Q1111). Ours hides `b_track` (`ParkObjectWindow.ShowsTheTrack`). It does not yet have the
+condemned hide, the door's track statuses or the call-mechanic's down state (Q1112).
+
 **The shared base's three ids.** `FUN_0048cea0( stream, handler, a, b, c )` is called here as
 `(0x00755150, FUN_004af600, 0x3e24, 0x3e15, 0x3e25)`: `a` is the preview panel, kept at `this[6]` and
 filled through vtable `+0x10`; `b` is the stats panel at `this[5]`, filled through vtable `+0xc`; `c`
