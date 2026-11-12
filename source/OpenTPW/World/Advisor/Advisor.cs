@@ -350,6 +350,8 @@ public sealed class Advisor : Entity
 
 		_now += delta;
 
+		// Ours: the line sounds from its first sample. The original's first read of a speech voice is one feed of zeros,
+		// about 209 ms (0x006c83e1; docs/exe/audio.md, "Speech opens with one feed of silence"); Q1167.
 		if ( _pending != 0 && _now >= _speakAt && _speech is { } speech )
 		{
 			_voice = speech.Play( _pending, SpeechVolume, respectDelay: false, bus: AudioBus.Speech );

@@ -3865,9 +3865,11 @@ sent meanwhile let go 5 of 5 (`q533/run3`).
 `WindowStack.TakesRightPress`: a control under the pointer, a modal window, or a park screen's root
 (`UiWindow.ParkScreen`, `WindowStack.OnParkScreen`) takes it, and `Level.RightPressTaken` adds first person (and gives
 the park every press while F2 hides the HUD) and a press the viewfinder answered (`WindowStack.RightViewAnswered`, kept
-press by press): a first-person click let go inside one frame has left first person by its release, which the stack
-runs before the park reads the press, and that press is still not the park's, as the original's park is posted it first,
-in first person (Q718). A left press reads the same three (`WindowStack.PointerTaken`). No park
+for the frame: the original posts all of one pass's presses to the hover set before its cursor poll (`0x0048a69c`,
+`0x0048a6af`) and hands them out in the next pass's drain (`0x0048a5be`)): a first-person click let go inside one frame
+has left first person by its release, which the stack runs before the park reads the press, and that press is still not
+the park's, as the original posts the press to the viewfinder's layer 1, the hover when it was posted (`0x00658af1`),
+never to the park's layer (hidden in first person, `0x004a2ac0`) (Q718). A left press reads the same three (`WindowStack.PointerTaken`). No park
 screen is modal, so the gadget answers beside one. The gadget's body takes a press inside its outline,
 and its arm, handle and aerial take theirs (`hud.md`, "The arm and the aerial as built"). A right click on a list row and a click on an object window's
 preview move the camera and close the window ("The camera goes to a thing"). `Level.LeftPressTaken` keeps a left press off the park in first person too (Q116): the

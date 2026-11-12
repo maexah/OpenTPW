@@ -395,6 +395,9 @@ public sealed class Voice
 
 				// By subtraction rather than by zeroing, so a buffer that ran past the end of the
 				// clip carries its overrun into the next time round instead of dropping it.
+				// Ours: every pass starts at frame 0. The original's later passes of a looped Layer I voice of an in-memory
+				// bank start one frame (384 mono samples) in (0x006c84a0; docs/exe/audio.md, "A looped Layer I voice's
+				// later passes start one frame in"); Q1166.
 				_frame -= length;
 				at = (int)_frame;
 

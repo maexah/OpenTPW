@@ -2767,8 +2767,9 @@ public class Level
 		// release, as the original's park is posted both (0x00486c70).
 		//
 		// The stack runs before this (Hud.Update), so a first-person right click let go inside one frame has left first
-		// person by now; whether the viewfinder answered each press is read from the stack (RightViewAnswered), so that
-		// press is still the interface's, as the original's park is posted it first, in first person, and takes none of it.
+		// person by now; whether the viewfinder answered the frame's first press is read from the stack (RightViewAnswered),
+		// and every press of the frame is the interface's then, as the original posts them all to the viewfinder's layer
+		// before any is handed out (0x0048a6af), never to the park's layer, which first person hides.
 		var putAway = false;
 		var press = 0;
 

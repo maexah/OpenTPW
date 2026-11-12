@@ -1392,10 +1392,14 @@ filed the items that cite it.
   (`BUY_SCREEN_PURCHASE_ADVISOR_POST` in `ParkBuyScreen.Chose`, once a click that puts the item in the hand). The
   original posts `0xc9` where the item's `+0x4c` is nought and `FUN_004824d0( 0x80, 0 )` answers nought, else `0xce`
   (`0x004ac67e`..`0x004ac7d9`, read in the decompiler alone; `docs/exe/hud.md`, "The click"; `advisor-park.md`'s
-  buy-screen section). Neither the item's `+0x4c` nor what that call answers with these arguments is named in
-  `docs/exe/` (`hud.md` names `FUN_004824d0` as the staff lists' next link), and rows 201 and 206 are not decoded.
-  Decode the field, the call and both rows in Ghidra, then post the row the original posts, and confirm with a
-  purchase in both games.
+  buy-screen section). The item's `+0x4c` is not named in `docs/exe/`. `FUN_004824d0` is the used-thing list's next
+  link for a class mask (`hud.md`, "The staff and visitor locators" and the person's windows' `b_ardown`, masks `0x40`
+  and 1), switching on its first argument (`0x004824d7`..`0x004824f2`, then `0x0048268f`..`0x004828a9`), so
+  `( 0x80, 0 )` asks for the first thing of class `0x80` from the list's head; only its `0x80` case (`0x004827d5`) is
+  not read. Rows `0xc9` and `0xce` (201 and 206) are category 1 (`advisor-park.md`, "F1: the kept tutorial line said
+  again") and the mode setter withdraws both on any change of mode (`hud.md`, "The setter withdraws ten messages on any
+  change of mode", `0x0052f245`..`0x0052f326`): build the withdrawal with the post. Decode the field, the `0x80` case and
+  both rows' text in Ghidra, then post the row the original posts, and confirm with a purchase in both games.
 - [ ] **Q501. A rider's head, a balloon and a thought bubble are drawn the original's size: shown.** From the review of Q470
   (`handoff/review3/VERIFY-6.md`, finding 4): Q470 drew every sprite through `Extent` (the span over
   `Camera.ClipPerWorld`), and the head (`HeadScale` 0.685), the balloon and the thought bubble go through the same
@@ -1908,11 +1912,14 @@ filed the items that cite it.
   (it is already, 730 ms whole at 32, Q829's `base/run.log`). Confirm with the `[load]` step times before and after, and the frame rate at
   32 beside 16 (not yet measured).
 - [ ] **Q1178. A chain's stop on its empty pass.** From Q654. On a child's due millisecond the original's prune deletes
-  the newest child (`0x006bdc23`, `0x006bdc3e`), so a stop that pass finds no child to cut and the sample plays out (read
-  from `docs/exe/audio.md`, "Which variation it plays", not checked in Ghidra). Here both chains keep the pruned child's
-  voice until the next child is made: `ParkScreams.Stop` and `ParkAudio.StopScriptSound` cut it. Check in Ghidra that the
-  stop (`0x006bd9b0`) reaches only the list, then let the pruned child go on the empty pass (`Chain.Voice`,
-  `ScriptVoice.Voice`), with a test that stops a chain on that pass.
+  the newest child (`0x006bdc23`, `0x006bdc3e`), so a stop that pass finds no child to cut (`0x006bd9b0` walks only the
+  list, `0x006bd9ba`..`0x006bda04`: read in the listing), and the pruned child's channel is not stopped (`0x006bdc3e`;
+  whether it plays out is not traced: `docs/exe/audio.md`, "Pruning", says only "most likely"). The list empties the same
+  way when a child's own wait is nought: its time is the pass's own (`0x006c3ac5`), so the prune in the pass that makes
+  it deletes it (`0x006bdc23`; effect 74's 0-500 ms wait draws nought once in 500). Here both chains keep the pruned
+  child's voice until the next child is made: `ParkScreams.Stop` and `ParkAudio.StopScriptSound` cut it. Let the pruned
+  child go on the empty pass, on both paths (`Chain.Voice`, `ScriptVoice.Voice`), with a test that stops a chain on that
+  pass.
 - [ ] **Q660. Does the original free or hide a boundary record no anchor claims? (from Q620.)** At load the original clears
   each anchor's saved handle and re-claims its piece by matching item, cell and angle (`FUN_0053b1a0` through
   `FUN_00522f20( ..., 1 )` and `FUN_00463ab0`, which marks a match `0x10000`); `ParkBoundaryHoarding` draws every
@@ -2364,6 +2371,24 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   `State.GameTick` and not from the compared `GameCalendar.Days`. Test: a sweep whose turn starts or stops the rain sizes
   its load with the new drops' k. Confirm: the weather's and the arrivals' log lines on the sweep the rain starts, read
   against the original's drops and load at that sweep.
+- [ ] **Q1166. A looped Layer I voice's later passes start one frame in.** From the run 22 review of Q659 (`review22/q659`,
+  `VERIFY-6.md` F1). In the original a looped voice of an in-memory bank (BANK byte +9 bit 0x1; `0x006ba690`,
+  `0x006ba725`) rewinds through `0x006c84a0`, which for Layer I decodes and drops 0x300 bytes (`0x006c84b5`..`0x006c84cc`),
+  so pass 1 plays decode bytes [0, D) and every later pass [0x300, 0x300 + D); the builder clears request 0x40 before the
+  start (`0x006ba59d`, `0x006ba93a`), so the start's own skip (`0x006c8358`) does not fire for a count > 1. A streamed
+  bank's voice (`0x0070ae90`, rewind `0x006c8b10`) never skips. OpenTPW wraps every pass to frame 0 (`Voice`, said there),
+  so Lost Kingdom's river and waterfall dip ~17 ms each 1.7-1.8 s (`docs/exe/audio.md`, "A looped Layer I voice's later
+  passes start one frame in"). Build: keep 384 / ch more frames of a Layer I clip, carry the layer and the bank's flag
+  (the category's BANK record, byte +9), and wrap a looped in-memory Layer I voice to 384 / ch. Test: a looped clip's
+  second pass starts at 384 / ch, a streamed bank's at 0, a one-shot's length unchanged. Confirm in both games by a
+  capture of the fall's channel. Open: the half-rate switch `0x00fb2708`'s default; which plain/music effects (count 1
+  with 0x40) take the start's skip.
+- [ ] **Q1167. Speech opens with one feed of silence.** From the run 22 review of Q659 (`review22/q659`, `VERIFY-6.md` F2).
+  The MPEG read's first call on a Layer II 48 kbit/s voice (the 644 speech entries) returns zeros for the whole request
+  (`0x006c83e1`..`0x006c8426`); the channel's feed asks 0x2400 bytes (`0x006bb5a0`, `0x006bb632`), about 209 ms
+  (`docs/exe/audio.md`, "Speech opens with one feed of silence"; said at `Advisor.Step`). Check no stage between resizes
+  it (the 0x4000 stage, `0x006ba486`), measure a line's onset in the original under Proton against its play call, then
+  delay OpenTPW's speech voice start by the same 4,608 samples (lip sync included).
 
 ## B. Docs and comments
 

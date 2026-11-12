@@ -254,4 +254,57 @@ public class AudioClipTests
 		Assert.AreEqual( 5, resampled, "the clips shipped at 44,100 Hz" );
 		Assert.AreEqual( 80, skipped, "the clips NLayer refuses, set aside (Decode refuses them too)" );
 	}
+
+	/// <summary>
+	/// A bank hands out its clips cut to the played length on both of its roads: the global ride bank decodes whole as it
+	/// loads (kept by a park), the global kids bank, over 16 MB decoded, decodes each entry when it is first asked for (never
+	/// kept). Each clip is its entry's <c>DecodedSize / (2 x channels)</c> frames at the stream's rate, brought to the device's.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> either road passing nought (the whole decode) or the compressed size for the played length.</remarks>
+	[TestMethod]
+	public void ABankCutsEachClipToItsPlayedLengthOnBothRoads()
+	{
+		FileSystem = GameData.Required();
+		SoundBank.ForgetKept();
+
+		try
+		{
+			foreach ( var (bankPath, whole) in new[] { ("Sound/Ride", true), ("Sound/Kids", false) } )
+			{
+				var bank = SoundBank.Load( "global", bankPath, keep: true );
+
+				Assert.IsNotNull( bank, $"{bankPath} ships" );
+
+				if ( whole )
+					Assert.AreSame( bank, SoundBank.Load( "global", bankPath, keep: true ), $"{bankPath} decodes whole" );
+				else
+					Assert.AreNotSame( bank, SoundBank.Load( "global", bankPath, keep: true ), $"{bankPath} decodes on demand" );
+
+				using var stream = FileSystem.OpenReadOrNull( bank!.Path )!;
+				using var archive = new SdtArchive( stream );
+				var checkedClips = 0;
+
+				for ( int i = 0; i < bank.Count; ++i )
+				{
+					var entry = archive.soundFiles[i];
+					var clip = bank[i];
+
+					if ( clip == null )
+						continue;
+
+					var channels = entry.SoundType == MP2File.SoundTypes.MP2_STEREO ? 2 : 1;
+					var expected = (int)((long)(entry.DecodedSize / (2 * channels)) * Audio.SampleRate / entry.SampleRate);
+
+					Assert.AreEqual( expected, clip.Frames, $"{bankPath}:{entry.Name}" );
+					++checkedClips;
+				}
+
+				Assert.IsTrue( checkedClips > 0, $"{bankPath} handed out clips" );
+			}
+		}
+		finally
+		{
+			SoundBank.ForgetKept();
+		}
+	}
 }

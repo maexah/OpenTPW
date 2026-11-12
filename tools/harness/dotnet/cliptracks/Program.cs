@@ -4,9 +4,9 @@
 //     moved node, clips with a route too; lists late.txt, past.txt, offrest.txt (first point off the rest), nested.txt,
 //     adds.txt in the working folder. A clip's model is the longest other member of its wad whose name begins the clip's.
 //   ... -- <data dir> <clip path in the tree>   one clip's declared span and each position track's keys and samples
-//   ... -- <data dir> rot   (Q729) every rotation track whose last key falls before its clip's declared end, where the
-//     original's rotation search wraps to key 0 (Anim_FindKey 0x00470b60, param_5 1): the counts over every .md2 member of
-//     every wad, those whose last key turns away from key 0 (|dot| under 0.99999, or a negative dot, which the original's
+//   ... -- <data dir> rot   (Q729) every rotation track whose last key falls before its clip's declared end (none ship;
+//     the engine holds a rotation's last key, Anim_BlendRotationKeys 0x00474490, whatever Anim_FindKey's param_5 1
+//     names): the counts over every .md2 member of every wad, those whose last key turns away from key 0 (|dot| under 0.99999, or a negative dot, which the original's
 //     unflipped blend takes the long way), and the list rotwrap.txt in the working folder. It opens each wad itself and
 //     walks its folders, and adds the loose .md2 files, so given the game folder (not Data) it reads the whole corpus:
 //     2,129 in the shipped game, 2,123 under Data and the six under USEnglish/Meshes

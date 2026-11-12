@@ -1528,11 +1528,36 @@ louder at its peak in the mix of the build before (peak 0.15602) than after (0.1
 **A voice ends at the bank's played length, not at the stream's end.** The read clamps each request to
 `min( request, [voice+0x30] - [voice+0x14] )` before it calls slot `+0x5c` (`0x006c8429`..`0x006c8457`; FileFormats
 `sounds.md` lines 81-84), so the decoder's last 14.4 to 82.8 ms (an encoder's delay and its last frame's padding, over
-all 3,739 entries: `Mp2DurationTests`) are never heard. That `+0x30` holds the entry's `+0x20`, the `DecodedSize` in
-bytes of 16-bit PCM at the stream's rate and channels, is FileFormats' reading, not re-traced here (no Ghidra in the
-Q659 session). OpenTPW cuts each clip to `DecodedSize / (2 x channels)` frames of its stream as it decodes it, before a
-44,100 Hz clip is brought to 22,050 (`AudioClip.Decode`, Q659): every one of the 3,659 clips NLayer decodes is cut, and
-335 of the 336 that peak past full scale still do within what is kept (`AudioClipTests`).
+all 3,739 entries: `Mp2DurationTests`) are never heard, except from the second pass of a looped Layer I voice of an
+in-memory bank (below). The constructor `0x006c82c0` copies the entry's `+0x20`, the `DecodedSize` in bytes of 16-bit
+PCM at the stream's rate and channels, to `+0x30` when the type has bit `0x04` (`0x006c82e9`..`0x006c82f7`; 36 and 37
+both do); the base class's open `0x006c84e0` keeps it (`0x006c8569` skips the decoder's own length) and scales it only
+when the header's rate is not the decoder's (`0x006c8598`..`0x006c85e3`; never for a shipped entry at full rate), and
+the streamed class's open `0x006c88c0` does the same (`0x006c8960` keep, `0x006c898f`..`0x006c89da` scale). OpenTPW
+cuts each clip to `DecodedSize / (2 x channels)` frames of its stream as it decodes it, before a 44,100 Hz clip is
+brought to 22,050 (`AudioClip.Decode`, Q659): every one of the 3,659 clips NLayer decodes is cut, and 335 of the 336
+that peak past full scale still do within what is kept (`AudioClipTests`).
+
+**A looped Layer I voice's later passes start one frame in** (the run 22 review). The loop wrapper (vtable `0x0070a678`)
+rewinds its voice through slot `+0x20` when the read ends (`0x006c655d`..`0x006c6581`). The base class's rewind
+`0x006c84a0` noughts `+0x14`, resets the decoder and, for Layer I (`[dec+0x2442]` 1), decodes 0x300 bytes into scratch
+and drops them (`0x006c84b5`..`0x006c84cc`), so every pass after the first plays decode bytes [0x300, 0x300 + D), one
+Layer I frame (384 mono samples, 17.4 ms at 22,050 Hz) in; the first pass plays [0, D), since the builder clears request
+`0x40` before the start (`0x006ba59d`, the start at `0x006ba93a`) and the start's own skip (`0x006c8358`..`0x006c837f`)
+does not fire for a wrapped voice. The base class is made for a bank whose BANK map record's byte +9 has bit 0x1
+(`0x006ba690`, `0x006ba725`): `Sound\Ambient` (River, watfall). The streamed class `0x0070ae90` (byte +9 0x02 or 0x42:
+`sSfx`, `sRide`, `sLobbySfx`, `xsAmbient`) rewinds at `0x006c8b10` with no skip, so its voices loop from 0 every pass.
+OpenTPW wraps every pass to frame 0 (`Voice`), so the river and the waterfall, whose first 384 decoded samples are near
+silence, dip about 17 ms each 1.7 to 1.8 s here and not in the original (an ffmpeg decode, not heard); Q1166.
+
+**Speech opens with one feed of silence** (the run 22 review). The read's first call on a Layer II 48 kbit/s voice
+(`+0x3c`, set 1 by the constructor `0x006c82e6`, cleared only by this call `0x006c8407`), writes zeros over the whole
+request and reports it read without advancing `+0x14` (`0x006c83e1`..`0x006c8426`). Those are the 644 speech entries
+(640 in `global/Speech/speechHD.SDT`, one in each level's), every one through the streamed class, whose read is the same
+`0x006c83c0`. The channel's feed asks 0x2400 bytes (`0x006bb5a0`, passed to the stage chain's read at
+`0x006bb627`..`0x006bb632`), so each speech line opens with about 209 ms of silence (4,608 samples at 22,050 Hz),
+provided no stage between resizes the request (the stage built under request `0x4000`, `0x006ba486`, is not read).
+OpenTPW starts a speech voice on its first sample; Q1167.
 
 ## The fade, the SoundInfo settings and the reverb
 

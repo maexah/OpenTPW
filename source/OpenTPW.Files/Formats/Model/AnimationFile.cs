@@ -446,10 +446,9 @@ public class AnimationFile : BaseFormat
 			if ( Rotations.Length == 1 || frame <= FrameIndices[0] )
 				return Rotations[0];
 
-			// The last key is held. The original's search takes key 0 as the upper key here (Anim_FindKey 0x00470bee, the
-			// rotation call's param_5 1), so it would blend back towards key 0 between the last key and the clip's declared
-			// end; no shipped track ends before its declared end, so the two never differ: dead by CONTENT (Q729,
-			// docs/exe/park.md, FUN_00470b60).
+			// The last key is held, as the engine holds it: Anim_BlendRotationKeys (0x00474490) pairs key i with key i+1
+			// clamped to the last key, so the key 0 the rotation search names there is never read (docs/exe/park.md,
+			// FUN_00470b60).
 			if ( frame >= FrameIndices[^1] )
 				return Rotations[^1];
 

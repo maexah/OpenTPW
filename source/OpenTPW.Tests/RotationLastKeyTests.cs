@@ -8,10 +8,10 @@ using System.Numerics;
 namespace OpenTPW.Tests;
 
 /// <summary>
-/// A rotation track's last key, held or wrapped (Q729). The original's key search (<c>Anim_FindKey</c>, <c>0x00470b60</c>)
-/// takes key 0 as the upper key on a rotation track's last key (<c>0x00470bee</c>), so between that key and the clip's
-/// declared end it would blend back towards key 0; <see cref="AnimationFile.RotationTrack.Sample"/> holds the last key.
-/// No shipped track has such a stretch, so the two never differ (<c>docs/exe/park.md</c>, <c>FUN_00470b60</c>).
+/// A rotation track's last key (Q729). The original's key search (<c>Anim_FindKey</c>, <c>0x00470b60</c>) names key 0 as
+/// the upper key on a rotation track's last key (<c>0x00470bee</c>), but the blend never reads it:
+/// <c>Anim_BlendRotationKeys</c> (<c>0x00474490</c>) pairs key i with key i+1 clamped to the last, so the engine holds the
+/// last key, as <see cref="AnimationFile.RotationTrack.Sample"/> does (<c>docs/exe/park.md</c>, <c>FUN_00470b60</c>).
 /// </summary>
 [TestClass]
 public class RotationLastKeyTests
@@ -19,8 +19,8 @@ public class RotationLastKeyTests
 	private static readonly Quaternion Turned = Quaternion.CreateFromAxisAngle( System.Numerics.Vector3.UnitZ, MathF.PI / 2f );
 
 	/// <summary>
-	/// Past a track's last key the sampler answers the last key, not key 0 and not a blend towards it: a wrapping rule
-	/// gets the identity here, a blend something between.
+	/// Past a track's last key the sampler answers the last key, as the engine's clamped blend does (<c>0x00474490</c>): a
+	/// wrapping rule gets the identity here, a blend something between.
 	/// </summary>
 	[TestMethod]
 	public void PastTheLastKeyTheLastKeyIsHeld()
@@ -42,9 +42,9 @@ public class RotationLastKeyTests
 	/// <summary>
 	/// The corpus: every <c>.md2</c> the game ships (each wad opened and walked into its folders, then the loose files, over
 	/// the game's folder), 2,129, of which 1,278 declare an end. Their 3,039 rotation tracks all have two keys or more; 2,601 end on their
-	/// clip's declared end, 438 past it, and none before it. So the wrap stretch is never reached and the held last key is
-	/// dead by CONTENT (AGENTS.md rule 3). On a track that ends on the declared end the original reaches the wrap arm only
-	/// on the end frame itself, with t nought, which is the last key's own turn.
+	/// clip's declared end, 438 past it, and none before it. So no shipped track has a stretch between its last key and its
+	/// clip's declared end. The count is a fact about the data only: the engine holds the last key in any case
+	/// (<c>0x00474490</c>).
 	/// </summary>
 	[TestMethod]
 	public void NoShippedRotationTrackEndsBeforeItsClipsDeclaredEnd()

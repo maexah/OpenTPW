@@ -150,16 +150,19 @@ internal sealed class WindowStack : Panel
 	internal static bool RightPointerTaken { get; private set; }
 
 	/// <summary>
-	/// Whether the scene's own view answered this frame's right press number <paramref name="press"/>, counted from
-	/// nought (<see cref="ViewRightClick"/>), as the stack asked it at that press. The park reads it for the same press,
-	/// since a click let go inside one frame has its answer run at the stack's release, before the park sees the press:
-	/// a first-person click has left first person by then, and the press was still the viewfinder's (<c>Level.RightPressTaken</c>).
-	/// Written and read in the same frame, as <see cref="RightPointerTaken"/> is.
+	/// Whether the scene's own view answered this frame's first right press (<see cref="ViewRightClick"/>), as the stack
+	/// asked it at that press; every press of the frame, <paramref name="press"/> counted from nought, is that press's, as
+	/// the original's cursor poll posts all of one pass's presses to the hover set before it (<c>0x0048a6af</c>;
+	/// docs/exe/hud.md, "A press let go at once is still a press and a release"). The park reads it because a click let go
+	/// inside one frame has its answer run at the stack's release, before the park sees the press: a first-person click has
+	/// left first person by then, and the press was still the viewfinder's (<c>Level.RightPressTaken</c>). Written and read
+	/// in the same frame, as <see cref="RightPointerTaken"/> is.
 	/// </summary>
 	internal static bool RightViewAnswered( int press )
-		=> press >= 0 && press < _rightViewAnswers.Count && _rightViewAnswers[press];
+		=> press >= 0 && _firstRightViewAnswer == true;
 
-	private static readonly List<bool> _rightViewAnswers = [];
+	/// <summary>Whether the view answered this frame's first right press; null before the frame has one.</summary>
+	private static bool? _firstRightViewAnswer;
 
 	/// <summary>
 	/// The row the scene's own view posted this frame (<c>FUN_004924b0</c>), with its parameters' values, or null where it
@@ -446,7 +449,7 @@ internal sealed class WindowStack : Panel
 		WheelTaken = false;
 		PointerTaken = false;
 		RightPointerTaken = false;
-		_rightViewAnswers.Clear();
+		_firstRightViewAnswer = null;
 
 		foreach ( var window in _windows.ToArray() )
 			window.Update();
@@ -460,9 +463,9 @@ internal sealed class WindowStack : Panel
 		// its hover out only on a move and when its interface changes (FUN_006589f9), so a press made after a window
 		// opens, before the pointer moves, can go to the old hover (docs/exe/lobby.md, "The lobby's keys act on the
 		// release", Unsettled). Kept as a fix (docs/DECISIONS.md).
-		// Every step of one frame's presses (LeftSteps) goes to this one hit; only PointerTaken's modal and park-screen tests
-		// are read live. Whether the original sends a frame's second press to the control the first one's click left is not
-		// decided (its press poster, UI_PostButtonPress 0x00658af1, takes the hover current at posting).
+		// Every step of one frame's presses (LeftSteps) goes to this one hit, as the original's cursor poll posts all of a
+		// pass's presses to the hover set before it, after the move's hit test (0x0048a6af); only PointerTaken's modal and
+		// park-screen tests are read live.
 		var mouse = Input.Mouse.Position;
 		var hit = Covered ? null : HitTest( mouse.X, mouse.Y );
 
@@ -711,7 +714,7 @@ internal sealed class WindowStack : Panel
 		{
 			var answer = Covered ? CoverRightClick?.Invoke() : RightPointerTaken ? null : ViewRightClick?.Invoke();
 
-			_rightViewAnswers.Add( !Covered && answer != null );
+			_firstRightViewAnswer ??= !Covered && answer != null;
 
 			var now = Time.WallMilliseconds;
 

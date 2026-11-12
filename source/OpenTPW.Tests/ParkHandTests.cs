@@ -524,14 +524,16 @@ public class ParkHandTests
 
 	/// <summary>
 	/// <b>A first-person right click let go inside one frame is the viewfinder's alone</b>: the stack's release leaves first
-	/// person before the level's frame reads the press, and the press is still not the park's, as the original's park is
-	/// posted it first, in first person, and takes none of it. Entering first person in the game lets go of the hand; here
-	/// first person is put up with the hand full, so a quick click the park took would empty it. A frame of two clicks
-	/// shows the record is per press: the first leaves first person, the second lands on the park and lets go.
+	/// person before the level's frame reads the press, and the press is still not the park's, as the original posts the
+	/// press to the viewfinder's layer 1, the hover when it was posted (<c>0x00658af1</c>), never to the park's layer
+	/// (hidden in first person, <c>0x004a2ac0</c>). Entering first person in the game lets go of the hand; here first person
+	/// is put up with the hand full, so a quick click the park took would empty it. A frame of two clicks gives both to the
+	/// viewfinder: the first leaves first person, the second is a double click's second.
 	/// </summary>
 	/// <remarks>
 	/// <b>Mutations:</b> the level's frame not reading <see cref="UI.WindowStack.RightViewAnswered"/> (the bug put back)
-	/// empties the hand on the one click; one record for the whole frame keeps the hand full on the two.
+	/// empties the hand on the one click; a record press by press (the second press read after first person is left)
+	/// empties the hand on the two.
 	/// </remarks>
 	[TestMethod]
 	public void AFirstPersonRightClickInsideOneFrameLeavesItAndLetsNothingGo()
@@ -558,7 +560,7 @@ public class ParkHandTests
 			stack.Update();
 			worldClick.Invoke( level, [] );
 			Assert.IsFalse( ParkCamcorderCameraMode.Active, "two clicks in one frame: the first leaves first person" );
-			Assert.AreEqual( 0, ParkBuilding.Carrying, "and the second is the park's and lets go" );
+			Assert.AreEqual( item, ParkBuilding.Carrying, "and the second is the viewfinder's too: the hand is still full" );
 		}
 		finally
 		{

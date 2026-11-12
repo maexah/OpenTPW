@@ -1235,7 +1235,7 @@ reaches the UI, and `FUN_00658ab4`, which would post `0x10007` to the hover, has
 **A press let go at once is still a press and a release** (Q476). Measured in the original (`q476/orig/run.sh`, round
 a): five presses on the gadget's buy button, each sent back to back with its release (one `xdotool mousedown 1 mouseup
 1`, nothing between), each opened the buy screen, a new screen read 0.06 to 0.09 s on (`screens.py`'s poll).
-How the cursor library's callback gets them (buffered or not) is not read; the measurement is what the build follows.
+How the cursor library's callback gets them: one call of the device's slot `0x20` per buffered event, under a lock, from `UI_RunPass` at `0x0048a6af` (`0x006176e0`; that the slot calls the callback is inferred), after the pass's drain and the move's hit test, so every press of one poll goes to the hover set before it; the measurement is what the build follows.
 OpenTPW: `Input.MouseInfo.LeftPresses` and `LeftWentDown` come from the frame's events, not the button's state as the
 frame ends; `WindowStack.LeftSteps` gives the stack a press and a release for each press let go inside a frame (and a
 release before a press made while it was down), and `Level.WorldClick` acts on `LeftWentDown`. A frame's second press

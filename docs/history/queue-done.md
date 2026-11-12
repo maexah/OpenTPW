@@ -12965,9 +12965,11 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the rotation tracks whose last key falls before their clip's declared end (a corpus scan over all 2,129 `.md2`); where
   there are any, and Lost Kingdom's reach one, make `Sample` wrap and confirm one beside the original's frames;
   otherwise say in `park.md` that none exists and the held last key is dead by CONTENT.
-  Done in Q729: none exists. Of the 2,129 `.md2` (1,278 declare an end) the 3,039 rotation tracks end 2,601 on their
-  clip's declared end, 438 past it and none before it (`RotationLastKeyTests`, `dotnet/cliptracks ... rot`), so the held
-  last key is dead by CONTENT: said in `park.md` (`FUN_00470b60`) and at `RotationTrack.Sample`. Nothing drawn changes.
+  Done in Q729, premise refuted by the run 22 review: the rotation blend (`Anim_BlendRotationKeys` `0x00474490`) pairs
+  key i with key i+1 clamped to the last and never reads the search's key-0 index, so the original holds the last key as
+  `Sample` does; nothing to build. The census stands as a fact: of the 2,129 `.md2` (1,278 declare an end) the 3,039
+  rotation tracks end 2,601 on their clip's declared end, 438 past it and none before it (`RotationLastKeyTests`,
+  `dotnet/cliptracks ... rot`); said in `park.md` (`FUN_00470b60`) and at `RotationTrack.Sample`. Nothing drawn changes.
 - [x] **Q465. A purchase's advisor post is not counted.** From the week-end audit (`VERIFY-10a.md` Q328 3). Every
   purchase reaches the original's 0xc9 or 0xce post (`0x004ac67e`..`0x004ac7d9`); ours neither builds nor counts it
   (`ParkBuyScreen.Chose`). The line is filed under Q420; add the `Unimplemented.Report` (rule 4).
