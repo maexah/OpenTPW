@@ -2738,15 +2738,17 @@ public class Level
 		// Each step the right button took this frame, so a quick click let go inside one frame is still a press and a
 		// release, as the original's park is posted both (0x00486c70).
 		//
-		// Latent: the stack runs before this (Hud.Update). A first-person right click let go inside one frame is answered by
-		// the stack's release, which leaves first person, so its press step is read here with first person already left and
-		// arms, and its release runs the quick right click; the original's park is posted the press first, in first person,
-		// and takes none of it. Harmless while entering first person lets go of the hand and LetGo answers null.
+		// The stack runs before this (Hud.Update), so a first-person right click let go inside one frame has left first
+		// person by now; whether the viewfinder answered each press is read from the stack (RightViewAnswered), so that
+		// press is still the interface's, as the original's park is posted it first, in first person, and takes none of it.
 		var putAway = false;
+		var press = 0;
 
 		foreach ( var rightDown in UI.WindowStack.RightSteps( _worldRightWasDown, Input.Mouse ) )
 		{
-			if ( RightButton( rightDown, Input.Mouse.Position / UI.VirtualScreen.Scale, RightPressTaken( UI.WindowStack.RightPointerTaken ) ) is { } letGo )
+			var byTheView = rightDown && !_worldRightWasDown && UI.WindowStack.RightViewAnswered( press++ );
+
+			if ( RightButton( rightDown, Input.Mouse.Position / UI.VirtualScreen.Scale, RightPressTaken( UI.WindowStack.RightPointerTaken, byTheView ) ) is { } letGo )
 			{
 				Log.Info( letGo );
 				putAway = true;
@@ -2794,10 +2796,12 @@ public class Level
 	/// <summary>
 	/// Whether a right press is the interface's rather than the park's, given whether a window took it
 	/// (<see cref="UI.WindowStack.TakesRightPress"/>): in first person always, since entering it hides the park's own
-	/// layer (<c>0x004a2ac0</c>), and with the HUD hidden by F2 never, since the stack is not updated then.
+	/// layer (<c>0x004a2ac0</c>), and with the HUD hidden by F2 never, since the stack is not updated then. Also when the
+	/// view answered the press (<see cref="UI.WindowStack.RightViewAnswered"/>): that is first person's, even when the
+	/// click it began has left first person by the time the park reads the press.
 	/// </summary>
-	internal static bool RightPressTaken( bool byAWindow )
-		=> ParkCamcorderCameraMode.Active || (!UI.RootPanel.Hidden && byAWindow);
+	internal static bool RightPressTaken( bool byAWindow, bool byTheView = false )
+		=> ParkCamcorderCameraMode.Active || (!UI.RootPanel.Hidden && (byAWindow || byTheView));
 
 	/// <summary>
 	/// The right button over the park, this frame: down or up, where the pointer is in the interface's 2048x1536
