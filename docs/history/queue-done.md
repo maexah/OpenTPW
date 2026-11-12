@@ -13518,3 +13518,8 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   for both. Call `ParkScrap.Percent` with the thing's `Built`, `RingsFor( thing ).NumCustomers` and `UpgradeLevel`, and confirm a sale's balance step and the window's figure beside the original's.
   Also counted: a queue cell whose owner ride cannot be found refunds its whole price (`QUEUE_REFUND_OWNER_NOT_FOUND`, `ParkPathBuilding.QueueRefund`; `FUN_004d99e0` answers thing nought there and the
   original reads whatever thing nought holds), not met in play.
+- [x] **Q452. Buy Rides lists a researched ride upgrade.** From the week-end audit, 2026-10-17 (`LEDGER.md` D1,
+  `VERIFY-13a.md` Q349 1; `CLAUDE.local.md` says where). `ParkBuyScreen.Listed` lacks the original's `+0x284` skip
+  (`0x004aaffc`), so a Full Simulation park with 1500 or 1501 researched lists Dino Karts Jump (750) and Dino Karts
+  Tunnel (900), and a row puts one in the hand. Seen in the game on a copy of Alexah's Full Simulation autosave
+  (`gp-fs.out`). It is Q221 (2), no longer dead by content since Q349. Confirm: the list without them, beside the original.
