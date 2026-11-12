@@ -2440,10 +2440,21 @@ public sealed partial class ParkPeople : Entity
 			member.Pace();
 			member.Navigator.StampPrevious();
 
+			var bubbleShown = member.Thoughts.Bubble != null;
+
 			// The staff handler's own bubble call, on the member's sweep in four of the park's clock
 			// (FUN_00505490, 0x005054b3..0x005054c0).
 			if ( (member.ThingId & 3) == (State.GameTick & 3) )
 				member.Thoughts.Expire( State.GameTick );
+
+			// The handyman's pre-step calls the expiry again, ungated, on every sweep (FUN_004d7060, 0x004d70f1), so his
+			// bubble lasts exactly 13 sweeps where the other kinds' last 13 to 16.
+			if ( member.Model == HandymanModel )
+				member.Thoughts.Expire( State.GameTick );
+
+			if ( bubbleShown && member.Thoughts.Bubble == null )
+				Log.Info( $"Staff: {member.ThingId} (model {member.Model}) bubble of mGameTick {member.Thoughts.TimeBubbleShown} "
+					+ $"taken away on mGameTick {State.GameTick}, {State.GameTick - member.Thoughts.TimeBubbleShown} sweeps on" );
 
 			var playing = _sprites.GetValueOrDefault( member.ThingId );
 
@@ -4054,7 +4065,10 @@ public sealed partial class ParkPeople : Entity
 				+ $"pace {member.PreviousSpeed:0.0000} speed {nav.MaxSpeed} restExact {member.Tiredness:0.000} "
 				// The cell recorded for them, where an entertainer's or a guard's region effect stands.
 				+ $"recorded {(MapStep.IsCellId( member.RecordedCell ) ? $"({MapStep.CellAt( member.RecordedCell ).X},{MapStep.CellAt( member.RecordedCell ).Y})" : "none")} "
-				+ $"through {member.PercentageThroughGrade}";
+				+ $"through {member.PercentageThroughGrade} "
+				// The thought last set and the bubble's bank and set, or "-" with none, as the guests' census gives them.
+				+ $"thought 0x{member.Thoughts.Last:x} "
+				+ $"bubble {(member.Thoughts.Bubble is { } bubble ? $"{bubble.Bank}/{bubble.Set} since {member.Thoughts.TimeBubbleShown}" : "-")}";
 		}
 	}
 }

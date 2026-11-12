@@ -1129,13 +1129,6 @@ filed the items that cite it.
   week-end audit (stage 6, the second reading of commit `0db41100`; read from the code, not reproduced in the
   game). `OpenTPW/World/Park/StaffBehaviour.cs`, line 432.
 
-- [ ] **Q282. A handyman's thought bubble is taken away only on his own sweep in four, as the other kinds' are, so
-  it lasts 13 to 16 sweeps.** The original's handyman pre-step FUN_004d7060 ends by calling the expiry
-  FUN_0050be40 ungated on every sweep (0x004d70ee; docs/exe/ride-operation.md, the pre-step table's note on
-  0x004d70f1), so his lasts exactly 13: a test that gives handyman 25 a bubble on mGameTick 1001 and steps the
-  park to 1014 would show it still there. From the week-end audit (stage 6, the second reading of commit
-  `738789d6`; read from the code, not reproduced in the game). `OpenTPW/World/Park/ParkPeople.cs`, line 2144.
-
 - [ ] **Q283. `ParkParticles.Edit.Start` passes a directed start's `Direction` on to the linked effect when the
   link does not follow (`its = spawn`, then `Start( its with { Template = linked } )`).** So the linked emitter is
   written aimed and with no draw of the generator. `Particles_SpawnFull` starts its linked emitter with the plain

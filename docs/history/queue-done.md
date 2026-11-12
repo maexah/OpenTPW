@@ -12145,6 +12145,17 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q282. A handyman's thought bubble is taken away only on his own sweep in four, as the other kinds' are, so
+  it lasts 13 to 16 sweeps.** The original's handyman pre-step FUN_004d7060 ends by calling the expiry
+  FUN_0050be40 ungated on every sweep (0x004d70ee; docs/exe/ride-operation.md, the pre-step table's note on
+  0x004d70f1), so his lasts exactly 13: a test that gives handyman 25 a bubble on mGameTick 1001 and steps the
+  park to 1014 would show it still there. From the week-end audit (stage 6, the second reading of commit
+  `738789d6`; read from the code, not reproduced in the game). `OpenTPW/World/Park/ParkPeople.cs`, line 2144.
+  **Done 2026-11-12** (cloud lane c44): the staff sweep calls `Thoughts.Expire` again for a handyman on every sweep,
+  after the gated call (`FUN_004d7060`, `0x004d70f1`), and logs `Staff: N (model M) bubble of mGameTick T taken away on
+  mGameTick U, K sweeps on`; the `staff` census gives `thought` and `bubble`. `AHandymansBubbleGoesOnTheFirstSweepPast
+  TwelveAndAGuardsOnHisOwn` gives handyman 25 and guard 28 a bubble on 1001: the handyman's goes on 1014, the guard's on
+  1016. Off-screen in a cloud container, the handyman's went 13 sweeps on, the guard's 14; not photographed.
 
 ## B. Docs and comments
 
