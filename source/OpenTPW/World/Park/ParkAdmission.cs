@@ -308,6 +308,10 @@ public sealed class ParkAdmission
 		if ( idealPrice <= MinimumEntryFee && Fee <= MinimumEntryFee )
 			return Opinion.AboutRight;
 
+		// Each of the four compared arms pushes a sample of kind 0 to the park analyser (FUN_004c74b0, 0x004ff693,
+		// 0x004ff6b5, 0x004ff6f0, 0x004ff715), the ring the advisor's messages 91 and 92 read; nothing here keeps it.
+		Unimplemented.Report( "ENTRY_FEE_ANALYSER_SAMPLE" );
+
 		float ideal = idealPrice;
 		float fee = Fee;
 

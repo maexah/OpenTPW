@@ -3126,7 +3126,10 @@ The car's model record is read as its boat is stood ("OpenTPW's reader, a car's 
 it (the original's step finds it gone and empties it; here it is empty from the load, and the next retarget
 starts another); `+0x24`, `+0x28`, `+0x60`, `+0x68`, `+0x84`, `+0xa0` and `+0xa4`, which nothing here keeps
 ("A car's eight words nothing keeps", below; `+0x58` is kept, `Car.Turned`); a rider record with no car of its ride before it
-(`SAVED_TRACK_RIDER_WITH_NO_CAR`: the original hangs it on a null car).
+(`SAVED_TRACK_RIDER_WITH_NO_CAR`: the original hangs it on a null car). A car, its riders and a listed peep of a ride whose BumperType has no record here (every type
+but the Hot Pot's -1: `BUMPER_TEMPLATE_n`) are dropped, each counted (`SAVED_TRACK_CAR_WITH_NO_RECORD`,
+`SAVED_TRACK_RIDER_WITH_NO_RECORD`, `SAVED_TRACK_LISTED_PEEP_WITH_NO_RECORD`), where the original's car arm restores a
+car for any ride its handle names (Q285).
 
 **A rider saved with no sprite is given one at the load, a deviation.** A rider on a thing that keeps none (the
 Hot Pot: `mFlags` without `0x20`) is in the file with sprite slot nought, since admission destroyed it

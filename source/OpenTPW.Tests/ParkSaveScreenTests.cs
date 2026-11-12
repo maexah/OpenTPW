@@ -175,6 +175,35 @@ public class ParkSaveScreenTests
 	}
 
 	/// <summary>
+	/// <b>Delete, Left, Right, Home and End are dropped and counted</b>, each under its own name: the original's box
+	/// moves its caret on four and deletes forward on the fifth (<c>FUN_00667a72</c>), and here the caret is always at
+	/// the end, so the name is unchanged and the next letter still goes on its end.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the keys counting nothing; one key counted under another's name.</remarks>
+	[TestMethod]
+	public void TheBoxDropsAndCountsTheCaretKeysAndDelete()
+	{
+		var stack = APark();
+		var screen = OpenSavePark( stack );
+		var keys = new[] { (Key.Delete, "EDIT_BOX_KEY_DELETE", 2), (Key.Left, "EDIT_BOX_KEY_LEFT", 1), (Key.Right, "EDIT_BOX_KEY_RIGHT", 1),
+			(Key.Home, "EDIT_BOX_KEY_HOME", 1), (Key.End, "EDIT_BOX_KEY_END", 1) };
+
+		Type( stack, "ab" );
+
+		Press( stack, Key.Home );
+		Press( stack, Key.Left );
+		Press( stack, Key.Delete );
+		Press( stack, Key.Right );
+		Press( stack, Key.Delete );
+		Press( stack, Key.End );
+		Type( stack, "c" );
+
+		Assert.AreEqual( "abc", screen.Name, "nothing deleted, the letter on the end" );
+		CollectionAssert.AreEqual( keys.Select( key => key.Item3 ).ToArray(),
+			keys.Select( key => Unimplemented.Summary.FirstOrDefault( gap => gap.What == key.Item2 ).Times ).ToArray() );
+	}
+
+	/// <summary>
 	/// <b>A row's click puts that save's name in the box, unselected</b>, so the next letter goes on its end; the
 	/// folder is read again at the click; the screen stays open and nothing is counted.
 	/// </summary>

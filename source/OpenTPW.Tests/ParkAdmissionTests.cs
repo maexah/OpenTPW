@@ -217,6 +217,32 @@ public class ParkAdmissionTests
 	}
 
 	/// <summary>
+	/// Each of the four compared bands pushes one sample to the park analyser in the original (<c>FUN_004c74b0( 0, … )</c>
+	/// at <c>0x004ff693</c>, <c>0x004ff6b5</c>, <c>0x004ff6f0</c>, <c>0x004ff715</c>) and the early-out none; nothing here
+	/// keeps the analyser, so each is counted. The fee of 20 against 20 is the early-out where the standard game's
+	/// lines alone would call it expensive, so a count before the early-out is caught.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the count before the early-out; in one band's arm alone.</remarks>
+	[TestMethod]
+	public void EachComparedBandCountsOneAnalyserSampleAndTheEarlyOutNone()
+	{
+		const string Gap = "ENTRY_FEE_ANALYSER_SAMPLE";
+		int Counted() => Unimplemented.Summary.FirstOrDefault( gap => gap.What == Gap ).Times;
+
+		var before = Counted();
+		Standard( 20 ).OpinionOf( 20 );
+		Assert.AreEqual( before, Counted(), "the early-out pushes nothing" );
+
+		foreach ( var (fee, band) in new[] { (30, ParkAdmission.Opinion.OnTheCheapSide), (31, ParkAdmission.Opinion.AboutRight),
+			(50, ParkAdmission.Opinion.OnTheExpensiveSide), (80, ParkAdmission.Opinion.FarTooExpensive) } )
+		{
+			var at = Counted();
+			Assert.AreEqual( band, Standard( fee ).OpinionOf( 40 ) );
+			Assert.AreEqual( at + 1, Counted(), $"one sample for {band}" );
+		}
+	}
+
+	/// <summary>
 	/// And the cheap band really is out of reach for a park worth only the floor, which is the other half
 	/// of the paragraph above - stated as its own test so the fact is asserted rather than only described.
 	/// </summary>

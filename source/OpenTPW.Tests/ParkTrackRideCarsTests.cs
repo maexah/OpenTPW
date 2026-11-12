@@ -254,6 +254,43 @@ public class ParkTrackRideCarsTests
 		Assert.AreEqual( 0, cars.CarsOf( HotPotHandle ).Count() );
 	}
 
+	/// <summary>
+	/// A ride whose BumperType has no record here (a Dino Karts, type -4) has its car, the car's riders and its two
+	/// lists dropped at the load, each counted, where the original's car arm (<c>FUN_00543560</c>, chunk 5) restores a
+	/// car for any ride its handle names; a Hot Pot's beside it, which has a record, loses and counts nothing.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the car's drop counting nothing; its riders not counted; a listed peep not counted; a Hot Pot's car counted.</remarks>
+	[TestMethod]
+	public void ARideWithNoRecordHereHasItsCarsRidersAndListsCountedAsTheyAreDropped()
+	{
+		const int Karts = unchecked((int)0xfffffc00);
+		const int HotPot = unchecked((int)0xffffff01);
+		string[] gaps = ["SAVED_TRACK_CAR_WITH_NO_RECORD", "SAVED_TRACK_RIDER_WITH_NO_RECORD", "SAVED_TRACK_LISTED_PEEP_WITH_NO_RECORD"];
+		var afloat = new[] { (0x00, 0x308c009), (0x34, 0x20a00), (0x38, 0x13200) };
+
+		var read = new ParkTrackRides( Body(
+			Chunk( 3, Karts, 0x20400, 0x12c00, 0, 1140, 60, 1, 1, 4350, 1 ),
+			Car( Karts, afloat, 0x20a00, 0x13200, 0, 0, 0 ), Chunk( 9, Karts, 40, 1 ), Chunk( 9, Karts, 41, 2 ),
+			Chunk( 7, Karts, 42 ), Chunk( 8, Karts, 43 ), Chunk( 6, Karts ),
+			Chunk( 3, HotPot, 0x30400, 0x12c00, 0, 1140, 60, 1, 1, 4350, 1 ),
+			Car( HotPot, [(0x00, 0x308c009), (0x34, 0x30a00), (0x38, 0x13200)], 0x30a00, 0x13200, 0, 0, 0 ), Chunk( 9, HotPot, 50, 1 ),
+			Chunk( 7, HotPot, 52 ), Chunk( 8, HotPot, 53 ), Chunk( 6, HotPot ) ) );
+
+		Assert.AreEqual( (2, 3, 4), (read.Cars.Count, read.Cars.Sum( car => car.Riders.Count ), read.Listed.Count), "the file as written" );
+
+		var before = gaps.Select( Counted ).ToArray();
+		var cars = new ParkTrackRideTable( read ).Cars;
+
+		CollectionAssert.AreEqual( new[] { 1, 2, 2 }, gaps.Select( ( gap, index ) => Counted( gap ) - before[index] ).ToArray(),
+			"the kart's car, its two riders and its two listed peeps" );
+		Assert.IsNull( cars.RideOf( Karts ) );
+		Assert.AreEqual( 0, cars.CarsOf( Karts ).Count() );
+
+		var pot = cars.RideOf( HotPot )!;
+
+		Assert.AreEqual( (1, 1, 1, 1), (pot.Cars, pot.Seated, pot.Leaving.Count, pot.Boarding.Count), "the Hot Pot's kept whole" );
+	}
+
 	[TestMethod]
 	public void ARiderGoesOnItsRidesLastCarHeadFirstAndOneWithNoCarIsCounted()
 	{
