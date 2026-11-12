@@ -74,10 +74,61 @@ public sealed class ParkBalance
 	}
 
 	/// <summary>
+	/// A stack read from text, one string per layer in the order the original reads its files: a unit test's
+	/// way to a balance whose arrays end somewhere the shipped files' do not.
+	/// </summary>
+	internal static ParkBalance FromText( params string[] layers )
+	{
+		var balance = new ParkBalance();
+
+		foreach ( var text in layers )
+			foreach ( var pair in new SAMParser( text ).Parse() )
+				balance._values[pair.Key] = pair.Value;
+
+		return balance;
+	}
+
+	private ParkBalance() { }
+
+	/// <summary>
+	/// How many rows an array group has: the highest subscript any layer wrote, plus one, and nought where no
+	/// layer writes the group. This is the original's count, not its table's size (<c>docs/exe/park-engine.md</c>,
+	/// "How a key finds its global"), so a draw over the rows takes this many. Lost Kingdom's <c>PeepTypes</c> comes
+	/// to 8, from the global <c>Standard.sam</c> alone.
+	/// </summary>
+	public int RowsOf( string group )
+	{
+		var rows = 0;
+		var opening = group + "[";
+
+		foreach ( var key in _values.Keys )
+		{
+			if ( !key.StartsWith( opening, StringComparison.OrdinalIgnoreCase ) )
+				continue;
+
+			var close = key.IndexOf( ']', opening.Length );
+
+			if ( close > opening.Length
+				&& int.TryParse( key.AsSpan( opening.Length, close - opening.Length ), NumberStyles.None, CultureInfo.InvariantCulture, out var index )
+				&& index + 1 > rows )
+				rows = index + 1;
+		}
+
+		return rows;
+	}
+
+	/// <summary>
 	/// Reads one file over whatever is already here. A missing or unreadable layer is reported and
 	/// stepped over rather than thrown: the global file existing and the theme's not is a broken
 	/// installation, but it is one the park can still be looked at with.
 	/// </summary>
+	/// <remarks>
+	/// <b>Deviation, not yet decided:</b> the original's parser (<c>FUN_004017a0</c>) stops at the first line it
+	/// refuses - a key its table does not name, a bounded value out of range, a negative in a type-5 key - and no
+	/// later line of that file is read. This reads every line, because which balance key is which type, and its
+	/// bounds, are not decoded (Q1204). Every shipped balance file holds negatives (the jungle's
+	/// <c>WeatherEffects.QualityForSnowLow -1</c> among them), so the rule may decide where some of these files end.
+	/// </remarks>
 	private void Layer( string path )
 	{
 		try

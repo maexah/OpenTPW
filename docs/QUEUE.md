@@ -2788,11 +2788,15 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   jungle park and `q252/orig/ctl-written-by-the-original.TPWS`) all nine bounce riders' sprites are on program 66,
   the second state script, picture set 2; OpenTPW's rider stands on program 90, and a park file is written so.
   `Peep.AnimationFor`'s remark reads the setter's case `0x10` as "the stand": read it again with these files.
-- [ ] **Q54. The `.sam` reader against the original's parser.** Found by Q36's decode (`park-engine.md`, "How a key
-  finds its global"). In the original the first bad line ends the file - an unknown key, a bounded value out of
-  range, or a negative in a non-negative field - and an array's count is the highest index written plus one, so
-  Lost Kingdom's guest type is `rand % 8`. Compare `ParkBalance` with both. Confirm: a test per behaviour against the
-  shipped files, and the guest types a loaded park draws from.
+- [ ] **Q1204. A balance file's first refused line ends it. Decode first.** Found by Q54 (`park-engine.md`, "How a key
+  finds its global"). `FUN_004017a0` stops a file at the first line it refuses - a key its table does not name, a
+  bounded value out of range, a negative in a type-5 key - but which balance key is which type, and its bounds, are
+  not decoded. Read every balance family's table record by record (the `PeepInfo` object's at `0x0073fc70` and the
+  rest), as Q178b read the item schema at `0x00744b30`. Every shipped balance file holds negatives
+  (`WeatherEffects.QualityForSnowLow -1`, `RegionFX[n].Hunger`, `ThemeEngine.ProceduralTexturingXOffset`,
+  `LightNormal.Y`, `WaterStartPos.Y`); if one is type 5 the original drops the rest of that file. Then build the stop
+  in `ParkBalance.Layer` (the deviation is said there) and count it. Confirm: a test per shipped balance file naming
+  the line it stops at, or none, and the keys a loaded jungle park loses.
 - [ ] **Q58. A purchase faces whatever the hand last held. Decode first.** Found by Q39's decode. The original keeps
   one rotation, `DAT_0081d7a4`, and `FUN_0052f200` writes it only for tool 0 (`0x0052f3b6`), so an item bought over a
   carried move faces the moved thing's way; a candidate's or worker's pickup leaves it too. Here a purchase always

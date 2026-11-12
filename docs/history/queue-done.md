@@ -12315,6 +12315,11 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   open. The engine finds a bounce rider's node by id in `0x800` ("Where a rider is drawn"); `ModelFile.FindNode` is
   that lookup and `RideNodes` the stored positions at rest (Q175b), not the animated pose a rider needs. A walk's riders
   are placed by `FUN_005580a0` from the posed nodes since Q585 (`ride-operation.md`, "Where a walk's rider is drawn").
+- [x] **Q54. The `.sam` reader against the original's parser.** Found by Q36's decode (`park-engine.md`, "How a key
+  finds its global"). In the original the first bad line ends the file - an unknown key, a bounded value out of
+  range, or a negative in a non-negative field - and an array's count is the highest index written plus one, so
+  Lost Kingdom's guest type is `rand % 8`. Compare `ParkBalance` with both. Confirm: a test per behaviour against the
+  shipped files, and the guest types a loaded park draws from.
 
 ## E. Large
 
