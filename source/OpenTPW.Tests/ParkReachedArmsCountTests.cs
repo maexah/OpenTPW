@@ -8,8 +8,9 @@ namespace OpenTPW.Tests;
 
 /// <summary>
 /// The guests' reached arms that are counted, not built (Q157): the gate's guard on an entering guest
-/// (<c>FUN_004ffb20</c>), a leaver's change of mind (<c>FUN_00500a50</c>) and the route improver's diagonal pass
-/// (<c>FUN_005108a0</c>). Each name is asserted present where the original tests and absent where it does not.
+/// (<c>FUN_004ffb20</c>) and the route improver's diagonal pass (<c>FUN_005108a0</c>). Each name is asserted present
+/// where the original tests and absent where it does not. A leaver's change of mind (<c>FUN_00500a50</c>), counted
+/// here first, is built (Q862) and asserted by the state it leaves.
 /// </summary>
 [TestClass]
 public class ParkReachedArmsCountTests
@@ -85,9 +86,10 @@ public class ParkReachedArmsCountTests
 	}
 
 	/// <summary>
-	/// The change of mind is counted when all four of its tests pass (<c>0x00500a53</c>..<c>0x00500a84</c>) and when
-	/// any one fails it is not: the exit level above nought (a negative one is not, <c>JLE</c>), the happiness
-	/// byte not nought (a half is truncated to nought by <c>__ftol</c>), an open park, and a counting cell.
+	/// The change of mind (Q862) turns a guest back to Deciding when all four of its tests pass
+	/// (<c>0x00500a53</c>..<c>0x00500a84</c>) and when any one fails the walk out goes on: the exit level above nought
+	/// (a negative one is not, <c>JLE</c>), the happiness byte not nought (a half is truncated to nought by
+	/// <c>__ftol</c>), an open park, and a counting cell. It keeps the exit level, and nothing is counted any more.
 	/// </summary>
 	[TestMethod]
 	[DataRow( 100, 50f, false, 1, true, "all four pass" )]
@@ -99,8 +101,8 @@ public class ParkReachedArmsCountTests
 	[DataRow( 100, 1f, false, 1, true, "a point of happiness" )]
 	[DataRow( 100, 50f, true, 1, false, "a shut park" )]
 	[DataRow( 100, 50f, false, 2, false, "a cell that is a ride's footprint" )]
-	public void AGuestHeadingForTheExitIsCountedWhereTheChangeOfMindIsTested(
-		int exitLevel, float happiness, bool shut, int cellType, bool counted, string why )
+	public void AGuestHeadingForTheExitChangesTheirMindWhereAllFourTestsPass(
+		int exitLevel, float happiness, bool shut, int cellType, bool changes, string why )
 	{
 		var (behaviour, guest, walk) = Guest( PeepState.HeadingForExit, shut );
 		var cell = CellOfType( behaviour.State, cellType );
@@ -113,16 +115,19 @@ public class ParkReachedArmsCountTests
 
 		behaviour.Step( guest, walk, playing: null, tick: 1 );
 
-		Assert.AreEqual( counted ? before + 1 : before, Counted( "HEADING_FOR_EXIT_CHANGE_OF_MIND" ), why );
+		Assert.AreEqual( changes ? PeepState.Deciding : PeepState.HeadingForExit, guest.State, why );
+		Assert.AreEqual( exitLevel, guest.ExitLevel, $"{why}: the exit level is kept" );
+		Assert.AreEqual( before, Counted( "HEADING_FOR_EXIT_CHANGE_OF_MIND" ), $"{why}: built, not counted" );
 	}
 
 	/// <summary>
 	/// The change of mind is reached by a running game (Q862): the door shuts the park, a deciding guest with a positive exit level
 	/// sets off (<c>PeepBehaviour.Leave</c> writes no exit level, as <c>0x004fee87</c>..<c>0x004fef13</c> store nothing to
-	/// <c>+0x1bc</c>), the door opens again while they walk, and the next turn is counted. While it stays shut nothing is.
+	/// <c>+0x1bc</c>), the door opens again while they walk, and the next turn puts them back to Deciding with the exit
+	/// level they had, so the open park's leave test does not send them out again. While it stays shut they walk on.
 	/// </summary>
 	[TestMethod]
-	public void AGuestWhoSetOffWhenTheParkShutIsCountedWhenItReopens()
+	public void AGuestWhoSetOffWhenTheParkShutChangesTheirMindWhenItReopens()
 	{
 		var (behaviour, guest, walk) = Guest( PeepState.Deciding, shut: true );
 		var cell = CellOfType( behaviour.State, 1 );
@@ -131,22 +136,24 @@ public class ParkReachedArmsCountTests
 		guest.ExitLevel = 100;
 		guest.Happiness = 50;
 
-		var before = Counted( "HEADING_FOR_EXIT_CHANGE_OF_MIND" );
-
 		behaviour.Step( guest, walk, playing: null, tick: 1 );
 
 		Assert.AreEqual( PeepState.HeadingForExit, guest.State, "the shut park sent them out" );
 		Assert.AreEqual( 100, guest.ExitLevel, "setting off writes no exit level" );
 
 		behaviour.Step( guest, walk, playing: null, tick: 2 );
-		Assert.AreEqual( before, Counted( "HEADING_FOR_EXIT_CHANGE_OF_MIND" ), "the park is still shut" );
+		Assert.AreEqual( PeepState.HeadingForExit, guest.State, "the park is still shut" );
 
 		// Reopened while they walk: a path cell under them again, as one of the cells on the way is.
 		behaviour.State.SetParkClosed( false );
 		behaviour.State.StandOn( guest.ThingId, cell.X, cell.Y );
 		behaviour.Step( guest, walk, playing: null, tick: 3 );
 
-		Assert.AreEqual( before + 1, Counted( "HEADING_FOR_EXIT_CHANGE_OF_MIND" ), "reopened while they walk out" );
+		Assert.AreEqual( PeepState.Deciding, guest.State, "reopened while they walk out" );
+		Assert.AreEqual( 100, guest.ExitLevel, "the change of mind writes no exit level" );
+
+		behaviour.Step( guest, walk, playing: null, tick: 4 );
+		Assert.AreNotEqual( PeepState.HeadingForExit, guest.State, "the open park's leave test does not send them out again" );
 	}
 
 	private static CellRoute Route( (int X, int Y) start, params (int X, int Y)[] waypoints )
