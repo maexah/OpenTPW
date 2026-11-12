@@ -12931,3 +12931,23 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
     92 (`ride-operation.md`, "The analyser's samples"), so it should be built or call `Unimplemented.Report`.
     (`OpenTPW/World/Park/ParkAdmission.cs`, line 303; commit `542b67e4`)
     Counted by Q285: `OpinionOf` reports `ENTRY_FEE_ANALYSER_SAMPLE` once past the early-out; nothing keeps the analyser.
+- [x] **Q570. The calendar compared after each sweep, and the weather ticked inside it.** From the run 6 review of Q149
+  (`review6/VERIFY-7.md`, Q149 1 and the hunt's new finding). The original's `Calendar_Update` (`0x004f8260`) runs at
+  the tail of every sweep (`0x00516695` -> `0x004d7b3b`), so in a frame of two or three sweeps whose day turns before
+  the last, the objects' rings roll and the month's bank and staff work turn between two sweeps; ours compares once a
+  frame after the entity walk (`Level.Update`, `GameCalendar.Update`), so the later sweeps count into the closing day.
+  And `ParkWeather` ticks off `GameCalendar.Counter`, which moves only after the walk, so its ticks for a frame's sweeps
+  run in the next frame and read `GameCalendar.Days` as compared after the last of them; the original's
+  `FUN_00512880` runs inside its sweep, before that sweep's compare. Both are said at the site. Since Q150 the
+  frame's ticks run in one loop (`ParkLoop`, `ParkPeople.Sweep` on every eighth), so the fix puts the weather's tick,
+  then the compare and `RollTheDay` / `TurnTheMonth` / `TurnTheYear`, after each `ParkPeople.Sweep` there, per sweep. The weather's day phase is moot once Q529 schedules on
+  instants; its one-frame lag is not. Test: a frame of three sweeps whose day turns on the second rolls the rings
+  before the third sweep's settle-up (put the once-a-frame compare back and see it fail). Reached only in a frame
+  owing 16 or more ticks (a hitch); no game run shows it unless a hitch is forced (the console's `pause`/`step` or a
+  stopped process, as `park-engine.md`'s "+5, +5, +6" measurement did).
+  Done in Q570: `ParkLoop` runs `Level.TurnTheCalendar` (the compare, the day's, month's and year's turns, the golden
+  tickets) and then `ParkWeather.Turn` after each sweep; the frame's compare and the weather's catch-up are gone. The
+  weather turns AFTER the compare, not before as thing 7 does: the original's reads the live `mGameTick`
+  (`FUN_004f8690`, `FUN_004f8770`) and hears none of the calendar's messages, ours reads the date the compare sets
+  (`weather.md`, "The calendar"). Seen off-screen after `clock 805` / `stall 1000` and `clock 1381` / `stall 1000`
+  (`q570/run2`, control `q570/run-ctl`).

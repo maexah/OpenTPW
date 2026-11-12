@@ -158,14 +158,10 @@ public static class GameCalendar
 
 	/// <summary>
 	/// Reads the date of the park's clock and sets the day's, the month's and the year's edges, as
-	/// <c>Calendar_Update</c> (<c>0x004f8260</c>) does. Driven from <see cref="Level.Update"/> once a frame, after the
-	/// frame's sweeps, and only in a park, so the lobby has no calendar. A frame with no sweep compares nothing; a paused
-	/// park sweeps nothing, so its date stands. The sweeps dropped past three a frame
+	/// <c>Calendar_Update</c> (<c>0x004f8260</c>) does. Driven by <see cref="ParkLoop"/> after each sweep, as the original's
+	/// sweep tail compares (<c>0x004d7b3b</c>), and only in a park, so the lobby has no calendar. A frame with no sweep
+	/// compares nothing; a paused park sweeps nothing, so its date stands. The sweeps dropped past three a frame
 	/// (<see cref="ParkPeople.SweepsAFrame"/>) are dropped from the date with them, as the original's are.
-	/// <para>
-	/// A deviation: the original compares at the tail of every sweep, so a frame of two or three sweeps whose day turns
-	/// before the last turns it there; here it turns once the last has run (<see cref="Level.Update"/> says why).
-	/// </para>
 	/// </summary>
 	public static void Update( int gameTick )
 	{

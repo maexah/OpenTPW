@@ -415,7 +415,7 @@ public static class DebugConsole
 
 				Reply( ParkWeather.Current == null
 					? "weather none - not in a park"
-					: $"weather quality={ParkWeather.Current.Quality} drops={ParkWeather.Current.Drops} "
+					: $"weather quality={ParkWeather.Current.Quality} drops={ParkWeather.Current.Drops} turns={ParkWeather.Current.Turns} "
 						+ $"storm={ParkWeather.Current.Lightning} rain: {ParkAudio.Current?.RainCensus() ?? "no park audio"}; "
 						+ $"as saved: {ParkWeather.Describe( ParkWeather.Current.Written( ParkState.Current?.Park?.Save?.WeatherRecord ) )}" );
 				break;
@@ -1962,8 +1962,8 @@ public static class DebugConsole
 
 				break;
 
-			// An instrument: writes the park's clock, mGameTick, which the calendar reads after the next frame's
-			// sweeps. A write into another month is a month's change.
+			// An instrument: writes the park's clock, mGameTick, which the calendar reads after the next sweep (ParkLoop).
+			// A write into another month is a month's change.
 			case "clock":
 				if ( parts.Length > 1 && Level.Current?.ParkState is { } clocked )
 				{

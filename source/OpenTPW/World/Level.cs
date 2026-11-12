@@ -125,11 +125,8 @@ public class Level
 	/// The calendar's compare and its turns, then the golden tickets the sweeps owed (<see cref="ParkGoldenTickets.Owe"/>),
 	/// in the order the original's sweep tail has them: the calendar (<c>0x004f8260</c>), then the tickets' test on every
 	/// hundredth tick (<c>0x004d7b54</c>, <c>docs/exe/ride-operation.md</c>, "Golden tickets"), so a tick that turns a year
-	/// is tested on the new year's profit. A deviation: the original compares at the tail of every sweep, so in a frame of
-	/// two or three sweeps whose day turns before the last, its rings roll and its month turns between two sweeps, and ours
-	/// after the last, the later sweeps counting into the closing day; the tickets owed by an earlier sweep of the frame are
-	/// tested here on the park as that frame leaves it. The sweep is split across the entities, so a compare per sweep waits on
-	/// one sweep loop for all of them (<c>docs/exe/park-engine.md</c>, "Still parted").
+	/// is tested on the new year's profit. Run by <see cref="ParkLoop"/> after each sweep, as the original's tail runs at the
+	/// end of each (<c>0x00516695</c>), so a day that turns on a frame's second sweep rolls the rings before its third.
 	/// </summary>
 	/// <param name="tickets">The ticket test, given the tick that owed it.</param>
 	internal static void TurnTheCalendar( ParkState state, ParkPeople? people, ParkItemCatalogue? catalogue, Action<int> tickets )
@@ -1794,9 +1791,15 @@ public class Level
 		GameClock.Update( PausedByWindow(), Kind == Scene.Park ? GameClock.ParkCatchUp : GameClock.LobbyCatchUp );
 
 		// A park's loop takes the frame's ticks one at a time through every system before anything is done once a frame,
-		// as the original's loop runs before its frame's work (ParkLoop).
+		// as the original's loop runs before its frame's work (ParkLoop); each sweep it runs is followed by the calendar's
+		// compare, the day's, month's and year's work on its edges and the golden tickets that sweep owed, then the weather's
+		// turn. Only a park keeps a date.
 		if ( Kind == Scene.Park )
-			ParkLoop.Run( ParticleSystem.Current, ParkRides.Current, ParkPeople.Current );
+			ParkLoop.Run( ParticleSystem.Current, ParkRides.Current, ParkPeople.Current, people =>
+			{
+				if ( ParkState is { } clocked )
+					TurnTheCalendar( clocked, people, Catalogue, tick => ParkGoldenTickets.Sweep( tick, clocked, people ) );
+			}, ParkWeather.Current );
 
 		Entity.All.ForEach( entity => entity.Update() );
 
@@ -1813,16 +1816,6 @@ public class Level
 
 		// And the model of an arrival vehicle made at a summons in the walk, for the same reason.
 		ParkFixedItems.Current?.Sync();
-
-		// The date of the park's clock once this frame's sweeps have counted it on, compared once a frame after the last of
-		// them, and the day's, month's and year's work run on its edges, then the golden tickets owed by this frame's sweeps.
-		// Only a park keeps a date.
-		if ( Kind == Scene.Park && ParkState is { } clocked )
-			TurnTheCalendar( clocked, ParkPeople.Current, Catalogue, tick =>
-			{
-				if ( ParkPeople.Current is { } people )
-					ParkGoldenTickets.Sweep( tick, clocked, people );
-			} );
 
 		// Whatever was deleted during that walk leaves the list now the walk is over - see Entity.Delete.
 		Entity.ApplyDeletions();

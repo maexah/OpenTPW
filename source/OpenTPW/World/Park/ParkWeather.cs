@@ -20,9 +20,8 @@ namespace OpenTPW;
 /// <para>
 /// <b>The beat is a weather tick, not a frame.</b> FUN_00512880 is reached through FUN_00516380,
 /// which the park loop gates to every eighth 31ms game tick (0x0054f668) - so weather updates about
-/// four times a second, and every countdown below is counted in those. <see cref="GameCalendar"/>
-/// advances its counter on exactly that gate, so this takes its beat from there rather than counting
-/// ticks a second time.
+/// four times a second, and every countdown below is counted in those. <see cref="ParkLoop"/> gives it
+/// its turn after each sweep it runs (<see cref="Turn"/>), so a dropped sweep is a weather tick dropped.
 /// </para>
 /// <para>
 /// Engine and content: which numbers a theme's balance file gives, and what a park does with them, is
@@ -105,9 +104,6 @@ public sealed class ParkWeather : Entity
 	private int _thunderCountdown;
 	private int _lastChangedDay;
 	private int _forecastDueDay = -1;
-	// The park's clock as this weather last ticked: where the calendar stood when it was made, so a loaded park's
-	// weather ticks only for the sweeps run since.
-	private int _counterSeen = GameCalendar.Counter;
 
 	// What the thing's saved record holds (FUN_00512010): the park calendar, a FILETIME, as the quality was last
 	// applied (FUN_00512f00 stamps mLastChanged; nought until one is) and as the last forecast was made, with its due time and quality
@@ -313,29 +309,16 @@ public sealed class ParkWeather : Entity
 			Current = null;
 	}
 
+	/// <summary>How many turns this weather has taken: one a sweep run since it was made.</summary>
+	internal int Turns { get; private set; }
+
 	/// <summary>
-	/// Runs one weather tick for each sweep the calendar has read, so the weather keeps the
-	/// original's four-a-second beat however fast or slow the frames are coming.
-	/// <para>
-	/// A deviation: the calendar reads the frame's sweeps after the entity walk, so these ticks run in the next frame,
-	/// and each reads <see cref="GameCalendar.Days"/> as compared after the last of those sweeps. The original's
-	/// <c>FUN_00512880</c> runs inside its sweep, before that sweep's compare (<c>docs/exe/weather.md</c>).
-	/// </para>
+	/// One weather tick - the body of FUN_00512880 - taken in the sweep's tail after the calendar's compare
+	/// (<see cref="ParkLoop"/> says why there), so it reads the date of its own sweep.
 	/// </summary>
-	protected override void OnUpdate()
+	internal void Turn()
 	{
-		var counter = GameCalendar.Counter;
-
-		while ( _counterSeen < counter )
-		{
-			_counterSeen++;
-			Tick();
-		}
-	}
-
-	/// <summary>One weather tick - the body of FUN_00512880.</summary>
-	private void Tick()
-	{
+		++Turns;
 		Deliver();
 		Schedule();
 		StepRain();

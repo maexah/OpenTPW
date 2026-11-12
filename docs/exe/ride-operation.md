@@ -3152,7 +3152,7 @@ says none of these three). The handymen's cell ratio, `STRIKE_HANDYMEN_CELL_RATI
 **Differences, each said at its site.** The look's guest count is taken as the month turns, where the
 original's is the analyser's, up to five of its timer's units old (`FUN_004c7fa0( 5 )`). The month's change
 comes from `GameCalendar`, the date of `mGameTick` (Q149), so it turns on the original's ticks; the console's
-`clock <tick>` writes `ParkState.GameTick`, which the calendar reads after the next frame's sweeps. A striker walking back is in state 1, so the walk is
+`clock <tick>` writes `ParkState.GameTick`, which the calendar reads after the next sweep. A striker walking back is in state 1, so the walk is
 stepped under the wander's filters (`staff-wandering.md`).
 
 **Instruments.** `forcestrike <0|1>` writes the force (one word for the park; `strike` was taken by the lobby's

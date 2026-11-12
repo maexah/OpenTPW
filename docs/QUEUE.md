@@ -471,20 +471,6 @@ filed the items that cite it.
   original fits (`UiControl_PlaceMesh`, `0x00476f10`: the node `0x00476e80` answers, `+0x78..+0x8c` through its chain)
   and how the "x N" part is chosen, then fit as it does; confirm "x 1" beside the original's.
 
-- [ ] **Q570. The calendar compared after each sweep, and the weather ticked inside it.** From the run 6 review of Q149
-  (`review6/VERIFY-7.md`, Q149 1 and the hunt's new finding). The original's `Calendar_Update` (`0x004f8260`) runs at
-  the tail of every sweep (`0x00516695` -> `0x004d7b3b`), so in a frame of two or three sweeps whose day turns before
-  the last, the objects' rings roll and the month's bank and staff work turn between two sweeps; ours compares once a
-  frame after the entity walk (`Level.Update`, `GameCalendar.Update`), so the later sweeps count into the closing day.
-  And `ParkWeather` ticks off `GameCalendar.Counter`, which moves only after the walk, so its ticks for a frame's sweeps
-  run in the next frame and read `GameCalendar.Days` as compared after the last of them; the original's
-  `FUN_00512880` runs inside its sweep, before that sweep's compare. Both are said at the site. Since Q150 the
-  frame's ticks run in one loop (`ParkLoop`, `ParkPeople.Sweep` on every eighth), so the fix puts the weather's tick,
-  then the compare and `RollTheDay` / `TurnTheMonth` / `TurnTheYear`, after each `ParkPeople.Sweep` there, per sweep. The weather's day phase is moot once Q529 schedules on
-  instants; its one-frame lag is not. Test: a frame of three sweeps whose day turns on the second rolls the rings
-  before the third sweep's settle-up (put the once-a-frame compare back and see it fail). Reached only in a frame
-  owing 16 or more ticks (a hitch); no game run shows it unless a hitch is forced (the console's `pause`/`step` or a
-  stopped process, as `park-engine.md`'s "+5, +5, +6" measurement did).
 - [ ] **Q151. A park's sky draws the lobby's horizon band. Decode first.** Found by the 2026-09-26 staleness audit.
   `FUN_005863c0` gives the band's four rings, per half, 0.99, `c08` + 0.5, `c0c` + 0.5, `v` + 0.5 and then 0.49,
   `c08`, `c0c`, `v`, with `c08`, `c0c`, `v` 0.34, 0.17, 0.01 (`0x00701f88`) by default and 0.19, 0.01, 0.49

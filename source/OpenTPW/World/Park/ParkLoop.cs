@@ -5,8 +5,9 @@ namespace OpenTPW;
 /// every system before the next begins, in the original's order (<c>0x0054f4bf</c>..<c>0x0054f8da</c>;
 /// <c>docs/exe/park-engine.md</c>, "What the 31 ms tick drives"): the particles (<c>0x0054f4f2</c>), the track tick and the
 /// scripts (<c>0x0054f55f</c>, <c>0x0054f56b</c>), the sprites on an even tick (<c>0x0054f5fb</c>), and on every eighth the
-/// thing sweep (<c>0x0054f7bb</c>), at most <see cref="ParkPeople.SweepsAFrame"/> a frame. So a guest's turn sees what the
-/// scripts did in the ticks before it and nothing of the ticks after.
+/// thing sweep (<c>0x0054f7bb</c>), at most <see cref="ParkPeople.SweepsAFrame"/> a frame, each followed by the sweep's tail:
+/// the calendar's compare and its turns and the weather's turn. So a guest's turn sees what the scripts did in the ticks before
+/// it and nothing of the ticks after, and a day that turns on a frame's second sweep rolls the objects' rings before its third.
 /// </summary>
 /// <remarks>
 /// Run by <see cref="Level.Update"/> at the top of a park's frame, before the entities' once-a-frame work. The original's
@@ -21,13 +22,19 @@ internal static class ParkLoop
 	/// <see cref="GameClock.Ticks"/>, which already counts this frame's ticks, so the first of them is that many less
 	/// <see cref="GameClock.TicksDue"/>, plus one.
 	/// </summary>
-	internal static void Run( ParticleSystem? particles, ParkRides? rides, ParkPeople? people )
+	/// <param name="calendar">The calendar's compare and its turns for the sweep just run (<see cref="Level.TurnTheCalendar"/>).</param>
+	/// <param name="weather">The weather, whose turn follows the compare.</param>
+	internal static void Run( ParticleSystem? particles, ParkRides? rides, ParkPeople? people, Action<ParkPeople>? calendar = null,
+		ParkWeather? weather = null )
 	{
 		if ( rides is { IsDeleted: true } )
 			rides = null;
 
 		if ( people is { IsDeleted: true } )
 			people = null;
+
+		if ( weather is { IsDeleted: true } )
+			weather = null;
 
 		var ticks = GameClock.TicksDue;
 		var first = GameClock.Ticks - ticks + 1;
@@ -68,7 +75,9 @@ internal static class ParkLoop
 				{
 					++sweeps;
 					people.Sweep( tick );
-					swept = $", sweep {sweeps} to mGameTick {people.State.GameTick}";
+					Tail( people, calendar, weather );
+					swept = $", sweep {sweeps} to mGameTick {people.State.GameTick}; calendar {GameCalendar.Now:yyyy-MM-dd HH:mm:ss}"
+						+ $" on mGameTick {GameCalendar.Counter}, weather turn {weather?.Turns.ToString() ?? "none"}";
 				}
 			}
 
@@ -78,6 +87,26 @@ internal static class ParkLoop
 
 		if ( dropped > 0 )
 			people!.Dropped( sweeps, dropped );
+	}
+
+	/// <summary>
+	/// The sweep's tail as it bears on the date: the calendar's compare and the day's, month's and year's turns, then the
+	/// golden tickets the sweep owed (<paramref name="calendar"/>; the original's tail <c>FUN_004d7b20</c>, which its sweep
+	/// calls last, <c>0x00516695</c>, and which compares at <c>0x004d7b3b</c>), then the weather's turn.
+	/// </summary>
+	/// <remarks>
+	/// The original's weather, thing 7, takes its turn in the sweep's walk, before the tail (<c>FUN_00512880</c> from
+	/// <c>FUN_0050b360</c>'s arm <c>0xf</c>), but it reads the date of the sweep's own <c>mGameTick</c> as it goes
+	/// (<c>FUN_004f8690</c> at <c>0x005128cd</c> and <c>0x005129be</c>, <c>FUN_004f8770</c> for the season) and hears none of
+	/// the compare's messages (it joins sets 1 and 2 alone, <c>0x00511fa9</c>, <c>0x00511fb8</c>). Ours reads the date the
+	/// compare sets (<see cref="GameCalendar.Days"/>, <see cref="GameCalendar.Season"/>), so it turns after the compare and
+	/// sees the same date; and after the advisor's turn, thing 3's, which reads nothing of the weather (docs/exe/weather.md,
+	/// "The calendar").
+	/// </remarks>
+	private static void Tail( ParkPeople people, Action<ParkPeople>? calendar, ParkWeather? weather )
+	{
+		calendar?.Invoke( people );
+		weather?.Turn();
 	}
 
 	/// <summary>How many of the <paramref name="ticks"/> ticks from <paramref name="first"/> fall on the thing sweep's beat.</summary>

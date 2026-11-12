@@ -1157,7 +1157,7 @@ public sealed class ParkState
 	/// The start is <see cref="GameCalendar.Epoch"/>, the clock constructor's own: the save's clock block is read
 	/// (<see cref="ParkWorld.Calendar"/>) but its start is not used, and every park file holds the same one
 	/// (<c>docs/exe/ride-operation.md</c>, "What it gives the three rides"). The rate is <see cref="GameCalendar.Rate"/>,
-	/// the loaded file's. <see cref="GameCalendar.Now"/> is the same date as of the last frame's sweeps.
+	/// the loaded file's. <see cref="GameCalendar.Now"/> is the same date as of the last sweep's compare.
 	/// </remarks>
 	public DateTime CalendarNow
 		=> GameCalendar.Epoch.AddTicks( (long)(uint)GameTick * GameCalendar.Rate / GameCalendar.AdvancesPerSecond

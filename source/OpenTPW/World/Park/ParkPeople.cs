@@ -2504,8 +2504,8 @@ public sealed partial class ParkPeople : Entity
 
 		// Then the sweep's tail, after every thing's turn and so after the advisor's (FUN_00516380 turns the things at
 		// 0x005163fb and calls the tail at 0x00516695): the golden tickets on every hundredth tick (0x004d7b60) are
-		// owed here and tested by Level.TurnTheCalendar once the calendar has turned, as the original's tail has them
-		// (0x004d7b20), so a ticket's line waits for the next sweep's turn.
+		// owed here and tested by Level.TurnTheCalendar, which ParkLoop runs after this sweep once the calendar has
+		// turned, as the original's tail has them (0x004d7b20), so a ticket's line waits for the next sweep's turn.
 		ParkGoldenTickets.Owe( State.GameTick );
 	}
 

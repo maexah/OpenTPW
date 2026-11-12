@@ -2375,7 +2375,7 @@ public class ParkFileWriterTests
 			for ( var tick = 1; tick < 5000 && GameCalendar.Days < 3; ++tick )
 			{
 				GameCalendar.Update( tick );
-				weather.Update();
+				weather.Turn();
 			}
 
 			var written = weather.Written( file );
@@ -2443,37 +2443,14 @@ public class ParkFileWriterTests
 		try
 		{
 			weather.DebugQuality( 78 );
-			GameCalendar.Update( 5 );
-			weather.Update();
+
+			for ( var sweep = 1; sweep <= 5; ++sweep )
+			{
+				GameCalendar.Update( sweep );
+				weather.Turn();
+			}
 
 			Assert.AreEqual( -5, weather.Written( null ).ThunderCountdown );
-		}
-		finally
-		{
-			weather.Delete();
-			GameCalendar.Rebase();
-		}
-	}
-
-	/// <summary>
-	/// <b>A loaded park's weather ticks only for the sweeps run since it was made</b>: entered on tick 755 and swept to
-	/// 758, its thunder count stands at -3, not the -758 of a weather that counted from nought.
-	/// </summary>
-	/// <remarks><b>Mutations:</b> the weather's tick started from nought.</remarks>
-	[TestMethod]
-	public void ALoadedParksWeatherTicksFromItsOwnClock()
-	{
-		_ = new ParkState( shipped );
-		GameCalendar.Rebase( shipped.GameTick, shipped.Calendar );
-		var weather = new ParkWeather( 139f, drawn: false );
-
-		try
-		{
-			weather.DebugQuality( 78 );
-			GameCalendar.Update( 758 );
-			weather.Update();
-
-			Assert.AreEqual( -3, weather.Written( null ).ThunderCountdown );
 		}
 		finally
 		{
