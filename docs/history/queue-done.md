@@ -13088,3 +13088,26 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   autosave rows, Alt+L and Restart Park each logged the Load line, the scene's windows stood and the clock ran on (139,
   171, 195, 216 / 137, 164 / 248), and the Good row loaded at 755. Three tests added, three changed. Not run: the
   original (none here), Windows and macOS, a picture (no drawing change). Filed Q1179 (the quickload's log line).
+- [x] **Q161. Stale text in code strings, test names and one census key.** Found by the 2026-09-26 staleness audit,
+  whose edits were to comments only. `Extensions.GetColor`'s `[Obsolete( "Use Color.Parse" )]` names a method that
+  does not exist, and nothing calls `GetColor` (dead by CODE: label it, rule 3). `RideEffects.Trigger` reports
+  `effect type {type} (TRIGGEREVENT)`; the instruction is `EVENT` (`Opcode`), beside `(ADDOBJ)`. The console's `load`
+  replies "they come one a tick"; `StepArrivals` admits one a thing sweep. Assert messages: `AnimationEasingTests`
+  ("an older note here quoted"), `ParkRideJoinTests` ("only 13 and 14 can be"; six pass the filter),
+  `ParkStateTests` ("the handyman" of thing
+  26, the mechanic), `ParkTickTests` ("neither of which this tree had"), `ParkPathBuildingTests` ("the loader's
+  runtime flag is a different thing", which `park-engine.md` calls not established), `PeepWalkTests` ("at 31ms a
+  tick"; a step is a thing sweep), `RideAnimationsTests` ("this branch"), `PeepNeedsTests` ("nothing else makes a
+  guest hurry"; `HurriesToTheGate`), `RideScriptModelTests` ("where the advance sat"), `PeepNavigatorTests` ("the
+  longest route in the shipped park", true of the save only) and `SoundCategoryTests` ("happened to work here"). Test
+  names: `AnimationUvTests.ATwoKeyTrackReadsAsItAlwaysDid`,
+  `BalanceFieldTests.AKeyThatNamesOneFieldIsReadExactlyAsBefore`,
+  `GameCalendarTests.TheDaysKeepTheOriginalsSlightlyFastPace` (it asserts 10 January on tick 230 and 11 January with
+  `DayRolled` on 231, the tick's date, and nothing of the 248 ms pace),
+  `ParkEvictionTests.EveryQueuerIsPutOutOfTheQueueAndLosesBothChanges` (its summary: the drain has already put out all
+  from the fifth place back) and `ParkWeatherTests.TheWeatherTurnsEverySevenDaysAndIsDecidedThreeDaysBefore` (four
+  days, `weather.md`). `ParkPathTests`' summary says "SEVEN tests fail" without the `ReferenceEquals` guard, measured
+  when sixteen classes built an edge test; twenty do now: take the guard out again in a worktree and write the count
+  taken, or drop it. No game run. **Done 2026-11-12** (cloud lane c19, `alexah/998-stale-strings-census-key`):
+  every string and name above corrected, `GetColor` labelled dead by CODE, the census key `(EVENT)` pinned in
+  `RideScriptEffectTests`, and the guard's count measured again: fifteen fail, written into `ParkPathTests`.

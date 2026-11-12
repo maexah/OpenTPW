@@ -185,7 +185,7 @@ public class ParkStateTests
 		cell.LitterCollector = 26;
 
 		Assert.AreEqual( 5, state.CellAt( 10, 11 ).Litter, "the litter should still be there" );
-		Assert.AreEqual( 26, state.CellAt( 10, 11 ).LitterCollector, "and so should the handyman who claimed it" );
+		Assert.AreEqual( 26, state.CellAt( 10, 11 ).LitterCollector, "and so should thing 26's claim on it" );
 		Assert.AreEqual( 1, state.LitteredCells, "and the park should now count one littered cell" );
 
 		Assert.AreEqual( 0, state.CellAt( 11, 10 ).Litter, "the cell with the coordinates the other way round is untouched" );

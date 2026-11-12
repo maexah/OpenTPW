@@ -1338,7 +1338,7 @@ public static class DebugConsole
 				var coming = (int)Argument( 1, 40 );
 				var by = loading.ForceArrival( coming );
 
-				Reply( $"load: {coming} arriving, vehicle {by} - they come one a tick" );
+				Reply( $"load: {coming} arriving, vehicle {by} - they come one a thing sweep" );
 
 				break;
 

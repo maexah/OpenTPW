@@ -111,7 +111,7 @@ public class ParkPathBuildingTests
 
 		Assert.AreEqual( 78, paths, "the shipped park's path cells" );
 		Assert.AreEqual( 18, protectedCells,
-			"the save carries NOMODIFY on 18 of them - the loader's runtime flag is a different thing" );
+			"the save carries NOMODIFY on 18 of them" );
 	}
 
 	/// <summary>

@@ -128,7 +128,7 @@ public class ParkEvictionTests
 	/// one in raw state 14, for the medium change alone (<c>docs/exe/ride-operation.md</c>, "The sale's drain").
 	/// </summary>
 	[TestMethod]
-	public void EveryQueuerIsPutOutOfTheQueueAndLosesBothChanges()
+	public void TheTwoQueuersTheDrainLeavesArePutOutOfTheQueueAndLoseBothChanges()
 	{
 		var park = Open();
 

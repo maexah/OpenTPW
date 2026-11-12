@@ -268,8 +268,9 @@ public class ParkPathTests
 	/// </para>
 	/// <para>
 	/// <b>Measured by putting the bug back: take the <c>ReferenceEquals</c> out of
-	/// <see cref="ParkState.CellFor"/> and SEVEN tests fail</b> - this one, and six more across the
-	/// queue walk and the offer filter, because a park-less overlay makes every cell read as type 0.
+	/// <see cref="ParkState.CellFor"/> and FIFTEEN tests fail</b> (2026-11-12, the whole suite with the game) -
+	/// this one, and fourteen more across the ground and path drawing, the queue walk, the offer filter and
+	/// the guests' choice, because a park-less overlay makes every cell read as type 0.
 	/// The ride's queue walk drops from four cells to nought, and the objects a guest may be offered
 	/// collapse from six to two.
 	/// </para>

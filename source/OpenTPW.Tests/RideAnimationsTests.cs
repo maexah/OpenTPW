@@ -172,7 +172,7 @@ public class RideAnimationsTests
 		Assert.AreEqual( 1, main.MorphTracks.Count, $"one mesh morphs - it carries {carried}" );
 		Assert.AreEqual( 0, main.RotationTracks.Count, $"and nothing turns - it carries {carried}" );
 		Assert.AreEqual( 0, main.PositionTracks.Count,
-			$"and nothing slides, so the tracks this branch does not pose are none of its business - {carried}" );
+			$"and nothing slides, so the position tracks LobbyModel does not pose are none of its business - {carried}" );
 
 		var model = new ModelFile( new System.IO.MemoryStream(
 			data.ReadAllBytes( "levels/jungle/features/camera/camera.md2" ) ) );

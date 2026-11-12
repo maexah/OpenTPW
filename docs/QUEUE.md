@@ -2411,27 +2411,6 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   Also left (the 2026-09-26 staleness audit): the `PreferredBackend` setting in `App.config` and `Settings.settings`,
   which nothing reads (`Settings.Default` is read for `GamePath` and `GameWindowSize` only). Label it as dead by CODE
   at its sites; remove it only on Alexah's word.
-- [ ] **Q161. Stale text in code strings, test names and one census key.** Found by the 2026-09-26 staleness audit,
-  whose edits were to comments only. `Extensions.GetColor`'s `[Obsolete( "Use Color.Parse" )]` names a method that
-  does not exist, and nothing calls `GetColor` (dead by CODE: label it, rule 3). `RideEffects.Trigger` reports
-  `effect type {type} (TRIGGEREVENT)`; the instruction is `EVENT` (`Opcode`), beside `(ADDOBJ)`. The console's `load`
-  replies "they come one a tick"; `StepArrivals` admits one a thing sweep. Assert messages: `AnimationEasingTests`
-  ("an older note here quoted"), `ParkRideJoinTests` ("only 13 and 14 can be"; six pass the filter),
-  `ParkStateTests` ("the handyman" of thing
-  26, the mechanic), `ParkTickTests` ("neither of which this tree had"), `ParkPathBuildingTests` ("the loader's
-  runtime flag is a different thing", which `park-engine.md` calls not established), `PeepWalkTests` ("at 31ms a
-  tick"; a step is a thing sweep), `RideAnimationsTests` ("this branch"), `PeepNeedsTests` ("nothing else makes a
-  guest hurry"; `HurriesToTheGate`), `RideScriptModelTests` ("where the advance sat"), `PeepNavigatorTests` ("the
-  longest route in the shipped park", true of the save only) and `SoundCategoryTests` ("happened to work here"). Test
-  names: `AnimationUvTests.ATwoKeyTrackReadsAsItAlwaysDid`,
-  `BalanceFieldTests.AKeyThatNamesOneFieldIsReadExactlyAsBefore`,
-  `GameCalendarTests.TheDaysKeepTheOriginalsSlightlyFastPace` (it asserts 10 January on tick 230 and 11 January with
-  `DayRolled` on 231, the tick's date, and nothing of the 248 ms pace),
-  `ParkEvictionTests.EveryQueuerIsPutOutOfTheQueueAndLosesBothChanges` (its summary: the drain has already put out all
-  from the fifth place back) and `ParkWeatherTests.TheWeatherTurnsEverySevenDaysAndIsDecidedThreeDaysBefore` (four
-  days, `weather.md`). `ParkPathTests`' summary says "SEVEN tests fail" without the `ReferenceEquals` guard, measured
-  when sixteen classes built an edge test; twenty do now: take the guard out again in a worktree and write the count
-  taken, or drop it. No game run.
 - [ ] **Q204. Load the area-only notes only in their area.** Claude Code loads a `.claude/rules/*.md` file whose
   `paths:` front matter matches an open file, and no other time. Move the sections of `CLAUDE.local.md` (and any of
   `CLAUDE.md`) that serve one area only - the capture recipe, the original under Proton, the 2.0 patch's evidence - into

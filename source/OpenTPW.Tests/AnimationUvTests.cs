@@ -148,7 +148,7 @@ public class AnimationUvTests
 	/// the engine's agree. It is here so that a change made for the 43% cannot quietly move the 57%.
 	/// </summary>
 	[TestMethod]
-	public void ATwoKeyTrackReadsAsItAlwaysDid()
+	public void ATwoKeyTrackEndsOnItsSecondKey()
 	{
 		var clip = Clip( "levels/jungle/terrain/basem.MD2" );
 

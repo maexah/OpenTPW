@@ -182,7 +182,7 @@ public class PeepWalkTests
 		var (verdict, ticks) = WalkOut( walk );
 
 		Assert.AreEqual( WalkVerdict.Arrived, verdict );
-		Assert.AreEqual( 32, ticks, "how long the walk takes, at 31ms a tick" );
+		Assert.AreEqual( 32, ticks, "how long the walk takes, in steps, one a thing sweep" );
 		Assert.AreEqual( (48, 13), nav.Position.Cell, "they end on the cell they were sent to" );
 
 		Assert.AreEqual( 266323,

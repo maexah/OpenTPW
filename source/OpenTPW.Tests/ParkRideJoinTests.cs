@@ -188,7 +188,7 @@ public class ParkRideJoinTests
 		// Only the ride and the sideshow are queued for in this run. The shop and the three toilets pass
 		// the filter too (ParkRideChoiceTests), so this pins where this run's guests queue, not the filter.
 		foreach ( var id in seen.Queued )
-			Assert.IsTrue( id is 13 or 14, $"thing {id} was queued for, and only 13 and 14 can be" );
+			Assert.IsTrue( id is 13 or 14, $"thing {id} was queued for, and this run's guests queue only for 13 and 14" );
 	}
 
 	/// <summary>

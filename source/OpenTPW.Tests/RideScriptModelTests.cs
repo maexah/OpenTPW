@@ -522,7 +522,7 @@ public class RideScriptModelTests
 		script.Turn( 21031f );
 		script.Turn( 21062f );
 
-		Assert.IsTrue( script.Running, "the script stopped, so the turns never reached where the advance sat" );
+		Assert.IsTrue( script.Running, "the script stopped, so the turns never reached the point a per-tick advance would act at" );
 		Assert.IsTrue( script.Waiting, "and it should still be sitting on its WAIT" );
 
 		// This is the assertion that catches a per-tick advance: it would read 631.86 rather than nought.
