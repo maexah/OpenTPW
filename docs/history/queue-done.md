@@ -12145,6 +12145,10 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q1064. The park writer's nought queued speed of a loaded channel (from Q1063).** With the load seeding every channel's `+0x30`, a loaded channel's `DeferredSpeed` is nought only after a promotion cleared it (`0x004738af`)
+  and before the next due visit, so `ParkRides.WrittenChannel` can write the nought as it stands (the engine saves `+0x30` whatever it holds) where it now writes the file's stale speed (`Speed: channel.DeferredSpeed != 0f ? ... : file.QueuedSpeed`). A made
+  channel's nought (a bought ride before its first visit) falls back to `MadeChannel`'s 1.0 or `NeverStartedChannel`'s nought, and the original's own just-bought Hot Pot (`q257r` hotpot-bought-shut, slot 90, item 1140) holds 1.1, its divisor (the Sentinel's review datum, 2026-11-05; not read by Q1063; `fix-bought.TPWS` is OpenTPW's file, not the original's), so a just-bought thing must not save nought and the nought is for a clear's alone (a promotion `0x004738af` or a start-at-once trigger `0x00473408` leaves `+0x30` nought and the engine saves it so until the next due visit); a made channel's value before any visit is what is unmeasured: read a bought ride's `+0x30` in the original before its first visit
+  (the model maker, `docs/exe/saves.md`, "A park made fresh"). Confirm: a loaded ride saved within 248 ms of a promotion, the saved `+0x30` read; predicted first.
 
 ## B. Docs and comments
 

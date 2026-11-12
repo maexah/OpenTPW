@@ -1158,7 +1158,7 @@ public sealed class ParkRides : Entity
 			for ( var index = 0; index < channels.Length; ++index )
 			{
 				channels[index] = animations?.Channel( index ) is { } channel
-					? WrittenChannel( channel, channel.Started ? MadeChannel : NeverStartedChannel, Reading, now )
+					? WrittenChannel( channel, channel.Started ? MadeChannel : NeverStartedChannel, Reading, now, seeded: false )
 					: MadeChannel;
 			}
 
@@ -1260,7 +1260,7 @@ public sealed class ParkRides : Entity
 			var channels = new SavedChannel[record.Channels.Length];
 
 			for ( var index = 0; index < channels.Length; ++index )
-				channels[index] = WrittenChannel( players.Channel( index )!, record.Channels[index], Reading, now );
+				channels[index] = WrittenChannel( players.Channel( index )!, record.Channels[index], Reading, now, seeded: true );
 
 			var hoarding = hoardingFor( thing.ThingId );
 
@@ -1444,18 +1444,21 @@ public sealed class ParkRides : Entity
 	private const int ChannelFlagsKept = 0x3f;
 
 	/// <summary>One channel as the engine keeps it - see <see cref="Written"/>.</summary>
-	internal static SavedChannel WrittenChannel( AnimTimeControl channel, SavedChannel file, Func<float, uint> reading, int now )
+	/// <param name="seeded">
+	/// Whether the load put the file's queued speed on this channel (<see cref="Resume(RideAnimations, SavedThing)"/>): a loaded
+	/// thing's channel, whose <paramref name="file"/> is its record. False for a made channel, whose <paramref name="file"/> is a fallback.
+	/// </param>
+	internal static SavedChannel WrittenChannel( AnimTimeControl channel, SavedChannel file, Func<float, uint> reading, int now, bool seeded )
 	{
 		// What is queued behind it; with nothing queued the engine leaves the last queue's clip and flags behind,
-		// which a channel here does not keep, so the file's stay. Its speed is the last write the scheduler made
-		// (RideScript.WriteChannelSpeeds, Q1061), which the engine saves as it stands; a load puts the file's speed back (Resume, Q1063),
-		// so nought here means a promotion or a start-at-once trigger since the last write, or a made channel no visit has reached, and the
-		// file's stays. Not the original's after the first two: the engine saves the nought until the script's next due visit
-		// (0x004738af; Q1064; docs/exe/saves.md, "OpenTPW's writer, the objects", a model).
+		// which a channel here does not keep, so the file's stay. Its speed is the engine's +0x30 as it stands, which it saves whatever
+		// it holds: the load's seed or the scheduler's last write (RideScript.WriteChannelSpeeds), or the nought a promotion or a
+		// start-at-once trigger left until the script's next due visit (0x004738af, 0x00473408). A made channel no visit has reached
+		// holds a nought no load put there, and takes the fallback (docs/exe/saves.md, "OpenTPW's writer, the objects", a model).
 		var queued = channel.HasQueued
 			? (Role: channel.DeferredAnimID, Entry: channel.DeferredSubAnim, Flags: channel.DeferredFlags, Speed: channel.DeferredSpeed)
 			: (Role: ParkThingStates.NoRole, Entry: file.QueuedEntry, Flags: file.QueuedFlags,
-				Speed: channel.DeferredSpeed != 0f ? channel.DeferredSpeed : file.QueuedSpeed);
+				Speed: seeded || channel.DeferredSpeed != 0f ? channel.DeferredSpeed : file.QueuedSpeed);
 
 		if ( channel.IsIdle )
 		{
