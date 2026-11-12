@@ -153,14 +153,13 @@ public class ParkSweepTailTests
 	}
 
 	/// <summary>
-	/// <b>The weather reads the date of its own sweep</b>: a park with no file, its clock at nought, forecasts on its first
-	/// sweep and the forecast lands on the sweep whose compare turns its fifth day edge, 93, one sweep a frame
-	/// (<c>docs/exe/weather.md</c>, "A park's first days": the original's on 94, by instants, Q529).
+	/// <b>The weather reads the calendar of its own sweep</b>: a park with no file, its clock at nought, forecasts on its first
+	/// sweep, due at 93.16, and the forecast lands on the first sweep past that, 94, one sweep a frame, as the original's
+	/// (<c>docs/exe/weather.md</c>, "A park's first days").
 	/// </summary>
-	/// <remarks><b>Mutations:</b> the weather's turn before the compare, which reads the day before the first edge and lands on
-	/// 71.</remarks>
+	/// <remarks><b>Mutations:</b> the schedule on day edges (lands on 93); the delivery at the forecast's stamp.</remarks>
 	[TestMethod]
-	public void AFreshParksFirstForecastLandsOnTheSweepOfItsDay()
+	public void AFreshParksFirstForecastLandsOnTheFirstSweepPastItsDueTime()
 	{
 		using var clock = new SimulationClockScope();
 		Park? park = null;
@@ -183,7 +182,7 @@ public class ParkSweepTailTests
 					landed = park.State.GameTick;
 			}
 
-			Assert.AreEqual( 93, landed, $"the forecast landed on sweep {landed}, quality {rolled} to {park.Weather.Quality}" );
+			Assert.AreEqual( 94, landed, $"the forecast landed on sweep {landed}, quality {rolled} to {park.Weather.Quality}" );
 		}
 		finally
 		{

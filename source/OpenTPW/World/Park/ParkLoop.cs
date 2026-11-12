@@ -114,9 +114,9 @@ internal static class ParkLoop
 	/// The original's weather, thing 7, takes its turn in the sweep's walk, before the tail (<c>FUN_00512880</c> from
 	/// <c>FUN_0050b360</c>'s arm <c>0xf</c>), but it reads the date of the sweep's own <c>mGameTick</c> as it goes
 	/// (<c>FUN_004f8690</c> at <c>0x005128cd</c> and <c>0x005129be</c>, <c>FUN_004f8770</c> for the season) and hears none of
-	/// the compare's messages (it joins sets 1 and 2 alone, <c>0x00511fa9</c>, <c>0x00511fb8</c>). Ours reads the date the
-	/// compare sets (<see cref="GameCalendar.Days"/>, <see cref="GameCalendar.Season"/>), so it turns after the compare and
-	/// sees the same date; and after the advisor's turn, thing 3's, which reads nothing of the weather (docs/exe/weather.md,
+	/// the compare's messages (it joins sets 1 and 2 alone, <c>0x00511fa9</c>, <c>0x00511fb8</c>). Ours reads the live tick's
+	/// calendar for its schedule (<see cref="ParkState.CalendarNow"/>) and the season the compare sets
+	/// (<see cref="GameCalendar.Season"/>), so it turns after the compare and sees the same date; and after the advisor's turn, thing 3's, which reads nothing of the weather (docs/exe/weather.md,
 	/// "The calendar"). But the original's tail reads the turned weather: its arrival manager sizes a load by this sweep's
 	/// drops (<c>0x004cf60e</c>), where ours runs in <see cref="ParkPeople.Sweep"/> before this turn and reads the drops one
 	/// turn behind (Q1165). And the original skips the walk, its weather with it, in world state 4, the park's end

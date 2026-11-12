@@ -102,13 +102,11 @@ public sealed class ParkWeather : Entity
 	private int _lightningCountdown;
 	private int _strikesThisPeriod;
 	private int _thunderCountdown;
-	private int _lastChangedDay;
-	private int _forecastDueDay = -1;
 
 	// What the thing's saved record holds (FUN_00512010): the park calendar, a FILETIME, as the quality was last
 	// applied (FUN_00512f00 stamps mLastChanged; nought until one is) and as the last forecast was made, with its due time and quality
-	// (message 2, FUN_005127a0); the forecast's stay after it is delivered, as the original's do, and are null until
-	// this park makes one.
+	// (message 2, FUN_005127a0); the forecast's stay after it is delivered, as the original's do, and are null in a
+	// fresh park until it makes one. The schedule runs on these instants.
 	private long _lastChanged;
 	private (long Made, long Due, int Quality)? _lastForecast;
 
@@ -162,19 +160,19 @@ public sealed class ParkWeather : Entity
 	/// <summary>The wind's force <c>Weather_Construct</c> leaves, its <c>+0x60</c>.</summary>
 	internal const float ConstructedForce = 0.5f;
 
-	/// <param name="savedWindDirection">
-	/// The park file's <c>mWindDir</c>, or null for a fresh park, which stands as the original's constructor leaves it;
-	/// a load reads the saved wind over that (<c>FUN_00512010</c>), so a loaded park's flags stand as they were saved.
+	/// <param name="saved">
+	/// The park file's weather thing, or null for a fresh park, which stands as the original's constructor leaves it;
+	/// a load reads the whole record over that (<c>FUN_00512010</c>) and runs on from it (<see cref="RunOnFrom"/>).
 	/// </param>
-	public ParkWeather( float? savedWindDirection = null ) : this( savedWindDirection, drawn: true )
+	public ParkWeather( ParkWorld.WeatherState? saved = null ) : this( saved, drawn: true )
 	{
 	}
 
-	/// <param name="savedWindDirection">As the public constructor's.</param>
+	/// <param name="saved">As the public constructor's.</param>
 	/// <param name="drawn">Whether it makes the rain and the bolt that draw it; a weather that draws nothing needs no device.</param>
 	/// <param name="balance">The balance file to read; null reads the level's own (a test hands one over).</param>
 	/// <remarks>Dead by CODE with <paramref name="drawn"/> false: only ParkFileWriterTests, ParkWeatherFreshTests and ParkWeatherBoltTests pass it.</remarks>
-	internal ParkWeather( float? savedWindDirection, bool drawn, ParkBalance? balance = null )
+	internal ParkWeather( ParkWorld.WeatherState? saved, bool drawn, ParkBalance? balance = null )
 	{
 		Current = this;
 
@@ -225,16 +223,49 @@ public sealed class ParkWeather : Entity
 		WindDirection = ConstructedWind;
 		WindForce = ConstructedForce;
 
-		// A load reads the file over all of that. This applies the roll at once and takes the file's wind alone, a
-		// deviation until Q529 starts the weather from the file.
-		if ( savedWindDirection != null )
-			Apply( Quality );
+		// A load reads the file over all of that, applying nothing.
+		if ( saved is { } file )
+			RunOnFrom( file );
 
-		WindDirection = StartingWind( WindDirection, savedWindDirection );
+		// The target as well as the drops: a fresh park's ramp has not run, and a loaded one's draws nothing until it steps.
+		Log.Info( $"Park weather: quality {Quality}, drops {_drops} heading for {_targetDrops}, lightning {Lightning}, "
+			+ $"forecast {Forecast}{(saved != null ? $", from the file: {Describe( saved.Value )}" : "")}" );
+	}
 
-		// The target, not Drops: the ramp has not run yet, so Drops is still nought here and reporting
-		// it would say "dry" however hard it is about to rain.
-		Log.Info( $"Park weather: quality {Quality}, heading for {_targetDrops} drops, lightning {Lightning}" );
+	/// <summary>
+	/// Takes the file's weather thing as it lies, as the original's load reads it over the constructor's
+	/// (<c>Weather_Serialise</c>, <c>0x00512010</c>): the quality, the stamps and a pending forecast, the ramp where it had got
+	/// to, the storm's counts and the wind. Nothing is applied, so no voice is started and the rain is handed no level:
+	/// the original hands the particles their count only on a step of the ramp, so a file whose drops stand within a step
+	/// of their target draws no rain until the weather next changes (<c>docs/exe/saves.md</c>, "A file loaded with its drops
+	/// at their target draws no rain"). <c>mRainSoundHandle</c>, <c>mPType</c> and <c>mOverridden</c> are not taken (see
+	/// <see cref="ParkWorld.PutWeather"/>); <see cref="Snowing"/> is left false, the record holding no particle mode (only hallow snows, and its load is not checked).
+	/// </summary>
+	private void RunOnFrom( ParkWorld.WeatherState file )
+	{
+		Quality = file.Quality;
+		_lastChanged = file.LastChanged;
+		_lastForecast = (file.LastForecasted, file.ForecastTime, file.ForecastQuality);
+		Forecast = file.ForecastValid ? file.ForecastQuality : -1;
+
+		_drops = file.CurrentDrops;
+		_targetDrops = file.TargetDrops;
+		Drops = _drops;
+
+		Lightning = file.Lightning;
+		_lightningCountdown = file.LightningCountdown;
+		_strikesThisPeriod = file.LightningNumThisPeriod;
+		_thunderCountdown = file.ThunderCountdown;
+
+		// The file's location is in the original's axes, y up; this engine is z up.
+		if ( file.LastLightningLocation is { } top )
+		{
+			_thunderAt = new Vector3( top.X, top.Z, top.Y );
+			LastStrike = _thunderAt.Value;
+		}
+
+		WindDirection = file.WindDir;
+		WindForce = file.WindForce;
 	}
 
 	/// <summary>
@@ -257,8 +288,6 @@ public sealed class ParkWeather : Entity
 		Apply( quality );
 
 		Forecast = -1;
-		_forecastDueDay = -1;
-		_lastChangedDay = GameCalendar.Days;
 	}
 
 	/// <summary>
@@ -327,20 +356,30 @@ public sealed class ParkWeather : Entity
 	}
 
 	/// <summary>
-	/// A forecast that has come due is applied and cleared. The original keeps the pending quality in
-	/// the thing's own forecast record at +0x20..+0x2c and tests the flag byte at +0x2c first thing.
+	/// A forecast that has come due is applied and cleared: on the first tick past its <c>mTime</c>. The original keeps
+	/// the pending quality in the thing's own forecast record at +0x20..+0x2c and tests the flag byte at +0x2c first thing.
 	/// </summary>
 	private void Deliver()
 	{
-		if ( Forecast < 0 || GameCalendar.Days < _forecastDueDay )
+		if ( Forecast < 0 || _lastForecast is not { } pending || !Past( CalendarStamp(), pending.Due ) )
 			return;
+
+		Log.Info( $"Park weather: forecast {Forecast} delivered on tick {Tick} (due {Stamp( pending.Due )})" );
 
 		Apply( Forecast );
 
 		Forecast = -1;
-		_forecastDueDay = -1;
-		_lastChangedDay = GameCalendar.Days;
 	}
+
+	/// <summary>The park's <c>mGameTick</c> for the log; the calendar's where there is no park state.</summary>
+	private static int Tick => ParkState.Current?.GameTick ?? GameCalendar.Counter;
+
+	/// <summary>
+	/// Whether <paramref name="now"/> is past <paramref name="instant"/>, both <c>FILETIME</c>s of the park calendar: the
+	/// weather's compare (<c>FUN_005fc570</c> at <c>0x005129c5</c>), read in <c>docs/exe/weather.md</c> as "past". A tick's stamp is
+	/// whole seconds, 3750 of them a tick at the shipped rate, so no shipped lead or warning lands on one exactly.
+	/// </summary>
+	internal static bool Past( long now, long instant ) => now > instant;
 
 	/// <summary>
 	/// Rolls the next quality and publishes it as a forecast, once the park is far enough past the
@@ -354,10 +393,11 @@ public sealed class ParkWeather : Entity
 	/// three days after the last change and arrives four days after that.
 	/// </para>
 	/// <para>
-	/// <b>A fresh park forecasts on its first tick.</b> Its <c>mLastChanged</c> is nought, 1601, so the first compare
-	/// (<c>0x005129c5</c>, now past that plus the lead) already holds, and the constructor's quality stands only until that
-	/// forecast lands. This counts day edges (see <see cref="Written"/>), so it lands on sweep 93 where the original's lands
-	/// on 94.
+	/// <b>The schedule runs on the park calendar's instants</b>, not on day edges: the forecast is made on the first tick
+	/// past <c>mLastChanged</c> plus the lead (<c>0x00512995</c>) and falls due at its <c>mTime</c>, so a forecast read from a file
+	/// falls due on the original's tick. <b>A fresh park forecasts on its first tick.</b> Its <c>mLastChanged</c> is nought,
+	/// 1601, so the first compare already holds, and the constructor's quality stands only until that forecast lands, on
+	/// sweep 94 (made on 1, due 93.16). A file with a nought stamp (Restart Park's, at tick nought) does the same.
 	/// </para>
 	/// <para>
 	/// Whether the original ever showed that warning to the player - an advisor line, a forecast panel -
@@ -370,15 +410,15 @@ public sealed class ParkWeather : Entity
 			return;
 
 		var lead = Math.Max( _daysBetweenChanges - _daysOfWarning, 0 );
+		var now = CalendarStamp();
 
-		if ( _lastChanged != 0 && GameCalendar.Days < _lastChangedDay + lead )
+		if ( !Past( now, _lastChanged + (lead * TimeSpan.TicksPerDay) ) )
 			return;
 
 		Forecast = Roll();
-		_forecastDueDay = GameCalendar.Days + _daysOfWarning;
+		_lastForecast = (now, ForecastDue( now, _daysOfWarning ), Forecast);
 
-		var made = CalendarStamp();
-		_lastForecast = (made, ForecastDue( made, _daysOfWarning ), Forecast);
+		Log.Info( $"Park weather: forecast {Forecast} made on tick {Tick}, due {Stamp( _lastForecast.Value.Due )}" );
 	}
 
 	/// <summary>
@@ -389,10 +429,11 @@ public sealed class ParkWeather : Entity
 
 	/// <summary>
 	/// Now on the park's own calendar as a <c>FILETIME</c> (<see cref="ParkState.CalendarNow"/>, <c>FUN_004f8690</c>),
-	/// the stamp the original's weather takes; the calendar's start where there is no park.
+	/// the stamp the original's weather takes, of the live tick; the calendar's own date where there is no park state (a
+	/// test's), the same date as of the last compare.
 	/// </summary>
 	private static long CalendarStamp()
-		=> ParkWorld.StaffState.FileTimeOf( ParkState.Current?.CalendarNow ?? GameCalendar.Epoch );
+		=> ParkWorld.StaffState.FileTimeOf( ParkState.Current?.CalendarNow ?? GameCalendar.Now );
 
 	/// <summary>
 	/// A quality for the season, from FUN_00512e10: usually the season's average give or take its
@@ -476,9 +517,6 @@ public sealed class ParkWeather : Entity
 		WindForce = Math.Clamp( (100 - Quality) * 0.01f, 0f, 1f );
 		WindDirection = Turned( WindDirection, _rng.Next( 90 ) - 45, _heldWind );
 	}
-
-	/// <summary>The wind a park opens with: the file's <c>mWindDir</c> where there is a file, else the constructor's 90 (<paramref name="rolled"/>; the original rolls no wind).</summary>
-	internal static float StartingWind( float rolled, float? saved ) => saved ?? rolled;
 
 	/// <summary>The wind after a change of weather: turned by <paramref name="turn"/> degrees and wrapped to [0, 360), unless held.</summary>
 	internal static float Turned( float wind, int turn, float? held ) => held ?? (wind + turn + 360f) % 360f;
@@ -649,15 +687,9 @@ public sealed class ParkWeather : Entity
 
 	/// <summary>
 	/// The weather thing's fields as a save writes them (<see cref="ParkWorld.PutWeather"/>; <c>docs/exe/saves.md</c>,
-	/// "OpenTPW's writer, the weather thing"). Where this park has made no forecast, the last forecast's stamp, due time
-	/// and quality are <paramref name="file"/>'s, as the original's load leaves them; its <c>mValid</c> is this park's,
-	/// whose forecast from the file is not read. The location is in the original's axes, y up.
-	/// <para>
-	/// <b>A deviation:</b> this park's schedule counts day edges of <see cref="GameCalendar"/> (<c>docs/QUEUE.md</c> Q529), so its forecast is
-	/// made and falls due on a whole day where the original's is made on the first tick past an instant
-	/// (<c>0x00512995</c>); the stamps are the park calendar's on the tick it happened here, so the original loading the
-	/// file runs its own schedule from them.
-	/// </para>
+	/// "OpenTPW's writer, the weather thing"). A loaded park's last forecast is its file's until it makes one; a fresh
+	/// park's, until it makes one, is <paramref name="file"/>'s where one is given, else noughts. The location is in the
+	/// original's axes, y up.
 	/// </summary>
 	public ParkWorld.WeatherState Written( ParkWorld.WeatherState? file )
 	{

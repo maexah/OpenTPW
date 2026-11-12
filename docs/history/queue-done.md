@@ -13736,3 +13736,15 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
     save (medium) logged `from textures`. Not done: the photograph (no display in the lane), filed as Q1432. `orange`
     (the note above) is not a drawn slot and is left. **Done 2026-11-12** (cloud lane c78,
     `alexah/1057-build-markers-stexture`).
+- [x] **Q529. A loaded park's weather runs on from the file's.** From Q528 (`saves.md`, "OpenTPW's writer, the weather
+  thing"): the original's load reads all of the weather thing over its constructor's (`Weather_Serialise`,
+  `0x00512010`) and runs on from it, the rain, the storm, a pending forecast and its due time; ours reads only
+  `mWindDir` (`ParkWorld.WindDirection`) and rolls the rest fresh, though `ParkWorld.WeatherRecord` reads it all. Start
+  `ParkWeather` from the record, and schedule as the original does, on the park calendar's instants (`mLastChanged` +
+  3 days, the forecast's `mTime`; the first tick past each) rather than day edges of `GameCalendar` (Q149), so a
+  forecast read from a file falls due on the original's tick. Look first at what the load leaves undrawn: the original
+  sets the particles only on a step of the ramp, so a file whose drops stand at their target rains nowhere until the
+  next change (filmed, `q528/orig/e-rain-film.png`), and its voice's handle is the saving process's. A park with no file stands as the constructor leaves it (Q803). A file at tick
+  nought, as Restart Park reads, holds a nought stamp, so its load forecasts on sweep 1 where this game's applies a roll
+  (`docs/exe/weather.md`, "A park's first days"), and the instants move a fresh park's first delivery from sweep 93 to the original's 94. Confirm: q528's `run3/q528-fix2.TPWS`
+  loaded here and in the original, the quality, the drops and the forecast's delivery tick (17097) predicted, a frame

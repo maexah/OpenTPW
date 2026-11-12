@@ -2486,7 +2486,8 @@ public class ParkFileWriterTests
 	/// <summary>
 	/// <b>The running weather is written as it stands</b>: a quality of 10 applied on tick 16970 is stamped with that
 	/// tick's calendar, asks for 450 drops and arms the lightning; with no forecast made the file's last forecast is kept
-	/// and none is pending; with no bolt the file's location is kept. A bolt aimed at (100, 200) arms the thunder (10 or
+	/// and none is pending; the storm's counts run on from the file's (its thunder -755); with no bolt the file's
+	/// location is kept. A bolt aimed at (100, 200) arms the thunder (10 or
 	/// 11 weather ticks off) and is written at its top in the original's axes, y up, 300; a second bolt while the thunder
 	/// is armed leaves it there.
 	/// </summary>
@@ -2498,7 +2499,7 @@ public class ParkFileWriterTests
 		var file = shipped.WeatherRecord!.Value;
 		var state = new ParkState( shipped );
 		state.SetGameTick( 16970 );
-		var weather = new ParkWeather( 139f, drawn: false );
+		var weather = new ParkWeather( file, drawn: false );
 
 		try
 		{
@@ -2508,7 +2509,7 @@ public class ParkFileWriterTests
 			var written = weather.Written( file );
 
 			Assert.AreEqual( new ParkWorld.WeatherState( 10, CalendarOn( 16970 ), file.LastForecasted, file.ForecastTime,
-				file.ForecastQuality, false, 0, 450, true, 0, 0, 0, null, 139f, written.WindForce ), written );
+				file.ForecastQuality, false, 0, 450, true, 0, 0, -755, null, 139f, written.WindForce ), written );
 			Assert.AreEqual( 0.9f, written.WindForce, 1e-6f );
 
 			weather.DebugStrike( new Vector3( 100f, 200f, 0f ) );
@@ -2530,9 +2531,10 @@ public class ParkFileWriterTests
 	}
 
 	/// <summary>
-	/// <b>A forecast made is written valid, with its own stamp, due time and quality</b>: the park calendar three days
-	/// past the last change (the shipped 7 days between changes less 4 of warning) makes one, which the save carries as
-	/// pending, stamped with the tick's calendar and falling due four days on. <b>The thunder sounds at the top of the
+	/// <b>A forecast made is written valid, with its own stamp, due time and quality</b>: the first tick past three days
+	/// after the last change (the shipped 7 days between changes less 4 of warning), 17040 for a change on 16970 as in the
+	/// original (<c>docs/exe/saves.md</c>, "Both games"), makes one, which the save carries as pending, stamped with that
+	/// tick's calendar and falling due four days on. <b>The thunder sounds at the top of the
 	/// bolt that armed it</b>, not the latest bolt's.
 	/// </summary>
 	/// <remarks><b>Mutations:</b> the forecast not recorded for the save; its valid flag fixed false; the thunder taken
@@ -2543,25 +2545,30 @@ public class ParkFileWriterTests
 		var file = shipped.WeatherRecord!.Value;
 		var state = new ParkState( shipped );
 		state.SetGameTick( 16970 );
-		GameCalendar.Rebase();
-		var weather = new ParkWeather( 139f, drawn: false );
+		GameCalendar.Rebase( 16970 );
+		var weather = new ParkWeather( file, drawn: false );
 
 		try
 		{
 			weather.DebugQuality( 50 );
 
-			// A sweep a frame until the third day has turned (47 sweeps, the first turning 1 January).
-			for ( var tick = 1; tick < 5000 && GameCalendar.Days < 3; ++tick )
+			var made = 0;
+
+			for ( var tick = 16971; tick < 17200 && made == 0; ++tick )
 			{
+				state.SetGameTick( tick );
 				GameCalendar.Update( tick );
 				weather.Turn();
+
+				if ( weather.Forecast >= 0 )
+					made = tick;
 			}
 
 			var written = weather.Written( file );
 
-			Assert.IsTrue( weather.Forecast >= 0, "a forecast is made three days on" );
+			Assert.AreEqual( 17040, made, "the first tick past 16970 + 69.12" );
 			Assert.IsTrue( written.ForecastValid );
-			Assert.AreEqual( CalendarOn( 16970 ), written.LastForecasted );
+			Assert.AreEqual( CalendarOn( 17040 ), written.LastForecasted );
 			Assert.AreEqual( ParkWeather.ForecastDue( written.LastForecasted, 4 ), written.ForecastTime );
 			Assert.AreEqual( weather.Forecast, written.ForecastQuality );
 
@@ -2617,7 +2624,7 @@ public class ParkFileWriterTests
 	{
 		_ = new ParkState( shipped );
 		GameCalendar.Rebase();
-		var weather = new ParkWeather( 139f, drawn: false );
+		var weather = new ParkWeather( null, drawn: false );
 
 		try
 		{
@@ -2630,6 +2637,59 @@ public class ParkFileWriterTests
 			}
 
 			Assert.AreEqual( -5, weather.Written( null ).ThunderCountdown );
+		}
+		finally
+		{
+			weather.Delete();
+			GameCalendar.Rebase();
+		}
+	}
+
+	/// <summary>
+	/// <b>Lost Kingdom's weather runs on from its file</b>: entered on tick 755 it holds the file's quality 78, its wind 139
+	/// and its thunder -755, the record unchanged, and as its <c>mLastChanged</c> is tick 746 its next forecast is made on
+	/// the first tick past 746 + 69.12, 816, and delivered on the first tick past 816 + 92.16, 909. A roll applied as the
+	/// park opens would make it on 825.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the roll applied at the load; the forecast's lead the warning's 4 days; the delivery at
+	/// the forecast's stamp rather than its due time.</remarks>
+	[TestMethod]
+	public void TheShippedParksWeatherRunsOnFromItsFile()
+	{
+		var file = shipped.WeatherRecord!.Value;
+		var state = new ParkState( shipped );
+		Level.StartTheCalendar( "jungle", shipped );
+		var weather = new ParkWeather( file, drawn: false );
+
+		try
+		{
+			Assert.AreEqual( 755, state.GameTick );
+			Assert.AreEqual( file, weather.Written( null ), "the record as it was read" );
+			Assert.AreEqual( (78, 139f, -1), (weather.Quality, weather.WindDirection, weather.Forecast) );
+
+			int made = 0, delivered = 0;
+			var forecast = -1;
+
+			for ( var tick = 756; tick < 1200 && delivered == 0; ++tick )
+			{
+				state.SetGameTick( tick );
+				GameCalendar.Update( tick );
+				weather.Turn();
+
+				if ( made == 0 && weather.Forecast >= 0 )
+				{
+					made = tick;
+					forecast = weather.Forecast;
+				}
+				else if ( made != 0 && weather.Forecast < 0 )
+					delivered = tick;
+			}
+
+			Assert.AreEqual( (816, 909), (made, delivered) );
+			Assert.AreEqual( Math.Clamp( forecast, 1, 100 ), weather.Quality );
+			Assert.AreEqual( CalendarOn( 909 ), weather.Written( null ).LastChanged );
+			Assert.AreEqual( (CalendarOn( 816 ), CalendarOn( 816 ) + (4 * TimeSpan.TicksPerDay)),
+				(weather.Written( null ).LastForecasted, weather.Written( null ).ForecastTime) );
 		}
 		finally
 		{
@@ -2654,7 +2714,7 @@ public class ParkFileWriterTests
 		var world = new ParkWorld( Inflate( raw ), reader.Preamble );
 		var state = new ParkState( world );
 		state.SetGameTick( 16970 );
-		var weather = new ParkWeather( 139f, drawn: false );
+		var weather = new ParkWeather( world.WeatherRecord, drawn: false );
 
 		try
 		{
