@@ -1074,12 +1074,6 @@ filed the items that cite it.
   leaves `+0x7c` nought, says the constructor does, and writes no `+0x80`. Confirm: a guest made here and saved,
   the two words read in the file and beside the original's for a guest it made.
 
-- [ ] **Q275. A lookup record's flag `0x10` is set on records that have no position.** From the week-end audit
-  (stage 4; read twice from the listing). `FUN_0044a870` tests the node word's `0x400` (`0x0044a924`) only inside
-  the branch its file flags' `0x30` opens (`0x0044a904`). `ParkModelTables` sets `0x10` from the node's `0x400`
-  alone. Confirm: the records of every model in the nine park files compared with the tables built here, and a
-  node with `0x400` and no position named.
-
 - [ ] **Q276. A rider's head is always drawn from their own bank.** From the week-end audit (stage 4; read twice
   from the listing). `FUN_004fcac0` gives the rider's own `mSpriteID` only where a costume bank (kind 3) is loaded
   (`FUN_00541f60( 3 )`, `0x004fcac6`); where none is, it stores the rider's id at the world's `+0x1da708` and

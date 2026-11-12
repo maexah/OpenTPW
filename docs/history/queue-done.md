@@ -12781,3 +12781,11 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `+0x30` holds the file's (`0x0047380a`: `+0x30` unless nought). Seed `WriteQueuedSpeed( channel.QueuedSpeed )` for an empty queue on load. A promotion clears `+0x30` to nought (`0x004738af`) until the next due visit writes it again, where Q1062's writer keeps the file's
   speed for a nought `DeferredSpeed`: a save inside those eight ticks writes a stale speed; with the load seeded, the nought can be written as it stands. Confirm: a park loaded from a file whose channel holds a queued speed other than the script's divisor, `scripts` read before the first visit, predicted first.
   Done in Q1063: `ParkRides.Resume` writes the file's `+0x30` into a channel with nothing queued (`WriteQueuedSpeed`), idle or running; the writer's nought is Q1064.
+- [x] **Q275. A lookup record's flag `0x10` is set on records that have no position.** From the week-end audit
+  (stage 4; read twice from the listing). `FUN_0044a870` tests the node word's `0x400` (`0x0044a924`) only inside
+  the branch its file flags' `0x30` opens (`0x0044a904`). `ParkModelTables` sets `0x10` from the node's `0x400`
+  alone. Confirm: the records of every model in the nine park files compared with the tables built here, and a
+  node with `0x400` and no position named. **Done 2026-11-12 (cloud lane c3):** `ParkModelTables.Lookups` sets `0x10` only with
+  `0x1`. Of the 2,073 models read, 16 lookup records carry `0x400` with no position (the Hallowed ogre's `ogrepipe01`
+  first), none in `jungle`; the shipped park's 14 things still read as built. The other eight park files were not in
+  the container and were not compared.

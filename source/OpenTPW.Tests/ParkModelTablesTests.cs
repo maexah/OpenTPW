@@ -494,4 +494,66 @@ public class ParkModelTablesTests
 		running.SetHidden( 3, false );
 		Assert.AreEqual( 0x400u, running.Words( [0f] )[3], "a show after a hide keeps its lock" );
 	}
+
+	/// <summary>
+	/// A lookup record's <c>0x10</c> is set only where it has a position as well as its node's <c>0x400</c>
+	/// (<c>FUN_0044a870</c> tests <c>0x400</c> at <c>0x0044a924</c>, inside the branch <c>0x30</c> opens at
+	/// <c>0x0044a904</c>). Over every <c>.md2</c> the archives hold that reads, 44 lookup records' nodes carry
+	/// <c>0x400</c>: 28 have a position and carry <c>0x10</c>, and 16 have none and do not, the Hallowed
+	/// ogre's <c>ogrepipe01</c> among them. None of the 16 is Lost Kingdom's.
+	/// </summary>
+	[TestMethod]
+	public void ARecordWithNoPositionHasNoTurnedAboutFlag()
+	{
+		var unplaced = new System.Collections.Generic.List<string>();
+		int turned = 0, marked = 0;
+
+		foreach ( var wad in Directory.GetFiles( GameDir.Data, "*.wad", SearchOption.AllDirectories ) )
+		{
+			var directory = Path.GetRelativePath( GameDir.Data, Path.ChangeExtension( wad, null ) ).Replace( '\\', '/' );
+
+			foreach ( var member in data.GetFiles( directory ).Select( Path.GetFileName ).OfType<string>().Where( name => name.EndsWith( ".md2", System.StringComparison.OrdinalIgnoreCase ) ) )
+			{
+				ModelFile model;
+
+				try
+				{
+					model = new ModelFile( new MemoryStream( data.ReadAllBytes( $"{directory}/{member}" ) ) );
+				}
+				catch ( System.Exception )
+				{
+					continue;
+				}
+
+				var lookups = ParkModelTables.Lookups( model, doHeadProcessing: false );
+
+				for ( var record = 0; record < lookups.Length && model.LookupFirst + record < model.Nodes.Count; ++record )
+				{
+					var node = model.Nodes[model.LookupFirst + record];
+
+					if ( (node.Flags & 0x400) == 0 )
+						continue;
+
+					++turned;
+					marked += (lookups[record].Flags & 0x10) != 0 ? 1 : 0;
+
+					if ( (node.IdFlags & 0x30) == 0 )
+					{
+						unplaced.Add( $"{directory}/{member}:{node.Name}" );
+						Assert.AreEqual( 0, lookups[record].Flags & 0x11, $"{directory}/{member}'s {node.Name}: no position, no 0x10" );
+					}
+					else
+					{
+						Assert.AreEqual( 0x11, lookups[record].Flags & 0x11, $"{directory}/{member}'s {node.Name}: a position and 0x10" );
+					}
+				}
+			}
+		}
+
+		Assert.AreEqual( 44, turned, "lookup records whose node carries 0x400" );
+		Assert.AreEqual( 28, marked, "those with a position, which carry 0x10" );
+		Assert.AreEqual( 16, unplaced.Count );
+		CollectionAssert.Contains( unplaced, "levels/hallow/upgrades/ogre/ogre.MD2:ogrepipe01" );
+		Assert.IsFalse( unplaced.Any( name => name.StartsWith( "levels/jungle/" ) ), "none of Lost Kingdom's" );
+	}
 }
