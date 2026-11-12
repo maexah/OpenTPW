@@ -2065,6 +2065,84 @@ public class ParkFileWriterTests
 	}
 
 	/// <summary>
+	/// <b>Every cell of the gate's row answers the gate, whatever it holds</b> (<c>FUN_00527e80</c>, <c>docs/exe/park.md</c>,
+	/// "The scene's height under a point"): Lost Kingdom's (46,17) to (49,17), one cell before <c>EntranceA</c> to one past
+	/// <c>EntranceB</c>. The shipped park's gate, its header's <c>mParkGates</c>, is a placed object (model word 3, the type
+	/// the original tests at <c>0x00452ac8</c>), and its model takes the original's fourth way (no lookup record with
+	/// <c>0x2</c>, header flags without <c>0x80</c>, float nought), which is counted and keeps the last height. A cell given
+	/// to the Hot Pot on the row answers the gate; one beside the row, either end or the row below, answers the pot; and
+	/// with a gate that is no placed object the row answers nothing, as the original's does.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> the row's arm taken out (the row's cells answer the pot, 29.8); the row from <c>EntranceA</c> to
+	/// <c>EntranceB</c> only ((46,17) and (49,17) answer the pot); the row's arm going on to the cell where the gate is no
+	/// object (the pot again).
+	/// </remarks>
+	[TestMethod]
+	public void TheGatesRowAnswersTheGateWhateverItHolds()
+	{
+		const int HotPot = 1140;
+		const int Gates = 1601;
+
+		SetCurrentPlayer( new Player( 0, "Test", new PlayerFile { InstantAction = true } ) );
+
+		var catalogue = new ParkItemCatalogue( "jungle", FileSystem );
+		var people = new ParkPeople( shipped );
+		var state = people.State;
+
+		try
+		{
+			Assert.AreEqual( Gates, state.Objects.Single( placed => placed.ThingId == shipped.ParkGates ).CatalogueId,
+				"the header's gate is a placed object, the gate item" );
+			Assert.IsTrue( catalogue.TryGet( HotPot, out var item ) );
+
+			var id = state.NextThingId();
+
+			state.AddObject( ParkBuilding.Constructed( item, id, 41, 23, 0, MapStep.CellId( 41 + item.EntryDeltaX, 23 + item.EntryDeltaY ),
+				MapStep.CellId( 41 + item.ExitDeltaX, 23 + item.ExitDeltaY ), ParkWorld.BuiltWhen.At( state.CalendarNow ),
+				ParkBuilding.TakeTrackRide( state, item ) ) );
+			ParkBuilding.Stamp( state, ParkObjects.FootprintAt( item, 41, 23, 0 ), 41, 23 );
+
+			HeightfieldFile field;
+
+			using ( var stream = FileSystem.OpenReadOrNull( "levels/jungle/terrain/base.MD2" )! )
+				field = new HeightfieldFile( stream );
+
+			var pot = (ushort)MapStep.CellId( 41, 23 );
+
+			foreach ( var (x, y) in new[] { (45, 17), (46, 17), (47, 17), (48, 17), (49, 17), (50, 17), (46, 18), (49, 16) } )
+				state.SetRecord( x, y, state.Record( x, y ) with { Type = CellEdge.Footprint, ParentId = pot } );
+
+			var scene = new ParkSceneHeight( catalogue, () => new( shipped.ParkGates, (47, 17), (48, 17) ) );
+			float At( int x, int y ) => scene.Under( (x + 0.5f) * 10f, (y + 0.5f) * 10f, state, field, -7f );
+			float Pot( int x, int y ) => field.ScapeHeight( (x + 0.5f) * 10f, (y + 0.5f) * 10f ) + 29.8f;
+
+			Unimplemented.Forget();
+
+			foreach ( var (x, y) in new[] { (46, 17), (47, 17), (48, 17), (49, 17) } )
+				Assert.AreEqual( -7f, At( x, y ), $"({x},{y}) answers the gate" );
+
+			Assert.AreEqual( 1, Counted( "SCENE_HEIGHT_OWN_MESH" ), "the gate's model takes the fourth way, counted once" );
+			Assert.AreEqual( 0, Counted( "SCENE_HEIGHT_SURFACE_MESHES" ) );
+
+			foreach ( var (x, y) in new[] { (45, 17), (50, 17), (46, 18), (49, 16) } )
+				Assert.AreEqual( Pot( x, y ), At( x, y ), 0.0001f, $"({x},{y}) is off the row and answers the pot" );
+
+			var noObject = new ParkSceneHeight( catalogue, () => new( people.Peeps.First().ThingId, (47, 17), (48, 17) ) );
+
+			Unimplemented.Forget();
+			Assert.AreEqual( -7f, noObject.Under( 465f, 175f, state, field, -7f ), "a gate that is no object answers nothing" );
+			Assert.AreEqual( 0, Counted( "SCENE_HEIGHT_OWN_MESH" ) );
+			Assert.AreEqual( Pot( 50, 17 ), noObject.Under( 505f, 175f, state, field, -7f ), 0.0001f, "and off the row the pot still" );
+		}
+		finally
+		{
+			people.Delete();
+			Entity.ApplyDeletions();
+		}
+	}
+
+	/// <summary>
 	/// <b>A written park holds the economy thing's seven fields and its eight loans</b>, each from its own place
 	/// (FileFormats <c>saves.md</c>, "The economy thing"), and every byte the writer changes for them lies inside the
 	/// record's 284 bytes past its map base. Handed none, the writer writes the balance alone and leaves the rest the

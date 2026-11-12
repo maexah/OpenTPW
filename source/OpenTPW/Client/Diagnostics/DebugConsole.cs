@@ -1690,6 +1690,26 @@ public static class DebugConsole
 					$"camera {ground.CameraHeight( groundX, groundY ):F4} bilinear {ground.HeightAtWorld( groundX, groundY ):F4}" );
 				break;
 
+			// The scene's height under a world point as a ride asks it (ParkSceneHeight, docs/exe/park.md, "The scene's height
+			// under a point"): whose model answers the point's cell, the gate on every cell of its row, and the height, or
+			// `keeps` where the caller would keep the height it had (no object, or a way not built, counted).
+			case "scene":
+				if ( ParkGround.Current?.Heightfield is not { } sceneField || ParkPeople.Current is not { } scenePeople )
+				{
+					Reply( "scene: only in a park" );
+					break;
+				}
+
+				var (sceneX, sceneY) = (Argument( 1 ), Argument( 2 ));
+				var sceneHeight = new ParkSceneHeight( Level.Current?.Catalogue );
+				var sceneItem = sceneHeight.ItemUnder( sceneX, sceneY, scenePeople.State, sceneField );
+				var sceneAnswer = sceneHeight.Under( sceneX, sceneY, scenePeople.State, sceneField, float.NaN );
+
+				Reply( $"scene ({sceneX:F3},{sceneY:F3}) cell ({(int)(sceneX / sceneField.CellSizeX)},{(int)(sceneY / sceneField.CellSizeY)}) "
+					+ $"answers {(sceneItem is { } answering ? $"item {answering.Id} {answering.Stem}" : "nothing")}: "
+					+ (float.IsNaN( sceneAnswer ) ? "keeps" : $"stands {sceneAnswer:F4}") );
+				break;
+
 			// Every cell's live flag word (y first, then the words from x = 0 in hex, a cell a footprint stamp holds starred: the
 			// stamp clears 0x800 in the original, ParkGround keeps it as a mask), then the census: how many cells carry 0x800 now, how
 			// many the load flagged, how many of those a stamp has since cleared, and how many cells a stamp holds. Alexah's New Save in

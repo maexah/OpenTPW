@@ -12145,6 +12145,17 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q271. The model under a point misses the park gate's row.** From the week-end audit (stage 4; read twice
+  from the listing). `FUN_00527e80` (called at `0x00452a82`) answers the gate thing the world keeps at `+0x1da732`
+  for every cell of the entrance's row, from one cell before EntranceA's x to one past EntranceB's, without reading
+  the cell, and only otherwise goes to `FUN_00527d60` (`park.md`, "The scene's height under a point").
+  `ParkSceneHeight.StandingOn` answers null there. Measure first whether the gate thing's type byte is 3
+  (`0x00452ac8`): without it the original answers nought there too. Confirm: the height read under a point on the
+  gate's row in both games.
+  Done as Q271 in cloud lane c50: `ParkSceneHeight` answers the gate on every cell of its row (the rule now
+  `ParkItemHeights.OnGateRow`, shared with the pick's march), nothing where the gate is no placed object; the
+  stock park's gate is a placed object (model word 3) whose model takes mode 4, counted. Measured off-screen with
+  the new console `scene X Y`; the original's side is Q1320.
 
 ## B. Docs and comments
 

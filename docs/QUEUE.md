@@ -1035,13 +1035,12 @@ filed the items that cite it.
   If they agree, tick it; if not, the filter's cell read (`InsideGateCensus`, the position's cell, or `OnACountingCell`, the link's:
   Q217) is the first suspect.
 
-- [ ] **Q271. The model under a point misses the park gate's row.** From the week-end audit (stage 4; read twice
-  from the listing). `FUN_00527e80` (called at `0x00452a82`) answers the gate thing the world keeps at `+0x1da732`
-  for every cell of the entrance's row, from one cell before EntranceA's x to one past EntranceB's, without reading
-  the cell, and only otherwise goes to `FUN_00527d60` (`park.md`, "The scene's height under a point").
-  `ParkSceneHeight.StandingOn` answers null there. Measure first whether the gate thing's type byte is 3
-  (`0x00452ac8`): without it the original answers nought there too. Confirm: the height read under a point on the
-  gate's row in both games.
+- [ ] **Q1320. The scene's height on the gate's row, in the original.** Filed by Q271 (cloud lane c50, no
+  Ghidra, no original). Ours now answers the gate on (46..49,17) and keeps the caller's height, counting
+  `SCENE_HEIGHT_OWN_MESH` (the gate's model takes mode 4: no `0x2` record, no `0x80`, float nought). Not checked:
+  that `0x00452ac8` tests the type byte the save's record word 3 is, and what the original answers there (mode 4
+  reads the instance's `+0x2c` mesh, whose writer is not read). Confirm: the original under Proton, a height read
+  under a point on (47,17) at a Ghidra breakpoint or by its caller, beside the console's `scene 475 175`.
 
 - [ ] **Q272. A mechanic arriving at a ride that waits for an upgrade is sent away.** From the week-end audit
   (stage 4; read twice from the listing). `FUN_004da740` puts him to work on any of three: the ride's state 1, its
