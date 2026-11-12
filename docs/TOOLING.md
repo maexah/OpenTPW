@@ -855,7 +855,7 @@ whole list):
   kind 4's nought effort never funds: end on a feature (`q550/stone240-fs.TPWS`, Stone Head at 240, tick 800). The
   End's view itself, with the camera and the layers read, is `q551/orig/run.sh` (`original/camread.py`; it waits for
   the End's id and frames every 2 s, moving the pointer). Ours: the console's `endfeature` is the End's census (its
-  thing, its two scripts, the eye and the look, the cover, the dip), and `q703/confirm.py <out> <bin> a|b` runs the
+  thing, its two scripts, the eye and the look, the cover, the dip), and `endfeature make` owes the End at once, with no scene file (Q864: the one way into a ride's view in a cloud lane; `unimplemented` then counts `CAMERA_RIDE_REVERB` four for each `PARK_LOOP_FUN_0055AB50`, the every-32nd tick's, a yardstick in the same reply where the console answers frames late), and `q703/confirm.py <out> <bin> a|b` runs the
   scene through the End to Escape (`a`) or to a right click (`b`). First person's fog, drawn in the End's view too,
   hides what stands past about 150 units: `fog 2000 2100` pushes it out for a look (`q703/exp-fog.py`). Its planes' flight
   (Q554): `endfeature` adds an `endfeature planes:` line, each `_f_endplane`'s drawn place and whether it is shown;

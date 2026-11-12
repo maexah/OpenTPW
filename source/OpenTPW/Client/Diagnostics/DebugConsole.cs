@@ -1597,8 +1597,16 @@ public static class DebugConsole
 				break;
 
 			// The End feature's census: the thing, its two scripts, the camera's eye and look, the cover and the music dip.
+			// `endfeature make` owes it first, as the end of research does (made after the frame's entity walk).
 			case "endfeature":
 				{
+					if ( parts.Length > 1 && parts[1] == "make" )
+					{
+						Level.Current?.OweTheEndFeatureNow();
+						Reply( "endfeature: owed; it stands from the end of this frame" );
+						break;
+					}
+
 					if ( ParkEndFeature.Current is not { } end )
 					{
 						Reply( $"endfeature: none standing; camera eye ({Camera.Position.X:F2}, {Camera.Position.Y:F2}, {Camera.Position.Z:F2}) ride view "

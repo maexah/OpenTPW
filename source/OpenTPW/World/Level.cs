@@ -925,6 +925,18 @@ public class Level
 		_endFeatureOwed = () => ParkEndFeature.Make( catalogue, state, rides, objects, windows, InstantAction );
 	}
 
+	/// <summary>
+	/// The End feature owed now, as if research had just ended: the debug console's <c>endfeature make</c>, the one way into a
+	/// ride's view without a park whose lab finishes. No screen of the game does it.
+	/// </summary>
+	internal void OweTheEndFeatureNow()
+	{
+		if ( ParkState is { } state )
+			OweTheEndFeature( state );
+		else
+			Log.Warning( "End feature: no park is loaded, so no End is owed" );
+	}
+
 	/// <summary>The End feature owed by <see cref="OweTheEndFeature"/>, made after the frame's entity walk.</summary>
 	private Action? _endFeatureOwed;
 

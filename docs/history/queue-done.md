@@ -13236,3 +13236,18 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   guest already stands at; `ParkOpeningWait` untouched. Seen in Q157: `7x ENTERING_GATE_GUARD` after `step 2`, which was not predicted as a
   number and is the seven guests then in `Entering` (things 32, 33, 34, 36, 37, 40, 41 in `q157/run-final2/run.log`), one turn each. Confirm: the entry-price door shut by a real click with a guest in `Entering`
   (`q157/confirm.py` has the click), `peeps` on that guest before and after, predicted first; the count leaves the census.
+- [x] **Q864. The reverb handoff of the camera's ride is neither built nor counted.** From Q157's Q126 note. `FUN_0055a470`
+  (`0x0054f828`, every eighth step) finds the ride the camera is on (`FUN_0042a4e0`) and hands its `+0xd8`, or `[0x0078578c]`
+  (`Sound.Reverb`, 0 in Lost Kingdom), to `FUN_0051c8d0`, the reverb preset holder (`audio.md`, "The fade, the SoundInfo settings and
+  the reverb"); a negative `+0xd8` sends nothing. Reverb itself stays cut, so only a name in the count is wanted: report it where the
+  original calls it (`Unimplemented.Report( "CAMERA_RIDE_REVERB" )`), once a ride is under the camera. Confirm: `unimplemented`
+  with the camcorder on a ride, predicted first, and without one.
+  Done in Q864: counted, not built. `ParkLoop.HandTheReverb` reports `CAMERA_RIDE_REVERB` on each eighth tick, after the
+  sweep and on a step whose sweep was dropped too (`0x0054f828`), while a ride's view is on (`ParkRideViewCameraMode`,
+  the End's alone: the camcorder walks into no ride's view in this build, `FIRST_PERSON_WALK_INTO_RIDE`). With no ride
+  under the camera nothing is counted, as the item asks, though the original then hands `Sound.Reverb`. The console's
+  `endfeature make` owes the End at once, so a run reaches the view without a research-ending file. Off-screen, predicted
+  first: none in the orbit or the camcorder; in the End's view four for each every-32nd count, 24 to 64 against 56 to 66.
+  - **Note (Q580, 2026-10-20):** the Sun God reaches `SETREVERB` (`incagod` at 162 and 188, in every run of it), counted at the dispatch
+    default as `Inca God: SETREVERB at 162`. Building it is the store of its operand at the script's `+0xd8` for the preset holder above;
+    with reverb cut nothing would read it, so a name of its own in the count is all it needs (`q580fs/run-S2`).

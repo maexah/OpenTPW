@@ -1619,6 +1619,7 @@ object) finds the script with `+0xc8` equal to it, `+0x10` nought and `+0xd8` se
 `0x0051c8d0` (a negative one sends nothing); with no match it hands `[0x0078578c]`. The holder keeps the preset at `[0x00803ab4]` (-1 at sound init, `0x0051b700`) and
 posts `0x700b30` (`0x006b5c90` -> `0x006ba1b0`) only on a change. `0x006c6000` refuses an index past the count or a record whose word 0 is -1. At detail at or
 below `SoundInfo.EAX` (10), `0x0051b920` resets the holder to 0 (`0x0051b9c7`..`0x0051b9f1`).
+**OpenTPW** (Q864): reverb is cut, so the handoff is a name in the count, `CAMERA_RIDE_REVERB`, reported by the park's loop on each eighth tick, a dropped sweep's too, while the camera is in a ride's view (`ParkLoop.HandTheReverb`; only the End's view is built). With no ride under the camera nothing is counted, though the original then hands `Sound.Reverb`. `SETREVERB`'s store is counted at the dispatch default (Q580).
 - **`[0x0078578c]` is the level key `Sound.Reverb`**, entry 255 of the `PeepInfo` object `0x00785040`'s table (`0x0073fc70`; `0x005157cb` loads the theme's `Standard.sam` into it).
   `data/levels/Standard.sam` sets 0 and `hallow/Standard.sam` sets 3; jungle sets none, so Lost Kingdom's reverb off a ride is 0.
 - **A slot goes to the listener, not to a voice, and only through EAX 2.0 hardware.** `0x006c46b0` copies the record's 13 words in the order [3], [4], [11], [5], [6], [7],
