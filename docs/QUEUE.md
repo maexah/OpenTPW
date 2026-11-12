@@ -723,11 +723,24 @@ filed the items that cite it.
   - **Needs Alexah:** does the staff's path fence stay, or does the original's no-links arm (`0x004f95c0`) alone keep
     staff on the paths?
 
-- [ ] **Q1333. A position off the map reads another row's cell in the original (`COUNTING_CELL_OFF_MAP`).** From Q1332.
+- [x] **Q1333. A position off the map reads another row's cell in the original (`COUNTING_CELL_OFF_MAP`).** From Q1332.
   `FUN_004fa990` packs the thing's bytes `+5` and `+7` as they are (`0x004fa994`..`0x004fa9b6`), so a person at x 128
   or more would read a cell of the next row; `PeepBehaviour.OnACountingCell` counts nobody there and counts the arm.
   Dead by content in the stock Lost Kingdom park (none in a 90 s off-screen run, Q1332): measure whether anything
   placed reaches it (the bus stop's approach is on the map) before building the wrapped read.
+  - **Done (2026-11-12, lane c90):** measured first: every person in `Easymode.TPWI` (its 13 guests and 18 people, the
+    file's own bytes and the navigator) and every arrival cell is on the map (`CountingCellTests`), and a 150 s
+    off-screen run logged no wrapped read and counted no `COUNTING_CELL_OFF_MAP`: dead by content. Built:
+    `PeepBehaviour.CountingRecord` packs the low byte of each whole part, `y * 128 + x`, so x 128 to 255 or below
+    nought reads the next row's cell; a pack past the last record stays counted (Q1480).
+
+- [ ] **Q1480. What `FUN_004fa990` reads past the map's last record, and whether its bytes are read unsigned (needs
+  Ghidra).** From Q1333. `PeepBehaviour.CountingRecord` reads the thing's bytes `+5` and `+7` zero-extended (the Q1332
+  reading of `0x004fa994`..`0x004fa9b6`, not re-read by Q1333, which had no Ghidra) and, for a pack of record 16384 or
+  more (a y byte of 128 or more, or x 128 or more on row 127), reads no cell, counts nobody and counts
+  `COUNTING_CELL_OFF_MAP`. Read the four instructions' extension (`MOVZX` or `MOVSX`) and what lies past the 68-byte
+  cell array at `[0x008023a0]`; build that arm, or say why it stays counted. Dead by content in the stock Lost Kingdom
+  park (Q1333). Put the bug back for each test (`AGENTS.md` rule 6). No game run.
 
 - [ ] **Q1240. The remeasure tail's `+0x68` exit against `ReopenAfterRemeasure` (piece (5) of Q218, which needs Ghidra).**
   `docs/exe/ride-operation.md` says the remeasure tail `FUN_004de1f0` leaves at once when `+0x68` is non-zero;

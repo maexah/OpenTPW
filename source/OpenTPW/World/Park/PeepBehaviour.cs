@@ -1644,19 +1644,39 @@ public sealed class PeepBehaviour
 	/// people count as inside").
 	/// </summary>
 	/// <remarks>
-	/// <b>Deviation:</b> a position off the 128 x 128 map counts nobody. The original packs the two bytes as they are,
-	/// so a byte of 128 or more would read a cell of another row; that arm is counted as <c>COUNTING_CELL_OFF_MAP</c>.
+	/// The two bytes are packed as they are, <c>y * 128 + x</c> (<see cref="CountingRecord"/>), so a position off the
+	/// 128 x 128 map reads the cell its bytes name: x 128 or more, or below nought, reads a cell of another row. A pack
+	/// past the map's last record (a y byte of 128 or more) reads no cell here, counts nobody and is counted as
+	/// <c>COUNTING_CELL_OFF_MAP</c>.
 	/// </remarks>
 	internal bool OnACountingCell( FixedVector position )
 	{
-		var (x, y) = position.Cell;
-		if ( x < 0 || y < 0 || x >= ParkWorld.MapSize || y >= ParkWorld.MapSize )
+		if ( CountingRecord( position ) is not var (x, y) )
 		{
 			Unimplemented.Report( "COUNTING_CELL_OFF_MAP" );
 			return false;
 		}
 
+		var (cellX, cellY) = position.Cell;
+		if ( cellX != x || cellY != y )
+			Log.Info( $"Counting cell: a position off the map at ({cellX},{cellY}) reads the cell ({x},{y})" );
+
 		return Peep.CountsOn( State.Record( x, y ).Type );
+	}
+
+	/// <summary>
+	/// The cell record <c>FUN_004fa990</c> reads for a position (<c>0x004fa994</c>..<c>0x004fa9b6</c>): the low byte of
+	/// each whole part, as the thing's 8.8 words hold it (<see cref="ParkWorld.NavigatorState.RawX"/>), packed
+	/// <c>y * 128 + x</c>. Null where the pack is past the map's last record.
+	/// </summary>
+	internal static (int X, int Y)? CountingRecord( FixedVector position )
+	{
+		var (x, y) = position.Cell;
+		var record = ((y & 0xff) * ParkWorld.MapSize) + (x & 0xff);
+
+		return record < ParkWorld.MapSize * ParkWorld.MapSize
+			? (record % ParkWorld.MapSize, record / ParkWorld.MapSize)
+			: null;
 	}
 
 	/// <summary>
