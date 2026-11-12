@@ -12315,6 +12315,17 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   open. The engine finds a bounce rider's node by id in `0x800` ("Where a rider is drawn"); `ModelFile.FindNode` is
   that lookup and `RideNodes` the stored positions at rest (Q175b), not the animated pose a rider needs. A walk's riders
   are placed by `FUN_005580a0` from the posed nodes since Q585 (`ride-operation.md`, "Where a walk's rider is drawn").
+- [x] **Q243. Every counted name against this queue.** Asked by Alexah, 2026-10-08: a thing "counted, not built"
+  must have an item here, or it may never be come back to. List every `Unimplemented.Report` name in the source by
+  script, find each in this file, and file an item (or add the name to the item it belongs to) for each one that has
+  none; names dead by content say so in their item. No game run.
+  **Done (2026-11-12, cloud lane c18):** `tools/gap_census.py` (`docs/TOOLING.md`; `GapCensusTests`, three tests) read 341
+  calls: 174 names were held by no item. Nine went to Q741 (the park file's voices), two to Q28 (rename) and one to Q155
+  (`TRACK_RIDE_SPEED_PUSH`), each as a note; the other 162 are filed by area as Q1190 to Q1196, each name with its file and
+  the `docs/exe/` pages that name it. Dead by content or code is said where the site's own comment says it (five names); the
+  rest were not classified, and the items say so. Not checked by hand: the 12 MESSAGE calls whose word the queue held
+  (`COAST`, `ADDOBJ`...: the instruction is named, not that message's case) and the three DYNAMIC calls (the ride script's
+  unhandled opcodes and a guest state, known at run time). After the filing the census lists 0.
 
 ## E. Large
 
