@@ -311,6 +311,10 @@ the same between them). **A deviation, said at the site:** the rest of the inter
 the Load Park list letters a date day first while the gadget letters it month first; in the original both read the
 american row. The 31-byte buffer is not modelled; no date fills it. An install without `Language/american` (not every
 release is known to ship it) letters the English row, day first, and counts `GADGET_DATE_NO_AMERICAN_TABLE` (`ParkGadget.DateIn`).
+The executable imports no `GetDateFormat`, so the layout is the table's, never the machine's. Under Proton the original read
+"8.11.2000" at `mGameTick` 5000 (`saves.md`, "The container takes another deflate"); its day against ours is Q1557's.
+Off-screen in a cloud lane (Q158, the run's output not kept), the stock park paused on tick 1567 read `date=2000-02-08` in
+`state` and '8.2.2000' in `control 20`, font 3 in (0, 0, 0), on the English row before Q527 moved the gadget to the american one.
 
 ### The happiness gauge's two quads (Q244; fork watch 2026-10-19, verify-advisor-ui.md L3, verify-other-b.md M3)
 

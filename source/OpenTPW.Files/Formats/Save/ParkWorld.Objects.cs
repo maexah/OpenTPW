@@ -97,6 +97,44 @@ public sealed partial class ParkWorld
 	/// <summary>How many characters each line of an object's name holds, its terminator among them.</summary>
 	private const int NameLength = 33;
 
+	/// <summary>
+	/// The two lines of a catalogue object's name as the file holds them (<c>mNameA</c>, <c>mNameB</c>), by its thing id: the
+	/// record's <c>+60</c> and <c>+62</c>, a line's characters four bytes apart up to a nought, as <see cref="MadeObjectRecord"/> writes
+	/// them. The gate's are the park's name (the stock Lost Kingdom's "LOST" and "Kingdom"), which the entry-price heading
+	/// letters (<c>0x00498e4c</c>). False for an id the file holds no catalogue object for.
+	/// </summary>
+	public bool TryNameOf( int thingId, out string lineA, out string lineB )
+	{
+		if ( _objectNames.TryGetValue( thingId, out var lines ) )
+		{
+			(lineA, lineB) = lines;
+			return true;
+		}
+
+		lineA = lineB = string.Empty;
+		return false;
+	}
+
+	private readonly Dictionary<int, (string A, string B)> _objectNames = [];
+
+	/// <summary>One line of an object's name from its first character at <paramref name="at"/>, read as <see cref="TryNameOf"/> says.</summary>
+	private string ReadNameLineAt( int at )
+	{
+		var line = new System.Text.StringBuilder();
+
+		for ( var i = 0; i < NameLength - 1; ++i )
+		{
+			var unit = ReadUInt16At( at + (i * 4) );
+
+			if ( unit == 0 )
+				break;
+
+			line.Append( (char)unit );
+		}
+
+		return line.ToString();
+	}
+
 	/// <summary>The six rings' places in an object's record, each of <see cref="DayRing.Size"/> bytes.</summary>
 	private static readonly int[] RingsAt = [228, 361, 498, 635, 768, 901];
 

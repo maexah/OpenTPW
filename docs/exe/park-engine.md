@@ -4792,7 +4792,7 @@ item's own model posed as built, wearing the name board where both models name b
 fitted and placed by the arithmetic above. Differences, each said at its site: the light is OpenTPW's own; the turn
 and the clip run on the frame clock, so the console's `pause` holds them. The first angle is the original's: the last
 panel's, wrapped to two pi, kept for the session (`ParkObjectPreview.LastAngle`, Q295). The ride's and the shop's windows draw it (`ParkObjectWindow`, `ParkShopWindow`); the
-buy screen's panel (Q158) takes the same path when it is built. The buy screen also paints a small picture of the item's footprint
+buy screen's panel (Q1556) takes the same path when it is built. The buy screen also paints a small picture of the item's footprint
 at its panel's lower left, which the windows do not: the next section.
 
 ### The buy screen's footprint picture
@@ -4874,7 +4874,7 @@ the list is filled.
 and its `Squares` the paint's arithmetic, on a surface the control's rectangle in whole pixels, drawn at 8/15.
 `ParkBuyScreen.RowSelected` and `Update` keep the waiting row and show it after more than 500 ms;
 `UiList.SelectsUnderPointer` is the flag, set on every list (`hud.md`, "The pointer over a list"), and `WindowStack` sends the move. It differs in one
-way, said at its site: the wait is real time, `Time.WallMilliseconds`, as the original's is. The model and the kind row `0x1ec` are not in the panel (Q158).
+way, said at its site: the wait is real time, `Time.WallMilliseconds`, as the original's is. The model and the kind row `0x1ec` are not in the panel (Q1556).
 The console's `footprint` prints the row shown, the row waiting, the cells and the block's place.
 
 **Confirmed in Lost Kingdom** (2026-10-06, a 1280 by 720 window, the pointer moved by XTEST, each number predicted

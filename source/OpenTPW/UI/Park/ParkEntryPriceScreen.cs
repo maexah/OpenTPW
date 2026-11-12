@@ -67,20 +67,18 @@ internal sealed class ParkEntryPriceScreen : UiWindow
 			Mesh = UiMesh.Get( "w_small" )
 		};
 
-		// The heading. THE ORIGINAL PUTS A THING'S NAME HERE, not a fixed string: the builder takes the
-		// gate thing by its handle at world +0x1da732 and calls UI_SetTitle with its name (0x00498e4c),
-		// which help row 191 calls the park name. It is left empty here and counted as ENTRY_PRICE_TITLE_PARK_NAME
-		// (the name's yellow lettering with the edge, in the widened rect, is counted with it); its click is counted
-		// below. The label further down belongs to a different control.
-		Unimplemented.Report( "ENTRY_PRICE_TITLE_PARK_NAME" );
-
+		// The heading: the park's name, the gate thing's (world +0x1da732, mParkGates), handed to UI_SetTitle by the builder
+		// (0x00498e4c), which help row 191 calls the park name. UI_SetTitle letters it in font 5 in (234, 239, 102) with its
+		// edge, centred in the stream's rect (749 to 1221) widened by half its width either side (docs/exe/ui.md, "UI_SetTitle").
 		Root.Add( new UiControl
 		{
 			Id = 0x4f3af,
-			Rect = new UiRect( 749, 174, 1221, 253 ),
+			Rect = new UiRect( 513, 174, 1457, 253 ),
 			HelpText = 191,
 			Font = 5,
-			TextColour = UiColour.White,
+			TextColour = new UiColour( 234, 239, 102 ),
+			TextShadow = true,
+			Text = ParkName( Level.Current?.Park, ParkVisitorWindow.NameOfThing ),
 
 			// A left click on the heading opens the park's rename box (FUN_00499060 to FUN_004990f0). Renaming is
 			// not built (docs/QUEUE.md Q28): counted.
@@ -220,4 +218,24 @@ internal sealed class ParkEntryPriceScreen : UiWindow
 	}
 
 	protected internal override void Update() => Show();
+
+	/// <summary>
+	/// The park's name as the heading letters it (<c>0x00498e4c</c>): the gate thing's name, its two lines as the file holds
+	/// them (<see cref="ParkWorld.TryNameOf"/>) joined as <c>FUN_004e2780</c> joins a thing's (<see cref="ParkVisitorWindow.JoinName"/>),
+	/// so the stock Lost Kingdom's reads "LOST Kingdom". A park with no file has its gate named by <paramref name="nameOf"/>, the
+	/// item's rows of <c>OBJECT_NAMES</c>, which are what the writer saves for it; what the original's fresh gate holds is
+	/// not read, and is counted.
+	/// </summary>
+	internal static string ParkName( IParkInitialState? park, Func<int, string> nameOf )
+	{
+		if ( park is null )
+			return string.Empty;
+
+		if ( park.Save is { } file && file.TryNameOf( park.ParkGates, out var lineA, out var lineB ) )
+			return ParkVisitorWindow.JoinName( lineA, lineB );
+
+		Unimplemented.Report( "ENTRY_PRICE_FRESH_PARK_NAME" );
+
+		return nameOf( park.ParkGates );
+	}
 }

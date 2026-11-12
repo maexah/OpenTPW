@@ -218,7 +218,7 @@ texture depth, the research pumps' smooth scroll, flags easing between winds, a 
 brings the original's look back comes last (Q645). Q647 first (a console.log per launch, Alexah 2026-10-22, for the play-test fixes after it). Then the display: Q616 (eight bits a channel by default, reversing
 Q700's 2026-10-18 choice), Q617 and Q618 (the ground's cells at different sharpness, then the paths, queues and ride
 borders; decode how the original draws and filters the ground first), Q619 (the river and the rock not darkened), Q620
-(the boundary wall, split from Q214), Q621 (the advisor's colours), Q158 (the buy screens' 3D preview), Q622 (the seaplane
+(the boundary wall, split from Q214), Q621 (the advisor's colours), Q1556 (the buy screens' 3D preview, split from Q158), Q622 (the seaplane
 invisible), Q623 (the fountain's flash). Then what a player hits: Q624 (the map screen), Q31b (the sideshow and toilet
 windows), Q625 (the camera leaves the park), Q626 (leaving the camcorder), Q25 (its crosshair and its speed), Q51 (staff
 stacked at the staff room), Q627 (vehicles pick up nearly non-stop), Q628 (the staff click range), Q55 (staff walking on
@@ -589,25 +589,18 @@ filed the items that cite it.
   run the routes of the stock park through the old and the new to see how many steps change. Confirm: a guest's route over a bent path
   in both builds, the waypoints printed, predicted first.
 
-- [ ] **Q158. Three park-screen readouts are stand-ins; each is counted where it is drawn (Q865).** Found by the 2026-09-26 staleness
-  audit (`AGENTS.md` rule 4). `ParkObjectWindow`'s scrap row is built (`FUN_004e2400`: the age bucket's percentage, `FUN_004e2290`,
-  `percent x +0x1b8 / 100`, the original's "$ 250"): the percentage since Q1052
-  (`ParkScrap.Percent`, `ItemDescriptionFile.ScrapValueAt`: the item's four-year `ScrapValueYear1`..`4` picked by the age, 100 only under 30 days with no customer yet); the row
-  and the sales that still counted `SCRAP_VALUE_DEPRECIATION` were Q1054's (built 2026-11-12; the photograph is Q1344's).
-  (The object window's Age row is built: UITEXT 433, "{P8} days".) `ParkEntryPriceScreen`'s heading
-  `0x4f3af` is empty, and its remark says "left empty and counted"; the original titles it with the name of the thing
-  at world `+0x1da732`, `mParkGates` (`ParkWorld`), and its help row 191 reads "Park name - left-click to edit", so
-  the title is the park's name and its edit is Q28's. The name is lettered by `UI_SetTitle` (`0x00485d20`, called at `0x00498e4c`): yellow, with the edge, in
-  the stream's rect widened by half its width either side (749..1221 to 513..1457), where ours letters the empty heading white (Q676). The gadget's date is lettered from the american UITEXT 448 and no longer counted (Q527). `ParkBuyScreen`'s description panel `0x1ea` draws its frame and the footprint picture, and neither the item's turning model nor its kind row `0x1ec`.
-  **Counted since Q865** (each where it is drawn: `SCRAP_VALUE_DEPRECIATION` at the object window's scrap row, gone since Q1054,
-  `ENTRY_PRICE_TITLE_PARK_NAME`, `GADGET_DATE_UITEXT_448`, gone since Q527, `BUY_SCREEN_ITEM_MODEL` and `BUY_SCREEN_ITEM_KIND_ROW`, the last two for every row the panel is filled for, land and mystery rows too); **what is left is each build**,
-  and a count goes when its build lands: letter the
-  park's name in the heading (`UI_SetTitle`); turn the item's model in the buy panel and write its kind row `0x1ec` (`ITEMTYPES.str`, item `+0x90`). Three rows are model-and-string pairs of their own (`FUN_004ab1b0`, `0x004ab55f`..`0x004ab654`, `FUN_00486410` then `FUN_00485b00`): a mystery ride builds item 100 and writes UITEXT `0x89` "??? Mystery Ride! ???"; Buy Land (row -1) builds item 101 and writes `0x86` "Buy Land"; Clear Land (row -2) builds item 102 and writes `0x87` "Clear Land".
-  Confirm each: its name leaves `unimplemented` after opening a ride's window, the entry-price screen and the buy screen.
-  From Q130e, seen beside the original's lists: the hire list's wages are bare numbers too ("$ 63" there); a buy
-  row with no state shows an empty box there and nothing here; Buy Land's price is `[0x0078560c]`, 10 there and 0
-  here; and the headings' lettering is larger there than the rows', here the same.
-  From Q188: the buy screen's panel is the object window's preview (`ParkObjectPreview`, which wants a placed thing
+- [ ] **Q1556. The buy screen's panel turns the item's model and writes its kind row `0x1ec` (split from Q158).** `ParkBuyScreen.Preview`
+  counts `BUY_SCREEN_ITEM_MODEL` and `BUY_SCREEN_ITEM_KIND_ROW` for every row it fills the panel for. The original builds a
+  model and writes row `0x1ec` for every row (`FUN_004ab1b0`, `0x004ab55f`..`0x004ab654`, `FUN_00486410` then
+  `FUN_00485b00`): an ordinary item its own model and its kind, row `+0x90` `RideTypeStringIndex` of `ITEMTYPES.str`
+  (`ParkBuyScreen.TypeNameOf` already reads it for the help row); a mystery ride item 100 and UITEXT `0x89` "??? Mystery
+  Ride! ???"; Buy Land (row -1) item 101 and `0x86` "Buy Land"; Clear Land (row -2) item 102 and `0x87` "Clear Land"
+  (`docs/exe/park-engine.md`, "Rows with no picture"). **Blocked in a cloud lane by the stream:** the kind row's rect, font and colour
+  are the layout stream's (`0x00754cf8`, `tools/harness/lib/uistream.py 00754cf8`), which needs `testme.exe`; the cloud
+  container (c104) has only the install's protected `TP.exe`, where `uistream.py` finds no section. Walk the stream first and
+  write `0x1ec`'s rect into `docs/exe/hud.md`'s BUY tree; then find what items 100, 101 and 102 are (no Lost Kingdom item
+  carries those ids) before building their models.
+  From Q188 (moved from Q158): the buy screen's panel is the object window's preview (`ParkObjectPreview`, which wants a placed thing
   today: give it an item); in the original it is (437,162) 360 by 363. The footprint picture at its lower left is
   built (Q233b) and is drawn in front of the model; the kind row `0x1ec` above it is not built.
   - **Note (play test 2026-10-21, note 8):** the buy screens show no 3D preview, a black panel. Q158's panel is the
@@ -615,6 +608,28 @@ filed the items that cite it.
     `ParkObjectPreview` wants a placed thing (QUEUE:409). Q450 (1) is the buy stats panel (QUEUE:2398-2402): settle
     there which of the two owns the buy screen's picture.
   - **Note (play test 2026-10-31):** the buy screens still show no model in the description panel. The model and the kind row are counted (Q865). Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
+
+- [ ] **Q1557. Photograph the gadget's date and the entry price's heading beside the original's (Q158's piece, for the desk lane).**
+  Built in a cloud lane with no display to photograph: the stock park entered, the gadget's date (`0x20`) and, after `screen 10`,
+  the heading `0x4f3af`, each beside the original's under Proton at the same tick. Predict: the date as the table orders it
+  (both read the american table, month first, since Q527: "2.8.2000" at the tick the off-screen run paused on,
+  1567), black, font 3; the heading "LOST Kingdom" yellow with its darker copy, centred in (513, 174)..(1457, 253)
+  of the 2048 x 1536 layout. Also check the day: `docs/exe/saves.md` has the original's gadget "8.11.2000" at `mGameTick` 5000, where
+  ours reads 5 August (`GameCalendar.Rebase( 5000 )`); find whether that file's clock start differs or the day does.
+
+- [ ] **Q1558. A park with no file: what the original's gate thing is named (split from Q158).** The entry price's heading letters
+  the gate's two name lines as the file holds them; a Full Simulation park started empty has no file, and OpenTPW names its gate
+  by the item's rows of `OBJECT_NAMES` (1601: rows 85 and 86), which are what its writer saves, and counts
+  `ENTRY_PRICE_FRESH_PARK_NAME`. Read where the original's fresh world names the gate thing (it may be the player's sign name,
+  `PlayerFile.SignNameA`/`B`, `mSignNameA`/`B`) and build it.
+
+- [ ] **Q1559. The buy and hire lists' notes from Q130e (moved from Q158).**
+  Seen beside the original's lists (Q130e): the hire list's wages are bare numbers too ("$ 63" there); a buy
+  row with no state shows an empty box there and nothing here; Buy Land's price is `[0x0078560c]`, 10 there and 0
+  here; and the headings' lettering is larger there than the rows', here the same.
+  Check each against today's build first: the wages carry "$ " since Q384 (`docs/exe/hud.md`, Q384's account), and the
+  headings' larger lettering is Q644's declared deviation; the empty box on a state-0 row (`docs/exe/hud.md`, "The state"
+  column) and Buy Land's price (`ParkBuyScreen`, `[0x0078560c]`) are open.
 
 - [ ] **Q1524. The hoardings on a slope photographed, and beside the original's (Q210's split piece; desk lane).** Since Q210 a
   hoarding's ends stand on the original's inclusive rectangle. Q210 ran in a cloud container with no display to look at and no

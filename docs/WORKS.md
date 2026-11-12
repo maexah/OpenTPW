@@ -13,8 +13,8 @@ belongs to or at the end. Grep it by area or Q-number; never read it whole.
   (`q657/side-by-side.png`, `q657/run3`).
 - **The all-visitors, all-items and all-staff screens' titles are lettered as `UI_SetTitle` letters them** (Q676): font 5 in
   (234, 239, 102) with the darker copy, centred in the stream's rect widened by half its width either side, as the buy, hire, research, staff-costs and
-  file screens' and the shop, staff and visitor windows' titles already were (the ride window's too since Q548); the entry
-  price's heading (Q158) is still white. Seen beside the original's at 800 x 600 in the stock park, each opened by its key
+  file screens' and the shop, staff and visitor windows' titles already were, the ride window's since Q548 and the entry
+  price's heading since Q158. Seen beside the original's at 800 x 600 in the stock park, each opened by its key
   (`q676/side-by-side.png`); the console's `control` reply now names a lettered control's font, colour and edge.
 - **The money's trend arrow is drawn, and the currency icon carries the balance's sign** (Q674): `0x31`, `cashtrend`, a
   child of the balance, red down while the newest closed month's cash in is below its costs and green up otherwise or with
@@ -344,3 +344,7 @@ belongs to or at the end. Grep it by area or Q-number; never read it whole.
   `Enabled` with all it holds, as `0x0065db25` skips a control flagged `0x2`, so the pointer reaches what is behind: no
   hover, no help row, no glint. An Instant Action player's grey island arrows read `over control 0x1e0e7`, the panel's
   L, off-screen, and a press there goes no further. The photograph is Q1548.
+- **The entry price's heading is the park's name** (Q158, cloud lane c104, 2026-11-12): the gate thing's two name lines as
+  the file holds them (`ParkWorld.TryNameOf`), "LOST Kingdom" in the stock park, in `UI_SetTitle`'s yellow with its edge in
+  the widened rect. The gadget's date is UITEXT 448 since Q527 (`ParkGadget.DateOf`, the american row). Seen off-screen in
+  the console's `control` and `unimplemented` replies; not photographed (Q1557).
