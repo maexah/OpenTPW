@@ -656,6 +656,9 @@ public sealed class ParkRides : Entity
 	/// <summary>The gate's command variable, resolved by its declared name.</summary>
 	internal const string GateCommand = "VAR_COMMAND";
 
+	/// <summary>The gate's command at the end of the park, the end sequence (<c>docs/exe/park-gate.md</c>).</summary>
+	internal const int GateEnds = 2;
+
 	/// <summary>
 	/// Initialize only a gate without a valid resumed script. A fresh closed gate keeps command 0 and
 	/// its closed base pose; 2 is the terminal end sequence, never an ordinary close. Saved commands,

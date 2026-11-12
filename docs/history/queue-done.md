@@ -12171,6 +12171,17 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   root, `wheel.sh PID -1 1`: predict 110. (f) Escape or the cross closes it: predict mValid 0; F1 then: no slot, the
   kept record unchanged. A frame (`orig.sh shot`) at (c), (d), (e) and (f). Ours the same steps by `q870/run1.py`
   (TOOLING), the log's `Park advisor: post message=188` lines and `camera`'s zoom= beside them.
+- [x] **Q404. A park six months in the red ends.** From the fork review 2, 2026-10-16
+  (`verify-economy-guests-paths.md` L4, M2). Counted, `BANK_PARK_ENDS_IN_THE_RED`. What the end does is
+  `ride-operation.md`, "The end of the park": world state 4, the end screen, `VAR_BREAKSTAT` 1 on every ride guests
+  choose, the pending deletes flushed, the gate closed; the clock and the bank go on. The path tests no game type, so
+  Lost Kingdom's Easymode reaches it. Confirm: a park held in the red to its end, beside the original.
+  **Outcome, 2026-11-12:** built but for its screen on `alexah/1055-park-bankruptcy-ends` (cloud lane c76; no Ghidra,
+  no original, no display): `ParkState.EndThePark`, `ParkPeople.EndThePark`, the running `ParkState.WorldState` (read
+  from the file, written by the save), the sweep's thing turns and the weather stopped in state 4, the music and crowd
+  reading the running state. Six tests pass, each failing with its bug put back; an off-screen run ended the stock park
+  on tick 5611 (`ride-operation.md`, "The end of the park"). The screen is Q1424; the advisor's record and the
+  unchecked readings are Q1425. Not run beside the original.
 
 ## B. Docs and comments
 

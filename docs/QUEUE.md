@@ -1257,11 +1257,21 @@ filed the items that cite it.
     `[0x007523e8]`/`[0x007523ec]`; message `0x14` (`0x0049b7b4`) deletes it and sets both to -1. It stands on control `0x2484`'s
     rect: x = ( left + ( right − left ) / 2 − `0x3f8` ) / 1024, y = ( `0x300` − bottom + ( bottom − top ) / 4 ) / 768, z =
     1 − ( depth + 1 ) / 40 (`0x00476a70`); the sprite steps every 62 ms (`0x004759c4`).
-- [ ] **Q404. A park six months in the red ends.** From the fork review 2, 2026-10-16
-  (`verify-economy-guests-paths.md` L4, M2). Counted, `BANK_PARK_ENDS_IN_THE_RED`. What the end does is
-  `ride-operation.md`, "The end of the park": world state 4, the end screen, `VAR_BREAKSTAT` 1 on every ride guests
-  choose, the pending deletes flushed, the gate closed; the clock and the bank go on. The path tests no game type, so
-  Lost Kingdom's Easymode reaches it. Confirm: a park held in the red to its end, beside the original.
+- [ ] **Q1424. The end of the park's screen, photographed beside the original (split from Q404).** `FUN_00481b50` to
+  `FUN_0048ac40` (`park-engine.md`, the full-screen view's table): first person or a ride view left, `FUN_004e15b0( 0 )`,
+  the keys taken, the full-screen view off, the open screen closed, layers 0 and 1 hidden, the control `0x7472` (handler
+  `0x0048a740`, stream `0x0074fb20`) with the `s_bkrupt` banner (`bankrupt.MD2`, mesh `0xf3a7aff4`, its window-animation
+  table `0x0074fc38`); the handler's right click and Escape putting the full-screen view on; in state 4 Escape opening the
+  game menu and F3 and Ctrl+P read not (`0x004a2942`); a park loaded in state 4 put back under it (`FUN_0048adb0`).
+  Counted, `PARK_END_SCREEN`. OpenTPW registers no language mesh yet. Confirm: the stock park held in the red to its end
+  (`docs/TOOLING.md`, "Recipes", the Q404 line), photographed beside the original's.
+- [ ] **Q1425. What Q404 read from the doc's words, checked in the disassembly (split from Q404).** (1) The set the end
+  gives `VAR_BREAKSTAT` 1 (`FUN_005168f0`'s walk to `FUN_004e0db0`): ours is the door's, `+0x32 & 4`. (2) The advisor's
+  record `0x6a` (`0x0059aee7`): how it is constructed (line, forced, score), and whether it can be said with the advisor's
+  turn skipped in state 4; counted, `ADVISOR_PARK_ENDED_IN_THE_RED`. (3) The render flag `0x00763f84` and what reads it;
+  counted, `PARK_END_RENDER_FLAG`. (4) Which list the end empties, and whether it frees the ids or drops them; ours counts
+  `PARK_END_PENDING_DELETES` when its deleted ids are pending. (5) The order the bank's broadcast reaches the bank's
+  handler and the advisor.
 
 - [ ] **Q452. Buy Rides lists a researched ride upgrade.** From the week-end audit, 2026-10-17 (`LEDGER.md` D1,
   `VERIFY-13a.md` Q349 1; `CLAUDE.local.md` says where). `ParkBuyScreen.Listed` lacks the original's `+0x284` skip

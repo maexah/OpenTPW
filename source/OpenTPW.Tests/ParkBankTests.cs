@@ -836,8 +836,10 @@ public class ParkBankTests
 	}
 
 	/// <summary>
-	/// <b>Six thirty-day months in the red end the park</b>, counted: 4148 sweeps at the shipped rate, not 4147.
+	/// <b>Six thirty-day months in the red end the park</b>: 4148 sweeps at the shipped rate, not 4147, and world state 4
+	/// (<c>FUN_005168f0</c>); the end screen counted once, the advisor's record counted on every month that finds it so.
 	/// </summary>
+	/// <remarks><b>Mutations:</b> five months ending it; the end not setting state 4; a second month ending it again.</remarks>
 	[TestMethod]
 	public void SixMonthsInTheRedEndThePark()
 	{
@@ -848,15 +850,72 @@ public class ParkBankTests
 		for ( var i = 0; i < 4147; ++i )
 			bank.AdvanceGameTick();
 
-		var before = Times( "BANK_PARK_ENDS_IN_THE_RED" );
+		var (screen, advisor) = (Times( "PARK_END_SCREEN" ), Times( "ADVISOR_PARK_ENDED_IN_THE_RED" ));
 		bank.TurnTheMonth( null );
 
-		Assert.AreEqual( (5, before), (bank.MonthsInTheRed(), Times( "BANK_PARK_ENDS_IN_THE_RED" )) );
+		Assert.AreEqual( (5, 0, screen, advisor), (bank.MonthsInTheRed(), bank.WorldState, Times( "PARK_END_SCREEN" ),
+			Times( "ADVISOR_PARK_ENDED_IN_THE_RED" )), "five months: the park goes on" );
 
 		bank.AdvanceGameTick();
 		bank.TurnTheMonth( null );
 
-		Assert.AreEqual( (6, before + 1), (bank.MonthsInTheRed(), Times( "BANK_PARK_ENDS_IN_THE_RED" )) );
+		Assert.AreEqual( (6, ParkState.EndedWorldState, screen + 1, advisor + 1), (bank.MonthsInTheRed(), bank.WorldState,
+			Times( "PARK_END_SCREEN" ), Times( "ADVISOR_PARK_ENDED_IN_THE_RED" )), "six: the park ends" );
+
+		bank.TurnTheMonth( null );
+
+		Assert.AreEqual( (ParkState.EndedWorldState, screen + 1, advisor + 2), (bank.WorldState, Times( "PARK_END_SCREEN" ),
+			Times( "ADVISOR_PARK_ENDED_IN_THE_RED" )), "the next month: not ended again, the advisor told again" );
+		Assert.AreEqual( -1, bank.Balance, "and the bank goes on" );
+	}
+
+	/// <summary>
+	/// <b>Six months after going red, a park climbed out on deposits alone does not end</b>: a deposit never writes
+	/// <c>mLastBalance</c>, so the count still reads six, but the balance is not below nought (<c>0x004d054c</c>).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the balance's test left off; the last balance read in its place.</remarks>
+	[TestMethod]
+	public void AParkClimbedOutOnDepositsDoesNotEnd()
+	{
+		GameCalendar.Rebase();
+		var bank = Bank( balance: 0 );
+		bank.Spend( 1 );
+		bank.Deposit( 5 );
+
+		for ( var i = 0; i < 4148; ++i )
+			bank.AdvanceGameTick();
+
+		var screen = Times( "PARK_END_SCREEN" );
+		bank.TurnTheMonth( null );
+
+		Assert.AreEqual( (6, -1, 4, 0, screen), (bank.MonthsInTheRed(), bank.LastBalance, bank.Balance, bank.WorldState,
+			Times( "PARK_END_SCREEN" )) );
+	}
+
+	/// <summary>
+	/// <b>A park loaded in world state 4 has ended</b>: the state is the file's (<c>mWorldState</c>, header field 19), so
+	/// the bank does not end it again; and an ended park's save writes 4 back where the file's 0 was.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the state not read from the file; the writer not writing it, or writing it elsewhere.</remarks>
+	[TestMethod]
+	public void AnEndedParksStateIsWrittenAndReadBack()
+	{
+		var data = GameData.Required();
+		using var stream = data.OpenRead( "levels/jungle/Easymode.TPWI" );
+		var shipped = new ParkWorld( new SaveReader( stream ).ReadFile() );
+
+		Assert.AreEqual( 0, new ParkState( shipped ).WorldState, "the shipped park is not ended" );
+
+		var ended = ParkFileWriter.Body( shipped, new ParkFileWriter.Running( shipped.GameTick, false, 13, 0, shipped.Camera.Saved!.Value,
+			WorldState: ParkState.EndedWorldState ) );
+		var plain = ParkFileWriter.Body( shipped, new ParkFileWriter.Running( shipped.GameTick, false, 13, 0, shipped.Camera.Saved!.Value ) );
+		var written = new ParkWorld( ended );
+
+		Assert.AreEqual( (ParkState.EndedWorldState, 0), (written.WorldState, new ParkWorld( plain ).WorldState) );
+		Assert.AreEqual( 1, Enumerable.Range( 0, ended.Length ).Count( at => ended[at] != plain[at] ), "one byte apart" );
+
+		var loaded = new ParkState( written );
+		Assert.IsTrue( loaded.Ended, "a park run from it has ended" );
 	}
 
 	/// <summary>

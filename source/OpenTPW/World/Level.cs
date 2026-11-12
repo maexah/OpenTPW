@@ -1211,7 +1211,8 @@ public class Level
 			state.Economy, state.CalendarAtLastUpdate, ParkWeather.Current?.Written( loaded.WeatherRecord ), research?.Written,
 			state.RecentlyResearched.Written, ids, ParkAudio.Current?.FileVoicesLetGo,
 			ParkAudio.Current?.FileVoicesNotPutBack == true,
-			state.AdvisorMessages?.WrittenKept( subject => state.TryObject( subject, out var about ) ? about.CatalogueId : 0 ) );
+			state.AdvisorMessages?.WrittenKept( subject => state.TryObject( subject, out var about ) ? about.CatalogueId : 0 ),
+			state.WorldState );
 
 		// The sound module goes out as the loaded file's, less the voices put back from it and let go since: the original
 		// writes the manager's live voices (Sound_SaveModule, 0x0051c350), so what was started here, and each put-back

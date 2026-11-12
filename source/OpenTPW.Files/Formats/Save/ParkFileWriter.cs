@@ -87,7 +87,8 @@ public static class ParkFileWriter
 	/// it null nothing was deleted and the higher id is the newer. <see cref="VoicesLetGo"/> is the voices put back from the
 	/// file and let go since, which are left out; <see cref="VoicesNotPutBack"/> says the park ran with no sound device, so
 	/// none was put back, and each held chain a script named at the load and none written names is left out
-	/// (<see cref="WithoutUnnamedChains"/>).
+	/// (<see cref="WithoutUnnamedChains"/>). <see cref="WorldState"/> is <c>mWorldState</c>, 4 for a park that has ended; the
+	/// file's where it is null.
 	/// </summary>
 	public readonly record struct Running( int GameTick, bool ParkClosed, int VisitorsToDate, int Balance,
 		ParkCameraModule.View Camera, IReadOnlyDictionary<int, ParkWorld.MapCell>? Cells = null,
@@ -106,7 +107,8 @@ public static class ParkFileWriter
 		ParkWorld.EconomyState? Economy = null, (int Month, int Day)? Calendar = null,
 		ParkWorld.WeatherState? Weather = null, ParkWorld.WrittenLab? Lab = null,
 		IReadOnlyList<ParkWorld.ResearchedRing>? RecentlyResearched = null, ParkWorld.ThingIds? Ids = null,
-		IReadOnlySet<int>? VoicesLetGo = null, bool VoicesNotPutBack = false, ParkWorld.AdvisorSlot? AdvisorKept = null );
+		IReadOnlySet<int>? VoicesLetGo = null, bool VoicesNotPutBack = false, ParkWorld.AdvisorSlot? AdvisorKept = null,
+		int? WorldState = null );
 
 	/// <summary>
 	/// The file's objects, scripts and models as the running park has them (<c>docs/exe/saves.md</c>, "OpenTPW's
@@ -272,6 +274,9 @@ public static class ParkFileWriter
 
 		PutInt32( body, loaded.HeaderAt + ParkWorld.GameTickAt, running.GameTick );
 		PutInt32( body, loaded.HeaderAt + ParkWorld.ParkClosedAt, running.ParkClosed ? 1 : 0 );
+
+		if ( running.WorldState is { } worldState )
+			PutInt32( body, loaded.HeaderAt + ParkWorld.WorldStateAt, worldState );
 		PutInt32( body, loaded.HeaderAt + ParkWorld.NumberOfVisitorsToDateAt, running.VisitorsToDate );
 		PutInt32( body, loaded.EconomyAt + ParkWorld.BalanceAt, running.Balance );
 

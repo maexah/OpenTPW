@@ -1622,7 +1622,7 @@ public sealed partial class ParkAudio : Entity
 		if ( !Audio.Ready )
 			return;
 
-		var worldState = Level.Current?.Park?.WorldState ?? 0;
+		var worldState = ParkPeople.Current?.State.WorldState ?? 0;
 
 		if ( _music is { IsValid: true } )
 		{
