@@ -12145,6 +12145,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q461. The tag bar's meshless buttons are disabled in the original.** From the week-end audit (D10,
+  `TIEBREAK-Q311.md`). A type-0 tag's second button and a decline's erase button are shown and disabled (vtable +0x14
+  with 0 at `0x0048e991`, `0x0048e43c`); the hit test skips a disabled control (`0x0065db3b`). Q427 made them take the
+  pointer (`ParkGadget.cs`, `hud.md`, two tests). Needs Q66 (`HitTest` reads no `Enabled`) first, or the difference said. **Done 2026-11-12** (cloud lane c121; no Ghidra, no original): built without Q66, the difference said
+  at the site. `UiButton.PassedWhenDisabled`, set on the bar's three buttons alone, makes a disabled one pass the
+  pointer; `ParkGadget.EnabledFor` disables a button of a type `FUN_0048e610` has no case for (0x16 left as it was) and
+  the erase button is disabled beside a decline; the census marks a disabled button `/off`. Both Q427 tests now hold the
+  original's rule (the arm answers behind them; a click on a decline's erase spot erases nothing). Off-screen, row 113's
+  tag opened read `second=none/help=-1/off`, and a real click there left the bar out. Not checked: that `FUN_0048e610`
+  enables a type it dresses (taken so here), and what the original's hit test answers behind them. Filed: none.
 
 ## B. Docs and comments
 

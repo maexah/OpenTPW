@@ -1501,7 +1501,7 @@ its effects are drawn with the gadget, so a window opened over it covers them (`
 
 | Message | What it does |
 |---|---|
-| `0x1001d9`, the arm starts out with it | the middle panel's text is the bar's word 1; `FUN_0048e610` dresses `0x10d30` by word 3 and `0x10d2f` by word 4; `0x10d2e` wears `mb_erase` and is shown, unless word 4 is `0x1b`, when it has no mesh and is hidden; each button's depth goes up one; `[0x007ca090]` takes `[0x007ca094]`; and the stream at `0x007502b8` is played on that tag at 100 (`FUN_0065e72d`) |
+| `0x1001d9`, the arm starts out with it | the middle panel's text is the bar's word 1; `FUN_0048e610` dresses `0x10d30` by word 3 and `0x10d2f` by word 4; `0x10d2e` wears `mb_erase` and is shown, unless word 4 is `0x1b`, when it has no mesh, is hidden and is disabled (vtable `+0x14` with 0, `0x0048e43c`); each button's depth goes up one; `[0x007ca090]` takes `[0x007ca094]`; and the stream at `0x007502b8` is played on that tag at 100 (`FUN_0065e72d`) |
 | `0x1d` with 1, the arm fully out | `[0x007ca094]` is cleared |
 | `0x1001d8`, the arm starts in | the tag's stream is stopped (`FUN_0065e897`), advisor message `0x11c` is withdrawn (`FUN_00486b40`), `[0x007ca090]` is cleared |
 | `0x100` from `0x10d2e` | the tag on show is hidden, the mast is posted `0x100002` with it and nought (off half a second on), and the arm folded away |
@@ -1511,7 +1511,7 @@ its effects are drawn with the gadget, so a window opened over it covers them (`
 `mb_locate` `0x204`; 4 `mb_locate` `0x203`; 9 to `0x11` `mb_buy`, `0x200` and the type; `0x12` `b_loan` `0x212`;
 `0x13` `mb_resrch` `0x213`; `0x14` `b_pkinfo` `0x214`; `0x15` `b_staffcost` `0x215`; `0x17` `mb_callmech`
 `0x217`; `0x18` `b_entry` `0xec`; `0x1a` `mb_accept` and `0x1b` `mb_decline`, no row; `0x16` leaves the button as
-it was; any other type takes the mesh off and hides it. Rows 515 and 516 both read "Left-click to go there".
+it was; any other type takes the mesh off, hides it and disables it (vtable `+0x14` with 0, `0x0048e991`). Rows 515 and 516 both read "Left-click to go there".
 
 **A button's act, `FUN_0048e0f0`** (its answer in brackets): 3 `FUN_004867b0( thing )`, the camera to the thing's
 cell (0: the bar stays); 4 `FUN_004868d0( &item )`, the item's word a packed cell id, the camera to `( ( id − 1 ) & 0x7f ) × 10`,
@@ -1579,7 +1579,7 @@ going out, 3 coming in, 4 coming in for a panel waiting.
   arm's resize (message `0x12`, `0x004a1a0e`) moves the panel as far (`FUN_0065c7fe`) and shows it and each of its
   children where its right edge is past the arm's parent's, the body's 439 (`FUN_004a1440`, which sets every one,
   so a part `0x1001d9` hid is shown again: the bar's button of type nought and a decline's erase button, each with
-  no mesh, stand shown and take the pointer once the arm is out). At nought the timer stops: coming in (state 3),
+  no mesh, stand shown once the arm is out, but disabled, so the hit test passes them, `0x0065db3b`). At nought the timer stops: coming in (state 3),
   **the arm is put back at its rest rectangle**, the one the builder stored with the narrowed arm (`FUN_0065cf17` at
   `0x004a23ee` writes the control's `+0x14`; `FUN_0065d4cb` reads it at `0x004a18ef`, `FUN_0065cc04` sets it at
   `0x004a1933`), the panel is hidden and unlinked, sent `0x1d` with nought, and sound `0xc2` played
@@ -1672,6 +1672,7 @@ its tag was gone 33 s after it came.
 | The panel's children as it comes out | each shown as its right edge passes the body's | the same (Q427) |
 | A carried panel's depth | 3, its parts 5 and theirs 7: behind the body and the retract button | the same (Q445); a locator's buttons, at 7 under their group, are drawn after the retract button, the order at one depth not decoded |
 | The retract button through the slide in | switched off and drawn | the same, but it stops the pointer (Q445) |
+| A meshless button (a second of type nought, a decline's erase) | shown by the slide, disabled: the pointer passes it | the same (Q461, `UiButton.PassedWhenDisabled`, these three buttons alone; every other disabled button still takes the pointer, Q66); behind them the arm answers here; what answers there in the original is not read. That `FUN_0048e610` enables a button of a type it dresses is not decoded: here it does |
 | The bar's text | the middle panel's, over the right slice | the same lettering; the right slice is put in the tree before the middle one so that it is drawn under it. At 1280 x 720 font 6 is a smaller face than the original's at 1024 x 768, so the line breaks fall later |
 | The two stacked buttons | 21 types | dressed for every type whose mesh is a file of `ui.wad` (not `b_loan` and `b_pkinfo`, nodes of files not looked up); types 3, 9 to `0x11` and `0x18` act (`advisor-park.md`, "A park with no ride in it", "Worn rides and no mechanic"), the rest counted `TAG_BAR_BUTTON` |
 | Advisor message `0x11c` | posted with the bar, withdrawn as it leaves | the same (`advisor-park.md`, "The line of an opened tag message") |

@@ -411,10 +411,14 @@ internal class UiButton : UiControl
 	internal virtual bool ClicksSelect3 => false;
 
 	/// <summary>
-	/// Enabled or not. The original's hit test skips a disabled button (flag 0x2) and everything under it, so the pointer
-	/// passes over it to whatever is behind - no hover, no help row, no glint (<c>docs/QUEUE.md</c> Q66).
+	/// Whether the hit test passes it while it is disabled, as the original's skips every control flagged 0x2
+	/// (<c>0x0065db3b</c>), so the pointer goes over it to whatever is behind: no hover, no help row, no click. Only a
+	/// button that says so does yet; every other disabled button still takes the pointer (<c>docs/QUEUE.md</c> Q66).
 	/// </summary>
-	internal override bool TakesMouse => true;
+	public bool PassedWhenDisabled { get; init; }
+
+	/// <summary>Enabled, or disabled and not passed (<see cref="PassedWhenDisabled"/>).</summary>
+	internal override bool TakesMouse => Enabled || !PassedWhenDisabled;
 
 	internal override int State => !Enabled ? Disabled
 		: Pressed ? (Hovered ? HighlightedDown : HeldDown)

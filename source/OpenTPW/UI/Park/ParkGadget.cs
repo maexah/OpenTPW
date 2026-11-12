@@ -440,9 +440,9 @@ internal sealed class ParkGadget : UiWindow
 			PinDown = VerticalAnchor.Bottom
 		} );
 
-		_barFirst = _bar.Add( new UiButton { Id = 0x10d30, Rect = new UiRect( 514, 1121, 617, 1224 ), Clicked = () => BarButton( first: true ), PinAcross = Anchor.Left, PinDown = VerticalAnchor.Bottom } );
-		_barSecond = _bar.Add( new UiButton { Id = 0x10d2f, Rect = new UiRect( 514, 1229, 617, 1331 ), Clicked = () => BarButton( first: false ), PinAcross = Anchor.Left, PinDown = VerticalAnchor.Bottom } );
-		_barErase = _bar.Add( new UiButton { Id = 0x10d2e, Rect = new UiRect( 514, 1336, 617, 1439 ), Mesh = UiMesh.Get( BarEraseMesh ), Clicked = EraseTag, PinAcross = Anchor.Left, PinDown = VerticalAnchor.Bottom } );
+		_barFirst = _bar.Add( new UiButton { Id = 0x10d30, PassedWhenDisabled = true, Rect = new UiRect( 514, 1121, 617, 1224 ), Clicked = () => BarButton( first: true ), PinAcross = Anchor.Left, PinDown = VerticalAnchor.Bottom } );
+		_barSecond = _bar.Add( new UiButton { Id = 0x10d2f, PassedWhenDisabled = true, Rect = new UiRect( 514, 1229, 617, 1331 ), Clicked = () => BarButton( first: false ), PinAcross = Anchor.Left, PinDown = VerticalAnchor.Bottom } );
+		_barErase = _bar.Add( new UiButton { Id = 0x10d2e, PassedWhenDisabled = true, Rect = new UiRect( 514, 1336, 617, 1439 ), Mesh = UiMesh.Get( BarEraseMesh ), Clicked = EraseTag, PinAcross = Anchor.Left, PinDown = VerticalAnchor.Bottom } );
 
 		// The staff and visitor locators' two panels, which FUN_004b3cf0 builds hidden and FUN_004b3f60 and FUN_004b4280
 		// hand the arm, each put where the arm's handler puts it out, and their strip above the arm.
@@ -943,6 +943,8 @@ internal sealed class ParkGadget : UiWindow
 		var erase = EraseLook( tag.Row.Button2 );
 		_barErase.Mesh = erase != null ? UiMesh.Get( erase ) : null;
 		_barErase.Visible = erase != null;
+		// Disabled beside a decline (vtable +0x14 with 0, 0x0048e43c), so once the slide shows it the pointer passes it.
+		_barErase.Enabled = erase != null;
 		tags.Shown( Time.WallMilliseconds );
 
 		Log.Info( $"Park gadget: message bar: tag {tag.Row.Id} subject {tag.Subject} item {tag.Item} {BarCensus()}" );
@@ -1042,7 +1044,7 @@ internal sealed class ParkGadget : UiWindow
 
 	/// <summary>
 	/// The erase button's mesh beside a second button of this type: mb_erase, or none and hidden beside a decline
-	/// (FUN_0048e2f0's 0x1001d9); the arm's slide shows it again either way.
+	/// (FUN_0048e2f0's 0x1001d9); the arm's slide shows it again either way, disabled beside a decline so the pointer passes it.
 	/// </summary>
 	internal static string? EraseLook( int secondButton ) => secondButton == ParkTags.DeclineButton ? null : BarEraseMesh;
 
@@ -1092,7 +1094,21 @@ internal sealed class ParkGadget : UiWindow
 		button.Mesh = look is { } found ? UiMesh.Get( found.Mesh ) : null;
 		button.HelpText = look?.Help ?? -1;
 		button.Visible = look != null;
+		if ( EnabledFor( type ) is { } enabled )
+			button.Enabled = enabled;
 	}
+
+	/// <summary>
+	/// Whether FUN_0048e610 leaves a bar button of this type enabled: a type it has no case for is disabled with its
+	/// mesh taken off (vtable +0x14 with 0, 0x0048e991), so the slide shows it and the hit test passes it; 0x16 leaves
+	/// the button as it was (null). That a type it dresses is enabled again is this game's reading, not decoded.
+	/// </summary>
+	internal static bool? EnabledFor( int type ) => type switch
+	{
+		0x16 => null,
+		LocateThing or LocateItem or (>= 9 and <= 0x15) or 0x17 or EntryPrice or 0x1a or ParkTags.DeclineButton => true,
+		_ => false
+	};
 
 	/// <summary>
 	/// One of the bar's two stacked buttons (FUN_0048e2f0, 0x10d30 and 0x10d2f, to FUN_0048e0f0 with the button's
@@ -1245,7 +1261,7 @@ internal sealed class ParkGadget : UiWindow
 		static bool IsIn( UiControl control, UiControl panel ) => control.Parent is { } parent && (parent == panel || IsIn( parent, panel ));
 	}
 
-	private static string Button( UiButton button ) => button.Visible ? $"{button.Mesh?.Name ?? "none"}/help={button.HelpText}" : "hidden";
+	private static string Button( UiButton button ) => button.Visible ? $"{button.Mesh?.Name ?? "none"}/help={button.HelpText}{(button.Enabled ? "" : "/off")}" : "hidden";
 
 	/// <summary>
 	/// b_1person, the panel's id 99: into first person through FUN_00481a10, the advisor's message 0x131 withdrawn, and

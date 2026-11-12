@@ -1337,10 +1337,6 @@ filed the items that cite it.
   constant at `0x007026ac` is the codec's own), then match the original's decode of a few files, as Q483 matched the
   ground's. The comment at the cut says the deviation. Confirm: three Lost Kingdom `.wct` of type `0x13` beside the
   original's decode, pixel by pixel.
-- [ ] **Q461. The tag bar's meshless buttons are disabled in the original.** From the week-end audit (D10,
-  `TIEBREAK-Q311.md`). A type-0 tag's second button and a decline's erase button are shown and disabled (vtable +0x14
-  with 0 at `0x0048e991`, `0x0048e43c`); the hit test skips a disabled control (`0x0065db3b`). Q427 made them take the
-  pointer (`ParkGadget.cs`, `hud.md`, two tests). Needs Q66 (`HitTest` reads no `Enabled`) first, or the difference said.
 - [ ] **Q1312. The gate's retry comes after the advisor's turn.** From Q462. `FUN_00516380` walks the things (the
   advisor, thing 3, among the last) and only then tries the delayed close (`0x0051643b`..`0x00516639`, every 30 ticks;
   `docs/exe/park-gate.md`, "The later close check"); `ParkPeople.Sweep` calls `RetryGateClose` before the advisor's
@@ -2729,7 +2725,7 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
 - [ ] **Q66. A disabled button takes the pointer.** Found by Q42's review. The original's hit test (`0x0065db25`) skips a
   control flagged `0x2` - a disabled button, `0x0065da8d` - with everything under it, so the pointer passes over it to
   whatever is behind: no hover, no help row, no glint. Here `UiButton.TakesMouse` is true whatever `Enabled` is, said at
-  the site; the island panel's greyed arrows for an Instant Action player are the case in the lobby, and a press there
+  the site (Q461 passes the message bar's three buttons alone, `UiButton.PassedWhenDisabled`); the island panel's greyed arrows for an Instant Action player are the case in the lobby, and a press there
   still ends at the panel's outline, so nothing but the hover differs. Before changing the hit test, check every park
   window whose root takes no pointer: a press on a greyed button there would fall through to the world. Confirm: an
   Instant Action player's pointer on a grey arrow, no help row; a screenshot.

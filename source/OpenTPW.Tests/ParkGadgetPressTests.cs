@@ -637,11 +637,12 @@ public class ParkGadgetPressTests
 		Assert.AreEqual( 0x10d30, Under( gadget, 565, 1172 ) );
 		Assert.AreEqual( 0x10d2e, Under( gadget, 565, 1387 ) );
 		var unbuilt = Times( "TAG_BAR_BUTTON" );
-		Assert.AreEqual( 0x10d2f, Under( gadget, 565, 1280 ), "it takes the pointer" );
+		Assert.IsFalse( ((UI.UiButton)Find( gadget, 0x10d2f )).Enabled, "disabled for nought (0x0048e991)" );
+		Assert.AreEqual( 0x21, Under( gadget, 565, 1280 ), "so the hit test passes it to the arm behind (0x0065db3b)" );
 		Assert.IsTrue( stack.ClickAt( 565, 1280 ) );
-		Assert.AreEqual( (unbuilt, true), (Times( "TAG_BAR_BUTTON" ), gadget.BarOut), "and its click does nothing, as FUN_0048e0f0 has no case for nought" );
+		Assert.AreEqual( (unbuilt, true), (Times( "TAG_BAR_BUTTON" ), gadget.BarOut), "and a click there does nothing" );
 		StringAssert.Contains( gadget.BarCensus(), "bar: out=1 rect=486,1112,1101,1453 arm=331,1069,1181,1495 handle=1151,1058,1304,1503" );
-		StringAssert.Contains( gadget.BarCensus(), "second=none/help=-1" );
+		StringAssert.Contains( gadget.BarCensus(), "second=none/help=-1/off erase=none/help=-1 " );
 		StringAssert.Contains( gadget.BarCensus(), "text=\"A ride has broken down.\"" );
 
 		// The stream at 0x007502b8: 0, 2, 4, 6, 4, 2, 0 a side, a step every 100 ms, from the opening.
@@ -974,7 +975,12 @@ public class ParkGadgetPressTests
 		Assert.IsTrue( stack.ClickAt( 565, 1280 ) );
 		Settle( gadget );
 		Assert.AreEqual( (buttons + 1, true), (Times( "TAG_BAR_BUTTON" ), gadget.BarOut), "the decline counted, and the bar left out" );
-		Assert.AreEqual( 0x10d2e, Under( gadget, 565, 1387 ), "the erase button with no mesh takes the pointer, as the original's shown again" );
+		Assert.AreEqual( (true, false), (((UI.UiButton)Find( gadget, 0x10d2f )).Enabled, ((UI.UiButton)Find( gadget, 0x10d2e )).Enabled),
+			"mb_decline enabled; the erase button beside it disabled (0x0048e43c)" );
+		Assert.AreEqual( 0x21, Under( gadget, 565, 1387 ), "so the erase button with no mesh, shown again by the slide, lets the pointer pass to the arm" );
+		Assert.IsTrue( stack.ClickAt( 565, 1387 ) );
+		Settle( gadget );
+		Assert.AreEqual( (true, offer, false), (gadget.BarOut, tags.OnShow, offer.Hidden), "and a click there erases nothing" );
 
 		// mb_locate of the other type, which goes by the item (FUN_004868d0, not read): counted, and the camera left.
 		var looked = ParkOrbitCameraMode.PointOfInterest;
