@@ -21,11 +21,11 @@ namespace OpenTPW.UI;
 ///
 /// <para>
 /// <b>Counted, not built:</b> the title's rename box (<c>RENAME_OBJECT</c>, Q28) and the age-bucket scrap percentage
-/// (<c>SCRAP_VALUE_DEPRECIATION</c>: the row shows the build price). <b>Not built:</b> the cursor Up and Down keys, which
-/// step the window in the original (<c>0x0048d200</c>) and reach no object window here (Q547).
+/// (<c>SCRAP_VALUE_DEPRECIATION</c>: the row shows the build price). The cursor Up and Down keys step it as its arrows do
+/// (<c>0x0048d200</c>, <see cref="ParkFrontEnd.ObjectWindowKeys"/>).
 /// </para>
 /// </summary>
-internal sealed class ParkShopWindow : UiWindow, IStatusBox
+internal sealed class ParkShopWindow : UiWindow, IStatusBox, IObjectWindowSteps
 {
 	/// <summary>The special ingredients' words, the boot's table <c>INGREDIENT</c> (<c>[0x0078ba8c]</c>).</summary>
 	internal const string IngredientTable = "Language/English/INGREDIENT.str";
@@ -683,6 +683,9 @@ internal sealed class ParkShopWindow : UiWindow, IStatusBox
 		ThingId = next;
 		Show();
 	}
+
+	/// <summary>The cursor Up and Down keys' step (<see cref="IObjectWindowSteps"/>): the arrows' own.</summary>
+	public void Step( bool newer ) => Cycle( newer );
 
 	/// <summary>
 	/// <c>0xc068</c>, <c>FUN_0048cd10</c>: the box of UITEXT 396 first where Confirmations is on (<see

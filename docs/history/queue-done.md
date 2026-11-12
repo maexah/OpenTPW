@@ -12145,6 +12145,12 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q547. The cursor Up and Down keys step an object window.** From Q31. The base window proc `0x0048d200` takes key
+  down `0x2600` and `0x2800` to `0x0048cbe0` and `0x0048caf0` (`hud.md`, "The shop, sideshow and ride windows"), which
+  apply and step to the next or the previous object of the class; no object window here hears a key. Build it for the
+  ride's and the shop's windows (and the staff member's and the visitor's, if the same proc serves them: read first), and
+  confirm in either game: the stock park with a second Drinks Shop bought, Down in the shop's window, the title and the
+  `shopwindow` census naming the other shop.
 
 ## B. Docs and comments
 

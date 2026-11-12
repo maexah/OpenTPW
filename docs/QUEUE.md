@@ -1702,12 +1702,6 @@ filed the items that cite it.
   - **Note (play test 2026-10-21, note 3):** the advisor does not say his opening lines in a fresh park. Nothing here
     posts message 0 on tick 1 (`map.md`; Q543 is decode first and unstarted).
   - **Note (play test 2026-10-31):** the advisor still says no opening lines in a fresh Full Simulation park: polls from tick 1 log `result=no-score`, row 281 plays at tick 612. Nothing counts the missing welcome; add the count with the fix. Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
-- [ ] **Q547. The cursor Up and Down keys step an object window.** From Q31. The base window proc `0x0048d200` takes key
-  down `0x2600` and `0x2800` to `0x0048cbe0` and `0x0048caf0` (`hud.md`, "The shop, sideshow and ride windows"), which
-  apply and step to the next or the previous object of the class; no object window here hears a key. Build it for the
-  ride's and the shop's windows (and the staff member's and the visitor's, if the same proc serves them: read first), and
-  confirm in either game: the stock park with a second Drinks Shop bought, Down in the shop's window, the title and the
-  `shopwindow` census naming the other shop.
 - [ ] **Q548. The ride window's title is white; `UI_SetTitle` letters it yellow.** From Q31: the shop's window takes
   `UI_SetTitle`'s font 5 in (234, 239, 102) with its shadow over the widened rect (`hud.md`, "The shop's window"), as the
   visitor's and the staff member's do; `ParkObjectWindow` letters the ride's title white in the stream's own rect. The

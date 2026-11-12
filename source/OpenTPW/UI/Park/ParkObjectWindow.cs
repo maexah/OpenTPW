@@ -34,7 +34,7 @@ namespace OpenTPW.UI;
 /// (<see cref="Commit"/>), all but what the speed word does to the script's waits.
 /// </para>
 /// </summary>
-internal sealed class ParkObjectWindow : UiWindow, IStatusBox
+internal sealed class ParkObjectWindow : UiWindow, IStatusBox, IObjectWindowSteps
 {
 	/// <summary>The bottom row of verbs, left to right, exactly as the stream lays them out.</summary>
 	private static readonly (int Id, int Help, string? Mesh, string What)[] Verbs =
@@ -428,6 +428,9 @@ internal sealed class ParkObjectWindow : UiWindow, IStatusBox
 
 		Show( next );
 	}
+
+	/// <summary>The cursor Up and Down keys' step (<see cref="IObjectWindowSteps"/>): the arrows' own.</summary>
+	public void Step( bool newer ) => Cycle( newer );
 
 	/// <summary>
 	/// What an arrow walks (<c>FUN_004828f0( uiType, current )</c>, from <c>0x004824d0</c> and <c>0x00482da0</c>, on

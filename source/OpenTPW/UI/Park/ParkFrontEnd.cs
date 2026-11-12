@@ -202,6 +202,9 @@ internal sealed class ParkFrontEnd : Panel
 	/// </summary>
 	private void ParkKeys()
 	{
+		if ( !_stack.Covered )
+			ObjectWindowKeys( _stack.Windows.Count > 0 ? _stack.Windows[^1] : null, Input.KeysPressed );
+
 		foreach ( var release in Input.Releases )
 		{
 			if ( release.Key is Key.Escape or Key.F3 )
@@ -218,6 +221,37 @@ internal sealed class ParkFrontEnd : Panel
 			else if ( ShortcutRow( release ) is > 0 and var row )
 				ShortcutKey( _stack.Windows.Count > 0 ? _stack.Windows[^1] : null, row );
 		}
+	}
+
+	/// <summary>
+	/// The cursor Up and Down keys, as the base proc of every object window takes them (<c>FUN_0048d200</c>,
+	/// <c>0x0048d220</c>..<c>0x0048d243</c>; <c>docs/exe/hud.md</c>, "The shop, sideshow and ride windows"): on the key
+	/// DOWN (<c>0x1000a</c>), each press and each auto-repeat (<c>FUN_00658c38</c> posts both), cursor Up (<c>0x2600</c>)
+	/// calls <c>FUN_0048cbe0</c> and cursor Down (<c>0x2800</c>) <c>FUN_0048caf0</c>, which apply the window's settings
+	/// and step it to the next of its class towards the newest or the oldest (<see cref="IObjectWindowSteps"/>). Only the
+	/// window in front hears them: the object window has the focus once it opens (<c>FUN_004862a0</c>), and a box opened
+	/// over it takes the keys. The keypad's 8 and 2 with NumLock off are <c>0x26</c> and <c>0x28</c>, not these keys.
+	/// Whether <c>FUN_0048d200</c> reads the modifiers is not traced, so a key held with Shift, Ctrl or Alt steps too.
+	/// Answers how many steps were taken.
+	/// </summary>
+	internal static int ObjectWindowKeys( UiWindow? front, IReadOnlyList<Key> pressed )
+	{
+		if ( front is not IObjectWindowSteps window )
+			return 0;
+
+		var steps = 0;
+
+		foreach ( var key in pressed )
+		{
+			if ( key is not (Key.Up or Key.Down) )
+				continue;
+
+			window.Step( newer: key == Key.Up );
+			Log.Info( $"Object window keys: {key} down, {front.GetType().Name} stepped {(key == Key.Up ? "towards the newest" : "towards the oldest")}" );
+			++steps;
+		}
+
+		return steps;
 	}
 
 	/// <summary>

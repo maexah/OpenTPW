@@ -40,7 +40,7 @@ namespace OpenTPW.UI;
 /// <c>STAFF_WINDOW_NAME_EDIT</c>). The switch's second help row, 87 while it is down, is not shown: a button here has one.
 /// </para>
 /// </summary>
-internal sealed class ParkStaffWindow : UiWindow
+internal sealed class ParkStaffWindow : UiWindow, IObjectWindowSteps
 {
 	/// <summary>How often the figures are filled again, in milliseconds of real time: timer <c>0x80080</c>, armed with 4000.</summary>
 	private const long RefreshEvery = 4000;
@@ -400,6 +400,9 @@ internal sealed class ParkStaffWindow : UiWindow
 		ThingId = next;
 		Show();
 	}
+
+	/// <summary>The cursor Up and Down keys' step (<see cref="IObjectWindowSteps"/>): the arrows' own.</summary>
+	public void Step( bool newer ) => Cycle( newer );
 
 	/// <summary>b_locate (<c>FUN_004b3f60( member )</c>): the staff's locator out on the arm, on this member.</summary>
 	private void Locate()

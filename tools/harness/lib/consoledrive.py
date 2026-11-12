@@ -120,6 +120,12 @@ class Drive:
 
     def key(self, name): self._xdotool("key", name)
 
+    def focus_key(self, name):
+        """A key sent to the game's window with the focus given first (`windowfocus --sync`), the pointer put on it: without
+        the focus the window hears no key (Q994). Q547's cursor Up and Down over an object window."""
+        self._xdotool("search", "--onlyvisible", "--name", ".", "windowfocus", "--sync", "%1",
+                      "mousemove", "--window", "%1", "640", "600", "key", name)
+
     def click(self, x, y): self._xdotool("mousemove", str(int(x)), str(int(y)), "click", "1")
 
     def quit(self):
