@@ -1378,6 +1378,13 @@ control constructor stores the layout's flags at `+0x48` (`0x0065bd2c`) and the 
   to `0x3943d` with no click** (`0x00499707`..`0x00499711`), Tab swaps the lines, **Enter on the second line posts `0x100` with -1 and clicks**
   (`0x00499736`..`0x0049973e`), and **Escape closes by `0x00658d9f( window, 4 )`, silent** (`0x004996bf`..`0x004996ca`). Every root carries layout flags
   `0x1`, so the click is `0x1f`. Save Park (`0x0049ea30`) is the one box that clicks on Escape too (it posts `0x100` with -2).
+- **Up and Down in a name box (Q1164; decode from the run 22 review of Q285, `review22/q285` F2, not re-read here).** The box
+  (`FUN_00667a72`) moves its caret a line on Up and Down (`0x2600`, `0x2800`) only when flagged `0x80`; in any other box it
+  sends the key to its window as `0x805` (`0x00667c68`, `0x00667cb0`), as it does every key it does not take (`0x00667fd3`).
+  Save Park's handler (`0x0049ea30`) has no `0x805` arm and hands it to `0x0047ee90`, whose only arm is `0x14`, then to the
+  window's default through its vtable `+0x118` (`0x0065f688`). **Not read:** that default, and the new player dialog's
+  handler for `0x805` (Q1260). Until they are, OpenTPW drops Up and Down in a focused box and counts them,
+  `EDIT_BOX_KEY_UP` and `EDIT_BOX_KEY_DOWN` (`WindowStack.Keyboard`), as it counts Delete, Left, Right, Home and End.
 - **The staff rename box.** `0x004b6110` is refused while a box is open (`[edi+0xc]`) or with no selected thing (`[0x007c2658]`), and the thing's class
   byte `[+2]` must be 4, 5, 6, 7 or 8. It opens table `0x007572e8` with callback `0x004b6320` (`0x0065fd0e`), properties 0 = the thing and 1 = the window;
   the title control `0x5daa` reads **UITEXT 195** (`0x004b6226`), the one edit `0x5dab` has buffer `0x007cc360` and a limit of **32** characters

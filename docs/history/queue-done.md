@@ -12145,6 +12145,15 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q1164. Up and Down in a name box - first piece: Up and Down counted until the 0x805 default is read.** The
+  window's default for `0x805` (vtable `+0x118`, `0x0065f688`) and the new player dialog's handler are not decoded in
+  `docs/exe/` and were not read here (a cloud container with no Ghidra), so what the original does with the two keys is
+  open. Rule 4 counts a path the program reaches whose original is unread, so `WindowStack.Keyboard` now drops Up and Down
+  in a focused box and counts them, `EDIT_BOX_KEY_UP` and `EDIT_BOX_KEY_DOWN`, beside Delete, Left, Right, Home and End;
+  said at the site and in `hud.md`, "Up and Down in a name box". `TheBoxDropsAndCountsUpAndDown` (needs the game): Up once
+  and Down twice in Save Park's box leave the name, keep the screen open and count 1 and 2 under their own names; two bugs
+  put back by hand (the keys uncounted, Down counted as Up) each failed it. The read is Q1260. Done as Q1164 in cloud
+  lane c35.
 
 ## B. Docs and comments
 

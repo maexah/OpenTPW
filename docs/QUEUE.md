@@ -2348,14 +2348,14 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   finance and park-info toggles and the list headings' buttons letter one way always. First read which of Lost Kingdom's
   buttons are of the class (their layouts' controls), then build the states. Confirm: hover and press one toggle in both
   games, photographs side by side.
-- [ ] **Q1164. Up and Down in a name box.** From the run 22 review of Q285 (`review22/q285`, F2). The original's box
-  (`FUN_00667a72`) moves its caret a line on Up and Down (0x2600, 0x2800) only in a box flagged 0x80; in any other it sends
-  the key to the box's window as message 0x805 (`0x00667c68`, `0x00667cb0`), as it does every key it does not take
-  (`0x00667fd3`). Save Park's handler (`0x0049ea30`) has no 0x805 arm and hands it to `0x0047ee90`, whose only arm is 0x14,
-  then to the window's default through its vtable `+0x118` (`0x0065f688`), not read; the new player dialog's handler is not
-  read. Ours drops both keys in a focused box (`WindowStack.Keyboard`) uncounted. Read the vtable default and the new player
-  dialog's handler for 0x805: if either acts, count `EDIT_BOX_KEY_UP` and `_DOWN` (and any other key that reaches it); if
-  neither does, say so in `hud.md` and at the site. No game run is needed unless the reading leaves it open.
+- [ ] **Q1260. What the window's default and the new player dialog make of a name box's 0x805 (from Q1164).** The box
+  (`FUN_00667a72`) sends every key it does not take to its window as `0x805` (`0x00667c68`, `0x00667cb0`, `0x00667fd3`);
+  Save Park's handler (`0x0049ea30`) passes it through `0x0047ee90` (only arm `0x14`) to the window's default, vtable
+  `+0x118` (`0x0065f688`). Read that default and the new player dialog's handler (its name box `0x004a6f8e`,
+  `lobby.md`) for `0x805`. If either acts on Up or Down, build it; if neither does, remove the `EDIT_BOX_KEY_UP` and
+  `_DOWN` counts (Q1164) and say so in `hud.md` and at `WindowStack.Keyboard`. Also list the other keys the box does not
+  take (Tab is `0x803`; PageUp, PageDown, the function keys) and whether any reaches an arm. Needs Ghidra; no game run
+  unless the reading leaves it open.
 - [ ] **Q1165. The arrival manager reads this sweep's rain (from Q570).** From the run 22 review of Q570 (`review22/q570`,
   finding 1). In the original the weather (thing 7) turns in the sweep's walk, before the tail, and the tail's arrival
   manager then reads its drops (`FUN_004cf5b0`, `0x004cf609` World_Weather, `0x004cf60e` `mov ecx,[eax+0x30]`, k 0.8 or 1.2

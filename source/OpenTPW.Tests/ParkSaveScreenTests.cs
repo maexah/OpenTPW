@@ -204,6 +204,33 @@ public class ParkSaveScreenTests
 	}
 
 	/// <summary>
+	/// <b>Up and Down are dropped and counted</b>, each under its own name: the original's box sends them to its window
+	/// as <c>0x805</c> (<c>0x00667c68</c>), and what the window's default makes of it is not read (Q1260). The name is
+	/// unchanged, the screen stays open, and no other key is counted.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the keys counting nothing; one counted under the other's name; either closing the screen.</remarks>
+	[TestMethod]
+	public void TheBoxDropsAndCountsUpAndDown()
+	{
+		var stack = APark();
+		var screen = OpenSavePark( stack );
+
+		Type( stack, "ab" );
+
+		Press( stack, Key.Up );
+		Press( stack, Key.Down );
+		Press( stack, Key.Down );
+		Type( stack, "c" );
+
+		Assert.AreEqual( "abc", screen.Name, "nothing moved, the letter on the end" );
+		Assert.IsTrue( stack.Windows.Contains( screen ), "the screen stays open" );
+		CollectionAssert.AreEqual( new[] { 1, 2 },
+			new[] { "EDIT_BOX_KEY_UP", "EDIT_BOX_KEY_DOWN" }
+				.Select( what => Unimplemented.Summary.FirstOrDefault( gap => gap.What == what ).Times ).ToArray() );
+		Assert.AreEqual( 2, Unimplemented.Summary.Count( gap => gap.What.StartsWith( "EDIT_BOX_KEY_" ) ), "no other key counted" );
+	}
+
+	/// <summary>
 	/// <b>A row's click puts that save's name in the box, unselected</b>, so the next letter goes on its end; the
 	/// folder is read again at the click; the screen stays open and nothing is counted.
 	/// </summary>

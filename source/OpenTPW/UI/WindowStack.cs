@@ -983,11 +983,11 @@ internal sealed class WindowStack : Panel
 		// on Delete (FUN_00667a72: 0x2500, 0x2700, 0x2400, 0x2300, 0x2e00). Here the caret is always at the end, so each
 		// is dropped and counted. Up and Down (0x2600, 0x2800) move a line only in a box flagged 0x80; in any other they are
 		// sent to the box's window as 0x805, as is every key the box does not take (0x00667c68). Save Park's handler has no
-		// 0x805 arm (0x0049ec35), and what the window's default and the new player dialog make of it is not read (Q1164),
-		// so here they are dropped uncounted.
+		// 0x805 arm (0x0049ec35); what the window's default (vtable +0x118, 0x0065f688) and the new player dialog's
+		// handler make of it is not read (Q1260), so Up and Down are dropped and counted until it is.
 		foreach ( var key in Input.KeysPressed )
 		{
-			if ( key is Key.Delete or Key.Left or Key.Right or Key.Home or Key.End )
+			if ( key is Key.Delete or Key.Left or Key.Right or Key.Home or Key.End or Key.Up or Key.Down )
 				Unimplemented.Report( $"EDIT_BOX_KEY_{key.ToString().ToUpperInvariant()}" );
 		}
 
