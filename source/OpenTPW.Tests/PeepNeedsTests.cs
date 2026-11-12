@@ -222,7 +222,7 @@ public class PeepNeedsTests
 		strolling.Tick( 4 );
 
 		Assert.AreEqual( Peep.UnhurriedSpeed, strolling.PurposeSpeed,
-			"eighty exactly is not past eighty, and nothing else makes a guest hurry" );
+			"eighty exactly is not past eighty, and neither hunger nor sickness makes a guest hurry" );
 	}
 
 	/// <summary>

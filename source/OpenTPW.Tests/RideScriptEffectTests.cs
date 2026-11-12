@@ -194,6 +194,12 @@ public class RideScriptEffectTests
 		Assert.AreEqual( 0, effects.Count, "a type the engine rejects left a record behind" );
 		Assert.AreEqual( 0, effects.Started );
 		Assert.AreEqual( 3, effects.Unknown, "and all three should have been counted as unknown" );
+
+		// The census names each by its instruction, as Opcode spells it, so the gap is found by that name.
+		var census = Unimplemented.Summary.Select( entry => entry.What ).ToList();
+
+		CollectionAssert.Contains( census, "effect type 11 (ADDOBJ)" );
+		CollectionAssert.Contains( census, "effect type -1 (EVENT)", "an EVENT's unknown type is keyed by EVENT" );
 	}
 
 	/// <summary>

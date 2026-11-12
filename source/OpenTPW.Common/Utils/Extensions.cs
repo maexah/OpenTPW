@@ -91,7 +91,9 @@ public static class MathExtensions
 		return new Vector3( x, y, z );
 	}
 
-	[Obsolete( "Use Color.Parse" )]
+	/// <summary>
+	/// Dead by CODE (<c>AGENTS.md</c> rule 3): nothing calls it. Kept, labelled, not deleted.
+	/// </summary>
 	public static System.Numerics.Vector4 GetColor( string hex )
 	{
 		var color = ColorTranslator.FromHtml( hex );

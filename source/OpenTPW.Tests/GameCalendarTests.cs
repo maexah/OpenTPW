@@ -89,9 +89,9 @@ public class GameCalendarTests
 		Assert.AreEqual( new DateTime( 2000, 1, 2 ), GameCalendar.Now.Date );
 	}
 
-	/// <summary>Ten days on, the original's slightly fast pace: 1 January's 231st tick is the first of 11 January.</summary>
+	/// <summary>Ten days on: tick 230 is still 10 January, and tick 231 is the first of 11 January, with the day rolled.</summary>
 	[TestMethod]
-	public void TheDaysKeepTheOriginalsSlightlyFastPace()
+	public void TickTwoHundredAndThirtyOneIsTheFirstOfElevenJanuary()
 	{
 		GameCalendar.Update( 230 );
 		Assert.AreEqual( new DateTime( 2000, 1, 10 ), GameCalendar.Now.Date );

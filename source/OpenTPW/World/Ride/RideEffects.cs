@@ -244,7 +244,7 @@ public sealed class RideEffects
 		{
 			++Unknown;
 
-			Unimplemented.Report( $"effect type {type} (TRIGGEREVENT)" );
+			Unimplemented.Report( $"effect type {type} (EVENT)" );
 
 			return false;
 		}

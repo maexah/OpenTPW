@@ -498,7 +498,7 @@ public class ParkTickTests
 			$"and should have nominated them - the flag alone is half the handshake - {driven.Trace}" );
 		Assert.IsTrue( driven.Boarding,
 			"and should have ended up RIDING - which needs the guest's own BeingAdmitted arm to admit them "
-			+ $"and their EnteringRide arm to complete it, neither of which this tree had - {driven.Trace}" );
+			+ $"and their EnteringRide arm to complete it - {driven.Trace}" );
 
 		// The control. Same park, same frames, no way for a ride to reach its script.
 		var inert = RunPark( wireScripts: false );

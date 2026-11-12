@@ -97,7 +97,7 @@ public class PeepNavigatorTests
 	public void ALongRouteIsHeldFiveWaypointsAtATime()
 	{
 		Assert.AreEqual( 1, PeepNavigator.BufferedFor( 1 ) );
-		Assert.AreEqual( 3, PeepNavigator.BufferedFor( 3 ), "the longest route in the shipped park" );
+		Assert.AreEqual( 3, PeepNavigator.BufferedFor( 3 ), "the longest route Lost Kingdom's save holds" );
 		Assert.AreEqual( 5, PeepNavigator.BufferedFor( 5 ) );
 		Assert.AreEqual( 5, PeepNavigator.BufferedFor( 6 ), "a route past the slots is cut to them" );
 		Assert.AreEqual( 5, PeepNavigator.BufferedFor( 200 ) );

@@ -255,6 +255,6 @@ public class SoundCategoryTests
 		CollectionAssert.AreEqual(
 			new[] { 1, 1, 1, 1 },
 			lobby.Effects.Select( effect => effect.Variations ).ToArray(),
-			"one list each, which is why the gap rule happened to work here" );
+			"one list each, which is why a gap rule gives no wrong answer here" );
 	}
 }

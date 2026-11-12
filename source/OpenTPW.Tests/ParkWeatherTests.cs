@@ -71,7 +71,7 @@ public class ParkWeatherTests
 	/// roughly every forty seconds - see <see cref="GameCalendar"/>.
 	/// </summary>
 	[TestMethod]
-	public void TheWeatherTurnsEverySevenDaysAndIsDecidedThreeDaysBefore()
+	public void TheWeatherTurnsEverySevenDaysAndIsDecidedFourDaysBefore()
 	{
 		var balance = Jungle();
 

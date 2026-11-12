@@ -88,7 +88,7 @@ public class BalanceFieldTests
 	/// one field, so a change here that broke the other few hundred keys would be a poor trade.
 	/// </summary>
 	[TestMethod]
-	public void AKeyThatNamesOneFieldIsReadExactlyAsBefore()
+	public void AKeyThatNamesOneFieldIsReadAsThatOneSetting()
 	{
 		var balance = Jungle();
 

@@ -79,7 +79,7 @@ public class AnimationEasingTests
 		CollectionAssert.AreEqual(
 			new byte[] { 32, 66, 105, 141, 176, 208, 233, 249 },
 			track.Curves[0],
-			"and this is the ramp an older note here quoted without knowing what it was" );
+			"and this is the ramp curve 0 holds" );
 	}
 
 	/// <summary>
