@@ -309,8 +309,9 @@ public static class ParkModelTables
 	/// Each lookup record's pair on a model with nothing attached: its runtime flags, and <c>-1</c> for the handle
 	/// of a record with a position, nought for one without. The flags are <c>0x1</c> it has a position, <c>0x8</c>
 	/// it is posed whatever its children (its file flags meet <c>0x580f00</c>, or its item sets
-	/// <paramref name="doHeadProcessing"/>), <c>0x10</c> its node's file flags carry <c>0x400</c>, and <c>0x20</c>
-	/// its node has no child (<c>FUN_0044a870</c>, <c>FUN_0044aa10</c>).
+	/// <paramref name="doHeadProcessing"/>), <c>0x10</c> it has a position and its node's file flags carry
+	/// <c>0x400</c> (tested only inside the position branch, <c>0x0044a924</c>), and <c>0x20</c> its node has no child
+	/// (<c>FUN_0044a870</c>, <c>FUN_0044aa10</c>).
 	/// </summary>
 	public static (int Flags, int Handle)[] Lookups( ModelFile model, bool doHeadProcessing )
 	{
@@ -342,7 +343,7 @@ public static class ParkModelTables
 
 			var flags = (placed ? 0x1 : 0)
 				| ((file & AlwaysPosedFlags) != 0 || doHeadProcessing ? 0x8 : 0)
-				| ((nodes[index].Flags & 0x400) != 0 ? 0x10 : 0)
+				| (placed && (nodes[index].Flags & 0x400) != 0 ? 0x10 : 0)
 				| (hasChild[index] ? 0 : 0x20);
 
 			records[record] = (flags, placed ? -1 : 0);

@@ -2267,7 +2267,7 @@ exactly those; what the argument is was not traced.
 
 **A lookup record's pair on a model with nothing attached**, 870 of 870: flags `0x1` its file flags meet `0x30`,
 `0x8` they meet `0x580f00` or its item sets `DoHeadProcessing`, `0x10` it has a position and its node's file flags hold `0x400` (`FUN_0044a870`, `0x0044a924`, inside the `0x30` branch), `0x20`
-its node has no child (`FUN_0044aa10`, `0x0044aaa5`); the handle `-1` with a position and nought without. **The
+its node has no child (`FUN_0044aa10`, `0x0044aaa5`); the handle `-1` with a position and nought without. Over every `.md2` the archives hold that reads (2,073 models, 2,410 lookup records), 44 records' nodes carry `0x400`: 28 have a position and so `0x10`, and 16 have none and so not (the Hallowed ogre's `ogrepipe01`, the other three themes' water rides' pipes and tap, the teleport's `end01`; none of Lost Kingdom's, so no jungle record tells the two rules apart; Q275, `ParkModelTablesTests.ARecordWithNoPositionHasNoTurnedAboutFlag`). **The
 shared flags**: `0x1` some record has a position, `0x8` some record's file flags hold `0x2`, and `0x2` where the
 item's model was loaded with the head pass (`FUN_0044ba60`, from `FUN_004629d0` on its `param_5 & 0x80`) and a
 record is a head's (file flag `0x80`): all 17 records of the seven such items, and none of the ferry's four, an
