@@ -615,15 +615,18 @@ pool (`0x004d7b30`), the calendar (`0x004d7b3b`) and the golden tickets (`0x004d
 and the arrivals as the last sweep's tail left them: a candidate who times out, or one the top-up makes, on the tick
 of his row's turn is counted as the pool stood before it, and a guest the bus drops on that tick is not yet in.
 
-**OpenTPW** (`ParkPeople.Sweep`): the messages' turn comes after the guests', the staff's, the rides' and the gate's
-retry; then the free list, the arrivals with the vehicle, and the staff pool; the calendar and the tickets are
+**OpenTPW** (`ParkPeople.Sweep`): the messages' turn comes after the guests', the staff's and the rides'; then the
+gate's retry (Q1312), the free list, the arrivals with the vehicle, and the staff pool; the calendar and the tickets are
 `ParkLoop`'s, after the sweep. The test (`ParkAdvisorBeforeTailTests`) leaves the shipped park's pool one researcher, whose
 time runs out on the tick row 17 is polled: posted with `candidates=1`, where the pool's turn first answers `no-score`
 with `candidates=0`. Off-screen (Q462, `lib/consolerun.py`; the key 1, the pool's three researchers expired and the
 clock set so row 17's poll fell on 1083): `poll message=17 ... tick=1083 result=no-score ... candidates=0`, then
 `Staff pool: topped up on mGameTick 1083`; main's build before it, the top-up first and `result=post ... candidates=1`.
-Not run in the original; the order is the decode's. **Still parted**: the gate's retry (`0x0051643b`, after the walk)
-runs before his turn here (Q1312). `q318/confirm.py`, the stock park's Belly Bounce
+Not run in the original; the order is the decode's. **The gate's retry** (`0x0051643b`, after the walk) comes after
+his turn and before the free list (Q1312). No word either reads is written by the other, so only the console's order
+shows it: `ParkGateTests.TheRetryIsLoggedAfterTheAdvisorSpeaksOnTheSameSweep` (his line about the shut park, then the
+retry's, on tick 780), and off-screen (the stock park shut by the door on tick 765 with three guests in) row 13's poll
+line, then `Gate retry: ... tick 780`, where the build before it printed the two the other way round. `q318/confirm.py`, the stock park's Belly Bounce
 broken 25 s in, predicted first (`q318/PREDICTION.txt`; the first round's `pending` counts were Q306's, wrong since
 Q314, and were predicted again before the second run): the log read `mechanic 26 found ride 13 ... on mGameTick
 885`, `post message=70 subject=13 score=110 threshold=25 tick=885 result=queued pending=2` and `attempt=1

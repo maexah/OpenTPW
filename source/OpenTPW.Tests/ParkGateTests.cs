@@ -236,6 +236,53 @@ public class ParkGateTests
 		}
 	}
 
+	/// <summary>
+	/// <b>The retry is the sweep's after the advisor's turn</b> (FUN_00516380 walks the things, him among them, then tries
+	/// the close at 0x0051643b; docs/exe/park-gate.md, "The later close check"). The closed park's message 0x81, posted by
+	/// the door, is said on the next sweep's turn of his; that sweep lands on a multiple of 30, so the retry runs on it
+	/// too. No word either turn reads is written by the other, so the console's order is what shows it: his line, then
+	/// the gate's, both on tick 780, and the gate commanded shut.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the retry back before his turn (after the rides') logs the gate first and fails.</remarks>
+	[TestMethod]
+	public void TheRetryIsLoggedAfterTheAdvisorSpeaksOnTheSameSweep()
+	{
+		using var clock = new SimulationClockScope();
+		var (people, state, gate) = Park();
+		// The stock file scores the closed park's message 20, under its threshold's 25, so he would never say it:
+		// the score is put at 26, as an Advisor.sam may have it.
+		var settings = new SettingsFile( "Advisor/Advisor.sam" );
+		var index = settings.Entries.FindIndex( pair => pair.Key == "ParkNowClosed.Score" );
+		Assert.AreEqual( "20", settings.Entries[index].Value, "the stock score" );
+		settings.Entries[index] = new SettingsPair( settings.Entries[index].Key, "26" );
+		state.AdvisorMessages = new ParkAdvisorMessages( settings );
+
+		// The door's close finds the gate shut and writes nothing; the retry is left to command it.
+		gate.Set( "VAR_STATUS", 0 );
+		state.SetParkClosed( true );
+		Assert.AreEqual( 1, gate["VAR_COMMAND"], "the door wrote nothing" );
+		gate.Set( "VAR_STATUS", 1 );
+		state.SetGameTick( 779 );
+
+		var lines = new List<string>();
+		Logger.LogDelegate listen = ( _, text ) =>
+		{
+			if ( text.StartsWith( "Park advisor: attempt=" ) || text.StartsWith( "Gate retry:" ) )
+				lines.Add( text );
+		};
+		Logger.OnLog += listen;
+		try { people.Sweep( 0 ); }
+		finally { Logger.OnLog -= listen; }
+
+		Assert.AreEqual( 780, state.GameTick );
+		Assert.AreEqual( 2, lines.Count, string.Join( "\n", lines ) );
+		StringAssert.StartsWith( lines[0], "Park advisor: attempt=1 message=129 " );
+		StringAssert.Contains( lines[0], " tick=780 " );
+		StringAssert.StartsWith( lines[1], "Gate retry: " );
+		StringAssert.Contains( lines[1], " tick 780 " );
+		Assert.AreEqual( 0, gate["VAR_COMMAND"], "the retry commanded the gate shut" );
+	}
+
 	[TestMethod]
 	public void RetryRequiresClosedParkAndOpenGateAndCensusIsReadOnly()
 	{

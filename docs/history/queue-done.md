@@ -13969,3 +13969,9 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
     off-screen run logged no wrapped read and counted no `COUNTING_CELL_OFF_MAP`: dead by content. Built:
     `PeepBehaviour.CountingRecord` packs the low byte of each whole part, `y * 128 + x`, so x 128 to 255 or below
     nought reads the next row's cell; a pack past the last record stays counted (Q1480).
+- [x] **Q1312. The gate's retry comes after the advisor's turn.** From Q462. `FUN_00516380` walks the things (the
+  advisor, thing 3, among the last) and only then tries the delayed close (`0x0051643b`..`0x00516639`, every 30 ticks;
+  `docs/exe/park-gate.md`, "The later close check"); `ParkPeople.Sweep` calls `RetryGateClose` before the advisor's
+  `Tick`. No row the advisor reads is known to follow the gate's command on the same tick, so first find what (if
+  anything) the order changes; then move it after his turn and before `FreeDeletedThings`, with a test whose values
+  the old order gets wrong, or say at the call that nothing can tell the two apart.
