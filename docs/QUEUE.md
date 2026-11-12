@@ -3237,7 +3237,7 @@ Back to the advisor in a park; saving a fresh park is Q783, in section A. Also l
   `guests` census at the crossing, then find what the walk asks of the crosswalk cells there.
   - **Note (play test 2026-10-31):** still seen in a short look at Halloween World; not the priority. Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
 
-- [ ] **Q1190. Counted, not built, and owned by no item: the interface (21 names, from Q243).** Filed by Q243's census,
+- [ ] **Q1190. Counted, not built, and owned by no item: the interface (19 names, from Q243).** Filed by Q243's census,
   2026-11-12: `python3 tools/gap_census.py` found each name below counted by `Unimplemented.Report` and named by no other item
   here. A session takes one name or a few: read the site and the `docs/exe/` page given, classify the path (`AGENTS.md`
   rule 3; only a site's own "dead by" words were read, given below, and the rest are not classified), then build it or
@@ -3258,11 +3258,19 @@ Back to the advisor in a park; saving a fresh park is Q783, in section A. Also l
   - `UNKNOWN_CATEGORY_SCREEN` (`ParkCategoryScreens.cs`); dead by CODE at its site: the work is removing the unreachable arm (`AGENTS.md` rule 3), not building it
   - `TAG_BAR_BUTTON` (`ParkGadget.cs`; `hud.md`, `advisor-park.md`)
   - `STAFF_PORTRAIT_ACTOR` (`ParkHireScreen.cs`)
-  - `RIDE_EXCITEMENT_BAR` (`ParkObjectWindow.cs`; `park-engine.md`)
-  - `RIDE_RELIABILITY_BAR` (`ParkObjectWindow.cs`; `park-engine.md`)
   - `STAFF_LIST_ADVISOR_LINE` (`ParkStaffScreen.cs`; `hud.md`)
   - `VISITORS_LIST_ADVISOR_LINE` (`ParkVisitorsScreen.cs`; `hud.md`)
   - `TEXTURE_WRAP_SHARED` (`LobbyModel.cs`; `render-states.md`)
+- [ ] **Q1657. The ride window's Excitement and Reliability gauges beside the original's, and the flag's red line read.**
+  Split from Q1656 (built in a cloud lane with no display, Ghidra or original). Confirm on a desk: the stock park's Belly
+  Bounce window (`openthing 13`) photographed beside the original's (Q693's route, `q693/orig/run.sh`): excitement 40 and
+  reliability 82 fill about 40% and 82% of their rows; then speed and capacity a step down each (59 and 4), 39 and 86 after
+  the next fill. Read in Ghidra which count `FUN_004df450`'s flag arm (the window's, from `FUN_004df640`) holds the
+  capacity's red line against, the capacity handed in or `VAR_ONRIDE`, and whether it clamps the capacity:
+  `ParkRideWear.Reliability` takes the capacity, unclamped. No count from nought to an item's most seats meets a red line
+  either way: every tier that wears, in the four themes' catalogues in both modes (89 item rows), has its red line above a
+  tenth of its item's most seats (the least, 1, on a one-seat space ride), so the gauge is the same; the doc line in
+  `ride-operation.md`, "A ride's wear", is what needs the answer.
 - [ ] **Q1191. Counted, not built, and owned by no item: guests' turns and events (37 names, from Q243).** Filed by Q243's census,
   2026-11-12: `python3 tools/gap_census.py` found each name below counted by `Unimplemented.Report` and named by no other item
   here. A session takes one name or a few: read the site and the `docs/exe/` page given, classify the path (`AGENTS.md`

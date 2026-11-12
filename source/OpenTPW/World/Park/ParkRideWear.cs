@@ -36,9 +36,11 @@ public static class ParkRideWear
 	/// halved. An item whose most is nought divides by it as the original's floats do.
 	/// </summary>
 	public static float Of( int speed, int riders, int maxSpeed, int maxCapacity, Tier tier )
-	{
-		riders = riders < 0 ? 0 : Math.Min( riders, maxCapacity );
+		=> Sum( speed, riders < 0 ? 0 : Math.Min( riders, maxCapacity ), maxSpeed, maxCapacity, tier );
 
+	/// <summary><c>FUN_004df450</c>'s sum over a speed and a count of riders or seats, the count as the caller hands it.</summary>
+	private static float Sum( int speed, int riders, int maxSpeed, int maxCapacity, Tier tier )
+	{
 		// Each ratio is stored as a float before its floor is added, and each term once more after its red line.
 		var bySpeed = (float)((float)speed / (double)maxSpeed * Scale) + (double)Floor;
 
@@ -52,6 +54,24 @@ public static class ParkRideWear
 
 		return (float)(((double)(float)byRiders + (float)bySpeed) * tier.Rate * 0.5);
 	}
+
+	/// <summary>The float a ride window's wear is scaled by before it comes off a hundred - 9.0 (<c>0x00700594</c>).</summary>
+	public const float ReliabilityScale = 9f;
+
+	/// <summary>
+	/// A ride's reliability at the settings shown - <c>FUN_004df640</c>, which the object window's Reliability gauge
+	/// shows (<c>0x3e18</c>; <c>docs/exe/park-engine.md</c>, "The object window's stats panel"): the low byte of
+	/// <c>100 - trunc( 9 × w )</c>, <c>w</c> being <c>FUN_004df450</c> with its flag set, which takes the capacity
+	/// handed in where a turn's wear takes the riders (<c>docs/exe/ride-operation.md</c>, "A ride's wear").
+	/// </summary>
+	/// <remarks>
+	/// The capacity's red line is held against a tenth of the capacity handed in, as against the riders in a turn's
+	/// wear; which count the flag's arm holds it against was not read (Q1657). Every tier that wears, in the four themes'
+	/// catalogues, has its red line above a tenth of its item's most seats, so no count from nought to that most meets it
+	/// either way.
+	/// </remarks>
+	public static int Reliability( int speed, int capacity, int maxSpeed, int maxCapacity, Tier tier )
+		=> (byte)(100 - (int)(ReliabilityScale * (double)Sum( speed, capacity, maxSpeed, maxCapacity, tier )));
 
 	/// <summary>A value less a loss, held to 0..100 as the original's two compares hold it: not a number is nought.</summary>
 	public static float Lowered( float value, double loss )

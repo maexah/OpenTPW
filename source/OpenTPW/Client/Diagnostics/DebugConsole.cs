@@ -562,6 +562,7 @@ public static class DebugConsole
 						: control.Text is { Length: > 0 } lettered ? $" reads '{lettered.Replace( "\n", " / " )}'" : "")
 					+ (control.Mesh is { } drawnMesh ? $" mesh {drawnMesh.Name} frame {control.Frame}" : "")
 					+ (control is UI.UiList scrolled ? $" list: {scrolled.ScrollCensus()}" : "")
+					+ (control is UI.ParkObjectWindow.UiStatBar gauge ? (gauge.Known ? $" gauge at {gauge.At:F4}" : " gauge unset") : "")
 					+ (Hidden( control ) ? " hidden" : "")
 					+ (control is UI.UiButton { Enabled: false } ? " disabled" : "")
 					+ (control.Text is { Length: > 0 } && control is not UI.UiEdit

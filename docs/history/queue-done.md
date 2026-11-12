@@ -12346,6 +12346,17 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   (Alexah's answer). Dry runs: `weekly-test-1` refused the Mac zips (MoltenVK's manifest, then allowed);
   `weekly-test-2` published four zips and the sums, the Linux zip downloaded passed `zipsmoke.py`; both deleted.
   Not run: the Windows and macOS zips themselves.
+- [x] **Q1656. The ride window's Excitement and Reliability gauges (from Q1190).** Split from Q1190 (cloud lane c126):
+  its `RIDE_EXCITEMENT_BAR` and `RIDE_RELIABILITY_BAR`. Fill the ride window's `0x3e16` and `0x3e18` gauges from its
+  sliders, as `FUN_004ade40` does (`docs/exe/park-engine.md`, "The object window's stats panel"; `ride-operation.md`, "A
+  ride's wear"); tests.
+  **Done 2026-11-12** (cloud lane c126): `FillStats` hands `0x3e16` `ParkRideScore.ExcitementOf` at the window's speed and
+  duration (`FUN_004e0560`, `0x004adfcc`) and `0x3e18` the new `ParkRideWear.Reliability` (`FUN_004df640`: the low byte of
+  `100 - trunc( 9 × w )`, `w` the wear sum over the window's speed and capacity), each as `((v & 0xff) << 10) / 100`; both
+  names are gone. The window's three buffered values are one helper (`Buffered`) the commit shares. The console's
+  `control` reply gives a stat bar's `gauge at F`. Off-screen in a cloud container, the stock Belly Bounce read excitement
+  40 and reliability 82 (gauges 0.3994 and 0.8193), and with speed and capacity a step down each, 39 and 86 (0.3896 and
+  0.8594) at the next four-second fill, nothing committed. Not photographed (Q1657).
 
 ## G. The lobby plan's open items
 

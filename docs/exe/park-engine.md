@@ -3278,8 +3278,12 @@ constructor `mPricePerUse` (`+0x194`) is copied unclamped from `UsageInfo.InitPr
 OpenTPW builds all four fields (`ParkBuilding.Constructed`, Q171) and pushes the capacity and duration
 (`ParkRides.BindNew`); and pushes the speed into the script's word when `InitSpeed` is above nought (`ParkRides.PushItemSpeed`, Q875). `+0x13c`, which supplies the base above,
 is `UsageInfo.ExcitementLevel`: the compiled `.sam` schema puts it one slot before `InitCostOfGoods` (`+0x140`), in a
-UsageInfo group from `+0xc4` (`GoldenTicketCost`) through `+0x170` (`NumSimultAnims`) (`ride-operation.md`, "At the door"). `RIDE_EXCITEMENT_BAR` and
-`RIDE_RELIABILITY_BAR` stay counted until they are built.
+UsageInfo group from `+0xc4` (`GoldenTicketCost`) through `+0x170` (`NumSimultAnims`) (`ride-operation.md`, "At the door").
+**OpenTPW** (Q1656): the ride window's `FillStats` hands `0x3e16` `ParkRideScore.ExcitementOf` at the window's speed and
+duration and `0x3e18` `ParkRideWear.Reliability` at its speed and capacity, each slider's value or the thing's own where
+the slider is hidden (`Buffered`), so a slider moved shows at the next four-second fill before anything is committed.
+Which count the flag's arm of `FUN_004df450` holds the capacity's red line against was not read (Q1657); no count an item
+allows meets one either way.
 
 ### Sell, move and the scrap value
 

@@ -67,6 +67,27 @@ public class ParkRideWearTests
 			0.00001f, "nobody on, a line of nought: on the line" );
 	}
 
+	/// <summary>
+	/// A ride window's reliability, <c>FUN_004df640</c>: the low byte of <c>100 - trunc( 9 × w )</c>, the wear taking the
+	/// capacity handed in where a turn's takes the riders.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the hundred less the product truncated as one (81 for 82, 89 for 90), or the riders' floor
+	/// of a tenth taken for the capacity (88 for 82).</remarks>
+	[TestMethod]
+	[DataRow( 60, 5, 82 )]
+	[DataRow( 45, 2, 90 )]
+	[DataRow( 60, 10, 76 )]
+	[DataRow( 100, 1, 84 )]
+	public void AWindowsReliabilityIsAHundredLessNineWears( int speed, int capacity, int reliability )
+		=> Assert.AreEqual( reliability, ParkRideWear.Reliability( speed, capacity, maxSpeed: 100, maxCapacity: 10, Bounce ) );
+
+	[TestMethod]
+	public void AWindowsReliabilityMeetsBothRedLinesAndANeverWearingTier()
+	{
+		Assert.AreEqual( 55, ParkRideWear.Reliability( 100, 10, 100, 10, new( 5, 60, 1 ) ), "both lines met: a wear of 5" );
+		Assert.AreEqual( 100, ParkRideWear.Reliability( 100, 10, 100, 10, Bounce with { Rate = 0 } ), "a tier that never wears" );
+	}
+
 	[TestMethod]
 	public void ALossIsHeldToNoughtAndAHundred()
 	{

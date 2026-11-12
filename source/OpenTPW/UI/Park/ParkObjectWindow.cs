@@ -527,10 +527,9 @@ internal sealed class ParkObjectWindow : UiWindow, IStatusBox
 	/// 0x3e1c, 0x3e1e, 0x3e1f, 0x3e1d, 0x3e22; the refresh writes the right cells of the same rows, in
 	/// the same order, which is also the order of the rectangles the stream lays out.
 	/// <para>
-	/// <b>Two of the seven figures are not answerable here and are counted rather than invented.</b>
 	/// Excitement and reliability are type-9 bars skinned <c>ridestatbar.wct</c> that the engine computes
-	/// from the three sliders - <c>FUN_004e0560</c> divides two slider values by per-upgrade maxima this
-	/// decode has not read. Users last month sums the object's ring of customers over the last thirty finished
+	/// from the window's sliders, not the thing's settings - <see cref="ParkRideScore.ExcitementOf"/> and
+	/// <see cref="ParkRideWear.Reliability"/>. Users last month sums the object's ring of customers over the last thirty finished
 	/// game days (<see cref="ParkObjectRings.Customers"/>).
 	/// State of repair and remaining life are bars too, read straight off the thing.
 	/// </para>
@@ -592,13 +591,27 @@ internal sealed class ParkObjectWindow : UiWindow, IStatusBox
 		Gauge( 0x3e17, placed.RemainingLife );    // +0x48, what a breakdown eats
 		Gauge( 0x3e19, placed.StateOfRepair );    // +0x44, what a repair restores
 
-		// Excitement (0x3e16) and Reliability (0x3e18) are NOT left out for want of a control - the
-		// gauge above draws them the moment there is a number. FUN_004ade40 fills them from FUN_004e0560 and
-		// FUN_004df640 over the window's own slider values (docs/exe/park-engine.md, "The object window's stats
-		// panel"). Their inputs are named, and ParkRideScore.ExcitementOf works out the first from the thing's own
-		// settings; the bars themselves, over the sliders, and Reliability's FUN_004df450 are not built.
-		Unimplemented.Report( "RIDE_EXCITEMENT_BAR" );
-		Unimplemented.Report( "RIDE_RELIABILITY_BAR" );
+		// Excitement and Reliability are worked out from the window's own slider values, not the thing's, so a slider
+		// moved shows in them at the next fill before anything is committed (docs/exe/park-engine.md, "The object
+		// window's stats panel"): FUN_004e0560 on the speed and duration (0x004adfcc) and FUN_004df640 on the speed
+		// and capacity, each handed to its gauge as ((v & 0xff) << 10) / 100.
+		var (speed, capacity, duration) = Buffered( placed, item );
+		var excitement = ParkRideScore.ExcitementOf( placed with { OperatingSpeed = speed, OperatingDuration = duration },
+			item, state.TrackRides );
+		var reliability = ParkRideWear.Reliability( speed, capacity, item.MaxSpeed, item.MaxCapacity,
+			item.WearAt( placed.UpgradeLevel ) );
+
+		Units( 0x3e16, ParkItemsScreen.Bar( excitement ) );
+		Units( 0x3e18, ParkItemsScreen.Bar( reliability ) );
+
+		void Units( int id, int units )
+		{
+			if ( !_bars.TryGetValue( id, out var bar ) )
+				return;
+
+			bar.Units = units;
+			bar.Known = true;
+		}
 
 		// Users last month: the object's customers over the last thirty finished days, today's not among them
 		// (FUN_004ade40, 0x004ade7d), printed "%d" (0x0048ff8f).
@@ -612,8 +625,18 @@ internal sealed class ParkObjectWindow : UiWindow, IStatusBox
 		Log.Info( $"Ride window: thing {ThingId} stats age {(placed.Built.IsSet ? state.AgeInDays( placed ) : -1)} days," +
 			$" users {users?.Text ?? "-"}, scrap {item.BuildPrice}," +
 			$" built {placed.Built.Year}-{placed.Built.Month:D2}-{placed.Built.Day:D2}," +
-			$" repair {placed.StateOfRepair:R}, life {placed.RemainingLife:R}" );
+			$" repair {placed.StateOfRepair:R}, life {placed.RemainingLife:R}," +
+			$" excitement {excitement & 0xff} reliability {reliability} at speed {speed} capacity {capacity} duration {duration}" );
 	}
+
+	/// <summary>
+	/// The window's three settings as it holds them - <c>+0x2c</c>, <c>+0x30</c> and <c>+0x34</c>: each slider's value,
+	/// or the thing's own where the slider is hidden (the duration's also where the item has no duration).
+	/// </summary>
+	private (int Speed, int Capacity, int Duration) Buffered( ParkWorld.CatalogueObject placed, ParkItemCatalogue.Item item )
+		=> (_sliders[Speed].Visible ? _sliders[Speed].Value : placed.OperatingSpeed,
+			_sliders[Capacity].Visible ? _sliders[Capacity].Value : placed.OperatingCapacity,
+			item.DurationUnit != 0 && _sliders[Duration].Visible ? _sliders[Duration].Value : placed.OperatingDuration);
 
 	/// <summary>The preview's click (<c>0x0048d1c0</c>): the camera to the thing shown, then the window closed.</summary>
 	private void GoToThing()
@@ -969,11 +992,7 @@ internal sealed class ParkObjectWindow : UiWindow, IStatusBox
 			|| level.Catalogue is not { } catalogue || !catalogue.TryGet( placed.CatalogueId, out var item ) )
 			return;
 
-		var speed = _sliders[Speed].Visible ? _sliders[Speed].Value : placed.OperatingSpeed;
-		var capacity = _sliders[Capacity].Visible ? _sliders[Capacity].Value : placed.OperatingCapacity;
-		var duration = item.DurationUnit != 0 && _sliders[Duration].Visible
-			? _sliders[Duration].Value
-			: placed.OperatingDuration;
+		var (speed, capacity, duration) = Buffered( placed, item );
 
 		if ( speed == placed.OperatingSpeed && capacity == placed.OperatingCapacity
 			&& duration == placed.OperatingDuration )
