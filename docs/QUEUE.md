@@ -1136,14 +1136,6 @@ filed the items that cite it.
   park to 1014 would show it still there. From the week-end audit (stage 6, the second reading of commit
   `738789d6`; read from the code, not reproduced in the game). `OpenTPW/World/Park/ParkPeople.cs`, line 2144.
 
-- [ ] **Q283. `ParkParticles.Edit.Start` passes a directed start's `Direction` on to the linked effect when the
-  link does not follow (`its = spawn`, then `Start( its with { Template = linked } )`).** So the linked emitter is
-  written aimed and with no draw of the generator. `Particles_SpawnFull` starts its linked emitter with the plain
-  `Particles_Spawn` (`0x00521cf2`), so the linked start must carry no direction; a test starting effect 51 (links
-  54, not following) with a direction and holding emitter 54's +0x38 to the template's (0, 31, 0) and the seed
-  three draws on would show it From the week-end audit (stage 6, the second reading of commit `d490bc90`; read
-  from the code, not reproduced in the game). `OpenTPW.Files/Formats/Save/ParkParticles.cs`, line 376.
-
 - [ ] **Q1154. A handyman loaded walking to litter or sweeping falls to idle (from Q285).** A handyman loaded from a park
   file in state 8 or 9 (FUN_004d73c0's cases 8 and 9) takes `StaffBehaviour.Step`'s default arm, is counted
   (`HANDYMAN_LITTER_STATE_8`, `_9`) and stands in that state for the rest of the session. Until the litter job is built he

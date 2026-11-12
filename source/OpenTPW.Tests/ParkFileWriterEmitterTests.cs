@@ -395,6 +395,47 @@ public class ParkFileWriterEmitterTests
 		Assert.IsTrue( edit.Starts( 58 ) );
 	}
 
+	/// <summary>
+	/// A directed start starts the effect it links with the plain start (<c>Particles_Spawn</c>, <c>0x00521cf2</c>):
+	/// effect 51 aimed, its linked 54 (not following) keeps the template's own aim at <c>+0x38</c> and draws the
+	/// generator three times, after the aimed parent drew none.
+	/// </summary>
+	[TestMethod]
+	public void ADirectedStartStartsItsLinkedEffectPlain()
+	{
+		var parent = shipped.Particles.Template( 51 );
+		var template = shipped.Particles.Template( 54 );
+		var range = Word( template, 0x12 );
+
+		Assert.AreEqual( (54, 0, 0), (Dword( parent, 0xb4 ), Word( parent, 0xb8 ), (int)parent[0xba]) );
+		Assert.AreEqual( (0, 31, 0), (Dword( template, 0x38 ), Dword( template, 0x3c ), Dword( template, 0x40 )), "the template's own aim" );
+		Assert.AreNotEqual( 0, range );
+		Assert.AreNotEqual( 0, Dword( parent, 0xb0 ), "the parent's speed, so an aim passed on would show" );
+
+		var seed = Dword( payload.AsSpan( shipped.Particles.LiveAt ), 0x10 );
+		var want = new int[3];
+
+		for ( var axis = 0; axis < 3; ++axis )
+		{
+			seed = unchecked((seed * 0x343fd) + 0x269ec3);
+			want[axis] = Dword( template, 0x2c + (axis * 4) ) + ((seed >> 16) % range);
+		}
+
+		var edit = shipped.Particles.Begin();
+		var slot = edit.Start( At( 51, 7, 8, 9 ) with { Direction = (0, 0, 1024) } ) & 0xffff;
+		var its = Dword( edit.Bytes( slot ), 0xb4 ) & 0xffff;
+
+		Assert.AreEqual( 54, edit.At( its ).Template );
+		Assert.AreEqual( (0, 0, Dword( parent, 0xb0 )), (Dword( edit.Bytes( slot ), 0x38 ), Dword( edit.Bytes( slot ), 0x3c ), Dword( edit.Bytes( slot ), 0x40 )), "the parent is aimed" );
+		Assert.AreEqual( (0, 31, 0), (Dword( edit.Bytes( its ), 0x38 ), Dword( edit.Bytes( its ), 0x3c ), Dword( edit.Bytes( its ), 0x40 )), "the linked one is not" );
+		CollectionAssert.AreEqual( want, Enumerable.Range( 0, 3 ).Select( axis => Dword( edit.Bytes( its ), 0x2c + (axis * 4) ) ).ToArray() );
+
+		var body = (byte[])payload.Clone();
+
+		shipped.Particles.Put( body, edit );
+		Assert.AreEqual( seed, Dword( body.AsSpan( shipped.Particles.LiveAt ), 0x10 ), "three draws on, the linked start's alone" );
+	}
+
 	/// <summary>No such effect and no slot free answer -1, and leave the image as it was.</summary>
 	[TestMethod]
 	public void AStartWithNoEffectOrNoSlotAnswersNone()

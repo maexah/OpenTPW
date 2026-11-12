@@ -12145,6 +12145,13 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q283. `ParkParticles.Edit.Start` passes a directed start's `Direction` on to the linked effect when the
+  link does not follow (`its = spawn`, then `Start( its with { Template = linked } )`).** So the linked emitter is
+  written aimed and with no draw of the generator. `Particles_SpawnFull` starts its linked emitter with the plain
+  `Particles_Spawn` (`0x00521cf2`), so the linked start must carry no direction; a test starting effect 51 (links
+  54, not following) with a direction and holding emitter 54's +0x38 to the template's (0, 31, 0) and the seed
+  three draws on would show it From the week-end audit (stage 6, the second reading of commit `d490bc90`; read
+  from the code, not reproduced in the game). `OpenTPW.Files/Formats/Save/ParkParticles.cs`, line 376.
 
 ## B. Docs and comments
 
