@@ -869,7 +869,7 @@ whole list):
   kind 4's nought effort never funds: end on a feature (`q550/stone240-fs.TPWS`, Stone Head at 240, tick 800). The
   End's view itself, with the camera and the layers read, is `q551/orig/run.sh` (`original/camread.py`; it waits for
   the End's id and frames every 2 s, moving the pointer). Ours: the console's `endfeature` is the End's census (its
-  thing, its two scripts, the eye and the look, the cover, the dip), and `endfeature make` owes the End at once, with no scene file (Q864: the one way into a ride's view in a cloud lane; `unimplemented` then counts `CAMERA_RIDE_REVERB` four for each `PARK_LOOP_FUN_0055AB50`, the every-32nd tick's, a yardstick in the same reply where the console answers frames late), and `q703/confirm.py <out> <bin> a|b` runs the
+  thing, its two scripts, the eye and the look, the cover, the dip), and `endfeature make` owes the End at once, with no scene file (Q864: the one way into a ride's view in a cloud lane; `unimplemented` then counts `CAMERA_RIDE_REVERB` and `CAMERA_NO_RIDE_REVERB` together four for each `PARK_LOOP_FUN_0055AB50`, the every-32nd tick's, a yardstick in the same reply where the console answers frames late; the ride's name only while the view is on, Q1236), and `q703/confirm.py <out> <bin> a|b` runs the
   scene through the End to Escape (`a`) or to a right click (`b`). First person's fog, drawn in the End's view too,
   hides what stands past about 150 units: `fog 2000 2100` pushes it out for a look (`q703/exp-fog.py`). Its planes' flight
   (Q554): `endfeature` adds an `endfeature planes:` line, each `_f_endplane`'s drawn place and whether it is shown;
@@ -1333,6 +1333,7 @@ after its poller starts**, so a key meant inside either line cannot be sent afte
   then `Happiness changed by X since using object N` (X is three times the change in the guest's happiness since they joined, each as its low byte,
   `ParkRideOperation.cs` / `0x004fda47`; the ride's own part is the `excitement` line before it, a shop's the
   `ingredient` line). A spot that may not reach the path: buy, send one guest, `sell` on "no route", next spot.
+- **A script's `SETREVERB` reached in an Easy park** (Q1236, `lib/consoledrive.py`): the Sun God is Full Simulation only (`buy 1106` answers `this theme has no item 1106`), so the Inca Totem (`Totem.RSE` 126 and 167): `buy 1110 40 22 0` (thing 43, queue node (41,21)), then `scriptvar 43 VAR_RIDECLOSED 0` (a bought ride stays closed: its script loops at word 351), `pause`, four `admit 43 21`; guests the chooser takes there ride it unsent, and `unimplemented` counts `SCRIPT_REVERB_LEVEL` two a ride from about 15 s.
 - **The four Full Simulation ones with guests** (Q580, `q580fs/confirm.py <out> <bin> S|K|G|A`, `lib/fsplayer.py`): each
   fits on (40,22) in the stock park entered as Full Simulation, thing 43; Sun God `buy 1106 40 22 0`, node (42,21)
   joined at (43,21); the Steak Restaurant `1208`, the Gift Shop `1211`, the Arcade `1309`; four guests admitted on

@@ -587,19 +587,6 @@ filed the items that cite it.
   `CellReroute.Run` stops where it starts. Decode the corner cases (the other sign combinations from `0x00510c73`), build the pass, and
   run the routes of the stock park through the old and the new to see how many steps change. Confirm: a guest's route over a bent path
   in both builds, the waypoints printed, predicted first.
-- [ ] **Q1236. Count the reverb handoff with no ride under the camera, or say why not.** From Q864 (a cloud lane, no
-  Ghidra); its two Ghidra questions were settled from the listing by the run 22 review. `FUN_0042a4e0` answers
-  `[0x00790a44]` only with bit 4 of `gui_CameraFlags` (`[0x00790ab0]`) set and `[0x00790988]` non-zero, both written by
-  `FUN_0042a560` (`0x0042a636`, `0x0042a673`), the "Ride it!" entry the End takes; first person leaves bit 4 clear, so 0
-  there. With 0, no script list or no matching script, `FUN_0055a470` still calls `FUN_0051c8d0` with `[0x0078578c]`
-  (`Sound.Reverb`; `0x0055a477`, `0x0055a4c5`): the handoff is made every eighth step in every view, and only a script's
-  negative `+0xd8` sends nothing (`0x0055a4b9`). `ParkLoop.HandTheReverb` counts `CAMERA_RIDE_REVERB` only in a ride's
-  view. The one choice left: count the no-ride handoff too (rule 4: a reached, unbuilt call, every eighth step of every
-  park), e.g. a second name for it beside the ride arm's, or write in `docs/exe/audio.md`, "The reverb", why it stays
-  uncounted. Also from Q580 (2026-10-20, left by Q864): the Sun God reaches `SETREVERB` (`incagod` at 162 and 188, in every
-  run), counted at the dispatch default as `Inca God: SETREVERB at 162`; building it is the store of its operand at the
-  script's `+0xd8`, and with reverb cut a name of its own in the count is all it needs (`q580fs/run-S2`). Confirm with
-  `endfeature make` and `unimplemented`, predicted first.
 
 - [ ] **Q158. Four park-screen readouts are stand-ins; each is counted where it is drawn (Q865).** Found by the 2026-09-26 staleness
   audit (`AGENTS.md` rule 4). `ParkObjectWindow`'s scrap row letters the build price as money (row 449, "$ 500"), where `FUN_004e2400`
@@ -1110,7 +1097,6 @@ filed the items that cite it.
   `StaffBehaviour` takes that arm only above 1, counts `ENTERTAINER_BANK_WITHOUT_A_STATE_GROUP` for nought and
   starts on animation 0, which its remarks give as a deviation no shipped bank reaches. Dead by content today:
   build it as the original's or leave the count, on Alexah's word.
-
 
 - [ ] **Q1316. The handyman loaded walking to litter or sweeping: his walk off photographed, and the job itself (from Q1154).**
   Q1154 made one loaded in state 8 or 9 fall to idle (`StaffBehaviour.Step`'s default arm, counted as
