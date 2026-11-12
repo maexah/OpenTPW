@@ -139,20 +139,11 @@ public sealed partial class ParkAudio : Entity
 		=> MusicLevel( people?.GateGuestCensus ?? 0, worldState );
 
 	/// <summary>
-	/// Whether a frame that ran <paramref name="ticksDue"/> ticks ending on <paramref name="lastTick"/> ran one the
-	/// level is set on, a tick whose low five bits are nought. The loop tests every tick, so a long frame's 32nd is
-	/// not missed.
+	/// Whether the park loop's step for <paramref name="tick"/> sets the level, a tick whose low five bits are nought
+	/// (<c>TEST [0x00877d34],0x1f</c>, <c>0x0054f82d</c>). <see cref="ParkLoop"/> asks it of every step, so a long frame's
+	/// 32nd is not missed and a frame holding two sets twice.
 	/// </summary>
-	public static bool SetsMusicLevel( int lastTick, int ticksDue )
-	{
-		for ( var tick = lastTick - ticksDue + 1; tick <= lastTick; ++tick )
-		{
-			if ( (tick & (MusicLevelEvery - 1)) == 0 )
-				return true;
-		}
-
-		return false;
-	}
+	public static bool SetsMusicLevel( int tick ) => (tick & (MusicLevelEvery - 1)) == 0;
 
 	/// <summary>The level the music was last set to, nought until the first set, as the original sets it as it starts the voice (<c>FUN_0051e730</c>).</summary>
 	internal int LevelNow { get; private set; }
@@ -1458,6 +1449,50 @@ public sealed partial class ParkAudio : Entity
 	}
 
 	/// <summary>
+	/// The park loop's every-32nd block (<c>0x0054f82d</c>..<c>0x0054f8c8</c>), run from <see cref="ParkLoop"/>'s step for
+	/// <paramref name="tick"/> after that step's sweep, its tail and the reverb's handoff, as the original runs it: the
+	/// music's level, the crowd's voice and the flying cars' rectangle. Re-counted rather than told when the crowd changes,
+	/// as the original does, and on its beat, about once a second and not while the game is held, when no tick runs. So in
+	/// a frame owing a later sweep (a hitch) the level counts the guests the 32nd tick's sweep left, not that later one's.
+	/// </summary>
+	internal void SetTheLevels( int tick )
+	{
+		// With no audio device nothing is set.
+		if ( !Audio.Ready )
+			return;
+
+		var worldState = Level.Current?.Park?.WorldState ?? 0;
+
+		if ( _music is { IsValid: true } )
+		{
+			var guests = ParkPeople.Current?.GateGuestCensus ?? 0;
+			var level = MusicLevelFor( ParkPeople.Current, worldState );
+
+			if ( level != LevelNow )
+				Log.Info( $"Park music: level {LevelNow} to {level} for {guests} counted guests on tick {tick}" );
+
+			LevelNow = level;
+			++LevelSets;
+		}
+
+		// The same block's second call (0x0054f875 to 0x0054f8b9): the crowd's own voice, set from the guests
+		// within four cells of the cell under the pointer (docs/exe/audio.md, "The crowd's voice").
+		var cell = ParkPicking.Cell;
+		var near = ParkPeople.Current?.GuestsNear( cell, CrowdVoiceReach ) ?? 0;
+		var crowd = CrowdVoiceLevel( near, worldState );
+
+		if ( crowd != CrowdVoiceLevelNow )
+			Log.Info( $"Crowd voice: level {CrowdVoiceLevelNow} to {crowd} for {near} guests near cell {cell} on tick {tick}" );
+
+		CrowdVoiceGuests = near;
+		CrowdVoiceCell = cell;
+		SetCrowdVoice( crowd );
+
+		// And its third (0x0054f8c8): FUN_0055ab50, the flying cars' rectangle, which nothing here flies in.
+		Unimplemented.Report( "PARK_LOOP_FUN_0055AB50" );
+	}
+
+	/// <summary>
 	/// Starts the theme again when it runs out.
 	///
 	/// One sample follows another with no wait: once the voice has ended the next is drawn from the variation
@@ -1489,43 +1524,6 @@ public sealed partial class ParkAudio : Entity
 
 		if ( !Audio.Ready )
 			return;
-
-		// Re-counted rather than told when the crowd changes, as the original does, and on its beat: FUN_0051e790
-		// runs from the park loop at 0x0054f870 on every 32nd tick, about once a second, and not while the game
-		// is held, when no tick runs. Guests arrive by bus and leave, so the level moves with them. Asked once a frame after the
-		// park's loop, where the original asks in the 32nd tick's own step: a later sweep in the same frame is counted (Q1120).
-		if ( SetsMusicLevel( GameClock.Ticks, GameClock.TicksDue ) )
-		{
-			var worldState = Level.Current?.Park?.WorldState ?? 0;
-
-			if ( _music is { IsValid: true } )
-			{
-				var guests = ParkPeople.Current?.GateGuestCensus ?? 0;
-				var level = MusicLevelFor( ParkPeople.Current, worldState );
-
-				if ( level != LevelNow )
-					Log.Info( $"Park music: level {LevelNow} to {level} for {guests} counted guests on tick {GameClock.Ticks}" );
-
-				LevelNow = level;
-				++LevelSets;
-			}
-
-			// The same block's second call (0x0054f875 to 0x0054f8b9): the crowd's own voice, set from the guests
-			// within four cells of the cell under the pointer (docs/exe/audio.md, "The crowd's voice").
-			var cell = ParkPicking.Cell;
-			var near = ParkPeople.Current?.GuestsNear( cell, CrowdVoiceReach ) ?? 0;
-			var crowd = CrowdVoiceLevel( near, worldState );
-
-			if ( crowd != CrowdVoiceLevelNow )
-				Log.Info( $"Crowd voice: level {CrowdVoiceLevelNow} to {crowd} for {near} guests near cell {cell} on tick {GameClock.Ticks}" );
-
-			CrowdVoiceGuests = near;
-			CrowdVoiceCell = cell;
-			SetCrowdVoice( crowd );
-
-			// And its third (0x0054f8c8): FUN_0055ab50, the flying cars' rectangle, which nothing here flies in.
-			Unimplemented.Report( "PARK_LOOP_FUN_0055AB50" );
-		}
 
 		NextCrowdSample();
 		NextRainSample( RainBed, "the rain's bed" );

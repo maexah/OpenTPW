@@ -2005,13 +2005,6 @@ filed the items that cite it.
   account falls by 6.9 to 8.6 MB from 108.8 MB, VmHWM falls by about as much, `mem vulkan` (204.5 MB) falls by less or not at all
   (the pool may reuse the space); the second park loads in about 4.8 to 5.0 s against 3.1 s. Add `memmap.drm` vram on the desk if
   wanted. Decide the keep or release in `docs/DECISIONS.md` from the figures (about 1.75 s a re-entry against the saving). (Filed by the Sentinel from the run 15 review of Q832, VERIFY-2.)
-- [ ] **Q1120. The music's level and the crowd's voice count the guests once a frame, after all its sweeps (from Q150).**
-  The original's every-32nd block (`0x0054f82d`..`0x0054f8c8`) runs in the 32nd tick's own step of the park's loop, after
-  that step's sweep. `ParkAudio.OnUpdate` asks `SetsMusicLevel` once a frame, after `ParkLoop`, so in a frame owing a 32nd
-  tick and a sweep after it (nine ticks or more: a hitch) the level and the crowd's voice count the guests as the later
-  sweep left them. Said at the site. Ask the block from `ParkLoop`'s step, after the sweep, keeping `Audio.Ready`'s guard
-  and the pump outside. Test: a frame from tick 25 to 40 sets the level from the guests the sweep of 32 left (a guest the
-  sweep of 40 admits is not counted). Reached in play only by a hitch (`lib/hitch.py`).
 - [ ] **Q1121. One sweep walks one list of every thing, newest first (from Q150, Q238's note).** Inside one sweep the
   original visits one list holding every kind of thing, the newest first (`FUN_00516380`, `FUN_00516270`;
   `ride-operation.md`, "Where a ride's turn comes from"). `ParkPeople.Sweep` takes the guests, then the staff, then the

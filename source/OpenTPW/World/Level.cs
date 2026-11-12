@@ -1881,7 +1881,7 @@ public class Level
 	private void RunTheWorld()
 	{
 		if ( Kind == Scene.Park )
-			ParkLoop.Run( ParticleSystem.Current, ParkRides.Current, ParkPeople.Current, SweepTail, ParkWeather.Current );
+			ParkLoop.Run( ParticleSystem.Current, ParkRides.Current, ParkPeople.Current, SweepTail, ParkWeather.Current, ParkAudio.Current );
 
 		Entity.All.ForEach( entity => entity.Update() );
 	}
