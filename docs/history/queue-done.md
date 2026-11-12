@@ -12146,6 +12146,21 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
 
+- [x] **Q1404. An armed tool's click beside an open park screen commits on the release, not the press.** Q231's (3)
+  (`park-engine.md`, "A park screen is open", the pointer: the press case's screen test `0x00488741` skips the press;
+  the release case `0x004885a5` has none and calls the mode's button-up slot, the commit). Tests and the log.
+  **Done (Q1404, `alexah/1098-tool-click-commits-on-release`, cloud lane c119, 2026-11-12):** beside an open park screen,
+  with a tool armed or something in the hand, `Level.WorldClick` skips the press (`park press: skipped beside an open
+  screen, the tool commits on the release`) and commits on its release at the cell under the pointer as it is let go
+  (`Level.CommitsOnTheRelease`, `Level.LeftRelease`; the click's answer ends `(on the release)`), silent through
+  `Level.PressReachedTheTool`; a tool put away before the release does nothing. With no screen open the press still
+  acts. `BesideAnOpenScreenAnArmedToolCommitsOnTheReleaseNotThePress` (needs the game); five bugs put back by hand each
+  fail it. Off-screen (xvfb, real xdotool presses, the path tool armed, the buy screen open, the run's output not kept):
+  the press at (900,600) over cell (32,23) logged the skip and left the tool unanchored, the pointer moved to (1060,640)
+  over (34,22) with the button held, and the release logged `world click: path: anchored at (34,22) - click again to
+  lay a run (on the release)`; a second click laid `3 from (34,22) to (32,22)` on its release, the screen still open.
+  Not checked: the original (no Proton or Ghidra in the lane); no photograph (nothing drawn changes).
+
 ## B. Docs and comments
 
 - [x] **Q953. The pylon fixture of `ParkPylonChannelsTests` writes the present count into the free field.** From an outside

@@ -1971,6 +1971,15 @@ public class Level
 
 	private bool _worldRightWasDown;
 
+	/// <summary>
+	/// A left press beside an open park screen, with a tool armed or something in the hand, that the park skipped and
+	/// whose release it still owes the tool (<see cref="CommitsOnTheRelease"/>).
+	/// </summary>
+	private bool _leftReleaseOwed;
+
+	/// <summary>Whether the click being run is a release whose press the park skipped (<see cref="PressReachedTheTool"/>).</summary>
+	private static bool _committingOnTheRelease;
+
 	/// <summary>The park's own pointer, so an armed tool can show its cursor.</summary>
 	private Cursor? _cursor;
 
@@ -2887,15 +2896,72 @@ public class Level
 		if ( putAway )
 			return;
 
-		if ( !pressed || LeftPressTaken( UI.WindowStack.PointerTaken ) || KeptFromThePark( UI.WindowStack.ParkScreenOpen ) )
-			return;
+		if ( pressed && !LeftPressTaken( UI.WindowStack.PointerTaken ) && !KeptFromThePark( UI.WindowStack.ParkScreenOpen ) )
+		{
+			if ( Input.Mouse.LeftPresses > 1 )
+				Unimplemented.Report( "PARK_PRESSES_IN_ONE_FRAME" );
 
-		if ( Input.Mouse.LeftPresses > 1 )
-			Unimplemented.Report( "PARK_PRESSES_IN_ONE_FRAME" );
+			if ( CommitsOnTheRelease( UI.WindowStack.ParkScreenOpen ) )
+			{
+				_leftReleaseOwed = true;
+				Log.Info( "park press: skipped beside an open screen, the tool commits on the release" );
+			}
+			else if ( ParkPicking.TryCell( out var cellX, out var cellY ) )
+			{
+				Log.Info( ClickWorldAt( cellX, cellY, ParkPicking.PersonUnderCursor, ParkPicking.ObjectUnderCursor ) );
+			}
+		}
 
-		if ( ParkPicking.TryCell( out var cellX, out var cellY ) )
-			Log.Info( ClickWorldAt( cellX, cellY, ParkPicking.PersonUnderCursor, ParkPicking.ObjectUnderCursor ) );
+		// The release of a skipped press, wherever the pointer has gone: the layer kept the capture (0x00658b88).
+		if ( _leftReleaseOwed && !Input.Mouse.Left )
+		{
+			_leftReleaseOwed = false;
+			Log.Info( LeftRelease() );
+		}
 	}
+
+	/// <summary>
+	/// The release of a left press the park skipped beside an open screen (<see cref="CommitsOnTheRelease"/>): the
+	/// release case has no screen test (<c>0x004885a5</c>) and calls the mode's button-up slot (<c>FUN_0046c210</c>,
+	/// <c>0x00488841</c>), the commit, at the cell under the pointer as it is let go. With the tool put away and the hand
+	/// emptied since the press, that slot is the idle mode's <c>RET</c>, and nothing happens.
+	/// </summary>
+	private string LeftRelease()
+	{
+		if ( ParkHand.Empty && ParkBuildMode.Current == ParkBuildMode.None )
+			return "park release: beside an open screen, no tool and nothing in the hand: nothing done";
+
+		if ( !ParkPicking.TryCell( out var cellX, out var cellY ) )
+			return "park release: beside an open screen, no cell under the pointer";
+
+		_committingOnTheRelease = true;
+
+		try
+		{
+			return $"{ClickWorldAt( cellX, cellY, ParkPicking.PersonUnderCursor, ParkPicking.ObjectUnderCursor )} (on the release)";
+		}
+		finally
+		{
+			_committingOnTheRelease = false;
+		}
+	}
+
+	/// <summary>
+	/// Whether a left press that landed on the park beside an open park screen (<see cref="UI.WindowStack.ParkScreenOpen"/>)
+	/// is skipped and its release commits instead: with a tool armed or something in the hand. The press case's screen
+	/// test (<c>0x00488741</c>) keeps the press from the mode's button-down slot, and the release, which has none, reaches
+	/// the button-up slot, where the commit is (<c>docs/exe/park-engine.md</c>, "A park screen is open").
+	/// </summary>
+	internal static bool CommitsOnTheRelease( bool parkScreenOpen )
+		=> parkScreenOpen && !KeptFromThePark( parkScreenOpen );
+
+	/// <summary>
+	/// Whether the click being run had its press reach the tool, the flag the mode's button-down slot sets
+	/// (<c>DAT_008186d8</c>, which gates the refused sound, <see cref="ParkBuildMode.RefusedSound"/>): not on a
+	/// release whose press was skipped, nor on a click the console runs beside an open screen.
+	/// </summary>
+	private static bool PressReachedTheTool
+		=> !_committingOnTheRelease && !UI.WindowStack.ParkScreenOpen;
 
 	/// <summary>
 	/// Whether a left press is the interface's rather than the park's, given whether a window took it
@@ -2913,7 +2979,7 @@ public class Level
 	/// open"): no hover is taken, the idle click is not run, so no window opens and no path tool is picked up, and
 	/// the mode's button-down slot is not called. The release has no such test and reaches the mode's button-up
 	/// slot, which is where a carry shell commits, so a click beside a screen still puts down what the hand holds
-	/// and still lays an armed tool's run. Here every click acts on its press, so that is this press.
+	/// and still lays an armed tool's run: that press is skipped and its release commits (<see cref="CommitsOnTheRelease"/>).
 	/// </summary>
 	internal static bool KeptFromThePark( bool parkScreenOpen )
 		=> parkScreenOpen && ParkHand.Empty && ParkBuildMode.Current == ParkBuildMode.None;
@@ -2995,7 +3061,7 @@ public class Level
 		// 3, 5 and 6. Nothing is charged until it actually goes up, which is why cancelling needs no
 		// refund; see ParkBuilding.Carrying.
 		if ( ParkBuilding.Carrying != 0 )
-			return $"world click: {ParkBuilding.PlaceCarriedUnder( cellX, cellY, pressReachedTheTool: !UI.WindowStack.ParkScreenOpen )}";
+			return $"world click: {ParkBuilding.PlaceCarriedUnder( cellX, cellY, pressReachedTheTool: PressReachedTheTool )}";
 
 		if ( ParkStaffPool.Carrying != 0 )
 			return $"world click: {ParkStaffPool.PlaceCarried( cellX, cellY )}";
@@ -3063,7 +3129,7 @@ public class Level
 		{
 			ParkBuildMode.Arm( ParkBuildMode.Path );
 
-			return $"world click: {ParkPathBuilding.RunPath( cellX, cellY, !UI.WindowStack.ParkScreenOpen )}";
+			return $"world click: {ParkPathBuilding.RunPath( cellX, cellY, PressReachedTheTool )}";
 		}
 
 		if ( placed != 0 )
@@ -3104,21 +3170,22 @@ public class Level
 	/// <see cref="ParkPathBuilding.RunQueue"/>.
 	/// </summary>
 	/// <remarks>
-	/// <b>It acts on the press</b>; the original applies on the release, at the preview's target.
+	/// <b>It acts on the press</b>; the original applies on the release, at the preview's target. Beside an open park
+	/// screen it acts on the release, as the original's does (<see cref="CommitsOnTheRelease"/>).
 	/// </remarks>
 	private static string RunBuildMode( int cellX, int cellY )
 	{
 		if ( ParkBuildMode.Current == ParkBuildMode.Path )
-			return ParkPathBuilding.RunPath( cellX, cellY, !UI.WindowStack.ParkScreenOpen );
+			return ParkPathBuilding.RunPath( cellX, cellY, PressReachedTheTool );
 
 		if ( ParkBuildMode.Current == ParkBuildMode.Patrol )
-			return ParkPatrolTool.Run( cellX, cellY, !UI.WindowStack.ParkScreenOpen );
+			return ParkPatrolTool.Run( cellX, cellY, PressReachedTheTool );
 
 		if ( ParkBuildMode.IsTrack( ParkBuildMode.Current ) )
-			return ParkTrackTool.Run( cellX, cellY, !UI.WindowStack.ParkScreenOpen );
+			return ParkTrackTool.Run( cellX, cellY, PressReachedTheTool );
 
 		if ( ParkBuildMode.Anchored )
-			return ParkPathBuilding.RunQueue( cellX, cellY, !UI.WindowStack.ParkScreenOpen );
+			return ParkPathBuilding.RunQueue( cellX, cellY, PressReachedTheTool );
 
 		// An unanchored queue click plays the laying sound too, as mode 3 does before its anchor test (0x005271ea, then
 		// 0x00527222). Dead by CONTENT in Lost Kingdom: only EDIT_QUEUE_WITH_NO_ENTRANCE and the console's `tool queue` arm

@@ -478,6 +478,91 @@ public class ParkScreenTests
 	}
 
 	/// <summary>
+	/// <b>Beside an open screen an armed tool commits on the release, not the press</b>: the press case's screen test
+	/// (<c>0x00488741</c>) skips the press, and the release case, which has none (<c>0x004885a5</c>), calls the mode's
+	/// button-up slot, the commit, at the cell under the pointer as it is let go. With no screen the press still acts.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> acting on the press anchors on the press frame, at the press's cell (47,20) and not the
+	/// release's (50,22); never paying the release lays nothing; paying it while the button is still held commits on the
+	/// held frame; not asking at the release whether a tool is still armed runs the idle click there; deferring with no
+	/// screen open leaves the press frame unanchored.
+	/// </remarks>
+	[TestMethod]
+	public void BesideAnOpenScreenAnArmedToolCommitsOnTheReleaseNotThePress()
+	{
+		var stack = APark();
+		var park = (Level)RuntimeHelpers.GetUninitializedObject( typeof( Level ) );
+		typeof( Level ).GetProperty( nameof( Level.Kind ) )!.SetValue( park, Level.Scene.Park );
+		typeof( Level ).GetField( "_windows", BindingFlags.Instance | BindingFlags.NonPublic )!.SetValue( park, stack );
+		var worldClick = typeof( Level ).GetMethod( "WorldClick", BindingFlags.Instance | BindingFlags.NonPublic )!;
+		var cell = typeof( ParkPicking ).GetProperty( nameof( ParkPicking.Cell ) )!;
+		var cellWas = cell.GetValue( null );
+
+		var lines = new List<string>();
+		Logger.LogDelegate keep = ( _, text ) => lines.Add( text );
+		Logger.OnLog += keep;
+
+		void Frame( bool left, bool pressed, int x, int y )
+		{
+			cell.SetValue( null, (y * ParkWorld.MapSize) + x + 1 );
+			Input.UpdateFrom( new Snapshot( [], Grass, left, pressed ) );
+			stack.Update();
+			worldClick.Invoke( park, [] );
+		}
+
+		int Commits() => lines.Count( line => line.Contains( "world click:" ) );
+
+		try
+		{
+			ParkBuildMode.Arm( ParkBuildMode.Queue );
+			Frame( left: true, pressed: true, 47, 20 );
+			Assert.AreEqual( (47, 20), ParkBuildMode.Anchor, "no screen open: the press anchors, on its own frame" );
+			Frame( left: false, pressed: false, 47, 20 );
+			ParkBuildMode.Forget();
+
+			var screen = new AWindow( stack, parkScreen: true );
+			stack.Open( screen );
+			Pointer( stack, Grass, left: false );
+			ParkBuildMode.Arm( ParkBuildMode.Queue );
+			lines.Clear();
+
+			Frame( left: true, pressed: true, 47, 20 );
+			Assert.AreEqual( 0, Commits(), "beside the screen the press is skipped" );
+			Assert.IsFalse( ParkBuildMode.Anchored, "and anchors nothing" );
+			Assert.IsTrue( lines.Any( line => line.StartsWith( "park press: skipped beside an open screen" ) ), "the log says so" );
+
+			Frame( left: true, pressed: false, 49, 21 );
+			Assert.AreEqual( 0, Commits(), "held: still nothing" );
+
+			Frame( left: false, pressed: false, 50, 22 );
+			Assert.AreEqual( 1, Commits(), "the release commits" );
+			Assert.AreEqual( (50, 22), ParkBuildMode.Anchor, "at the cell under the pointer as it is let go" );
+			Assert.IsTrue( lines.Last( line => line.Contains( "world click:" ) ).EndsWith( "(on the release)" ), "the log names the release" );
+
+			Frame( left: false, pressed: true, 52, 22 );
+			Assert.AreEqual( 2, Commits(), "a press let go inside one frame is a release too" );
+			Assert.IsTrue( lines.Last( line => line.Contains( "world click:" ) ).EndsWith( "(on the release)" ), "its release's" );
+
+			ParkBuildMode.Forget();
+			ParkBuildMode.Arm( ParkBuildMode.Queue );
+			Frame( left: true, pressed: true, 47, 20 );
+			ParkBuildMode.Forget();
+			Frame( left: false, pressed: false, 47, 20 );
+			Assert.AreEqual( 2, Commits(), "the tool put away before the release: the idle mode's button-up does nothing" );
+			Assert.IsTrue( lines[^1].StartsWith( "park release: beside an open screen, no tool" ), lines[^1] );
+
+			stack.Close( screen );
+		}
+		finally
+		{
+			Logger.OnLog -= keep;
+			cell.SetValue( null, cellWas );
+			ParkBuildMode.Forget();
+		}
+	}
+
+	/// <summary>
 	/// <b>The game menu closes the open screen as it opens</b> (<c>MenuList_Show</c>, <c>0x00493171</c>), and so does any
 	/// window that says it does; a window that does not leaves it.
 	/// </summary>

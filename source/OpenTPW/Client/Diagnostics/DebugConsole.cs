@@ -1936,7 +1936,11 @@ public static class DebugConsole
 				}
 
 				var (clickPerson, clickObject) = ParkPicking.ThingsAt( Argument( 1 ), Argument( 2 ) );
-				Reply( clickPark.ClickWorldAt( clickX, clickY, clickPerson, clickObject ) );
+
+				// Beside an open screen the press is skipped and the tool commits on the release (Level.CommitsOnTheRelease);
+				// the console's click is both at once, so the answer is the release's.
+				Reply( clickPark.ClickWorldAt( clickX, clickY, clickPerson, clickObject )
+					+ (Level.CommitsOnTheRelease( clickStack.ParkScreenUp ) ? " (on the release, the press skipped beside an open screen)" : "") );
 				break;
 
 			// Buying, selling and moving something, driven by hand. A player buys through the buy screen

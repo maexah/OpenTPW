@@ -4181,13 +4181,14 @@ The map's own key-up case is the same test as the screens' (`FUN_005f1130`, `0x0
 screen, the game menu or the map opens (`UiWindow.ClosesParkScreen`); the gadget's Buy does nothing over an open buy
 screen; `WindowStack.OnParkScreen` gives the screen's whole rectangle to the interface for both buttons and hides the
 controls behind it; `Level.KeptFromThePark` keeps a left press beside a screen from the park unless a tool is armed or
-the hand holds something; `Level.GameTableKeys`, the orbit camera's keys and F3 are not heard while one is open
+the hand holds something, and then the press is skipped and its release commits, at the cell under the pointer as it
+is let go, wherever the pointer has gone (`Level.CommitsOnTheRelease`, Q1404; the log reads `park press: skipped beside
+an open screen` and then the click's answer with `(on the release)`), silent as the original's is, since no press set
+the flag (`Level.PressReachedTheTool`); a tool put away before the release does nothing, the idle mode's `RET`; `Level.GameTableKeys`, the orbit camera's keys and F3 are not heard while one is open
 (`WindowStack.ParkScreenOpen`); the idle pointer and its help row are the plain ones; `ParkGadget.Update` folds the arm
 when a screen opens. A plain Escape let go closes the screen in front, or the map, and is spent doing it; with a
 modifier held it does nothing (`ParkFrontEnd.MenuKey`). Where it parts from the original:
 
-- **A click acts on its press here**, so the armed tool's click beside a screen is taken on the press, where the
-  original skips the press and commits on the release.
 - **First person** leaves the screen open (`docs/QUEUE.md` Q122).
 - **F1** is read by nothing here, over a screen or not; the original's says the kept tutorial line again
   (`advisor-park.md`, "F1: the kept tutorial line said again", Q870; built in `docs/QUEUE.md` Q231).
