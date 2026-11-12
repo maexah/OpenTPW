@@ -13387,3 +13387,12 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   week-end audit (stage 6, the second reading of commit `0db41100`; read from the code, not reproduced in the
   game). `OpenTPW/World/Park/StaffBehaviour.cs`, line 432.
 - [x] **Q1109. The orbit camera's lean while panning (from Q1107).** The original turns its orbit matrix after the pitch and rotation by `FUN_0046f870( m, 9, 0x007908e0 )` (`0x0042cc1d`), the axis string `"ZX"`: Z by `[0x007908e0]` = sign( t ) max( 0, 0.005 sqrt( 100 |t| ) - 0.001 ), t the x scroll term `0x00790a88` (`0x0042c822`..`0x0042c8cf`), about 0.015 radians on a held pan at zoom 110; X by `[0x007908e4]` from the z term, which both branches' clamps hold at nought (`0x0042c8d2`..`0x0042c964`). Ours has no lean (`ParkOrbitCameraMode.Place`). Read whether `FUN_0046f5c0` turns the matrix on its own axes (a roll about the view) or the world's, and in which order, then film a held pan in the original (`original/campoi.py`'s keys, `record.sh`) to see it before building it the same way; `park-engine.md`, "Nothing is aimed at".
+- [x] **Q290. The queue's stamp is taken before the queue is measured, where the original measures first.** From
+  the week-end audit (stage 8, the older decode read a second time from the listing; verified once, not reproduced
+  in the game). `ParkState` takes `NextCounter()` before `InvalidateQueue` and the back-cell lookup, and its
+  comment says so, where the executable measures the queue first and takes the counter after (`ride-operation.md`,
+  the row for the queue's remeasure). `OpenTPW/World/Park/ParkState.cs`, line 1688. Confirm: the back cell's stamp
+  read in both games after one queue edit.
+  - **Done 2026-11-12 (cloud lane c47):** `ParkState.RemeasureQueue` measures, then takes the counter, then writes the
+    back cell's block; it logs the original's "queue is now N cells long" with the back and the stamp, and the console's
+    `cell` reply prints the cell's block stamp. In this game only: the original's side is Q1308.

@@ -2455,6 +2455,7 @@ public static class DebugConsole
 					$" way 0x{probed.TrackDirection:x2} track flags 0x{probed.TrackFlags:x} track parent {probed.TrackParentId} track over {probed.TrackOverlapCounter} piece {probed.TrackTileSet}/{probed.TrackTileIndex}/{probed.TrackTileAngle}" +
 					(ParkState.Current is { } effectState && ParkState.OnMap( probeX, probeY )
 						? $" effects {string.Join( ",", effectState.EffectsAt( probeX, probeY ).ToArray() )}"
+							+ $" block stamp {effectState.BlockStamp( probeX, probeY )} of counter {ParkState.Counter}"
 						: "") );
 				break;
 

@@ -1169,12 +1169,15 @@ filed the items that cite it.
     next `+10`) in its own order; kinds 1, 4, 5, 6, 7, 8 and `0x12`; itself excluded; distance non-zero and strictly
     inside the radius; it stops after the **fifth** neighbour. Whether guests reach it is not read.
 
-- [ ] **Q290. The queue's stamp is taken before the queue is measured, where the original measures first.** From
-  the week-end audit (stage 8, the older decode read a second time from the listing; verified once, not reproduced
-  in the game). `ParkState` takes `NextCounter()` before `InvalidateQueue` and the back-cell lookup, and its
-  comment says so, where the executable measures the queue first and takes the counter after (`ride-operation.md`,
-  the row for the queue's remeasure). `OpenTPW/World/Park/ParkState.cs`, line 1688. Confirm: the back cell's stamp
-  read in both games after one queue edit.
+- [ ] **Q1308. The queue remeasure's stamp in the original, and whether it takes one with no back cell.** Left from Q290
+  (cloud lane c47, no Ghidra, no original). Two things. (1) In Ghidra, `FUN_004de1f0` from `0x004de210` to `0x004de266`:
+  whether the counter call at `0x004de233` is reached when `FUN_004de130` finds no back cell, and what `FUN_004d8c60`
+  writes then. `ParkState.RemeasureQueue` takes one counter value on every call, back cell or not, as it did before
+  Q290; that is unchecked. (2) The item's own confirm: the back cell's block stamp read in the original under Proton
+  after one queue cell laid on the Belly Bounce's back, (49,23) entered from (49,22), beside ours (`cell 49 23` prints
+  `block stamp S of counter C`; ours read stamp 10723, 5 cells, back 2994). The stamp's value cannot match across the
+  two games (the counter is a logical clock that each runs its own way); compare that it is the remeasure's own value,
+  the newest counter at the lay, and lands in the back cell's block.
 
 - [ ] **Q399. Ride boards lettered as the original letters them.** From the fork review 2, 2026-10-16
   (`verify-objects-signs-other.md` H1, H3, M1). `ParkObjects.BuildSign` letters the `.sam`'s `Name`, split; the
