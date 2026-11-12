@@ -1119,14 +1119,6 @@ filed the items that cite it.
   starts on animation 0, which its remarks give as a deviation no shipped bank reaches. Dead by content today:
   build it as the original's or leave the count, on Alexah's word.
 
-- [ ] **Q280. A file's bumper ride with a peep on its leaving or boarding list and no car is written over where it
-  lies once the running lists are empty (`Level.WritePark`.** `Take`: only `CarsOf` is asked of the file), so the
-  file's type 7 and 8 chunks stay and the next load puts those peeps back on the lists. It should be taken out and
-  written whole whenever the file holds any chunk but the record and the close under its handle, as `FUN_005428e0`
-  writes the lists as they stand; a test that loads the commit's own "Boarder" file, empties the list and writes
-  again would show the stale chunk From the week-end audit (stage 6, the second reading of commit `05e54382`; read
-  from the code, not reproduced in the game). `OpenTPW/World/Level.cs`, line 587.
-
 - [ ] **Q281. A member of staff who reaches the picket keeps the facing their walk ended on, and turns on the spot
   from there.** The original's state setter writes nought to the facing as state 5 is entered (FUN_005054d0 case
   5, 0x00505582, beside the speed and animation 0x13 that Staff.SetActivity already takes from it), so a striker's

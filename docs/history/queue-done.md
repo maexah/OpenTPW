@@ -12834,3 +12834,15 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   scripts (`ParkRides.Tick`), the sprites and, on every eighth, the sweep (`ParkPeople.Sweep`), three a frame; the
   entities keep only their once-a-frame work. Seen off-screen after `stall 600` and `stall 1200` (`q150/`); the music's
   once-a-frame count is Q1120, and Q238's one newest-first list within a sweep is Q1121.
+- [x] **Q280. A file's bumper ride with a peep on its leaving or boarding list and no car is written over where it
+  lies once the running lists are empty (`Level.WritePark`.** `Take`: only `CarsOf` is asked of the file), so the
+  file's type 7 and 8 chunks stay and the next load puts those peeps back on the lists. It should be taken out and
+  written whole whenever the file holds any chunk but the record and the close under its handle, as `FUN_005428e0`
+  writes the lists as they stand; a test that loads the commit's own "Boarder" file, empties the list and writes
+  again would show the stale chunk From the week-end audit (stage 6, the second reading of commit `05e54382`; read
+  from the code, not reproduced in the game). `OpenTPW/World/Level.cs`, line 587.
+  **Done 2026-11-12** (cloud lane c5): `Level.WritePark`'s `Take` writes a file's bumper ride over where it lies
+  only while the file holds nothing under its handle but the record and the close
+  (`ParkTrackRides.HoldsMoreThanTheRecordOf`); any other is written whole as it runs. `TheLevelWritesATrackRidesRecord`
+  loads the "Boarder" file, empties its list and writes again: nobody listed (the old rule: one). Tested only; not
+  run in either game.

@@ -969,10 +969,10 @@ public class Level
 			id => catalogue?.ChannelsFor( id ) ?? 1, state.HoardingFor,
 			bought, gone, state.WrittenBuilt( loaded, made, gone ) );
 
-		// Each track ride made or gone, for the track-rides module, and each of the file's still standing. One with
-		// no car in the file and none out here is written over where it lies, or put in; one with a car, here or in
-		// the file, is taken out and written again whole with its cars; one with no record here is left the
-		// file's, counted.
+		// Each track ride made or gone, for the track-rides module, and each of the file's still standing. One whose
+		// file holds only its record and close under its handle, with no car out here and nobody on its lists, is
+		// written over where it lies, or put in; any other is taken out and written again whole with its cars and
+		// lists as they stand; one with no record here is left the file's, counted.
 		if ( things != null )
 		{
 			var kept = new List<SavedTrackRide>();
@@ -1015,7 +1015,9 @@ public class Level
 					return;
 				}
 
-				if ( loaded.TrackRides.CarsOf( thing.TrackRide ) == 0
+				// Over where it lies only while the file holds nothing under its handle but the record and the close: a
+				// car, a rider or a listed peep of the file's would stay and come back at the next load.
+				if ( !loaded.TrackRides.HoldsMoreThanTheRecordOf( thing.TrackRide )
 					&& bumpers.RideOf( thing.TrackRide ) is { Cars: 0, Boarding.Count: 0, Leaving.Count: 0 } )
 				{
 					carless.Add( record );
