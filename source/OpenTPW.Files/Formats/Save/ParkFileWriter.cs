@@ -58,7 +58,8 @@ public static class ParkFileWriter
 	/// where it is null. <see cref="AdvisorHistories"/> is the advisor's records of the messages named
 	/// (<see cref="ParkWorld.PutAdvisorHistories"/>); every other message's, and all of them where it is null, are the file's.
 	/// <see cref="AdvisorSlots"/> is the advisor's eight slots (<see cref="ParkWorld.PutAdvisorSlots"/>); a null slot's, and all
-	/// of them where it is null, are the file's. <see cref="AdvisorAction"/> answers the advisor's last action
+	/// of them where it is null, are the file's. <see cref="AdvisorKept"/> is his kept message (<see cref="ParkWorld.PutAdvisorKept"/>);
+	/// the file's where it is null. <see cref="AdvisorAction"/> answers the advisor's last action
 	/// (<see cref="ParkWorld.PutAdvisorAction"/>; <see cref="AdvisorPollCursor"/> is his poll's row, <see cref="ParkWorld.PutAdvisorPollCursor"/>) for the second stopwatch's reading the file is written with
 	/// (<see cref="ParkClock.SecondAt"/>); the file's where it is null or the file's clock did not read.
 	/// <see cref="LastStaffHired"/> is the analyser's stamp of the newest hire (<see cref="ParkWorld.PutLastStaffHired"/>);
@@ -105,7 +106,7 @@ public static class ParkFileWriter
 		ParkWorld.EconomyState? Economy = null, (int Month, int Day)? Calendar = null,
 		ParkWorld.WeatherState? Weather = null, ParkWorld.WrittenLab? Lab = null,
 		IReadOnlyList<ParkWorld.ResearchedRing>? RecentlyResearched = null, ParkWorld.ThingIds? Ids = null,
-		IReadOnlySet<int>? VoicesLetGo = null, bool VoicesNotPutBack = false );
+		IReadOnlySet<int>? VoicesLetGo = null, bool VoicesNotPutBack = false, ParkWorld.AdvisorSlot? AdvisorKept = null );
 
 	/// <summary>
 	/// The file's objects, scripts and models as the running park has them (<c>docs/exe/saves.md</c>, "OpenTPW's
@@ -332,6 +333,9 @@ public static class ParkFileWriter
 
 		if ( running.AdvisorSlots is { } waiting )
 			loaded.PutAdvisorSlots( body, waiting );
+
+		if ( running.AdvisorKept is { } kept )
+			loaded.PutAdvisorKept( body, kept );
 
 		// The second stopwatch is written moved with the clock, which is written with the things alone.
 		if ( running.AdvisorAction is { } action

@@ -225,6 +225,37 @@ public class ParkFileWriterTests
 	}
 
 	/// <summary>
+	/// <b>The advisor's kept message</b> (Q231) is read at 5,820 bytes into his record, after the 351 histories, and written
+	/// whole there: the stock park's reads message 0x15a with its valid byte nought, a record handed to the writer reads
+	/// back as it was, and no other byte of the file moves; with none handed over the file's stands.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the record read or written one history short (at 5,804) or at a slot's place; the valid byte
+	/// left unwritten; the forced and overridden bytes swapped.</remarks>
+	[TestMethod]
+	public void TheAdvisorsKeptMessageIsWrittenOverTheFilesOwn()
+	{
+		Assert.AreEqual( 0x15a, shipped.AdvisorKeptOf()!.Value.Message, "the stock park's kept message" );
+		Assert.IsFalse( shipped.AdvisorKeptOf()!.Value.Valid, "forgotten" );
+
+		var kept = new ParkWorld.AdvisorSlot( 0x1234, 77, 0xbc, 1000, true, -1, true, false );
+		var mine = Inflate( ParkFileWriter.Write( shipped, Played with { AdvisorKept = kept } ) );
+		var theirs = Inflate( ParkFileWriter.Write( shipped, Played ) );
+		var written = Read( ParkFileWriter.Write( shipped, Played with { AdvisorKept = kept } ) );
+
+		Assert.IsNull( written.Problem );
+		Assert.AreEqual( kept, written.AdvisorKeptOf() );
+		Assert.AreEqual( shipped.AdvisorKeptOf(), Read( ParkFileWriter.Write( shipped, Played ) ).AdvisorKeptOf(), "none handed over: the file's" );
+		var at = written.AdvisorAt + 5820;
+		CollectionAssert.AreEqual( new byte[] { 0x34, 0x12, 77, 0, 0, 0, 0xbc, 0, 0, 0, 0xe8, 3, 0, 0, 1, 0xff, 0xff, 0xff, 0xff, 1, 0 },
+			mine[at..(at + 21)], "mThingId, mSecondary, mMessage, mScore, mValid, mResponseNo, mOverrideOnlyOnce, mScoreOverridden" );
+		var differing = Enumerable.Range( 0, mine.Length ).Where( i => mine[i] != theirs[i] ).ToList();
+		Assert.IsTrue( differing.Contains( at + 14 ), "the valid byte" );
+		Assert.IsTrue( differing.All( i => i >= at && i < at + 21 ), "the kept record and no more" );
+		Assert.AreEqual( shipped.AdvisorSlotOf( 2 ), written.AdvisorSlotOf( 2 ) );
+		Assert.AreEqual( shipped.AdvisorHistoryOf( 350 ), written.AdvisorHistoryOf( 350 ) );
+	}
+
+	/// <summary>
 	/// The advisor's slots are written over the file's and read back: a taken one whole, twenty-one bytes at
 	/// 24 + 21 a slot of his thing; of an empty one its valid byte alone; a null one not at all; and no other
 	/// byte of the file moves.

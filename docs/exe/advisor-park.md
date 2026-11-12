@@ -993,7 +993,7 @@ attempt. Main's build named message 284 nowhere and counted `TAG_MESSAGE_BAR_ADV
 | | The original | OpenTPW |
 |---|---|---|
 | The said byte and the cuts | the advisor thing's records, in the park file | the same, for the built messages ("The records in a park file") |
-| The kept message (`+0x16d0`, `FUN_0059ab50`) | forgotten by a withdrawal of its id; said again on F1 (Q870) | kept by nothing here; F1 read by nothing |
+| The kept message (`+0x16d0`, `FUN_0059ab50`) | forgotten by a withdrawal of its id; said again on F1 (Q870) | the same (Q231) |
 | The Tutorial option | read at each post | the same; the console's `tutorial on|off` sets it in memory |
 | The cut | `Advisor_StopSpeaking` | the same call (`Advisor.StopSpeaking`), with its cry where his voice had started |
 | The other 39 screens' lines (`0xbc` to `0xd5`, `0x11d` to `0x135`) | posted as each opens | the buy screen's `0xbc` and the hire screen's `0xbd` are ("The buy screen's own line", "The hire screen's own line"); the other 37 are not posted |
@@ -1056,10 +1056,31 @@ its `0x14` arm at `0x004af6b2`: `0x129`, `0xcf`), and some 40 other sites withdr
 `FUN_0059aa70`'s callers). Not read: whether a
 slot is emptied when its line starts (which decides whether F1 during the line is refused by test 4).
 
-**OpenTPW** keeps no record (the table above, "The kept message"), and nothing reads F1 in a park: `InputButton.Help`
-(F1) has no reader. Measured off-screen on the lane B build of `1d5be3de` (`q870/run1`): the buy screen's open logged
-`Park advisor: post message=188 ... result=queued`; F1 over it and F1 after Escape closed it logged no post in three
-seconds each, the screen standing open after the first (`windows`: `ParkBuyScreen tab 0`).
+### OpenTPW (Q231: `ParkAdvisorMessages.SayKeptAgain`, `RestoreKept`, `WrittenKept`; `ParkFrontEnd.HelpKey`)
+
+Every post of a category-1 message keeps its record before the gate is asked (`Raise`), and its own withdrawal forgets
+it (`Withdraw`, logged `kept=forgotten`). F1 let go with no modifier, over the park or under a park screen, posts the kept
+record forced at `HelpMessage.ContextHelpScore` (`HelpKey`; the game menu, a modal window, the map, first person and the
+full-screen view's cover hear no F1); the forced post skips the said byte and the cuts alone. The census ends
+`kept=<id>/score/valid/forced/overridden`. A park file's kept record is taken as it stands and written back whole once
+it changes (`ParkWorld.AdvisorKeptOf`, `PutAdvisorKept`, 5,820 bytes into the advisor's record); a slot holding F1's post
+is written with its forced and given-score bytes. Counted: F1 on a file's kept message of a topic not built here
+(`PARK_ADVISOR_KEPT_MESSAGE_NOT_BUILT`), and a given-score record whose score function has fallen under the threshold by
+its turn, dropped as the plain helper drops one (`PARK_ADVISOR_OVERRIDDEN_RECORD_RECHECK`): what the tick does with an
+overridden record is not read. A file's slot holding a forced or given-score post is still carried, not said
+(`PARK_ADVISOR_SAVED_SLOT_NOT_BUILT`, "The slots in a park file").
+
+Measured on the stock park off-screen in a cloud container (Q231, `consoledrive.py`'s `focus_key` and `wheel`; no original, no Ghidra; the run's output was not kept), predicted first, seven of seven: the load logged `restored kept=346/score=1000/valid=0`, and F1
+over the bare park `F1 with no kept message (message=346 forgotten)`. The buy screen's open: `post message=188 ...
+result=queued`, census `kept=188/score=1000/valid=1/forced=0/overridden=0`; said (`attempt=1 message=188 ... response=407`).
+F1 with the pointer on the screen: `F1 says kept message=188 again at score=1000`, `post message=188 subject=0 score=1000
+forced=1 ... result=queued`, census `kept=188/score=1000/valid=1/forced=1/overridden=1`; F1 again a second later, the first
+line still playing and the copy waiting: `result=duplicate`; he said it again when the wait ended (`attempt=2 message=188`).
+Escape: `withdraw message=188 cleared=0 cut=0 slaps=0 kept=forgotten`, and F1 then `F1 with no kept message (message=188
+forgotten)`. Not checked: the original's own reading of any of it (no original here), a save of it in a game run (the
+console's `savepark` needs a player; the writer is held by `TheAdvisorsKeptMessageIsWrittenOverTheFilesOwn`), and the
+other park screens' lines. Ours empties a slot as its line starts, so F1 during the line is not refused by test 4 here;
+the original's is still not read.
 
 ## The records in a park file (Q313)
 
@@ -1099,7 +1120,8 @@ with no record of `0x11c`: a slot held it at the click and he said it.
 | The records of the seven built messages | read and written with the thing | the same |
 | The other 344 records | the same | carried: the file's own bytes are written back |
 | The eight slots | written with the thing | the same ("The slots in a park file", below) |
-| The last action's start and length, the message playing, the kept message | written with the thing | carried as the file's |
+| The last action's start and length, the message playing | written with the thing | carried as the file's |
+| The kept message | written with the thing | the same once it changes, the file's until then (Q231) |
 | A park made with no file | the constructor's | the same |
 
 Not in a game run: a rotation carried across a load (the test holds line 1 after the file's 0), the cooldown from a
@@ -1135,7 +1157,7 @@ and 1 read messages `0xbc` and `0x15a` at 1000 with `mValid` nought); slots neve
 
 A load puts each taken slot's message into the same slot of the park's messages with its file's score, subject and
 second word (`Level`, logged `Park advisor: restored slot=...`), and `savepark` writes the eight slots back: a
-waiting message whole, as `FUN_0059b590` builds an unforced post with no score given, its second word the
+waiting message whole, as `FUN_0059b590` builds it (F1's forced post with its two bytes set, Q231), its second word the
 subject's item; of an empty slot the `mValid` byte alone. A taken slot this game cannot say (a message of no built
 topic, a line asked for by number, a forced post, a score the poster gave) is counted
 `PARK_ADVISOR_SAVED_SLOT_NOT_BUILT`, keeps its slot, is said by nothing and is written back as the file's: no

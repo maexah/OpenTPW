@@ -962,8 +962,16 @@ internal sealed class ParkAdvisorMessages
 	}
 
 	/// <summary>A taken slot. <paramref name="Secondary"/> is the record's second word where a park file or the poster gave it, null for a post made here about its subject.
-	/// <paramref name="Line"/> is the line the poster asked for (the record's +0x08), -1 for the topic's own choice.</summary>
-	private sealed record Pending( Topic Topic, int Score, int Subject, int? Secondary = null, int Line = -1 );
+	/// <paramref name="Line"/> is the line the poster asked for (the record's +0x08), -1 for the topic's own choice.
+	/// <paramref name="Forced"/> and <paramref name="Overridden"/> are the record's +0x15 and +0x16, a post that skips the gate's test 3 and one whose score the poster gave.</summary>
+	private sealed record Pending( Topic Topic, int Score, int Subject, int? Secondary = null, int Line = -1, bool Forced = false, bool Overridden = false );
+
+	/// <summary>
+	/// The kept message (the advisor's +0x16d0, <c>mValid</c> its +0x16e4): the last category-1 raise's record, copied
+	/// whole before the gate is asked (FUN_0059a940, 0x0059a983..0x0059a995); <paramref name="Secondary"/> null for the
+	/// subject's item, as a slot's. A park file's is taken as it stands, its message built here or not.
+	/// </summary>
+	private sealed record Kept( int Message, int Subject, int? Secondary, int Line, int Score, bool Valid, bool Forced, bool Overridden );
 	private readonly SettingsFile _settings;
 	private readonly Dictionary<int, Topic> _topics;
 	private readonly Dictionary<int, History> _histories;
@@ -974,6 +982,9 @@ internal sealed class ParkAdvisorMessages
 	private readonly bool[] _carried = new bool[ParkWorld.AdvisorSlots];
 	private readonly Func<bool> _tutorial;
 	private readonly Func<bool> _instantAction;
+	// The kept message, null where none was raised and no file's taken; and whether it changed here, so a save writes it.
+	private Kept? _kept;
+	private bool _keptChanged;
 	private readonly PollCursor _cursor;
 	// What the poll last answered for each polled message, so the log holds a line a change.
 	private readonly Dictionary<int, string> _polled = [];
@@ -1169,7 +1180,7 @@ internal sealed class ParkAdvisorMessages
 			if ( _carried[index] ) continue;
 			written[index] = _slots[index] is { } slot
 				? new ParkWorld.AdvisorSlot( slot.Subject, slot.Secondary ?? (slot.Subject != 0 ? itemOf( slot.Subject ) : 0),
-					slot.Topic.Id, slot.Score, true, slot.Line, false, false )
+					slot.Topic.Id, slot.Score, true, slot.Line, slot.Forced, slot.Overridden )
 				: default( ParkWorld.AdvisorSlot );
 		}
 
@@ -1569,7 +1580,8 @@ internal sealed class ParkAdvisorMessages
 	/// inside its category's MinTimeSameMessage; one said, of a category said only once; one cut off as often as
 	/// its category's DiscardAfterSlaps, where that is not nought; one with all its copies in the slots.
 	/// </summary>
-	private string? Refusal( Topic topic, int gameTick )
+	/// <param name="forced">A forced post (the record's +0x15), which skips the said byte and the cuts alone (test 3: 0x0059acb3, 0x0059ad17).</param>
+	private string? Refusal( Topic topic, int gameTick, bool forced = false )
 	{
 		var history = _histories[topic.Id];
 		var group = $"MessageGroups[{topic.Category}]";
@@ -1580,9 +1592,9 @@ internal sealed class ParkAdvisorMessages
 			&& unchecked(((uint)gameTick >> 2) - ((uint)history.LastTick >> 2))
 				< (uint)Value( $"{group}.MinTimeSameMessage" ) )
 			return "cooldown";
-		if ( history.Said && Value( $"{group}.SayOnlyOnce" ) != 0 )
+		if ( !forced && history.Said && Value( $"{group}.SayOnlyOnce" ) != 0 )
 			return "said-once";
-		if ( slaps != 0 && slaps <= history.Slaps )
+		if ( !forced && slaps != 0 && slaps <= history.Slaps )
 			return "slapped";
 		if ( _slots.Count( slot => slot?.Topic.Id == topic.Id ) >= topic.MaxInstances )
 			return "duplicate";
@@ -1731,11 +1743,24 @@ internal sealed class ParkAdvisorMessages
 	/// <paramref name="line"/> is the line the poster asks for (the record's +0x08), -1 for the topic's own choice.
 	/// </summary>
 	internal bool Post( int id, int gameTick, int subject = 0, int? secondary = null, int line = -1 )
+		=> Raise( id, gameTick, subject, secondary, line, forced: false, given: null );
+
+	/// <summary>
+	/// <see cref="Post"/>, the record whole: <paramref name="forced"/> its +0x15, and <paramref name="given"/> the score the
+	/// poster gave (+0x10, +0x16 set), null for the score function's. A category-1 message's record is kept before the
+	/// gate is asked, so a raise the gate refuses is kept all the same (<see cref="SayKeptAgain"/>).
+	/// </summary>
+	private bool Raise( int id, int gameTick, int subject, int? secondary, int line, bool forced, int? given )
 	{
 		_lastTick = gameTick;
 		var topic = _topics[id];
-		var score = FilteredScoreOf( topic, gameTick );
-		var reason = Refusal( topic, gameTick ) ?? "queued";
+		var score = given ?? FilteredScoreOf( topic, gameTick );
+		if ( topic.Category == Tutorial )
+		{
+			_kept = new Kept( id, subject, secondary, line, score, true, forced, given != null );
+			_keptChanged = true;
+		}
+		var reason = Refusal( topic, gameTick, forced ) ?? "queued";
 		if ( reason == "queued" )
 		{
 			var index = -1;
@@ -1747,11 +1772,64 @@ internal sealed class ParkAdvisorMessages
 					if ( _slots[i] is { } held && (index < 0 || held.Score < _slots[index]!.Score) ) index = i;
 				if ( index < 0 || score <= _slots[index]!.Score ) reason = "priority";
 			}
-			if ( reason == "queued" ) _slots[index] = new Pending( topic, score, subject, secondary, line );
+			if ( reason == "queued" ) _slots[index] = new Pending( topic, score, subject, secondary, line, forced, given != null );
 		}
-		Log.Info( $"Park advisor: post message={id} subject={subject}{(secondary is { } second ? $" secondary={second}" : "")}{(line >= 0 ? $" line={line}" : "")} score={score} threshold={Threshold} tick={gameTick} result={reason} pending={PendingCount}" );
+		Log.Info( $"Park advisor: post message={id} subject={subject}{(secondary is { } second ? $" secondary={second}" : "")}{(line >= 0 ? $" line={line}" : "")} score={score}{(forced ? " forced=1" : "")} threshold={Threshold} tick={gameTick} result={reason} pending={PendingCount}" );
 		return reason == "queued";
 	}
+
+	/// <summary>
+	/// F1 let go with no modifier, in a park, a screen open or none: FUN_0059ab50. With no kept message, or one forgotten,
+	/// nothing. Otherwise the kept record is posted again forced, at <c>HelpMessage.ContextHelpScore</c>, its score given
+	/// (<c>DAT_00fb386c</c>): its thing, second word and line the first raise's, the said byte and the cuts not asked,
+	/// the Tutorial option and a copy still waiting asked as ever. The post keeps it again, so it is kept forced at that score.
+	/// <c>docs/exe/advisor-park.md</c>, "F1: the kept tutorial line said again". Says whether it posted.
+	/// </summary>
+	internal bool SayKeptAgain( int gameTick )
+	{
+		if ( _kept is not { Valid: true } kept )
+		{
+			Log.Info( $"Park advisor: F1 with no kept message ({(_kept == null ? "none kept" : $"message={_kept.Message} forgotten")})" );
+			return false;
+		}
+
+		// A park file's kept message of a topic not built here has no score function, gate or line to say it by.
+		if ( !_topics.ContainsKey( kept.Message ) )
+		{
+			Unimplemented.Report( "PARK_ADVISOR_KEPT_MESSAGE_NOT_BUILT" );
+			Log.Info( $"Park advisor: F1 kept message={kept.Message} is not built here" );
+			return false;
+		}
+
+		var score = Value( "HelpMessage.ContextHelpScore" );
+		Log.Info( $"Park advisor: F1 says kept message={kept.Message} again at score={score}" );
+		return Raise( kept.Message, gameTick, kept.Subject, kept.Secondary, kept.Line, forced: true, given: score );
+	}
+
+	/// <summary>The kept message for the census: its message, score, mValid, forced and overridden bytes, or none.</summary>
+	internal string KeptCensus()
+		=> _kept is { } kept
+			? $"kept={kept.Message}/score={kept.Score}/valid={(kept.Valid ? 1 : 0)}/forced={(kept.Forced ? 1 : 0)}/overridden={(kept.Overridden ? 1 : 0)}"
+			: "kept=none";
+
+	/// <summary>Takes a park file's kept message as it stands (FUN_0059ba30's record at the advisor's +0x16d0); null leaves the constructor's, none.</summary>
+	internal void RestoreKept( ParkWorld.AdvisorSlot? saved )
+	{
+		if ( saved is not { } kept ) return;
+		_kept = new Kept( kept.Message, kept.Thing, kept.Secondary, kept.Line, kept.Score, kept.Valid, kept.OverrideOnlyOnce, kept.ScoreOverridden );
+		Log.Info( $"Park advisor: restored {KeptCensus()} subject={kept.Thing} line={kept.Line}" );
+	}
+
+	/// <summary>
+	/// The kept message as a park file's advisor holds it (<see cref="ParkWorld.PutAdvisorKept"/>), its second word the
+	/// file's or, for one raised here about a thing, that thing's item by <paramref name="itemOf"/>; null where it is
+	/// unchanged since the load, so the file's own bytes stand.
+	/// </summary>
+	internal ParkWorld.AdvisorSlot? WrittenKept( Func<int, int> itemOf )
+		=> _keptChanged && _kept is { } kept
+			? new ParkWorld.AdvisorSlot( kept.Subject, kept.Secondary ?? (kept.Subject != 0 ? itemOf( kept.Subject ) : 0), kept.Message,
+				kept.Score, kept.Valid, kept.Line, kept.Forced, kept.Overridden )
+			: null;
 
 	/// <summary>
 	/// FUN_0059aa70: every slot holding <paramref name="id"/> is emptied, and where he is saying it (inside the
@@ -1759,11 +1837,18 @@ internal sealed class ParkAdvisorMessages
 	/// is no longer said, it has been cut off once more and the wait is over. Says whether it did either.
 	/// </summary>
 	/// <remarks>
-	/// The kept message the original also forgets here (the advisor's +0x16d0, a tutorial one of this id, raised
-	/// again by FUN_0059ab50) is kept by nothing in this game.
+	/// A kept message of this id, a category-1 one, is forgotten too (its +0x16e4 cleared), so F1 says nothing after it
+	/// (<see cref="SayKeptAgain"/>); the rest of its record stands.
 	/// </remarks>
 	internal bool Withdraw( int id, long milliseconds, Action stop )
 	{
+		var forgot = _kept is { Valid: true } kept && kept.Message == id && _topics[id].Category == Tutorial;
+		if ( forgot )
+		{
+			_kept = _kept! with { Valid = false };
+			_keptChanged = true;
+		}
+
 		var cleared = 0;
 		for ( var i = 0; i < _slots.Length; ++i )
 		{
@@ -1782,7 +1867,7 @@ internal sealed class ParkAdvisorMessages
 			_duration = 0;
 		}
 
-		Log.Info( $"Park advisor: withdraw message={id} cleared={cleared} cut={(cut ? 1 : 0)} slaps={history.Slaps} pending={PendingCount}" );
+		Log.Info( $"Park advisor: withdraw message={id} cleared={cleared} cut={(cut ? 1 : 0)} slaps={history.Slaps}{(forgot ? " kept=forgotten" : "")} pending={PendingCount}" );
 		return cleared > 0 || cut;
 	}
 
@@ -1815,6 +1900,10 @@ internal sealed class ParkAdvisorMessages
 		var score = FilteredScoreOf( pending.Topic, gameTick );
 		if ( score < Threshold )
 		{
+			// The recheck is the non-overridden helper's (FUN_0059b620, 0x0059b6c3); what the tick does with a record whose
+			// score the poster gave (F1's, SayKeptAgain) is not read, so here it is dropped the same and counted.
+			if ( pending.Overridden )
+				Unimplemented.Report( "PARK_ADVISOR_OVERRIDDEN_RECORD_RECHECK" );
 			Log.Info( $"Park advisor: dropped message={pending.Topic.Id} subject={pending.Subject} queued={pending.Score} score={score} threshold={Threshold} tick={gameTick}" );
 			return;
 		}
@@ -1869,5 +1958,5 @@ internal sealed class ParkAdvisorMessages
 		+ string.Concat( _slots.Where( slot => slot != null ).Select( slot => $"slot={slot!.Topic.Id}/subject={slot.Subject} " ) )
 		+ string.Join( " ", _topics.Values.Select( topic =>
 			$"message={topic.Id}/score={ScoreOf( topic, _lastTick )}/line={_histories[topic.Id].Line}/lastTick={_histories[topic.Id].LastTick}/said={(_histories[topic.Id].Said ? 1 : 0)}/slaps={_histories[topic.Id].Slaps}" ) )
-		+ $" action={(_started is { } started ? $"{started}+{_duration}" : "none")}/playing={_playing} poll={_cursor.Row}";
+		+ $" action={(_started is { } started ? $"{started}+{_duration}" : "none")}/playing={_playing} poll={_cursor.Row} {KeptCensus()}";
 }

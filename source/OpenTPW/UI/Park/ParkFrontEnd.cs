@@ -218,6 +218,8 @@ internal sealed class ParkFrontEnd : Panel
 				MenuKey( _stack.Windows.Count > 0 ? _stack.Windows[^1] : null, release.Plain );
 			else if ( release.Key == Key.F3 && release.Plain )
 				ToggleFullScreen();
+			else if ( release.Key == Key.F1 && release.Plain )
+				HelpKey( _stack.Windows.Count > 0 ? _stack.Windows[^1] : null );
 			else if ( ShortcutRow( release ) is > 0 and var row )
 				ShortcutKey( _stack.Windows.Count > 0 ? _stack.Windows[^1] : null, row );
 		}
@@ -252,6 +254,22 @@ internal sealed class ParkFrontEnd : Panel
 		}
 
 		return steps;
+	}
+
+	/// <summary>
+	/// F1 let go with no modifier held: the advisor says his kept tutorial line again
+	/// (<see cref="ParkAdvisorMessages.SayKeptAgain"/>), the same with a park screen open or none. Over the park the game
+	/// table's row 13 (key 0x70, handler <c>0x0040c800</c>) makes the call, and under a park screen, whose handler runs no
+	/// table but the shortcuts', the handler makes it itself (<c>FUN_00488ba0</c>, <c>0x00488bfb</c>;
+	/// <c>docs/exe/advisor-park.md</c>, "F1: the kept tutorial line said again"). The game menu, a modal window and the
+	/// map keep their keys, and in first person the viewfinder's layer answers none but its own (<c>0x00488a00</c>).
+	/// </summary>
+	internal static bool HelpKey( UiWindow? front )
+	{
+		if ( front is not { ParkScreen: true } && (front is GameMenu or ParkMapScreen or { Modal: true } || ParkCamcorderCameraMode.Active) )
+			return false;
+
+		return Level.Current?.ParkState is { AdvisorMessages: { } lines } park && lines.SayKeptAgain( park.GameTick );
 	}
 
 	/// <summary>

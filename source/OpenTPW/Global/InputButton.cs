@@ -316,9 +316,9 @@ public enum InputButton
 	/// <summary>
 	/// Help (F1)
 	/// Plays advisor help speech for the current screen/action.
-	/// A deviation: nothing reads this binding in a park, where the original's F1 has the advisor say his kept tutorial line
-	/// again (Q231, docs/exe/advisor-park.md, "F1: the kept tutorial line said again"); no code path reads or ignores it, so
-	/// there is no place to count it with <c>Unimplemented.Report</c> until Q231 builds the reader.
+	/// The binding is read by nothing: the park takes F1 by key from <see cref="Input.Releases"/>, as it takes the shortcuts,
+	/// and has the advisor say his kept tutorial line again (<c>ParkFrontEnd.HelpKey</c>; docs/exe/advisor-park.md,
+	/// "F1: the kept tutorial line said again").
 	/// </summary>
 	[DefaultKey( Key.F1 )]
 	Help,

@@ -3370,6 +3370,46 @@ public sealed partial class ParkWorld : IParkInitialState
 		}
 	}
 
+	/// <summary>Where the kept message sits in the advisor's record (the memory's <c>+0x16d0</c>), after the 351 histories.</summary>
+	private const int AdvisorKeptAt = AdvisorHistoriesAt + (16 * AdvisorMessages);
+
+	/// <summary>
+	/// The advisor's kept message as the file holds it, the last tutorial message raised, which F1 has him say again:
+	/// a record of <see cref="AdvisorSlot"/>'s twenty-one bytes, <c>FUN_0059ba30</c>'s again (<c>docs/exe/advisor-park.md</c>,
+	/// "The slots in a park file"); null where the file holds no advisor.
+	/// </summary>
+	public AdvisorSlot? AdvisorKeptOf()
+	{
+		if ( AdvisorAt < 0 )
+			return null;
+
+		var at = AdvisorAt + AdvisorKeptAt;
+		return new AdvisorSlot( ReadUInt16At( at ), ReadInt32At( at + 2 ), ReadInt32At( at + 6 ), ReadInt32At( at + 10 ),
+			ReadByteAt( at + 14 ) != 0, ReadInt32At( at + 15 ), ReadByteAt( at + 19 ) != 0, ReadByteAt( at + 20 ) != 0 );
+	}
+
+	/// <summary>
+	/// Writes the advisor's kept message over the file's in <paramref name="body"/>, a copy of this park's own, whole, as the
+	/// original writes it with the thing. A park with no advisor is left alone.
+	/// </summary>
+	public void PutAdvisorKept( byte[] body, AdvisorSlot kept )
+	{
+		ArgumentNullException.ThrowIfNull( body );
+
+		if ( AdvisorAt < 0 )
+			return;
+
+		var at = AdvisorAt + AdvisorKeptAt;
+		System.Buffers.Binary.BinaryPrimitives.WriteUInt16LittleEndian( body.AsSpan( at, 2 ), (ushort)kept.Thing );
+		System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian( body.AsSpan( at + 2, 4 ), kept.Secondary );
+		System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian( body.AsSpan( at + 6, 4 ), kept.Message );
+		System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian( body.AsSpan( at + 10, 4 ), kept.Score );
+		body[at + 14] = (byte)(kept.Valid ? 1 : 0);
+		System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian( body.AsSpan( at + 15, 4 ), kept.Line );
+		body[at + 19] = (byte)(kept.OverrideOnlyOnce ? 1 : 0);
+		body[at + 20] = (byte)(kept.ScoreOverridden ? 1 : 0);
+	}
+
 	/// <summary>
 	/// The advisor's last action: the second stopwatch's reading as he began the last line he said
 	/// (<c>mLastActionStarted</c>), how long he waits from it before the next, the line's length and a second

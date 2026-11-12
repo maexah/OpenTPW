@@ -3,10 +3,11 @@
 
 consolerun.py's interactive sibling for a cloud lane (no python-xlib, Q862): a run script imports it, starts the game with
 `Drive(out, bin, game)`, then `ask(command, until)` sends one console command and returns the lines printed up to the
-first one matching the regex `until` (or the timeout); `key(name)` and `click(x, y)` are real X events by xdotool on the
-run's own Xvfb display, and on no other: each is refused where `run_display` cannot find that Xvfb in the run's session;
-`bar_click(which)` clicks the message bar's first or second button there (`bar_button`, also barclick.sh's, for
-consolerun.py); `quit()` ends the run and kills what is left. Everything the game prints is in <out>/stdout.txt,
+first one matching the regex `until` (or the timeout); `key(name)`, `focus_key(name)`, `click(x, y)` and
+`wheel(x, y, notches)` are real X events by xdotool on the run's own Xvfb display, and on no other: each is refused where
+`run_display` cannot find that Xvfb in the run's session; `bar_click(which)` clicks the message bar's first or second
+button there (`bar_button`, also barclick.sh's, for consolerun.py); `quit()` ends the run and kills what is left.
+Everything the game prints is in <out>/stdout.txt,
 each command after `>>> `.
 
 As consolerun.py, the game never runs on <game> itself (consolegame.py): <out>/game links to <game>'s entries with a COPY
@@ -157,7 +158,8 @@ class Drive:
 
     def focus_key(self, name):
         """A key sent to the game's window with the focus given first (`windowfocus --sync`), the pointer put on it: without
-        the focus the window hears no key (Q994). Q547's cursor Up and Down over an object window."""
+        the focus the window hears no key (Q994). Q547's cursor Up and Down over an object window; Q231's F1 over the park,
+        a key the console has no command for."""
         self._xdotool("search", "--onlyvisible", "--name", ".", "windowfocus", "--sync", "%1",
                       "mousemove", "--window", "%1", "640", "600", "key", name)
 
@@ -173,6 +175,12 @@ class Drive:
             return False
         self.log.write(f"!!! bar_click {which} at {point[0]} {point[1]}\n"); self.log.flush()
         return window_click(found, *point)
+
+    def wheel(self, x, y, notches):
+        """The pointer to (x, y) and the wheel turned `notches` times: away (button 4) for a positive count, toward (button 5,
+        a notch down, the park's zoom out) for a negative one (Q231)."""
+        self._xdotool("mousemove", str(int(x)), str(int(y)), "click", "--repeat", str(abs(int(notches))), "--delay", "150",
+                      "4" if notches > 0 else "5")
 
     def quit(self):
         try:

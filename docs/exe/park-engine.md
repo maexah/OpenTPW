@@ -4220,13 +4220,13 @@ when a screen opens. A plain Escape let go closes the screen in front, or the ma
 modifier held it does nothing (`ParkFrontEnd.MenuKey`). Where it parts from the original:
 
 - **A click acts on its press here**, so the armed tool's click beside a screen is taken on the press, where the
-  original skips the press and commits on the release.
+  original skips the press and commits on the release (`docs/QUEUE.md` Q1404).
 - **First person** leaves the screen open (`docs/QUEUE.md` Q122).
-- **F1** is read by nothing here, over a screen or not; the original's says the kept tutorial line again
-  (`advisor-park.md`, "F1: the kept tutorial line said again", Q870; built in `docs/QUEUE.md` Q231).
-- **The wheel over a park screen's body** zooms the camera here; the original's goes to the screen's controls and moves
-  nothing but a list or a slider under the pointer (`hud.md`, "The wheel over a park screen", Q870; Q231). Over a modal
-  screen it zooms nothing here, as in the original (`hud.md`, "The wheel over a modal screen", Q930).
+- **F1** says the kept tutorial line again, over a screen or not, as the original's (`advisor-park.md`, "F1: the kept
+  tutorial line said again", Q870, built in Q231).
+- **The wheel over a park screen's body** zooms nothing, as the original's, a list or a slider under the pointer still
+  scrolling (`hud.md`, "The wheel over a park screen", Q870, built in Q231); nor over a modal screen (`hud.md`, "The wheel
+  over a modal screen", Q930).
 
 ### The game menu and the options screen hold the keys
 

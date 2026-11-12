@@ -16,7 +16,7 @@ public class ParkAdvisorMessageTests
 			+ $"ParkNowOpen.Score {open}\nParkNowClosed.Score {close}\nRidesBreakdownImminent.Score {worn}\n"
 			+ "RidesBreakdownNoMechanics.Score 105\nRidesBreakdownBusyMechanics.Score 107\n"
 			+ $"RidesBreakdownMechanicOnIt.Score {mechanic}\n"
-			+ "MessageGroups[0].DiscardAfterSlaps 0\nMessageGroups[1].MinTimeSameMessage 0\nMessageGroups[1].SayOnlyOnce 1\nMessageGroups[1].DiscardAfterSlaps 3\nHelpMessage.Score 1000\nTutorialUIPanel.AfterTime 10\nTutorialUIPanel.CutoffTime 60\nTutorialUIPanel.Score 110\nTutorialExplainTooltips.AfterTime 20\nTutorialExplainTooltips.CutoffTime 80\nTutorialExplainTooltips.Score 100\nOpenPark.ScorePerWaitingPerson 20\nClosePark.Score 99\nRidesBuildRides.Score -50\nRidesBuildRides.AdditionalPerDay 3\n"
+			+ "MessageGroups[0].DiscardAfterSlaps 0\nMessageGroups[1].MinTimeSameMessage 0\nMessageGroups[1].SayOnlyOnce 1\nMessageGroups[1].DiscardAfterSlaps 3\nHelpMessage.Score 1000\nHelpMessage.ContextHelpScore 640\nTutorialUIPanel.AfterTime 10\nTutorialUIPanel.CutoffTime 60\nTutorialUIPanel.Score 110\nTutorialExplainTooltips.AfterTime 20\nTutorialExplainTooltips.CutoffTime 80\nTutorialExplainTooltips.Score 100\nOpenPark.ScorePerWaitingPerson 20\nClosePark.Score 99\nRidesBuildRides.Score -50\nRidesBuildRides.AdditionalPerDay 3\n"
 			+ "ShopsClosed.MoreThanThisPercentClosed 25\nShopsClosed.Score 75\nSideshowsClosed.MoreThanThisPercentClosed 25\nSideshowsClosed.Score 70\n"
 			+ "ToiletsClosed.MoreThanThisPercentClosed 20\nToiletsClosed.Score 75\n"
 			+ "StaffroomClosed.MoreThanThisPercentClosed 25\nStaffroomClosed.Score 90\n"
@@ -849,6 +849,125 @@ public class ParkAdvisorMessageTests
 		StringAssert.Contains( shipped.Census(), "message=189/score=1000/line=0/lastTick=814/said=0/slaps=3" );
 		Assert.IsFalse( shipped.Post( ParkAdvisorMessages.HireScreen, 826 ), "cut off three times" );
 		Assert.AreEqual( new ParkWorld.AdvisorHistory( 814, 0, false, 3 ), shipped.Written()[ParkAdvisorMessages.HireScreen] );
+	}
+
+	/// <summary>
+	/// <b>F1 says the kept tutorial line again</b> (Q231; <c>FUN_0059ab50</c>, <c>docs/exe/advisor-park.md</c>, "F1: the kept tutorial
+	/// line said again"): the buy screen's line raised and said, a second raise refused as said once, then F1 posts the kept record
+	/// forced at <c>HelpMessage.ContextHelpScore</c> (640 here, not the line's own 1000), past the said byte, and he says it again
+	/// once the wait is over; F1 with that copy waiting is refused (one copy); the screen's withdrawal forgets it, and F1 then posts nothing.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> F1 at <c>HelpMessage.Score</c>; the forced post asking the said byte; the withdrawal leaving the
+	/// kept record valid; the slot written without its forced and overridden bytes.</remarks>
+	[TestMethod]
+	public void F1SaysTheKeptTutorialLineAgainForcedAtTheContextScore()
+	{
+		var messages = new ParkAdvisorMessages( Settings(), tutorial: () => true );
+		var said = new List<int>();
+		Func<int, int, int> play = ( response, _ ) => { said.Add( response ); return 4000; };
+
+		Assert.IsFalse( messages.SayKeptAgain( 100 ), "nothing kept" );
+		StringAssert.EndsWith( messages.Census(), " kept=none" );
+		Assert.IsNull( messages.WrittenKept( _ => 0 ), "none raised: the file's stands" );
+
+		Assert.IsTrue( messages.Post( ParkAdvisorMessages.BuyScreen, 100 ) );
+		StringAssert.EndsWith( messages.Census(), " kept=188/score=1000/valid=1/forced=0/overridden=0" );
+		messages.Tick( 101, 1000, play );
+		CollectionAssert.AreEqual( new[] { 407 }, said );
+		Assert.IsFalse( messages.Post( ParkAdvisorMessages.BuyScreen, 102 ), "said once" );
+
+		Assert.IsTrue( messages.SayKeptAgain( 103 ), "forced past the said byte" );
+		StringAssert.Contains( messages.Census(), "pending=1 attempts=1 threshold=25 slot=188/subject=0 " );
+		StringAssert.EndsWith( messages.Census(), " kept=188/score=640/valid=1/forced=1/overridden=1" );
+		Assert.AreEqual( new ParkWorld.AdvisorSlot( 0, 0, 188, 640, true, -1, true, true ), messages.WrittenSlots( _ => 0 )[0] );
+		Assert.IsFalse( messages.SayKeptAgain( 104 ), "one copy in the slots" );
+
+		messages.Tick( 105, 5999, play );
+		Assert.AreEqual( 1, said.Count, "inside the wait" );
+		messages.Tick( 106, 6000, play );
+		CollectionAssert.AreEqual( new[] { 407, 407 }, said );
+		Assert.AreEqual( 0, messages.PendingCount );
+
+		messages.Withdraw( ParkAdvisorMessages.BuyScreen, 20000, () => { } );
+		StringAssert.EndsWith( messages.Census(), " kept=188/score=640/valid=0/forced=1/overridden=1" );
+		Assert.IsFalse( messages.SayKeptAgain( 130 ), "forgotten" );
+		Assert.AreEqual( 0, messages.PendingCount );
+		Assert.AreEqual( new ParkWorld.AdvisorSlot( 0, 0, 188, 640, false, -1, true, true ), messages.WrittenKept( _ => 0 ) );
+	}
+
+	/// <summary>
+	/// <b>The kept record is copied before the gate</b>: a buy screen raise the Tutorial option refuses is kept all the same, and F1
+	/// is refused by that option too (test 1 is still asked); the hire screen's later raise takes its place, a category-0 raise and
+	/// another id's withdrawal leave it; a line cut off three times is refused a plain raise and posted by F1 (the cuts are test 3's).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the copy made only for a queued raise (the first assertion); F1 skipping the Tutorial option; the kept
+	/// record forgotten by any withdrawal; F1 asking the cuts.</remarks>
+	[TestMethod]
+	public void AKeptLineIsKeptWhereTheGateRefusesItAndForgottenByItsOwnWithdrawal()
+	{
+		var on = false;
+		var messages = new ParkAdvisorMessages( Settings(), tutorial: () => on );
+		Assert.IsFalse( messages.Post( ParkAdvisorMessages.BuyScreen, 100 ), "the Tutorial option off" );
+		StringAssert.EndsWith( messages.Census(), " kept=188/score=1000/valid=1/forced=0/overridden=0" );
+		Assert.IsFalse( messages.SayKeptAgain( 101 ), "F1 with the Tutorial option off" );
+		Assert.AreEqual( 0, messages.PendingCount );
+
+		on = true;
+		Assert.IsTrue( messages.Post( ParkAdvisorMessages.HireScreen, 102 ) );
+		Assert.IsTrue( messages.Post( ParkAdvisorMessages.MechanicsBusy, 103, 13 ) );
+		messages.Withdraw( ParkAdvisorMessages.BuyScreen, 0, () => { } );
+		StringAssert.EndsWith( messages.Census(), " kept=189/score=1000/valid=1/forced=0/overridden=0" );
+
+		var cut = new ParkAdvisorMessages( Settings(), tutorial: () => true );
+		cut.Restore( id => id == ParkAdvisorMessages.HireScreen ? new ParkWorld.AdvisorHistory( 814, 0, false, 3 ) : null );
+		Assert.IsFalse( cut.Post( ParkAdvisorMessages.HireScreen, 900 ), "cut off three times" );
+		Assert.IsTrue( cut.SayKeptAgain( 901 ), "F1 past the cuts" );
+		StringAssert.Contains( cut.Census(), "slot=189/subject=0 " );
+	}
+
+	/// <summary>
+	/// <b>A park file's kept message</b> is taken as it stands and written back as the file's until it changes: one of a message
+	/// built here is said again on F1, one of a message not built is counted and posts nothing. F1's record put in with a score
+	/// the poster gave, whose own score has fallen under the threshold by its turn, is dropped as the plain helper drops one and counted.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> <c>WrittenKept</c> answering a restored record unchanged; the unbuilt message posted; the recheck
+	/// skipped for an overridden record (the control panel's line said at nought).</remarks>
+	[TestMethod]
+	public void AParkFilesKeptMessageIsTakenAsItStands()
+	{
+		var notBuilt = new ParkAdvisorMessages( Settings(), tutorial: () => true );
+		notBuilt.RestoreKept( new ParkWorld.AdvisorSlot( 0, 0, 0x15a, 1000, true, -1, false, false ) );
+		var before = Counted( "PARK_ADVISOR_KEPT_MESSAGE_NOT_BUILT" );
+		Assert.IsFalse( notBuilt.SayKeptAgain( 100 ) );
+		Assert.AreEqual( before + 1, Counted( "PARK_ADVISOR_KEPT_MESSAGE_NOT_BUILT" ) );
+		Assert.IsNull( notBuilt.WrittenKept( _ => 0 ), "unchanged: the file's stands" );
+		notBuilt.RestoreKept( null );
+		StringAssert.EndsWith( notBuilt.Census(), " kept=346/score=1000/valid=1/forced=0/overridden=0" );
+
+		var hire = new ParkAdvisorMessages( Settings(), tutorial: () => true );
+		hire.RestoreKept( new ParkWorld.AdvisorSlot( 0, 0, ParkAdvisorMessages.HireScreen, 1000, true, -1, false, false ) );
+		Assert.IsTrue( hire.SayKeptAgain( 100 ) );
+		Assert.AreEqual( new ParkWorld.AdvisorSlot( 0, 0, 189, 640, true, -1, true, true ), hire.WrittenKept( _ => 0 ) );
+
+		var panel = new ParkAdvisorMessages( Settings(), tutorial: () => true );
+		panel.RestoreKept( new ParkWorld.AdvisorSlot( 0, 0, ParkAdvisorMessages.ControlPanel, 110, true, -1, false, false ) );
+		Assert.IsTrue( panel.SayKeptAgain( 1_000_000 ) );
+		var dropped = Counted( "PARK_ADVISOR_OVERRIDDEN_RECORD_RECHECK" );
+		panel.Tick( 1_000_001, 1000, ( _, _ ) => throw new Exception( "said at nought" ) );
+		Assert.AreEqual( dropped + 1, Counted( "PARK_ADVISOR_OVERRIDDEN_RECORD_RECHECK" ) );
+		Assert.AreEqual( 0, panel.PendingCount );
+	}
+
+	/// <summary>The shipped <c>Advisor.sam</c>'s <c>HelpMessage.ContextHelpScore</c> is 1000, the score F1's post is given.</summary>
+	[TestMethod]
+	public void TheShippedContextHelpScoreIsAThousand()
+	{
+		FileSystem = GameData.Required();
+		var messages = new ParkAdvisorMessages( new SettingsFile( "Advisor/Advisor.sam" ), tutorial: () => true );
+		Assert.IsTrue( messages.Post( ParkAdvisorMessages.HireScreen, 100 ) );
+		messages.Tick( 101, 1000, ( _, _ ) => 4000 );
+		Assert.IsTrue( messages.SayKeptAgain( 102 ) );
+		StringAssert.EndsWith( messages.Census(), " kept=189/score=1000/valid=1/forced=1/overridden=1" );
 	}
 
 	/// <summary>
