@@ -564,10 +564,12 @@ filed the items that cite it.
   `WAITANIM`'s qword sum wrap `+0xa0` (`park.md`, "`WAITANIM` is NOT `TRIGANIM` with a wait").
   - **Note (Q243's census, 2026-11-12):** beside `COAST_RIDE_SPEED`, the scheduler counts `TRACK_RIDE_SPEED_PUSH` (`RideScriptScheduler.cs`):
     `FUN_00545180`'s push into a kart's or a water ride's record of the track-ride table, where only the bumper rides' are built.
-- [ ] **Q1064. The park writer's nought queued speed of a loaded channel (from Q1063).** With the load seeding every channel's `+0x30`, a loaded channel's `DeferredSpeed` is nought only after a promotion cleared it (`0x004738af`)
-  and before the next due visit, so `ParkRides.WrittenChannel` can write the nought as it stands (the engine saves `+0x30` whatever it holds) where it now writes the file's stale speed (`Speed: channel.DeferredSpeed != 0f ? ... : file.QueuedSpeed`). A made
-  channel's nought (a bought ride before its first visit) falls back to `MadeChannel`'s 1.0 or `NeverStartedChannel`'s nought, and the original's own just-bought Hot Pot (`q257r` hotpot-bought-shut, slot 90, item 1140) holds 1.1, its divisor (the Sentinel's review datum, 2026-11-05; not read by Q1063; `fix-bought.TPWS` is OpenTPW's file, not the original's), so a just-bought thing must not save nought and the nought is for a clear's alone (a promotion `0x004738af` or a start-at-once trigger `0x00473408` leaves `+0x30` nought and the engine saves it so until the next due visit); a made channel's value before any visit is what is unmeasured: read a bought ride's `+0x30` in the original before its first visit
-  (the model maker, `docs/exe/saves.md`, "A park made fresh"). Confirm: a loaded ride saved within 248 ms of a promotion, the saved `+0x30` read; predicted first.
+- [ ] **Q1336. A bought channel's queued speed before its first visit, and a loaded one's nought, in the original (from Q1064).** Q1064 writes a loaded
+  thing's `+0x30` as it stands (`ParkRides.WrittenChannel`, `seeded` true), nought after a promotion or a start-at-once trigger (`0x004738af`, `0x00473408`), and
+  keeps a bought thing's fallbacks: 1.0 started, nought never started (`seeded` false). Neither was read in the original (Q1064 ran in a cloud container: no Proton, no Ghidra).
+  Read a bought ride's `+0x30` in the running original before its first due visit (the model maker, `docs/exe/saves.md`, "A park made fresh"; the just-bought Hot Pot of
+  `q257r` hotpot-bought-shut holds its divisor 1.1), and save the original's loaded park within 248 ms of a promotion and read the saved `+0x30` (`tools/harness/dotnet/queuedspeed/`);
+  predict both first. Where the bought value is the divisor, the made fallback becomes `RideScript.ChannelSpeedOf` of the script's word.
 - [ ] **Q156. The staff screen's two happiness meters (decoded in Q898: they fill from the left).** Found by the 2026-09-26 staleness
   audit. Nothing is left to build: the original paints each meter with its stat-bar skin alone and fills it from the left
   (`hud.md`, "What paints the all-staff meters"), and this game has drawn them so since Q369 (`ParkStaffScreen.Meter`, a

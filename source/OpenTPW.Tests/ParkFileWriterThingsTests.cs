@@ -1329,7 +1329,9 @@ public class ParkFileWriterThingsTests
 		Assert.AreEqual( (role, 0, 1.5f), (written.Role, written.Entry, written.Speed) );
 		Assert.AreEqual( 0x19, written.Flags, "looping, not held; the 0x10 a hold leaves behind, as the original's files hold it on a channel running since; the mark not yet taken off by an advance" );
 		Assert.AreEqual( (ShippedClock + 400, ShippedClock, ShippedClock), (written.StartTime, written.Time, written.NoPauseTime) );
-		Assert.AreEqual( (ParkThingStates.NoRole, file.QueuedEntry, file.QueuedFlags, file.QueuedSpeed), (written.QueuedRole, written.QueuedEntry, written.QueuedFlags, written.QueuedSpeed) );
+		// The start-at-once trigger cleared the queue's speed (0x00473408), and no due visit has written it since: the nought stands (Q1064).
+		Assert.AreEqual( (ParkThingStates.NoRole, file.QueuedEntry, file.QueuedFlags, 0f), (written.QueuedRole, written.QueuedEntry, written.QueuedFlags, written.QueuedSpeed) );
+		Assert.AreNotEqual( 0f, file.QueuedSpeed, "the file's own is not nought" );
 
 		// The channel's next advance, on a role that is not nought, takes the mark off.
 		players.Advance( rides.LoadedAt + 500 );
@@ -1346,6 +1348,37 @@ public class ParkFileWriterThingsTests
 			.Models.Single( model => model.Slot == Models( shipped ).ForScript( 7 )!.Value.Slot ).Channels[0];
 
 		Assert.AreEqual( (file.Role, 0, AnimTimeControl.LoopFlag, 0.75f), (queued.QueuedRole, queued.QueuedEntry, queued.QueuedFlags, queued.QueuedSpeed) );
+	}
+
+	/// <summary>
+	/// <b>The shipped park's Belly Bounce, saved after a promotion and before its script's next due visit, writes the nought the promotion
+	/// left</b> (Q1064). Its channel loops role 2 with nothing queued and the file's queued speed 1.1, which the load seeds and a save at once
+	/// writes back; a clip queued behind the loop and promoted when it ends clears the speed (<c>0x004738af</c>), and the engine saves
+	/// <c>+0x30</c> as it stands, nought, where the writer before this wrote the file's 1.1.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the file's speed where a seeded channel holds nought; the loaded path written as a made one (seeded false).</remarks>
+	[TestMethod]
+	public void ALoadedChannelSavedAfterAPromotionWritesNought()
+	{
+		var rides = Bind( shipped );
+		var state = new ParkState( shipped );
+		var players = rides.Scheduler.Find( rides.ScriptFor( BellyBounce ) )!.Animations!;
+		var file = Models( shipped ).ForScript( BouncyScript )!.Value.Channels[0];
+
+		Assert.AreEqual( (2, ParkThingStates.NoRole, 1.1f), (file.Role, file.QueuedRole, file.QueuedSpeed), "the file's loop, nothing queued, the divisor" );
+
+		SavedChannel Written() => rides.Written( shipped, state.WrittenObjects( shipped ), ChannelsFor, state.HoardingFor )!
+			.Models.Single( model => model.Slot == BouncyModelSlot ).Channels[0];
+
+		Assert.AreEqual( 1.1f, Written().QueuedSpeed, "saved at once: the load's seed" );
+
+		var channel = players.Channel( 0 )!;
+
+		channel.Queue( file.Role, 0, AnimTimeControl.LoopFlag, 1.1f );
+		players.Advance( rides.LoadedAt + 60000 );
+
+		Assert.AreEqual( (false, 0f, 2), (channel.HasQueued, channel.DeferredSpeed, channel.AnimID), "promoted, and the queue cleared" );
+		Assert.AreEqual( 0f, Written().QueuedSpeed, "saved before the next due visit: the nought as it stands" );
 	}
 
 	/// <summary>
@@ -1651,7 +1684,8 @@ public class ParkFileWriterThingsTests
 		Assert.IsTrue( channel.IsIdle, "a role the model lacks stops the channel" );
 
 		var file = new SavedChannel( 5, 0, 0x41, 1.5f, 1000, 1500, 1500, ParkThingStates.NoRole, 3, 0x9, 0.5f );
-		var written = ParkRides.WrittenChannel( channel, file, moment => (uint)moment, 9000 );
+		channel.WriteQueuedSpeed( file.QueuedSpeed );
+		var written = ParkRides.WrittenChannel( channel, file, moment => (uint)moment, 9000, seeded: true );
 
 		Assert.AreEqual( new SavedChannel( ParkThingStates.NoRole, 0, 0x40, 1f, 0, 0, 0, ParkThingStates.NoRole, 3, 0x9, 0.5f ), written );
 	}
@@ -1667,7 +1701,7 @@ public class ParkFileWriterThingsTests
 	{
 		var file = new SavedChannel( ParkThingStates.NoRole, 0, 0x40, 0f, 0, 0, 0, ParkThingStates.NoRole, 0, 0, 0f );
 
-		Assert.AreEqual( file, ParkRides.WrittenChannel( new AnimTimeControl(), file, moment => (uint)moment, 9000 ), "nothing started: the file's" );
+		Assert.AreEqual( file, ParkRides.WrittenChannel( new AnimTimeControl(), file, moment => (uint)moment, 9000, seeded: true ), "nothing started: the file's" );
 
 		var played = new AnimTimeControl();
 
@@ -1676,7 +1710,7 @@ public class ParkFileWriterThingsTests
 
 		Assert.IsTrue( played.IsIdle && played.Started );
 		Assert.AreEqual( new SavedChannel( ParkThingStates.NoRole, 0, 0x40, 1f, 0, 0, 0, ParkThingStates.NoRole, 0, 0, 0f ),
-			ParkRides.WrittenChannel( played, file, moment => (uint)moment, 9000 ) );
+			ParkRides.WrittenChannel( played, file, moment => (uint)moment, 9000, seeded: true ) );
 	}
 
 	/// <summary>
@@ -1693,7 +1727,7 @@ public class ParkFileWriterThingsTests
 		channel.Start( 5, 0, 0, 1f, now: 0, frames: 0f );
 
 		Assert.IsTrue( channel.IsIdle && channel.Started );
-		Assert.AreEqual( file with { Speed = 1f }, ParkRides.WrittenChannel( channel, file, moment => (uint)moment, 9000 ) );
+		Assert.AreEqual( file with { Speed = 1f }, ParkRides.WrittenChannel( channel, file, moment => (uint)moment, 9000, seeded: true ) );
 	}
 
 	/// <summary>
@@ -1715,7 +1749,8 @@ public class ParkFileWriterThingsTests
 		Assert.AreEqual( AnimTimeControl.RoleNoughtEndedFlag, channel.Flags, "marked, and not held" );
 
 		var file = new SavedChannel( 0, 0, 0x40, 1f, 1000, 2000, 2000, ParkThingStates.NoRole, 0, 0, 1f );
-		var written = ParkRides.WrittenChannel( channel, file, moment => (uint)moment, 3000 );
+		channel.WriteQueuedSpeed( file.QueuedSpeed );
+		var written = ParkRides.WrittenChannel( channel, file, moment => (uint)moment, 3000, seeded: true );
 
 		Assert.AreEqual( new SavedChannel( 0, 0, 0x48, 1f, 1000, 3000, 3000, ParkThingStates.NoRole, 0, 0, 1f ), written );
 	}
@@ -1735,7 +1770,8 @@ public class ParkFileWriterThingsTests
 		channel.Start( AnimTimeControl.FreezeAtStart, 0, 0, 1f, now: 1200, frames: 0f );
 
 		var file = new SavedChannel( ParkThingStates.NoRole, 0, 0, 1f, 0, 0, 0, ParkThingStates.NoRole, 0, 0, 1f );
-		var written = ParkRides.WrittenChannel( channel, file, moment => (uint)moment, 9000 );
+		channel.WriteQueuedSpeed( file.QueuedSpeed );
+		var written = ParkRides.WrittenChannel( channel, file, moment => (uint)moment, 9000, seeded: true );
 
 		Assert.AreEqual( new SavedChannel( 2, 0, 0x2, 1f, 1200, 1200, 9000, ParkThingStates.NoRole, 0, 0, 1f ), written );
 	}
@@ -1756,18 +1792,19 @@ public class ParkFileWriterThingsTests
 		channel.Start( AnimTimeControl.HoldAtEnd, 0, 0, 1f, now: 5000, frames: 0f );
 
 		var file = new SavedChannel( 2, 0, 0x40, 1f, 1000, 4000, 4000, ParkThingStates.NoRole, 0, 0, 1f );
-		var written = ParkRides.WrittenChannel( channel, file, moment => (uint)moment, 9000 );
+		channel.WriteQueuedSpeed( file.QueuedSpeed );
+		var written = ParkRides.WrittenChannel( channel, file, moment => (uint)moment, 9000, seeded: true );
 
 		Assert.AreEqual( new SavedChannel( 2, 0, 0x54, 1f, 5000, 5666, 9000, ParkThingStates.NoRole, 0, 0, 1f ), written );
 	}
 
 	/// <summary>
-	/// A channel with nothing queued is written with the speed the scheduler last wrote into it (<c>RideScript.WriteChannelSpeeds</c>, Q1061; the
-	/// engine saves <c>+0x30</c> as it stands), over the file's, its clip and flags the file's still; with no write since the load (nought) the file's
-	/// speed stands. In the original's own files 2,193 of 2,208 scripted channels with nothing queued hold their script's divisor (docs/exe/saves.md,
-	/// "OpenTPW's writer, the objects").
+	/// A loaded channel with nothing queued is written with its queued speed as it stands, as the engine saves <c>+0x30</c>: the load's
+	/// seed (the file's 1.1, Q1063), then the scheduler's last write over it (<c>RideScript.WriteChannelSpeeds</c>, Q1061), its clip and
+	/// flags the file's still. In the original's own files 2,193 of 2,208 scripted channels with nothing queued hold their script's divisor
+	/// (docs/exe/saves.md, "OpenTPW's writer, the objects").
 	/// </summary>
-	/// <remarks><b>Mutations:</b> the file's speed always; the live speed written when nought; the live speed dropped on the idle never-started or the idle started branch.</remarks>
+	/// <remarks><b>Mutations:</b> the file's speed always; the live speed dropped on the idle never-started or the idle started branch.</remarks>
 	[TestMethod]
 	public void AChannelWithNothingQueuedIsWrittenWithTheSchedulersLastSpeed()
 	{
@@ -1775,16 +1812,46 @@ public class ParkFileWriterThingsTests
 		var running = new AnimTimeControl();
 
 		running.Start( 0, 0, AnimTimeControl.LoopFlag, 1.1f, now: 1000, frames: 20f );
+		running.WriteQueuedSpeed( file.QueuedSpeed );
 		Assert.IsFalse( running.HasQueued );
 
-		Assert.AreEqual( file, ParkRides.WrittenChannel( running, file, moment => (uint)moment, 2000 ) with { Time = 2000, NoPauseTime = 2000 }, "no write yet: the file's speed" );
+		Assert.AreEqual( file, ParkRides.WrittenChannel( running, file, moment => (uint)moment, 2000, seeded: true ) with { Time = 2000, NoPauseTime = 2000 }, "no write yet: the load's seed" );
 
 		running.WriteQueuedSpeed( 1.3f );
 
-		var written = ParkRides.WrittenChannel( running, file, moment => (uint)moment, 2000 );
+		var written = ParkRides.WrittenChannel( running, file, moment => (uint)moment, 2000, seeded: true );
 
 		Assert.AreEqual( 1.3f, written.QueuedSpeed, "the scheduler's write" );
 		Assert.AreEqual( (ParkThingStates.NoRole, 3, 0x9), (written.QueuedRole, written.QueuedEntry, written.QueuedFlags), "the clip and flags left behind stay the file's" );
+	}
+
+	/// <summary>
+	/// <b>A loaded channel whose queue a promotion has cleared is written with the nought it holds</b> (Q1064): the promotion empties the
+	/// role, the entry and the speed (<c>0x004738af</c>; <see cref="AnimTimeControl.ClearQueue"/>) and the engine saves <c>+0x30</c> as it
+	/// stands until the script's next due visit writes the divisor again; the file's 1.1 is stale by then. A made channel's nought, which no
+	/// load put there, still takes its fallback: <c>MadeChannel</c>'s 1.0 for one started, as a bought thing must not save nought (the
+	/// original's just-bought Hot Pot holds its divisor; docs/exe/saves.md, "OpenTPW's writer, the objects").
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the file's speed where a seeded channel holds nought (the writer before Q1064); the seeded flag ignored, so a made channel saves nought.</remarks>
+	[TestMethod]
+	public void ALoadedChannelAPromotionClearedIsWrittenWithItsNought()
+	{
+		var file = new SavedChannel( 0, 0, 0x41, 1.1f, 1000, 2000, 2000, ParkThingStates.NoRole, 3, 0x9, 1.1f );
+		var loaded = new AnimTimeControl();
+
+		loaded.Start( 0, 0, AnimTimeControl.LoopFlag, 1.1f, now: 1000, frames: 20f );
+		loaded.Queue( 4, 1, 0x9, 1.1f );
+		loaded.ClearQueue();
+
+		Assert.AreEqual( (false, 0f), (loaded.HasQueued, loaded.DeferredSpeed), "the promotion's clear" );
+		Assert.AreEqual( 0f, ParkRides.WrittenChannel( loaded, file, moment => (uint)moment, 2000, seeded: true ).QueuedSpeed, "a loaded channel: the nought as it stands" );
+
+		var made = new SavedChannel( ParkThingStates.NoRole, 0, 0, 1f, 0, 0, 0, ParkThingStates.NoRole, 0, 0, 1f );
+		var bought = new AnimTimeControl();
+
+		bought.Start( 0, 0, AnimTimeControl.LoopFlag, 1.1f, now: 1000, frames: 20f );
+
+		Assert.AreEqual( 1f, ParkRides.WrittenChannel( bought, made, moment => (uint)moment, 2000, seeded: false ).QueuedSpeed, "a made channel: its fallback" );
 	}
 
 	/// <summary>The same on an idle channel: the one never started that the file holds idle, and one stopped since the load.</summary>
@@ -1796,7 +1863,7 @@ public class ParkFileWriterThingsTests
 
 		untouched.WriteQueuedSpeed( 0.9f );
 
-		Assert.AreEqual( file with { QueuedSpeed = 0.9f }, ParkRides.WrittenChannel( untouched, file, moment => (uint)moment, 9000 ), "never started" );
+		Assert.AreEqual( file with { QueuedSpeed = 0.9f }, ParkRides.WrittenChannel( untouched, file, moment => (uint)moment, 9000, seeded: true ), "never started" );
 
 		var played = new AnimTimeControl();
 
@@ -1805,7 +1872,7 @@ public class ParkFileWriterThingsTests
 		played.WriteQueuedSpeed( 0.9f );
 
 		Assert.AreEqual( new SavedChannel( ParkThingStates.NoRole, 0, 0x40, 1f, 0, 0, 0, ParkThingStates.NoRole, 0, 0, 0.9f ),
-			ParkRides.WrittenChannel( played, file, moment => (uint)moment, 9000 ), "stopped since the load" );
+			ParkRides.WrittenChannel( played, file, moment => (uint)moment, 9000, seeded: true ), "stopped since the load" );
 	}
 
 	/// <summary>A channel with a clip queued writes the queue's own speed, as before: the scheduler's write has replaced it in the channel, and that is what the engine saves.</summary>
@@ -1818,7 +1885,7 @@ public class ParkFileWriterThingsTests
 		running.Start( 0, 0, 0, 1f, now: 1000, frames: 20f );
 		running.Queue( 5, 1, 0x1, 1.25f );
 
-		var written = ParkRides.WrittenChannel( running, file, moment => (uint)moment, 2000 );
+		var written = ParkRides.WrittenChannel( running, file, moment => (uint)moment, 2000, seeded: true );
 
 		Assert.AreEqual( (5, 1, 0x1, 1.25f), (written.QueuedRole, written.QueuedEntry, written.QueuedFlags, written.QueuedSpeed) );
 	}
