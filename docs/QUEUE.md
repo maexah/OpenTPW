@@ -1329,10 +1329,6 @@ filed the items that cite it.
   (`0x004aaffc`), so a Full Simulation park with 1500 or 1501 researched lists Dino Karts Jump (750) and Dino Karts
   Tunnel (900), and a row puts one in the hand. Seen in the game on a copy of Alexah's Full Simulation autosave
   (`gp-fs.out`). It is Q221 (2), no longer dead by content since Q349. Confirm: the list without them, beside the original.
-- [ ] **Q453. A park file's advisor poll cursor out of range stalls the game.** From the week-end audit (D2,
-  `VERIFY-2a.md` Q316 1). `RestoreCursor` refuses only a negative cursor; at `0x7FFFFFFF` the first poll's `row + 1`
-  overflows and walks 2^31 rows, about 87 s. The original sets any cursor of 351 or more to nought first (`0x0059c6a8`).
-  Put the wrap back before the loop (the line removed as mutant r09) with an `int.MaxValue` test.
 - [ ] **Q454. A new Instant Action player's first park clears the advisor's records.** From the week-end audit (D3,
   `VERIFY-1b.md` Q313 1). Event 10 (`RESET_FOR_EASY_MODE`, sent `0x0054f24e`, handled `0x0059af63`) sets every record's
   line to -1 and its said and slaps to nought, keeping the tick, on the player's first park only (the gms.dat byte

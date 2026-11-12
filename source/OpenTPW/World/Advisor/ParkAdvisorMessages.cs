@@ -1622,7 +1622,7 @@ internal sealed class ParkAdvisorMessages
 
 	/// <summary>
 	/// The tick's first act, FUN_0059c680 asked for one row: from the cursor's row, nought again past the last,
-	/// the first polled row is scored and the cursor left on the row after it; a row scoring above nought that
+	/// the first polled row is scored and the cursor left on the row after it (a cursor of 351 or more is nought first); a row scoring above nought that
 	/// the gate lets by and above MinScoreForConsideration is posted about no thing, as any post is. A row for
 	/// Full Simulation alone is not scored in Instant Action: its answer is -1 there, which is above nothing. A
 	/// polled row of no built topic is counted.
@@ -1630,6 +1630,8 @@ internal sealed class ParkAdvisorMessages
 	private void Poll( int gameTick )
 	{
 		var row = _cursor.Row;
+		// A cursor past the table, a park file's included, is nought before the walk (0x0059c6a8).
+		if ( row >= Rows ) row = 0;
 		while ( !IsPolled( row ) )
 			row = row + 1 >= Rows ? 0 : row + 1;
 		_cursor.Row = row + 1;

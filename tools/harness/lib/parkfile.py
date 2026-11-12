@@ -288,6 +288,19 @@ def channel_set(src, dst, item, channel, offset, fmt, value):
     packed = zlib.compress(bytes(b), 9); head = bytearray(data[:0x629])
     struct.pack_into('<II', head, 0x611, len(b), 0x629 - 0x60d + len(packed))
     open(dst, 'wb').write(bytes(head) + packed); return was
+def poll_cursor_set(src, dst, row):
+    """A copy of a park file with its advisor poll cursor written over: the advisor-scoring module, the one dword between the
+    cheats' STHC and its own CSDA (FUN_0059c890; ParkWorld.AdvisorPollCursorOf finds it the same way, from the end), the BILZ
+    block packed again as thing_set packs it. Answers the value it replaced. A cursor no save of the original writes
+    (0x7FFFFFFF, Q453) is poll_cursor_set(src, dst, 0x7FFFFFFF). Not a played state: say so where the file is used."""
+    import zlib
+    data = open(src, 'rb').read(); assert data[0x60d:0x611] == b'BILZ'
+    b = bytearray(zlib.decompress(data[0x629:]))
+    at = next(a for a in range(len(b) - 12, -1, -1) if b[a:a + 4] == b'STHC' and b[a + 8:a + 12] == b'CSDA') + 4
+    was = struct.unpack_from('<i', b, at)[0]; struct.pack_into('<i', b, at, row)
+    packed = zlib.compress(bytes(b), 9); head = bytearray(data[:0x629])
+    struct.pack_into('<II', head, 0x611, len(b), 0x629 - 0x60d + len(packed))
+    open(dst, 'wb').write(bytes(head) + packed); return was
 def cell_set(src, dst, cells, offset, fmt, value, was=None):
     """A copy of a park file with one field of the map record of each cell in `cells` ((x, y), the park's own cells) written
     over: `struct` format `fmt` at `offset` into the map sub-record (FileFormats saves.md; the record starts one byte after the cell's
