@@ -1085,9 +1085,9 @@ public class ParkSaveScreenTests
 			=> method!.Name == $"get_{nameof( IParkInitialState.Save )}" ? throw new IOException( "the disc is full" ) : method.Invoke( Park, args );
 	}
 
-	/// <summary>What has been counted, less the list's own count of a first row it does not select and the gadget's date, which it counts each frame it is drawn (Q865).</summary>
+	/// <summary>What has been counted, less the list's own count of a first row it does not select.</summary>
 	private static string Counted() => string.Join( ", ", Unimplemented.Summary
-		.Where( entry => entry.What is not ("LIST_FIRST_ROW_SELECTED" or "GADGET_DATE_UITEXT_448") )
+		.Where( entry => entry.What != "LIST_FIRST_ROW_SELECTED" )
 		.Select( entry => $"{entry.Times}x {entry.What}" ) );
 
 	private static UI.WindowStack APark()

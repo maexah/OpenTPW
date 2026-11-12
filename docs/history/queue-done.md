@@ -12145,6 +12145,17 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q527. The gadget's date: the original letters it month.day.year with full stops.** From Q526
+  (`q526/side-by-side.png`): on 10 January 2002 the original's gadget reads "1.10.2002" (`orig/a-2-loaded-gadget.png`),
+  where ours lettered .NET's short date (`ToShortDateString`, the computer's culture). `FUN_004a0e30` letters UITEXT row
+  `0x1c0` (448) with token 16 the day, 17 the month, 18 the year (`docs/exe/hud.md`, "The date's lettering"). Built:
+  `ParkGadget.DateOf` fills row 448 by those tokens from `GameCalendar.Now`, and `GADGET_DATE_UITEXT_448` is no longer
+  counted. It reads the English tables (`{16}.{17}.{18}`, Q697), so it letters day.month.year, "10.1.2002" on that date:
+  a deviation said at the site, gone with the american tables. `TheDateIsLetteredFromRow448` (the american row gives
+  "1.10.2002"), `TheGadgetLettersTheParksDateWhenBuilt` and `TheGadgetRewritesItsDateOnAFrame`; four bugs put back by
+  hand each failed one. Off-screen run: `control 20` read '8.2.2000' at `date=2000-02-08`, and '10.1.2002' after
+  `clock 17055` (`date=2002-01-10`); the census had no `GADGET_DATE_UITEXT_448`. The picture is Q1388. **Done
+  2026-11-12** (cloud lane c67, `alexah/1046-gadget-date-lettering`).
 
 ## B. Docs and comments
 

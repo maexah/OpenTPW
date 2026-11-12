@@ -610,11 +610,11 @@ filed the items that cite it.
   `0x4f3af` is empty, and its remark says "left empty and counted"; the original titles it with the name of the thing
   at world `+0x1da732`, `mParkGates` (`ParkWorld`), and its help row 191 reads "Park name - left-click to edit", so
   the title is the park's name and its edit is Q28's. The name is lettered by `UI_SetTitle` (`0x00485d20`, called at `0x00498e4c`): yellow, with the edge, in
-  the stream's rect widened by half its width either side (749..1221 to 513..1457), where ours letters the empty heading white (Q676). `ParkGadget.ShowDate` prints the machine's short date (Q527). `ParkBuyScreen`'s description panel `0x1ea` draws its frame and the footprint picture, and neither the item's turning model nor its kind row `0x1ec`.
+  the stream's rect widened by half its width either side (749..1221 to 513..1457), where ours letters the empty heading white (Q676). The gadget's date is built from UITEXT 448 and no longer counted (Q527). `ParkBuyScreen`'s description panel `0x1ea` draws its frame and the footprint picture, and neither the item's turning model nor its kind row `0x1ec`.
   **Counted since Q865** (each where it is drawn: `SCRAP_VALUE_DEPRECIATION` at the object window's scrap row,
   `ENTRY_PRICE_TITLE_PARK_NAME`, `GADGET_DATE_UITEXT_448`, `BUY_SCREEN_ITEM_MODEL` and `BUY_SCREEN_ITEM_KIND_ROW`, the last two for every row the panel is filled for, land and mystery rows too); **what is left is each build**,
   and a count goes when its build lands: scale the scrap row by `FUN_004e2400`; letter the
-  park's name in the heading (`UI_SetTitle`); write the date from UITEXT 448; turn the item's model in the buy panel and write its kind row `0x1ec` (`ITEMTYPES.str`, item `+0x90`). Three rows are model-and-string pairs of their own (`FUN_004ab1b0`, `0x004ab55f`..`0x004ab654`, `FUN_00486410` then `FUN_00485b00`): a mystery ride builds item 100 and writes UITEXT `0x89` "??? Mystery Ride! ???"; Buy Land (row -1) builds item 101 and writes `0x86` "Buy Land"; Clear Land (row -2) builds item 102 and writes `0x87` "Clear Land".
+  park's name in the heading (`UI_SetTitle`); turn the item's model in the buy panel and write its kind row `0x1ec` (`ITEMTYPES.str`, item `+0x90`). Three rows are model-and-string pairs of their own (`FUN_004ab1b0`, `0x004ab55f`..`0x004ab654`, `FUN_00486410` then `FUN_00485b00`): a mystery ride builds item 100 and writes UITEXT `0x89` "??? Mystery Ride! ???"; Buy Land (row -1) builds item 101 and writes `0x86` "Buy Land"; Clear Land (row -2) builds item 102 and writes `0x87` "Clear Land".
   Confirm each: its name leaves `unimplemented` after opening a ride's window, the entry-price screen and the buy screen.
   From Q130e, seen beside the original's lists: the hire list's wages are bare numbers too ("$ 63" there); a buy
   row with no state shows an empty box there and nothing here; Buy Land's price is `[0x0078560c]`, 10 there and 0
@@ -1590,16 +1590,12 @@ filed the items that cite it.
   draw, then letter both as the original does. Confirm by the two frames at one fee and one balance under nought.
   - **Note (play test 2026-10-21, note 25):** the ticket price box shows "20", not "$20". The original letters UITEXT
     `0x1c1` "$ " (`hud.md:3294`; QUEUE:1436).
-- [ ] **Q527. The gadget's date: the original letters it month.day.year with full stops.** From Q526
-  (`q526/side-by-side.png`): on 10 January 2002 the original's gadget reads "1.10.2002" (`orig/a-2-loaded-gadget.png`,
-  the poll's day word 10 at that moment), where ours letters .NET's short date, "1/6/2002" on 6 January
-  (`ParkGadget.ShowDate`, `ToShortDateString`, so it follows the computer's culture). Decoded (run 6 review):
-  `FUN_004a0e30` letters UITEXT row `0x1c0` (448, `{17}.{16}.{18}` in the american tables, `saves.md`, the Load Park
-  rows) into a buffer of `0x1f` (the call at `0x004a0ea1`), token 16 the day, 17 the month (1-based, the +1 at
-  `0x0048156c`) and 18 the year + 1900: month.day.year with full stops. It is redrawn on a day's change, from
-  `0x00481570` inside the day-changed block (the call at `0x004f83ac`), and once at set-up (`0x0048166f`). Ours draws `GameCalendar.Now`,
-  the date of the park's tick (Q149), so the two gadgets show one date in two letterings (`q149/side-by-side.png`). Confirm by both
-  gadgets on one date.
+- [ ] **Q1388. The gadget's date, both gadgets on one date.** Split from Q527, whose lettering is built
+  (`ParkGadget.DateOf`, UITEXT 448 by tokens 16, 17 and 18; `docs/exe/hud.md`, "The date's lettering"). Not
+  photographed: no display, no original in that lane. Confirm by both gadgets on one date, as `q526/side-by-side.png`
+  does: predict the original's "1.10.2002" and ours "10.1.2002" on 10 January 2002 while ours reads the English tables
+  (Q697), the same "1.10.2002" once it reads the american ones. Look too at the lettering's fit in the text rect
+  (182, 1061)-(383, 1103) for the longest date, "12.31.2002", which no frame has shown.
 - [ ] **Q529. A loaded park's weather runs on from the file's.** From Q528 (`saves.md`, "OpenTPW's writer, the weather
   thing"): the original's load reads all of the weather thing over its constructor's (`Weather_Serialise`,
   `0x00512010`) and runs on from it, the rain, the storm, a pending forecast and its due time; ours reads only

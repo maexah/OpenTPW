@@ -1644,27 +1644,28 @@ internal sealed class ParkGadget : UiWindow
 	private bool HiddenNow => ParkCamcorderCameraMode.Active || Stack.Windows.Any( window => window is ParkMapScreen );
 
 	/// <summary>
-	/// The date the park's calendar has reached.
-	///
-	/// <para>
-	/// <b>The format is an approximation, and knowingly one.</b> The original fills this control in
-	/// FUN_004a0e30: it builds the text through FUN_006acca0 from a compiled resource - entry 0x1c0 of
-	/// the bundle at DAT_0078ba94, into a 31-byte buffer - handed three numbered arguments typed 0x10,
-	/// 0x11 and 0x12, which
-	/// are the day, the month and the year. So the layout of the date is <b>the game's own localised
-	/// resource</b>, not the machine's setting: the executable imports no GetDateFormat at all, and
-	/// GetLocaleInfoA/W appear only inside CRT locale code.
-	/// </para>
-	/// <para>
-	/// That entry of that bundle is UITEXT 448, the row the Load Park list writes a save's date with
-	/// (<see cref="ParkFileScreen.DateOf"/>; docs/exe/saves.md). This does not use it: it shows the machine's
-	/// short date, a stand-in and not a match.
-	/// </para>
+	/// The date the park's calendar has reached, lettered as <c>Gadget_SetDateAndTrend</c> (<c>0x004a0e30</c>) letters it:
+	/// see <see cref="DateOf"/>. Written every frame where the original writes it on a day's change and at set-up
+	/// (docs/exe/hud.md, "The money's trend arrow"); the text is the same between the two.
 	/// </summary>
-	private void ShowDate()
+	private void ShowDate() => _date.Text = DateOf( GameCalendar.Now );
+
+	/// <summary>
+	/// A date as the gadget letters it: UITEXT row <c>0x1c0</c> (448) with the day as parameter 16, the month as 17 and
+	/// the year as 18, none padded (the call at <c>0x004a0ea1</c>; docs/exe/hud.md, "The date's lettering"). The row is
+	/// <c>{17}.{16}.{18}</c> in the american tables the original reads, so month.day.year with full stops, and
+	/// <c>{16}.{17}.{18}</c> in the English ones.
+	/// </summary>
+	/// <remarks>
+	/// <b>A deviation:</b> <see cref="Localization"/> reads the English tables (Q697), so with no
+	/// <paramref name="table"/> this letters 10 January 2002 "10.1.2002" where the original letters "1.10.2002". The
+	/// original's 31-byte buffer is not modelled; no date reaches it.
+	/// </remarks>
+	internal static string DateOf( DateTime date, StringFile? table = null )
 	{
-		_date.Text = GameCalendar.Now.ToShortDateString();
-		Unimplemented.Report( "GADGET_DATE_UITEXT_448" );
+		(int, string)[] values = [(16, $"{date.Day}"), (17, $"{date.Month}"), (18, $"{date.Year}")];
+
+		return table is null ? Localization.Format( 448, values ) : Localization.Format( table, 448, values );
 	}
 
 	/// <summary>

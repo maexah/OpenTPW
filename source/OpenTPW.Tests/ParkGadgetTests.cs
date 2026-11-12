@@ -1,3 +1,4 @@
+using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
 using System.Linq;
@@ -122,6 +123,49 @@ public class ParkGadgetTests
 		finally
 		{
 			current.SetValue( Players.Roster, null );
+		}
+	}
+
+	/// <summary>
+	/// <b>The date is UITEXT 448 with the day as parameter 16, the month as 17 and the year as 18, none padded</b>
+	/// (<c>0x004a0ea1</c>): the american row the original reads letters 10 January 2002 "1.10.2002", month.day.year as
+	/// its gadget read it (<c>q526/orig/a-2-loaded-gadget.png</c>), and the English row this game reads "10.1.2002".
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the day and the month swapped; either padded to two digits; the year less 1900; the
+	/// machine's short date.</remarks>
+	[TestMethod]
+	public void TheDateIsLetteredFromRow448()
+	{
+		var american = new StringFile( "Language/american/UITEXT.str" );
+
+		Assert.AreEqual( "1.10.2002", UI.ParkGadget.DateOf( new DateTime( 2002, 1, 10 ), american ) );
+		Assert.AreEqual( "12.31.1999", UI.ParkGadget.DateOf( new DateTime( 1999, 12, 31, 23, 59, 59 ), american ) );
+		Assert.AreEqual( "10.1.2002", UI.ParkGadget.DateOf( new DateTime( 2002, 1, 10 ) ), "the English tables (Q697)" );
+		Assert.AreEqual( "6.1.2002", UI.ParkGadget.DateOf( new DateTime( 2002, 1, 6 ) ) );
+	}
+
+	/// <summary>
+	/// <b>The gadget letters the park's date when it is built</b>: tick 208 is 10 January 2000 (208 x 15,000 / 4 seconds
+	/// is nine days and a little), so "10.1.2000" from the English row, and nothing is counted for it.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the machine's short date; the report put back.</remarks>
+	[TestMethod]
+	public void TheGadgetLettersTheParksDateWhenBuilt()
+	{
+		var counted = Unimplemented.Summary.FirstOrDefault( entry => entry.What == "GADGET_DATE_UITEXT_448" ).Times;
+
+		try
+		{
+			GameCalendar.Rebase( 208 );
+			var gadget = new UI.ParkGadget( AStack() );
+
+			Assert.AreEqual( new DateTime( 2000, 1, 10 ), GameCalendar.Now.Date );
+			Assert.AreEqual( "10.1.2000", Find( gadget.Root, 0x20 ).Text );
+			Assert.AreEqual( counted, Unimplemented.Summary.FirstOrDefault( entry => entry.What == "GADGET_DATE_UITEXT_448" ).Times );
+		}
+		finally
+		{
+			GameCalendar.Rebase();
 		}
 	}
 
