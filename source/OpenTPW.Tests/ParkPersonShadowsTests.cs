@@ -183,11 +183,10 @@ public class ParkPersonShadowsTests
 	/// <summary>
 	/// <b>First person casts the body's own picture</b> (<c>FUN_00589770</c>, <c>0x0058a800</c>), through the code that writes
 	/// the frame: at tier 1 and tier 2 alike, each corner carries the atlas region's own uv (never the silhouette's 0 to 1), the
-	/// colour is black at the darkness alpha, 0x67000000, and the lift is 0.25 (<c>0x2000</c>). At tier 0 none is cast; at tier 2
-	/// in the orbit view none is built.
+	/// colour is black at the darkness alpha, 0x67000000, and the lift is 0.25 (<c>0x2000</c>). At tier 0 none is cast.
 	/// </summary>
 	/// <remarks><b>Mutations:</b> the silhouette's uv or its 0xff989898 colour kept in first person, the orbit view's 0.6 lift,
-	/// the tier-2 case left to the orbit view's count, tier 0 let through, or the choice keyed on tier 1 alone, each fails.</remarks>
+	/// tier 0 let through, or the choice keyed on tier 1 alone, each fails.</remarks>
 	[TestMethod]
 	public void FirstPersonCastsTheBodysOwnPicture()
 	{
@@ -224,7 +223,61 @@ public class ParkPersonShadowsTests
 		}
 
 		WithThreeBodies( 0, true, picture, pool => Assert.AreEqual( 0, pool.ShadowsDrawn.Count, "tier 0 casts none in first person" ) );
-		WithThreeBodies( 2, false, picture, pool => Assert.AreEqual( 0, pool.ShadowsDrawn.Count, "tier 2 in the orbit view is not built" ) );
+	}
+
+	/// <summary>
+	/// <b>High detail in the orbit view casts the body's own picture</b> (<c>SpriteShadow_Draw</c>'s non-<c>0x40000</c> arm,
+	/// Q521), through the code that writes the frame: at tiers 2 and 3 each corner carries the atlas region's own uv, the
+	/// colour is the darkness word 0x67000000, and the lift is the orbit view's 0.6, not first person's 0.25. At tier 1 the
+	/// same view keeps the silhouette's grey and whole texture. Unfogged: the people's draw is handed no fog band outside
+	/// first person, however the park's band is set.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> tier 2 or 3 left uncast in the orbit view, the silhouette's colour or uv kept there, first
+	/// person's 0.25 lift used, the own picture put on tier 1, or the band handed to the orbit view, each fails.</remarks>
+	[TestMethod]
+	public void TheOrbitViewAtHighCastsTheBodysOwnPictureUnfogged()
+	{
+		var picture = new ParkGuestSprites.Region( 0.25f, 0.1f, 0.5f, 0.3f, 38, 50, 22, 42 );
+		var uv = new[] { (0.25f, 0.1f), (0.5f, 0.1f), (0.5f, 0.3f), (0.25f, 0.3f) };
+
+		foreach ( var tier in new[] { 2, 3 } )
+		{
+			WithThreeBodies( tier, false, picture, pool =>
+			{
+				Assert.AreEqual( 3, pool.ShadowsDrawn.Count, $"tier {tier}: one a body in the orbit view" );
+
+				foreach ( var drawn in pool.Drawn )
+				{
+					var index = pool.ShadowsDrawn.ToList().FindIndex( shadow => shadow.Thing == drawn.Thing );
+					Assert.IsTrue( index >= 0, $"thing {drawn.Thing} casts one" );
+
+					var want = new Vertex[4];
+					ParkPersonShadows.Corners( want, new Vector2( drawn.Origin.X, drawn.Origin.Y ), drawn.Width, drawn.Height, drawn.OriginX,
+						drawn.Mirrored, Sun, ( _, _ ) => 0f, ParkPersonShadows.Lift, 0x67000000u, (0.25f, 0.1f, 0.5f, 0.3f) );
+
+					for ( var i = 0; i < 4; ++i )
+					{
+						var got = pool.ShadowsWritten[(index * 4) + i];
+						Assert.AreEqual( want[i].Position.X, got.Position.X, 0.0001f, $"tier {tier} thing {drawn.Thing} corner {i} x" );
+						Assert.AreEqual( want[i].Position.Y, got.Position.Y, 0.0001f, $"tier {tier} thing {drawn.Thing} corner {i} y" );
+						Assert.AreEqual( 0.6f, got.Position.Z, 0.0001f, $"tier {tier} thing {drawn.Thing} corner {i} lifted 0.6" );
+						Assert.AreEqual( 0x67000000u, got.MatFlags, $"tier {tier} corner {i} black at the darkness alpha" );
+						Assert.AreEqual( uv[i], (got.TexCoords.X, got.TexCoords.Y), $"tier {tier} corner {i} the picture's own uv" );
+					}
+				}
+			} );
+		}
+
+		WithThreeBodies( 1, false, picture, pool =>
+		{
+			Assert.AreEqual( 3, pool.ShadowsDrawn.Count );
+			Assert.AreEqual( 0xff989898u, pool.ShadowsWritten[0].MatFlags, "tier 1 keeps the silhouette's grey" );
+			Assert.AreEqual( (0f, 0f), (pool.ShadowsWritten[0].TexCoords.X, pool.ShadowsWritten[0].TexCoords.Y), "and its whole texture" );
+		} );
+
+		var band = FirstPersonFog.ForViewDistance( 1 );
+		Assert.AreEqual( 0f, Level.LinearFogFor( Level.Scene.Park, false, band ).Z, "the orbit view's draw is handed no fog" );
+		Assert.AreEqual( 1f, Level.LinearFogFor( Level.Scene.Park, true, band ).Z, "first person's is" );
 	}
 
 	/// <summary>
@@ -297,11 +350,12 @@ public class ParkPersonShadowsTests
 	}
 
 	/// <summary>
-	/// <b>The shadow pipelines' flags</b>: the silhouette's is the people's, no depth written, multiplied; first person's own
-	/// picture is the people's with no depth written and the default alpha blend, no multiply (<c>0x556</c> | <c>0x800</c>).
+	/// <b>The shadow pipelines' flags</b>: the silhouette's is the people's, no depth written, multiplied; the own picture's,
+	/// first person's and the orbit view's at high, is the people's with no depth written and the default alpha blend, no
+	/// multiply (<c>0x556</c> | <c>0x800</c>).
 	/// </summary>
-	/// <remarks><b>Mutations:</b> the multiply or the depth-write drop taken out of the silhouette's, the multiply put on first
-	/// person's, or its depth write left on, each fails.</remarks>
+	/// <remarks><b>Mutations:</b> the multiply or the depth-write drop taken out of the silhouette's, the multiply put on the
+	/// own picture's, its depth write left on, or the orbit view's own picture given the silhouette's, each fails.</remarks>
 	[TestMethod]
 	public void EachShadowPipelineHasItsFlags()
 	{
@@ -310,6 +364,7 @@ public class ParkPersonShadowsTests
 		Assert.AreEqual( MaterialFlags.None, ParkGuestSprites.OwnPictureShadowMaterial & MaterialFlags.Multiply );
 		Assert.AreEqual( ParkGuestSprites.SilhouetteShadowMaterial, ParkGuestSprites.ShadowMaterialFor( ParkPersonShadows.Kind.Silhouette ) );
 		Assert.AreEqual( ParkGuestSprites.OwnPictureShadowMaterial, ParkGuestSprites.ShadowMaterialFor( ParkPersonShadows.Kind.FirstPersonOwnPicture ) );
+		Assert.AreEqual( ParkGuestSprites.OwnPictureShadowMaterial, ParkGuestSprites.ShadowMaterialFor( ParkPersonShadows.Kind.OrbitOwnPicture ) );
 	}
 
 	/// <summary>
@@ -357,7 +412,7 @@ public class ParkPersonShadowsTests
 	/// <summary>
 	/// <b>Which shadow each tier casts in each view</b>: tier 0 none in either (<c>0x20000</c>); first person (<c>0x80</c>) the
 	/// body's own picture at every other tier, as <c>FUN_00589770</c> never reads <c>0x40000</c>; the orbit view's silhouette at
-	/// 1 and its unbuilt own picture at 2 and 3.
+	/// 1 and its own picture (<c>SpriteShadow_Draw</c>'s non-<c>0x40000</c> arm) at 2 and 3.
 	/// </summary>
 	/// <remarks><b>Mutations:</b> first person keyed on tier 1, tier 0 let through in first person, or the orbit view's tier 2
 	/// given the silhouette, each fails.</remarks>
@@ -368,8 +423,10 @@ public class ParkPersonShadowsTests
 		Assert.AreEqual( ParkPersonShadows.Kind.None, ParkPersonShadows.KindFor( 0, true ) );
 		Assert.AreEqual( ParkPersonShadows.Kind.Silhouette, ParkPersonShadows.KindFor( 1, false ) );
 		Assert.AreEqual( ParkPersonShadows.Kind.FirstPersonOwnPicture, ParkPersonShadows.KindFor( 1, true ) );
-		Assert.AreEqual( ParkPersonShadows.Kind.OwnPictureNotBuilt, ParkPersonShadows.KindFor( 2, false ) );
-		Assert.AreEqual( ParkPersonShadows.Kind.OwnPictureNotBuilt, ParkPersonShadows.KindFor( 3, false ) );
+		Assert.AreEqual( ParkPersonShadows.Kind.OrbitOwnPicture, ParkPersonShadows.KindFor( 2, false ) );
+		Assert.AreEqual( ParkPersonShadows.Kind.OrbitOwnPicture, ParkPersonShadows.KindFor( 3, false ) );
+		Assert.IsFalse( ParkPersonShadows.IsOwnPicture( ParkPersonShadows.Kind.Silhouette ) );
+		Assert.IsTrue( ParkPersonShadows.IsOwnPicture( ParkPersonShadows.Kind.OrbitOwnPicture ) );
 		Assert.AreEqual( ParkPersonShadows.Kind.FirstPersonOwnPicture, ParkPersonShadows.KindFor( 2, true ) );
 		Assert.AreEqual( ParkPersonShadows.Kind.FirstPersonOwnPicture, ParkPersonShadows.KindFor( 3, true ) );
 	}

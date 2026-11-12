@@ -8,8 +8,9 @@ namespace OpenTPW;
 /// <para>
 /// <b>Which picture.</b> The detail file's <c>GraphicalOptions.SPRITESHADOW</c> picks it: 0 draws none, 1 (medium) the
 /// shipped <c>generic/shadow/alphkid</c> silhouette over every person, 2 and 3 the person's own picture
-/// (<c>0x0044da97</c>). Outside first person the own picture is not built: it is counted,
-/// <c>SPRITE_SHADOW_OWN_PICTURE</c>, and draws none. <b>In first person</b> (render bit <c>0x80</c>) the original does not
+/// (<c>0x0044da97</c>). In the orbit view the own picture is <c>SpriteShadow_Draw</c>'s non-<c>0x40000</c> arm: the body's
+/// picture in black at the darkness alpha with the picture's own blend, added through <c>0x00566220</c>, unfogged.
+/// <b>In first person</b> (render bit <c>0x80</c>) the original does not
 /// use the silhouette at all: <c>SpriteList_Draw</c> calls <c>FUN_00589770</c> (<c>0x0058a800</c>) after each body at any tier
 /// but 0, which draws the body's own picture, alpha-blended, black at the darkness alpha
 /// (<see cref="OwnPictureColour"/>), fogged through <c>0x00565f90</c>; <see cref="KindFor"/> picks it.
@@ -86,8 +87,12 @@ internal static class ParkPersonShadows
 		/// <summary>First person's: the body's own picture, alpha-blended in black at the darkness alpha (<c>FUN_00589770</c>).</summary>
 		FirstPersonOwnPicture,
 
-		/// <summary>The own picture of the orbit view at high, not built: counted, <c>SPRITE_SHADOW_OWN_PICTURE</c> (Q521).</summary>
-		OwnPictureNotBuilt
+		/// <summary>
+		/// The orbit view's at tiers 2 and 3 (high): the body's own picture in black at the darkness alpha, the picture's own
+		/// blend and no multiply, unfogged (<c>SpriteShadow_Draw</c>'s non-<c>0x40000</c> arm, <c>0x005899c1</c>, <c>0x00589aec</c>,
+		/// added with <c>0x00566220</c>).
+		/// </summary>
+		OrbitOwnPicture
 	}
 
 	/// <summary>
@@ -100,7 +105,10 @@ internal static class ParkPersonShadows
 		=> tier <= 0 ? Kind.None
 		: firstPerson ? Kind.FirstPersonOwnPicture
 		: tier == 1 ? Kind.Silhouette
-		: Kind.OwnPictureNotBuilt;
+		: Kind.OrbitOwnPicture;
+
+	/// <summary>Whether a <paramref name="kind"/> draws the body's own picture (black at the darkness alpha) rather than the silhouette.</summary>
+	internal static bool IsOwnPicture( Kind kind ) => kind is Kind.FirstPersonOwnPicture or Kind.OrbitOwnPicture;
 
 	/// <summary>
 	/// A person's shadow's four corners: the picture's width across the light at the person's <paramref name="place"/>

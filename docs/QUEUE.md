@@ -1536,13 +1536,15 @@ filed the items that cite it.
   changed with `shadows 0`). Decode where the original draws its marker squares against the sprite list's two passes
   (and whether they write depth over the people's feet, Q477), then order ours to match. Confirm by the locator open on
   Mike in both games, a frame pair with shadows on and off (`lib/shadowdiff.py`).
-- [ ] **Q521. A person's shadow at high detail in the orbit view: their own picture, unfogged.** From Q480, narrowed by
-  the run 4 review (first person's own-picture shadow, `FUN_00589770`, is built: `ParkPersonShadows.KindFor`). `SPRITESHADOW`
-  2 and 3 (`high.sam` sets 2) have `SpriteShadow_Draw`'s non-`0x40000` arm (added with `0x566220`, unfogged) use the
-  person's own picture with the darkness word `0x67000000` as its colour and the picture's own blend (no multiply),
-  counted here `SPRITE_SHADOW_OWN_PICTURE` (`ParkGuestSprites.WriteShadow`) and drawing none. Build it on first person's:
-  add the unfogged orbit kind to `KindFor` and reuse `OwnPictureShadowMaterial`. Confirm at high quality in both games
-  (the original by its Options screen) by a frame pair at one camera.
+- [ ] **Q1588. A person's shadow at high detail in the orbit view, photographed in both games.** Split from Q521, which
+  built it in a cloud container with no display to photograph and no original: at tiers 2 and 3 (`high.sam`) the orbit
+  view's shadow is the body's own atlas picture, black at the darkness alpha (`0x67000000` under the jungle sun), the
+  people's alpha blend with no depth written, lifted 0.6 and unfogged (`ParkPersonShadows.Kind.OrbitOwnPicture`,
+  `ParkGuestSprites.WriteShadow`; `park-engine.md`, "A person's shadow"). Confirm at high quality in both games (the
+  original by its Options screen, ours by `save/Config.tcf`'s quality, `docs/TOOLING.md`, "This game at another graphics
+  quality") by a frame pair at one camera, shadows on and off (`lib/shadowdiff.py`): the shadow is the person's own
+  shape, not `alphkid`'s, leaving about 152/255 (0.596) of the ground under its opaque texels. Also check the one thing the decode
+  leaves to the item's word: that the non-`0x40000` arm sets `0x800` (no depth write) as first person's does.
 - [ ] **Q522. The weather's drops in first person's fog.** From Q485 (`park-engine.md`, "First person's fog"): first person
   fogs every batch under render-word `0x2000`, but whether the rain's and snow's drops go through that batch (the callers
   of `SpriteBatch_AddQuad` include `FUN_0057be90`, `FUN_0057ed50`, `FUN_005860d0`, `FUN_00577ae0` and `FUN_0058a010`, none
