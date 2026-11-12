@@ -331,6 +331,7 @@ public sealed partial class ParkPeople : Entity
 			GuestsInside = () => GateGuestCensus,
 			ScriptFor = scriptFor,
 			TrackTypeOf = TrackTypeOf,
+			ItemOf = ItemOf,
 			StaffById = id => _staff.Find( member => member.ThingId == id ),
 			GuestsNear = GuestsNear,
 			StateGroupsOf = member => BankOf( member.ThingId )?.StateGroupsInUse ?? 0,

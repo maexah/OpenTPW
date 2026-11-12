@@ -99,11 +99,24 @@ public class ParkMechanicRepairTests
 
 	private static int Counted( string gap ) => Unimplemented.Summary.FirstOrDefault( entry => entry.What == gap ).Times;
 
-	private static StaffBehaviour Behaviour( ParkState state, Func<int, RideScript?>? scripts = null, Staff? other = null )
+	private static StaffBehaviour Behaviour( ParkState state, Func<int, RideScript?>? scripts = null, Staff? other = null,
+		ParkItemCatalogue? catalogue = null )
 		=> new( Balance(), new Random( 1 ), state )
 		{
-			ScriptFor = scripts, StaffById = id => other != null && id == other.ThingId ? other : null
+			ScriptFor = scripts, StaffById = id => other != null && id == other.ThingId ? other : null,
+			ItemOf = thing => catalogue != null && catalogue.TryGet( thing.CatalogueId, out var item ) ? item : null
 		};
+
+	/// <summary>The Belly Bounce, item 1100: a ride of <c>Rides.sam</c>'s, whose tiers start at 60, 75 and 90.</summary>
+	private const int Bounce = 13;
+
+	private ParkItemCatalogue Catalogue() => new( "jungle", data );
+
+	private RideScript BounceScript()
+	{
+		using var stream = data.OpenRead( "levels/jungle/rides/bouncy/bouncy.RSE" );
+		return new RideScript( new RideScriptFile( stream ) );
+	}
 
 	/// <summary>Makes searches until the mechanics' cursor names a thing, and fails where it never does.</summary>
 	private static void CursorTo( ParkState state, int thing )
@@ -209,27 +222,27 @@ public class ParkMechanicRepairTests
 
 	/// <summary>
 	/// What the search takes (<c>0x004dac06</c>..<c>0x004dac29</c>): a thing broken down, toilet or not, or one a
-	/// mechanic was called to that is no toilet. Not one condemned, not one operating; one waiting for an upgrade
-	/// is the original's too and is counted here. A called ride posts no message.
+	/// mechanic was called to that is no toilet, or one waiting for an upgrade (<c>FUN_004e03e0</c>). Not one
+	/// condemned, not one operating. A called ride and one waiting for an upgrade post no message (<c>0x004da6bf</c>).
 	/// </summary>
 	[DataTestMethod]
-	[DataRow( Ride, 1, 0, true, 1, 0, DisplayName = "a ride broken down" )]
-	[DataRow( Toilet, 1, 0, true, 1, 0, DisplayName = "a toilet broken down" )]
-	[DataRow( Ride, 0, 1, true, 0, 0, DisplayName = "a ride he was called to: no message" )]
-	[DataRow( Ride, 1, 1, true, 0, 0, DisplayName = "broken and called: no message" )]
-	[DataRow( Toilet, 0, 1, false, 0, 0, DisplayName = "a toilet's call is the handyman's" )]
-	[DataRow( Ride, 0, 0, false, 0, 0, DisplayName = "operating" )]
-	[DataRow( Ride, 4, 0, false, 0, 0, DisplayName = "condemned" )]
-	[DataRow( Ride, 3, 0, false, 0, 0, DisplayName = "never offered" )]
-	[DataRow( Ride, 2, 0, false, 0, 1, DisplayName = "waiting for an upgrade: counted" )]
+	[DataRow( Ride, 1, 0, true, 1, DisplayName = "a ride broken down" )]
+	[DataRow( Toilet, 1, 0, true, 1, DisplayName = "a toilet broken down" )]
+	[DataRow( Ride, 0, 1, true, 0, DisplayName = "a ride he was called to: no message" )]
+	[DataRow( Ride, 1, 1, true, 0, DisplayName = "broken and called: no message" )]
+	[DataRow( Toilet, 0, 1, false, 0, DisplayName = "a toilet's call is the handyman's" )]
+	[DataRow( Ride, 0, 0, false, 0, DisplayName = "operating" )]
+	[DataRow( Ride, 4, 0, false, 0, DisplayName = "condemned" )]
+	[DataRow( Ride, 3, 0, false, 0, DisplayName = "never offered" )]
+	[DataRow( Ride, 2, 0, true, 0, DisplayName = "waiting for an upgrade: no message" )]
+	[DataRow( Toilet, 2, 0, true, 0, DisplayName = "a toilet waiting for an upgrade: his too" )]
 	public void TheSearchTakesTheBrokenAndTheCalled( int thing, int thingState, int requested, bool found,
-		int messages, int upgrades )
+		int messages )
 	{
 		var world = World();
 		var state = new ParkState( world );
 		var (member, walk) = MechanicOn( world, state );
 		var advisor = state.AdvisorMessages = Advisor();
-		var before = Counted( "MECHANIC_UPGRADE_JOB" );
 
 		Change( state, thing, it => it with { State = thingState, RequestedService = requested } );
 
@@ -240,7 +253,6 @@ public class ParkMechanicRepairTests
 		Assert.AreEqual( found ? Mechanic : 0, Thing( state, thing ).AssignedStaff );
 		Assert.AreEqual( messages, advisor.PendingCount );
 		Assert.AreEqual( messages == 1, advisor.Census().Contains( $"slot=70/subject={thing} " ), advisor.Census() );
-		Assert.AreEqual( upgrades, Counted( "MECHANIC_UPGRADE_JOB" ) - before );
 	}
 
 	/// <summary>
@@ -484,32 +496,176 @@ public class ParkMechanicRepairTests
 	}
 
 	/// <summary>
-	/// The arrival's third test (<c>FUN_004da740</c>, <c>0x004da7ca</c>): a ride waiting for an upgrade is work in
-	/// the original, unbuilt here, so arriving at one is counted and he decides; called or not, it is counted, and
-	/// the ride is left waiting. A ride that wants nothing is not counted.
+	/// The arrival's third test (<c>FUN_004da740</c>, <c>0x004da7ca</c>): a ride waiting for an upgrade, asked
+	/// before the State of repair or a call, puts him to work for the item's <c>DurationOfUpgrade</c> of the tier
+	/// above the ride's level (the Belly Bounce's 2 from level nought, 4 from level 1) times his grade's
+	/// <c>WorkDuration</c> (80, 60, 40, 30, 20), not divided by 100 (<c>0x004da3e8</c>..<c>0x004da418</c>). The
+	/// ride is left waiting until the work is done.
 	/// </summary>
 	[DataTestMethod]
-	[DataRow( 2, 0, 1, DisplayName = "waiting for an upgrade: counted" )]
-	[DataRow( 2, 1, 1, DisplayName = "waiting and called: counted, not repaired" )]
-	[DataRow( 0, 0, 0, DisplayName = "operating: not counted" )]
-	public void ArrivingAtARideWaitingForAnUpgradeIsCounted( int rideState, int requested, int counted )
+	[DataRow( 0, 3, 0, 60, DisplayName = "level 0, grade 3: 2 x 30" )]
+	[DataRow( 0, 0, 1, 160, DisplayName = "level 0, grade 0, called: 2 x 80, the call no repair" )]
+	[DataRow( 1, 1, 0, 240, DisplayName = "level 1, grade 1: 4 x 60" )]
+	public void ArrivingAtARideWaitingForAnUpgradeHeWorksForTheNextTier( int level, int grade, int requested, int sweeps )
+	{
+		var world = World();
+		var state = new ParkState( world );
+		var (member, walk) = MechanicOn( world, state, grade );
+		var before = Counted( "MECHANIC_UPGRADE_ARRIVAL" );
+
+		Change( state, Bounce, ride => ride with
+		{
+			State = 2, UpgradeLevel = level, RequestedService = requested, StateOfRepair = 40f
+		} );
+		OnHisWayAtTheEntry( state, member, Bounce );
+
+		Behaviour( state, catalogue: Catalogue() ).Step( member, walk, playing: null, tick: 1001 );
+
+		Assert.AreEqual( StaffActivity.Repairing, member.Activity );
+		Assert.AreEqual( sweeps, member.DurationOfRepair );
+		Assert.AreEqual( Bounce, member.ObjectToRepair, "the job kept" );
+		Assert.AreEqual( 0x12, member.NextAnimation );
+		Assert.AreEqual( 2, Thing( state, Bounce ).State, "still waiting" );
+		Assert.AreEqual( level, Thing( state, Bounce ).UpgradeLevel );
+		Assert.AreEqual( 0, Counted( "MECHANIC_UPGRADE_ARRIVAL" ) - before );
+	}
+
+	/// <summary>
+	/// A ride whose next tier would pass the third (only a save can hold its level at 2 and waiting), or whose item
+	/// is not known, is counted, <c>MECHANIC_UPGRADE_ARRIVAL</c>, and he decides; the ride is left waiting.
+	/// </summary>
+	[DataTestMethod]
+	[DataRow( 2, true, DisplayName = "level 2: no fourth tier" )]
+	[DataRow( 0, false, DisplayName = "no item" )]
+	public void AnUpgradePastTheThirdTierIsCounted( int level, bool known )
 	{
 		var world = World();
 		var state = new ParkState( world );
 		var (member, walk) = MechanicOn( world, state );
 		var before = Counted( "MECHANIC_UPGRADE_ARRIVAL" );
 
-		Change( state, Ride, ride => ride with { State = rideState, RequestedService = requested, StateOfRepair = 40f } );
-		OnHisWayAtTheEntry( state, member, Ride );
+		Change( state, Bounce, ride => ride with { State = 2, UpgradeLevel = level } );
+		OnHisWayAtTheEntry( state, member, Bounce );
 
-		Behaviour( state ).Step( member, walk, playing: null, tick: 1001 );
+		Behaviour( state, catalogue: known ? Catalogue() : null ).Step( member, walk, playing: null, tick: 1001 );
 
-		Assert.AreEqual( counted, Counted( "MECHANIC_UPGRADE_ARRIVAL" ) - before );
-		Assert.AreNotEqual( StaffActivity.Repairing, member.Activity, "no repair's count is started for an upgrade" );
+		Assert.AreEqual( 1, Counted( "MECHANIC_UPGRADE_ARRIVAL" ) - before );
 		Assert.AreEqual( 0, member.DurationOfRepair );
-		Assert.AreEqual( rideState, Thing( state, Ride ).State, "the ride is left as it was" );
-		Assert.AreEqual( StaffActivity.Walking, member.Activity, "the decide ran" );
-		Assert.AreEqual( 0, member.ObjectToRepair, "written by that decide's search" );
+		Assert.AreNotEqual( StaffActivity.Repairing, member.Activity, "the decide ran" );
+		Assert.AreEqual( 2, Thing( state, Bounce ).State );
+		Assert.AreEqual( level, Thing( state, Bounce ).UpgradeLevel );
+	}
+
+	/// <summary>
+	/// The whole job: a grade 3 mechanic arrives at the Belly Bounce waiting at level nought, works 60 sweeps and
+	/// on the next turn finishes it (<c>FUN_004da830</c>): the ride at level 1, opened, its speed, capacity and
+	/// duration tier 1's (75, 7, 30) in the thing and its script, the 400 tier 1 costs withdrawn, his job forgotten
+	/// and his decide made. <c>VAR_BREAKSTAT</c> is not the upgrade's to write.
+	/// </summary>
+	[TestMethod]
+	public void TheUpgradeIsDoneWhenTheWorkRunsOut()
+	{
+		var world = World();
+		var state = new ParkState( world );
+		var (member, walk) = MechanicOn( world, state );
+		var script = BounceScript();
+		var behaviour = Behaviour( state, id => id == Bounce ? script : null, catalogue: Catalogue() );
+		var balance = state.Balance;
+
+		Change( state, Bounce, ride => ride with { State = 2, CanLoad = 0, OperatingDuration = 12 } );
+		script.Set( ParkRideOperation.BreakStatVariable, 5 );
+		OnHisWayAtTheEntry( state, member, Bounce );
+
+		behaviour.Step( member, walk, playing: null, tick: 1001 );
+		Assert.AreEqual( 60, member.DurationOfRepair );
+
+		var left = Until( behaviour, member, walk, StaffActivity.Repairing, 1002 );
+		var ride = Thing( state, Bounce );
+
+		Assert.AreEqual( 1062, left, "60 sweeps counted down, then the end on the 61st" );
+		Assert.AreEqual( 1, ride.UpgradeLevel );
+		Assert.AreEqual( 0, ride.State, "opened" );
+		Assert.AreEqual( 1, ride.CanLoad );
+		Assert.AreEqual( (75, 7, 30), (ride.OperatingSpeed, ride.OperatingCapacity, ride.OperatingDuration) );
+		Assert.AreEqual( (75, 7, 30), (script.Speed, script[ParkRideOperation.CapacityVariable],
+			script[ParkRideOperation.DurationVariable]) );
+		Assert.AreEqual( balance - 400, state.Balance, "tier 1's CostOfUpgrade" );
+		Assert.AreEqual( 5, script[ParkRideOperation.BreakStatVariable], "not written for an upgrade" );
+		Assert.AreEqual( 0, ride.AssignedStaff );
+		Assert.AreEqual( 0, member.ObjectToRepair );
+	}
+
+	/// <summary>
+	/// The upgrade arm from level 1 (<c>FUN_004df8f0</c>): level 2, tier 2's 90, 9 and 30, and its 500 withdrawn; the
+	/// ride's wear and its call forgotten as a repair forgets them. Tier 2's <c>DurationOfUpgrade</c> is not the
+	/// completion's to read.
+	/// </summary>
+	[TestMethod]
+	public void TheSecondUpgradeTakesTheThirdTier()
+	{
+		var state = new ParkState( World() );
+		var script = BounceScript();
+		var balance = state.Balance;
+		var bounce = Catalogue().TryGet( 1100, out var item ) ? item : default;
+
+		Change( state, Bounce, ride => ride with
+		{
+			State = 2, UpgradeLevel = 1, StateOfRepair = 12f, AssignedStaff = Mechanic, RequestedService = 1
+		} );
+
+		ParkRideOperation.Repair( state, script, Bounce, item: bounce );
+
+		var after = Thing( state, Bounce );
+
+		Assert.AreEqual( 2, after.UpgradeLevel );
+		Assert.AreEqual( (90, 9, 30), (after.OperatingSpeed, after.OperatingCapacity, after.OperatingDuration) );
+		Assert.AreEqual( balance - 500, state.Balance );
+		Assert.AreEqual( (100f, 0, 0), (after.StateOfRepair, after.AssignedStaff, after.RequestedService) );
+		Assert.AreEqual( 0, after.State );
+	}
+
+	/// <summary>
+	/// A tier whose own settings are nought leaves the thing's as they were (<c>0x004dfa9b</c>..<c>0x004dfbdf</c>):
+	/// the Jungle Spray, a sideshow whose tiers state none, keeps its 3 and is still paid for, nought.
+	/// </summary>
+	[TestMethod]
+	public void ATierWithNoSettingsLeavesTheThingsOwn()
+	{
+		var state = new ParkState( World() );
+		var balance = state.Balance;
+		var spray = Catalogue().TryGet( Thing( state, Ride ).CatalogueId, out var item ) ? item : default;
+
+		Change( state, Ride, ride => ride with { State = 2, OperatingSpeed = 44, OperatingDuration = 6 } );
+
+		ParkRideOperation.Repair( state, script: null, Ride, item: spray );
+
+		var after = Thing( state, Ride );
+
+		Assert.AreEqual( 1, after.UpgradeLevel );
+		Assert.AreEqual( (44, 3, 6), (after.OperatingSpeed, after.OperatingCapacity, after.OperatingDuration) );
+		Assert.AreEqual( balance, state.Balance );
+	}
+
+	/// <summary>
+	/// <c>Upgrades[tier].DurationOfUpgrade</c> and the later tiers' <c>InitCapacity</c> are read from the item, the
+	/// category's showing through where the item states none; the Belly Bounce's are its <c>Rides.sam</c>'s 0, 2, 4
+	/// and its own 5, 7, 9.
+	/// </summary>
+	[TestMethod]
+	public void TheTiersDurationOfUpgradeAndCapacityAreRead()
+	{
+		var category = new ItemDescriptionFile( "Upgrades[1].DurationOfUpgrade 2\nUpgrades[2].DurationOfUpgrade 4\n"
+			+ "Upgrades[1].InitCapacity 3\nUpgrades[2].InitCapacity 4\n" );
+		var item = new ItemDescriptionFile( "Upgrades[2].DurationOfUpgrade 7\nUpgrades[0].DurationOfUpgrade 1\n"
+			+ "Upgrades[1].InitCapacity 8\n", category );
+
+		CollectionAssert.AreEqual( new[] { 1, 2, 7 }, new[] { 0, 1, 2 }.Select( item.DurationOfUpgradeAt ).ToArray() );
+		CollectionAssert.AreEqual( new[] { 8, 4 }, new[] { 1, 2 }.Select( item.InitCapacityAt ).ToArray() );
+		CollectionAssert.AreEqual( new[] { 0, 2, 4 }, new[] { 0, 1, 2 }.Select( category.DurationOfUpgradeAt ).ToArray() );
+
+		Assert.IsTrue( Catalogue().TryGet( 1100, out var bounce ) );
+		CollectionAssert.AreEqual( new[] { 0, 2, 4 }, new[] { 0, 1, 2 }.Select( bounce.DurationOfUpgradeAt ).ToArray() );
+		CollectionAssert.AreEqual( new[] { 5, 7, 9 }, new[] { 0, 1, 2 }.Select( bounce.InitCapacityAt ).ToArray() );
 	}
 
 	/// <summary>
@@ -702,13 +858,13 @@ public class ParkMechanicRepairTests
 	}
 
 	/// <summary>
-	/// The ride's side (<c>FUN_004df8f0</c>) with no script, and its unbuilt arms: a ride waiting for an upgrade is
-	/// counted and left; a coaster's circuit test is counted.
+	/// The ride's side (<c>FUN_004df8f0</c>) with no script, and its unbuilt arms: a ride waiting for an upgrade
+	/// with no item to read its tier from is counted and left; a coaster's circuit test is counted.
 	/// </summary>
 	[DataTestMethod]
 	[DataRow( 1, 0, 0, 0, DisplayName = "broken down" )]
 	[DataRow( 4, 0, 0, 0, DisplayName = "condemned: opened whatever its state" )]
-	[DataRow( 2, 0, 1, 0, DisplayName = "an upgrade: counted, left" )]
+	[DataRow( 2, 0, 1, 0, DisplayName = "an upgrade with no item: counted, left" )]
 	[DataRow( 1, ItemDescriptionFile.CoasterTrack, 0, 1, DisplayName = "a coaster: the circuit test counted" )]
 	public void TheRepairMendsAndOpensAndCountsWhatItDoesNotBuild( int thingState, int track, int upgrades, int circuits )
 	{

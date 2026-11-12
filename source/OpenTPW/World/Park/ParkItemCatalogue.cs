@@ -169,8 +169,20 @@ public sealed class ParkItemCatalogue
 
 		// What a scrapped object is worth by its age, tier by tier and year by year (tier * 4 + year - 1) -
 		// ItemDescriptionFile.ScrapValueAt. See ScrapValueAt and ParkScrap.
-		IReadOnlyList<int>? ScrapValues = null )
+		IReadOnlyList<int>? ScrapValues = null,
+
+		// The two later tiers' starting capacity and each tier's upgrade length in WorkDurations -
+		// ItemDescriptionFile.InitCapacityAt and DurationOfUpgradeAt. See InitCapacityAt and DurationOfUpgradeAt.
+		int InitCapacity1 = 0, int InitCapacity2 = 0,
+		int DurationOfUpgrade0 = 0, int DurationOfUpgrade1 = 0, int DurationOfUpgrade2 = 0 )
 	{
+		/// <summary>A tier's <c>InitCapacity</c>: tier nought's is <see cref="InitCapacity"/>, nought past the third.</summary>
+		public int InitCapacityAt( int tier ) => tier switch { 0 => InitCapacity, 1 => InitCapacity1, 2 => InitCapacity2, _ => 0 };
+
+		/// <summary>A tier's <c>DurationOfUpgrade</c> - <see cref="ItemDescriptionFile.DurationOfUpgradeAt"/>; nought past the third.</summary>
+		public int DurationOfUpgradeAt( int tier )
+			=> tier switch { 0 => DurationOfUpgrade0, 1 => DurationOfUpgrade1, 2 => DurationOfUpgrade2, _ => 0 };
+
 		/// <summary>A tier's scrap percentage for its <paramref name="year"/>th year (1..4) - <see cref="ItemDescriptionFile.ScrapValueAt"/>; nought where none is stated.</summary>
 		public int ScrapValueAt( int tier, int year )
 			=> ScrapValues is { } values && (uint)tier < ItemDescriptionFile.Tiers && year is >= 1 and <= ItemDescriptionFile.ScrapYears
@@ -453,7 +465,10 @@ public sealed class ParkItemCatalogue
 					EntryCellStandPosX: description.EntryCellStandPosX, EntryCellStandPosY: description.EntryCellStandPosY,
 					ExitCellAppearPosX: description.ExitCellAppearPosX, ExitCellAppearPosY: description.ExitCellAppearPosY,
 					ScrapValues: [.. Enumerable.Range( 0, ItemDescriptionFile.Tiers * ItemDescriptionFile.ScrapYears )
-						.Select( at => description.ScrapValueAt( at / ItemDescriptionFile.ScrapYears, (at % ItemDescriptionFile.ScrapYears) + 1 ) )] );
+						.Select( at => description.ScrapValueAt( at / ItemDescriptionFile.ScrapYears, (at % ItemDescriptionFile.ScrapYears) + 1 ) )],
+					InitCapacity1: description.InitCapacityAt( 1 ), InitCapacity2: description.InitCapacityAt( 2 ),
+					DurationOfUpgrade0: description.DurationOfUpgradeAt( 0 ), DurationOfUpgrade1: description.DurationOfUpgradeAt( 1 ),
+					DurationOfUpgrade2: description.DurationOfUpgradeAt( 2 ) );
 
 			return true;
 		}

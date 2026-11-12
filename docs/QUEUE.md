@@ -551,7 +551,7 @@ filed the items that cite it.
   `RIDE_SPEED_SCALES_WAITS` count went with Q875's `WAIT`). `WAITANIM` is built in the original's order (`RideScript.AnimationWait`: `fdiv`
   `0x00552acd`, `_ftol`, unsigned compare with 300 at `0x00552ad6`; at word 60 a 400 ms clip waits 300, a 1000 ms clip 636), a clip under 300 ms waits one turn here where the original waits days (Alexah's decision, 2026-11-04;
   `WAITANIM_SPEED_WRAP`, counted by Q876). The speed push of an upgrade's completion (`0x004dfabc`, when the new tier's `InitSpeed` is above nought)
-  is counted `RIDE_UPGRADE_COMPLETION` and unbuilt: build it with that item or here. `COAST`'s ride is counted (`COAST_RIDE_SPEED`); the scheduler's channel speed is built (Q1061); whether a Lost Kingdom coaster reaches `COAST` here is unchecked. The unbuilt
+  is built (Q1292, `ParkRideOperation.Repair`). `COAST`'s ride is counted (`COAST_RIDE_SPEED`); the scheduler's channel speed is built (Q1061); whether a Lost Kingdom coaster reaches `COAST` here is unchecked. The unbuilt
   `TRIGANIMSPEED` passes its rate / 1000 × the divisor (`0x00552f6e`), and its deadline, the length × 1000 / its rate,
   does not divide by it. The length a trigger answers does not depend on it (`FUN_00472f60`,
   `0x0047323e`..`0x00473258`).
@@ -1007,16 +1007,23 @@ filed the items that cite it.
   reads the instance's `+0x2c` mesh, whose writer is not read). Confirm: the original under Proton, a height read
   under a point on (47,17) at a Ghidra breakpoint or by its caller, beside the console's `scene 475 175`.
 
-- [ ] **Q1292. A mechanic arriving at a ride that waits for an upgrade does the upgrade's work (from Q272).** Q272 gave
-  `StaffBehaviour.ArriveAtTheRide` the arrival's third test (`FUN_004da740`, `0x004da7ca`) and counts it,
-  `MECHANIC_UPGRADE_ARRIVAL`, sending him to his decide. What state `0xd` counts down for an upgrade is read (`ride-operation.md`, "State `0xd`"):
-  the descriptor's dword at `+0x1fc + 0x40 x` the ride's byte `+0x50` (`0x004da409`), times `WorkDuration`, not divided
-  by 100. Name that descriptor field (0x3c into tier l + 1's record if the records start at `Upgrades[0].CostOfResearch`,
-  `+0x180`) and read it in `ItemDescriptionFile`, then put him to work for it and let `FUN_004df8f0`'s
-  upgrade arm finish it (`RIDE_UPGRADE_COMPLETION`); the search's own `MECHANIC_UPGRADE_JOB` belongs with it. Nothing
-  here puts a ride in state 2 (the Buy Upgrades order is not built, and the stock park is Instant Action), so the path
-  is reached only by a file that holds one. Confirm: a ride put to state 2 with a mechanic on his way, his
-  `mDurationOfRepair` and the ride's level read in both games.
+- [ ] **Q1484. The FileFormats page names `Upgrades[n].DurationOfUpgrade` (the rest of Q1292).** Rule 14: Q1292 named the
+  tier record's last dword (`+0x3c`, descriptor `+0x1bc + 0x40 n`) and read it, but the FileFormats repo was not reachable
+  from cloud lane c91. Write the key's meaning on the item `.sam` page (a mechanic's upgrade takes
+  `DurationOfUpgrade[l + 1] x WorkDuration` sweeps; every `Rides.sam` gives 0, 2, 4, no item overrides it) and the tier
+  record's sixteen offsets as `docs/exe/ride-operation.md`, "State `0xd`", gives them.
+
+- [ ] **Q1485. Q1292 confirmed in Ghidra, in both games and on screen (desk lane; the rest of Q1292).** Cloud lane c91 had
+  no Ghidra, no original and no photograph. Read in Ghidra: the schema record at `0x00744b30` whose offset is `0x3c` in
+  an `Upgrades` tier is `DurationOfUpgrade`; the write at `0x004df966` is the level plus one; the order of the upgrade
+  arm's writes (`0x004df966`..`0x004dfbdf`). Then the stock park with the Belly Bounce written to state 2
+  (`parkfile.thing_set( src, dst, 13, 200, '<i', 2 )`) loaded in both games: mechanic 26's `mDurationOfRepair` on his
+  arrival (60 here), the sweeps to the end, the ride's level, speed, capacity and duration and the balance after (level 1,
+  75, 7, 30, 400 less here), and a photograph of the upgraded ride beside the original's.
+
+- [ ] **Q1486. The upgrade's effect when a mechanic finishes one (from Q1292).** `FUN_004df8f0` starts a sprite on an
+  upgrade's completion (`0x004dfa54`, through the world-sprite initialiser; `ride-operation.md`, "The staff turn"), counted
+  here `RIDE_UPGRADE_EFFECT`. Read which sprite, where and for how long, build it, and photograph it beside the original's.
 
 - [ ] **Q1268. A node's direction words compared with the original's (the rest of Q273).** From Q273, split in cloud lane
   c37 (no original there). A type 2 particle record's emitter words, written by ours and by the original from the same

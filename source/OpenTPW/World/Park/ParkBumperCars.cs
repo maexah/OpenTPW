@@ -429,7 +429,7 @@ public sealed class ParkBumperCars
 	/// The scheduler's push of a script's speed word into its ride (<c>0x00551844</c>), made at every due visit of a script whose
 	/// thing has a track ride (a visit not due jumps over it): <see cref="SetPerformance"/> on the word, clamped there to 0-100
 	/// (<see cref="RideScriptScheduler.Advance"/>). The word is the script's own (<see cref="RideScript.Speed"/>, Q155), so a
-	/// speed the ride window writes reaches the ride at the script's next due visit (an upgrade's write is counted as <c>RIDE_UPGRADE_COMPLETION</c>), and a loaded one starts at the file's.
+	/// speed the ride window writes reaches the ride at the script's next due visit (and so does an upgrade's completion, <see cref="ParkRideOperation.Repair"/>), and a loaded one starts at the file's.
 	/// </summary>
 	internal void PushSpeedWord( int handle, int word ) => SetPerformance( handle, word );
 

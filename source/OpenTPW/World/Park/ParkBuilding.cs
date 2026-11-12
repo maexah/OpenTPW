@@ -404,19 +404,31 @@ public static class ParkBuilding
 	/// lowered (an Arcade's 5 at 3).
 	/// </remarks>
 	internal static (int Speed, int Capacity, int Duration) StartingSettings( ParkItemCatalogue.Item item )
+		=> SettingsAt( item, 0 );
+
+	/// <summary>
+	/// The speed, capacity and duration a tier starts a ride at, by <see cref="StartingSettings"/>'s rules: the
+	/// constructor's for tier nought, and an upgrade's completion's for the tier it reaches (<c>FUN_004df8f0</c>,
+	/// <c>0x004dfa9b</c>..<c>0x004dfbdf</c>; <c>docs/exe/ride-operation.md</c>, "A coaster's, a track ride's and an
+	/// upgraded ride's excitement"). Nought where the tier's own is not above nought.
+	/// </summary>
+	/// <param name="tier">0, 1 or 2.</param>
+	internal static (int Speed, int Capacity, int Duration) SettingsAt( ParkItemCatalogue.Item item, int tier )
 	{
-		var speed = item.InitSpeed > 0 ? item.InitSpeed : 0;
+		var (initSpeed, initDuration) = item.StartingAt( tier );
+		var initCapacity = item.InitCapacityAt( tier );
+		var speed = initSpeed > 0 ? initSpeed : 0;
 		var capacity = 0;
 
-		if ( item.InitCapacity > 0 )
+		if ( initCapacity > 0 )
 		{
-			capacity = item.InitCapacity & 0xff;
+			capacity = initCapacity & 0xff;
 
 			if ( item.MinCapacity + item.MaxCapacity > 0 )
 				capacity = Held( capacity, item.MinCapacity, item.MaxCapacity );
 		}
 
-		var duration = item.InitDuration > 0 ? Held( item.InitDuration & 0xff, item.MinDuration, item.MaxDuration ) : 0;
+		var duration = initDuration > 0 ? Held( initDuration & 0xff, item.MinDuration, item.MaxDuration ) : 0;
 
 		return (speed, capacity, duration);
 

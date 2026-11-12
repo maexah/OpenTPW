@@ -1002,18 +1002,33 @@ public sealed class ParkRideOperation
 	/// (<see cref="Open(ParkState, RideScript?, int)"/>).
 	/// </summary>
 	/// <remarks>
-	/// <b>Not built, each counted.</b> On a ride waiting for an upgrade (state 2) the original raises its level
-	/// and writes the tier's speed, capacity and duration in the broken arm's place: <c>RIDE_UPGRADE_COMPLETION</c>,
-	/// and the ride is left as it is. After opening, a ride on a type 3 track whose circuit is not closed is shut
+	/// <para>
+	/// <b>A ride waiting for an upgrade</b> (state 2) takes the upgrade arm in the broken arm's place: its level
+	/// (<c>+0x50</c>) one higher (<c>0x004df966</c>), the new tier's <c>CostOfUpgrade</c> withdrawn
+	/// (<c>0x004dfa96</c>), and the new tier's speed, capacity and duration held as the constructor holds them
+	/// (<see cref="ParkBuilding.SettingsAt"/>, <c>0x004dfa9b</c>..<c>0x004dfbdf</c>), each written to the thing and
+	/// its script only where the tier's own is above nought; <see cref="BreakStatVariable"/> is not written.
+	/// The upgrade's effect sprite (<c>0x004dfa54</c>) is not drawn: <c>RIDE_UPGRADE_EFFECT</c>. A level that would
+	/// pass the third tier, which only a save can hold, or no item to read, is counted and the ride left as it is:
+	/// <c>RIDE_UPGRADE_COMPLETION</c>.
+	/// </para>
+	/// <para>
+	/// <b>Not built, counted.</b> After opening, a ride on a type 3 track whose circuit is not closed is shut
 	/// again (<c>0x004dfd1e</c>): <c>OPEN_GUARD_COASTER_TRACK_RECORD</c>, as <see cref="MayOpen"/> counts it.
+	/// </para>
 	/// </remarks>
 	/// <param name="trackType">The item's <c>TrackType</c>.</param>
-	public static void Repair( ParkState state, RideScript? script, int thingId, int trackType = 0 )
+	/// <param name="item">The thing's item, which an upgrade's completion reads its new tier from.</param>
+	public static void Repair( ParkState state, RideScript? script, int thingId, int trackType = 0,
+		ParkItemCatalogue.Item? item = null )
 	{
 		if ( !state.TryObject( thingId, out var thing ) )
 			return;
 
-		if ( thing.State == 2 )
+		var upgrading = thing.State == 2;
+		var level = (byte)thing.UpgradeLevel + 1;
+
+		if ( upgrading && (item == null || level >= ItemDescriptionFile.Tiers) )
 		{
 			Unimplemented.Report( "RIDE_UPGRADE_COMPLETION" );
 
@@ -1023,13 +1038,63 @@ public sealed class ParkRideOperation
 		Log.Info( $"Object {thingId}: repairing fully, State of repair {thing.StateOfRepair:R} to 100" );
 
 		script?.Set( WornVariable, 0 );
-		state.ReplaceObject( thing with { StateOfRepair = 100f, AssignedStaff = 0, RequestedService = 0 } );
-		script?.Set( BreakStatVariable, 0 );
+		thing = thing with { StateOfRepair = 100f, AssignedStaff = 0, RequestedService = 0 };
+
+		if ( upgrading && item is { } known )
+			thing = Upgraded( state, script, thing, known, level );
+
+		state.ReplaceObject( thing );
+
+		if ( !upgrading )
+			script?.Set( BreakStatVariable, 0 );
 
 		Open( state, script, thingId );
 
 		if ( trackType == ItemDescriptionFile.CoasterTrack )
 			Unimplemented.Report( "OPEN_GUARD_COASTER_TRACK_RECORD" );
+	}
+
+	/// <summary>
+	/// <see cref="Repair"/>'s upgrade arm (<c>FUN_004df8f0</c>, <c>0x004df966</c>..<c>0x004dfbdf</c>): the thing
+	/// at <paramref name="level"/>, the tier paid for, and the tier's starting settings where they are above nought.
+	/// </summary>
+	private static ParkWorld.CatalogueObject Upgraded( ParkState state, RideScript? script,
+		ParkWorld.CatalogueObject thing, ParkItemCatalogue.Item item, int level )
+	{
+		Unimplemented.Report( "RIDE_UPGRADE_EFFECT" );
+
+		var cost = item.UpgradeCostAt( level );
+
+		state.Spend( cost );
+
+		var (speed, capacity, duration) = ParkBuilding.SettingsAt( item, level );
+
+		thing = thing with { UpgradeLevel = level };
+
+		if ( speed > 0 )
+		{
+			thing = thing with { OperatingSpeed = speed };
+
+			if ( script != null )
+				script.Speed = speed;
+		}
+
+		if ( capacity > 0 )
+		{
+			thing = thing with { OperatingCapacity = capacity };
+			script?.Set( CapacityVariable, capacity );
+		}
+
+		if ( duration > 0 )
+		{
+			thing = thing with { OperatingDuration = duration };
+			script?.Set( DurationVariable, duration );
+		}
+
+		Log.Info( $"Object {thing.ThingId}: upgraded to level {level}, cost {cost}, SPEED = {thing.OperatingSpeed}, "
+			+ $"capacity {thing.OperatingCapacity}, DUR = {thing.OperatingDuration}" );
+
+		return thing;
 	}
 
 	/// <summary>
@@ -1336,8 +1401,8 @@ public sealed class ParkRideOperation
 	/// <summary>
 	/// How long a go lasts - <c>VAR_DURATION</c>, which a script only ever reads. It is written beside the
 	/// capacity when a script is bound to a placed object (<see cref="ParkRides"/>) and when the ride window's
-	/// setting is changed. The original's write on an upgrade's completion (<c>FUN_004df8f0</c>, logging
-	/// "DUR = %d") is counted as <c>RIDE_UPGRADE_COMPLETION</c>.
+	/// setting is changed, and on an upgrade's completion (<see cref="Repair"/>; the original's
+	/// <c>FUN_004df8f0</c> logs "DUR = %d").
 	/// </summary>
 	public const string DurationVariable = "VAR_DURATION";
 

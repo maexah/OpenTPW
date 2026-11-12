@@ -630,6 +630,24 @@ public sealed partial class ItemDescriptionFile
 		=> tier == 0 ? InitDuration : _laterInitDuration[tier - 1] ?? _category?.InitDurationAt( tier ) ?? 0;
 
 	/// <summary>
+	/// A tier's starting capacity - <c>Upgrades[tier].InitCapacity</c>, descriptor <c>+0x198 + 0x40 × tier</c>, the
+	/// category's showing through. Tier nought is <see cref="InitCapacity"/>. An upgrade's completion passes the new
+	/// tier's to the capacity setter (<c>FUN_004df8f0</c>, <c>0x004dfaf6</c>).
+	/// </summary>
+	public int InitCapacityAt( int tier )
+		=> tier == 0 ? InitCapacity : _laterInitCapacity[tier - 1] ?? _category?.InitCapacityAt( tier ) ?? 0;
+
+	/// <summary>
+	/// How long upgrading to a tier takes, in a mechanic's <c>WorkDuration</c>s - <c>Upgrades[tier].DurationOfUpgrade</c>,
+	/// the tier record's last dword, descriptor <c>+0x1bc + 0x40 × tier</c>, the category's showing through, nought when
+	/// neither states it. A mechanic arriving at a ride of level <c>l</c> waiting for an upgrade works for tier
+	/// <c>l + 1</c>'s times his grade's <c>WorkDuration</c> (<c>FUN_004da370</c>, <c>0x004da409</c>: <c>+0x1fc + 0x40 l</c>).
+	/// Every <c>Rides.sam</c> gives 0, 2 and 4.
+	/// </summary>
+	public int DurationOfUpgradeAt( int tier )
+		=> _durationOfUpgrade[tier] ?? _category?.DurationOfUpgradeAt( tier ) ?? 0;
+
+	/// <summary>
 	/// A tier's queue constant - <c>Upgrades[tier].QueueWaitTimeConstant</c>, the float at descriptor
 	/// <c>+0x1b4 + 0x40 × tier</c>, the category's showing through, nought when neither states it. The longest queue a
 	/// guest joins or stays in is scaled by it (<c>FUN_004dda40</c>, <c>0x004ddac9</c>).
@@ -772,6 +790,8 @@ public sealed partial class ItemDescriptionFile
 	private int? _initDuration;
 	private readonly int?[] _laterInitSpeed = new int?[Tiers - 1];
 	private readonly int?[] _laterInitDuration = new int?[Tiers - 1];
+	private readonly int?[] _laterInitCapacity = new int?[Tiers - 1];
+	private readonly int?[] _durationOfUpgrade = new int?[Tiers];
 	private readonly float?[] _queueWaitTimeConstant = new float?[Tiers];
 	private int? _durationUnit;
 	private int? _redLineSpeed;
@@ -1303,6 +1323,28 @@ public sealed partial class ItemDescriptionFile
 
 				case "Upgrades[2].InitDuration":
 					_laterInitDuration[1] = Number( line );
+					break;
+
+				// The later tiers' starting capacity, which an upgrade's completion sets the ride to.
+				case "Upgrades[1].InitCapacity":
+					_laterInitCapacity[0] = Number( line );
+					break;
+
+				case "Upgrades[2].InitCapacity":
+					_laterInitCapacity[1] = Number( line );
+					break;
+
+				// How long each tier's upgrade keeps a mechanic at work.
+				case "Upgrades[0].DurationOfUpgrade":
+					_durationOfUpgrade[0] = Number( line );
+					break;
+
+				case "Upgrades[1].DurationOfUpgrade":
+					_durationOfUpgrade[1] = Number( line );
+					break;
+
+				case "Upgrades[2].DurationOfUpgrade":
+					_durationOfUpgrade[2] = Number( line );
 					break;
 
 				// Each tier's queue constant, a float, which the longest queue is scaled by.
