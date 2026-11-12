@@ -349,8 +349,8 @@ public class ParkStrandedTests
 	}
 
 	/// <summary>
-	/// A queue measured again stamps its new back cell's block (<c>FUN_004de1f0</c>, <c>0x004de266</c>) with the
-	/// counter value taken before the measure.
+	/// A queue measured again stamps its new back cell's block (<c>FUN_004de1f0</c>, <c>0x004de266</c>) with the one
+	/// counter value it takes, after the measure (<c>0x004de233</c>).
 	/// </summary>
 	[TestMethod]
 	public void AQueueMeasuredAgainStampsItsBackCellsBlock()
@@ -369,7 +369,8 @@ public class ParkStrandedTests
 
 			state.RemeasureQueue( bounce.ThingId );
 
-			Assert.IsTrue( state.BlockStamp( 49, 22 ) > before );
+			Assert.AreEqual( before + 1, ParkState.Counter, "one counter value a remeasure" );
+			Assert.AreEqual( ParkState.Counter, state.BlockStamp( 49, 22 ), "and it is the back cell's stamp" );
 			Assert.AreEqual( 0u, state.BlockStamp( 47, 22 ), "and no other block's" );
 		}
 		finally

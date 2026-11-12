@@ -416,7 +416,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004ddd7d` | `FUN_004ddd20`: the `VAR_LETMEON` clear (to here) | OpenTPW.Tests/ParkQueueRemeasureTests.cs OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004ddde9` | `FUN_004ddd20`: with no `mQPrev` the leaver's `mQNext` becomes `mFirstInQ` | OpenTPW.Tests/ParkQueueJoinTests.cs OpenTPW.Tests/ParkQueueTurnTests.cs OpenTPW/World/Park/ParkRideOperation.cs OpenTPW/World/Park/ParkState.cs  |
 | `0x004ddfa9` | `FUN_004ddf50` (GetPositionInQueue) gives up at a guest no longer queueing | OpenTPW.Tests/ParkQueueRemeasureTests.cs OpenTPW/World/Park/ParkState.cs  |
-| `0x004de233` | | OpenTPW/World/Park/ParkState.cs  |
+| `0x004de210` | `FUN_004de1f0` measures the queue again (`FUN_004de130`), before it takes the counter | OpenTPW/World/Park/ParkState.cs  |
+| `0x004de233` | `FUN_004de1f0` takes the counter (`FUN_004d8c50`), after the measure | OpenTPW.Tests/ParkStrandedTests.cs OpenTPW/World/Park/ParkState.cs  |
 | `0x004de266` | `FUN_004de1f0` calls `FUN_004d8c60`, a write into a coarse grid at the back cell's block | OpenTPW.Tests/ParkStrandedTests.cs OpenTPW/World/Park/ParkState.cs  |
 | `0x004de2b9` | `FUN_004de1f0`'s queue walk skips the object's nominee | OpenTPW.Tests/ParkQueueRemeasureTests.cs OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004de2bd` | `FUN_004de1f0`'s queue walk reads each `mQNext` before the call | OpenTPW/World/Park/ParkPeople.cs  |

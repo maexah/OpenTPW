@@ -12145,6 +12145,15 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q290. The queue's stamp is taken before the queue is measured, where the original measures first.** From
+  the week-end audit (stage 8, the older decode read a second time from the listing; verified once, not reproduced
+  in the game). `ParkState` takes `NextCounter()` before `InvalidateQueue` and the back-cell lookup, and its
+  comment says so, where the executable measures the queue first and takes the counter after (`ride-operation.md`,
+  the row for the queue's remeasure). `OpenTPW/World/Park/ParkState.cs`, line 1688. Confirm: the back cell's stamp
+  read in both games after one queue edit.
+  - **Done 2026-11-12 (cloud lane c47):** `ParkState.RemeasureQueue` measures, then takes the counter, then writes the
+    back cell's block; it logs the original's "queue is now N cells long" with the back and the stamp, and the console's
+    `cell` reply prints the cell's block stamp. In this game only: the original's side is Q1308.
 
 ## B. Docs and comments
 

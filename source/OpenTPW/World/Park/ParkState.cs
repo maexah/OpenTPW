@@ -2402,19 +2402,23 @@ public sealed class ParkState
 		if ( objectId == 0 )
 			return;
 
-		// The counter is taken before the measure and written into the new back cell's block after it
-		// (0x004de233, 0x004de266), so a queue edit frees its stranded guests.
-		var stamp = NextCounter();
-
 		InvalidateQueue( objectId );
 
-		if ( TryObject( objectId, out var thing ) && ParkRideChoice.QueueCellsFor( _park, thing ) is (var back and not 0, _) )
+		var (back, cells) = TryObject( objectId, out var thing ) ? ParkRideChoice.QueueCellsFor( _park, thing ) : (0, 0);
+
+		// The queue is measured first (FUN_004de130, 0x004de210), then the counter is taken (0x004de233) and
+		// written into the new back cell's block (0x004de266), so a queue edit frees its stranded guests.
+		var stamp = NextCounter();
+
+		if ( back != 0 )
 		{
 			var (x, y) = MapStep.CellAt( back );
 
 			if ( OnMap( x, y ) )
 				_blockStamps[((y >> 4) * BlocksASide) + (x >> 4)] = stamp;
 		}
+
+		Log.Info( $"Queue: object {objectId}'s queue is now {cells} cells long, back {back}, stamp {stamp}" );
 
 		QueueRemeasured?.Invoke( objectId );
 	}
