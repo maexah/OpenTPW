@@ -1172,7 +1172,8 @@ count from the block's length (`FUN_005597a0`, `0x00559d3d`..`0x00559da7`; FileF
 
     ADDHEAD(56)  00554c3e  operand resolved (variable, or the literal sign-extended). +0x30 null -> nothing.
                            no slot holding 0 -> nothing. else draw FUN_00516330 on [0x007cf83c], SHR 1, abs,
-                           mod +0x4c, until the slot holds 0 (00554caf..00554ccb): store the visitor, then
+                           mod +0x4c, until the slot holds 0 (00554caf..00554ccb): store the visitor (no
+                           duplicate test: one visitor added twice holds two slots, 00554c8f..00554cd3), then
                            FUN_0044b220( thing, 0x80, slot + 1 ); -1 -> stop, the visitor kept; else
                            FUN_0044b410( model, node, visitor ) hangs the head. No register write.
     DELHEAD(57)  00554d26  +0x30 null or +0x4c <= 0 -> nothing. every slot equal to the visitor: find the
@@ -1247,7 +1248,7 @@ Ten handlers, and **every one reaches another script by ID through one global re
     SPAWNCHILD(63)     00555081  string operand only. Path = frame +0x38 (own directory) + operand.
                                  Loader answers an ID; +0x0c = it; guarded by TEST/JZ. Then finds the
                                  child and copies parent +0x8 -> child +0x10, plus +0xac(word), +0x9c,
-                                 +0xb4, +0xc8. WRITES NO RESULT. Does NOT kill the child it replaces.
+                                 +0xb4, +0xc8 (0x0055516b). WRITES NO RESULT. Does NOT kill the child it replaces.
     SPAWNSOUND(64)     005551ab  same prologue and loader call; stores into +0x14 and stops. NO link
                                  of any kind, and NO guard - a failed load writes 0 into the slot.
     REMOVECHILD(65)    00555263  +0x0c != 0 -> FUN_00559060(id, 0), then +0x0c = 0.
@@ -1265,7 +1266,20 @@ Ten handlers, and **every one reaches another script by ID through one global re
 
 **`FUN_005587f0` RETURNS AN ID, NOT A POINTER** — `puVar7[2] = DAT_008791a8++` and that value is returned. The decompiler makes it look like a `char*` because the same stack slot earlier holds the path buffer. **The counter starts at 1 and is only ever incremented**, so 0 is a reserved failure id and **an id is never reused** — a dead id can only fail to match, never resolve to somebody else. Ids are sequential in load order. The loader also sets `puVar7[0x10] = stackSize - 1`.
 
-**`+0x74` is seeded to -1** (`puVar7[0x1d] = 0xffffffff`) and `FINDSCRIPTRAND` skips a negative, which is what makes "has never run `NAME`" different from "is called whatever is at offset 0"; **31 of the 308 never name themselves**. **`+0x38` keeps its trailing backslash** and the concatenation is a plain `strcat`, so a reimplementation using `Path.Combine` doubles the separator.
+**The loader's frame starts cleared**: `0x3d` dwords, the whole `0xf4`-byte struct a save writes, zeroed at `0x005588a8`,
+before its seeds. **`+0x74` is seeded to -1** (`puVar7[0x1d] = 0xffffffff`, `0x00558c4c`; `NAME` is `0x0055429a`) and `FINDSCRIPTRAND` skips a negative, which is what makes "has never run `NAME`" different from "is called whatever is at offset 0"; **31 of the 308 never name themselves**. **`+0x38` keeps its trailing backslash** and the concatenation is a plain `strcat`, so a reimplementation using `Path.Combine` doubles the separator.
+
+**What a child holds, against OpenTPW** (Q992; the addresses from the fork watch 2026-10-31, `verify-world.md` M11, not
+read again in Ghidra). A child is made by the loader with no thing, so everything it holds past the copy is the cleared
+frame's: no head table at `+0x30`, nothing at `+0x9c`. `RideScript.SpawnChild` copies the parent's id, the thing and the
+model (its player and its nodes) and leaves `+0x9c` (`TOUR`'s record) and `+0xb4` (no reader decoded) uncopied: **dead by
+CONTENT**, measured over the 308 `.RSE` (2026-11-12): the 20 `SPAWNCHILD`s of 16 parents spawn 16 files, none carrying
+`TOUR`, `BUMP`, `COAST`, `ADDHEAD` or `DELHEAD`, and no parent carries `TOUR`, so `+0x9c` is nought at every shipped
+spawn. For the same reason a child has no `TrackRide` or `Bumpers` in OpenTPW, which the engine's `BUMP` would reach
+through the copied thing (`0x0055470b`). `SPAWNSOUND` stores `+0x14` alone (`0x00555255`) and its script holds no thing or
+model in either. A child's speed word is not copied: the scheduler pushes the parent's into it after each due turn
+(`0x00551888`, `RideScriptScheduler`), in both games. Tests: `RideScriptRelativeTests.AChildTakesItsParentsThingAndModelAndNoHeadTableAndASoundScriptTakesNothing`,
+`AChildTakesItsParentsModelNodes`.
 
 **Teardown (`FUN_00559060`) is exactly one level deep**: it resolves `+0x14` first, then `+0x0c`, and calls the **flat** destructor `FUN_00558500` on each — which never reads their own links — then clears its parent's `+0x0c`. **So a grandchild is never killed** and survives holding a parent id that names nobody. Dormant in shipped content: none of the 48 files the corpus spawns spawns anything itself. The same teardown is what the tick loop calls on a script whose PC has gone negative.
 

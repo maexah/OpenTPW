@@ -14053,3 +14053,8 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   capacity and duration as the constructor does. `MECHANIC_UPGRADE_JOB` is gone; the effect sprite is counted,
   `RIDE_UPGRADE_EFFECT`. Off-screen, the stock park with the Belly Bounce written to state 2: mechanic 26 (grade 3)
   found it, worked 60 sweeps and left it at level 1, 75 / 7 / 30, 400 withdrawn. Left: Q1484 to Q1486.
+- [x] **Q992. A script's graph records: the parent copy and the head table's draw.** From the fork watch 2026-10-31 (`verify-world.md` M11,
+  confirmed). `0x0055516b` takes the parent id and copies `+0xac`, `+0x9c`, `+0xb4`, `+0xc8`; `0x00555255` stores only `[parent+0x14]`; the
+  constructor clears `0x3d` dwords (`0x005588a8`); `ADDHEAD` (`0x00554c8f`..`0x00554cd3`) asks for a free slot first, redraws until it gets
+  0 and does no duplicate test; `NAME` is `0x0055429a`, with -1 at `0x00558c4c`. Compare with `RideScript` and `park.md`, "The head
+  table", and file what differs.

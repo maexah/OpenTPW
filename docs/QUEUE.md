@@ -2101,11 +2101,12 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   through `0x007a4610`; `0x0043f4e0` tests the flag (`0x0043f50b`, `0x0043f57b`); `[0x007925d0]` picks a material index stored on the faces
   (`0x0043f5a5`..`0x0043f5bf`), written 1 at `0x00446c1f` and 3 at `0x00446df6`, and a `0x4000` node takes 2. Unread: which texture each index
   names (the fork says `m_erase` and a blue moved-pylon one; unproven). Read these, then build with Q951.
-- [ ] **Q992. A script's graph records: the parent copy and the head table's draw.** From the fork watch 2026-10-31 (`verify-world.md` M11,
-  confirmed). `0x0055516b` takes the parent id and copies `+0xac`, `+0x9c`, `+0xb4`, `+0xc8`; `0x00555255` stores only `[parent+0x14]`; the
-  constructor clears `0x3d` dwords (`0x005588a8`); `ADDHEAD` (`0x00554c8f`..`0x00554cd3`) asks for a free slot first, redraws until it gets
-  0 and does no duplicate test; `NAME` is `0x0055429a`, with -1 at `0x00558c4c`. Compare with `RideScript` and `park.md`, "The head
-  table", and file what differs.
+- [ ] **Q1492. What reads a script frame's `+0xb4`, and the Q992 addresses read in Ghidra.** From Q992 (a cloud lane with no
+  Ghidra). `SPAWNCHILD`'s copy (`0x0055516b`) writes the parent's `+0x9c` (`TOUR`'s record) and `+0xb4` into the child; no reader of a
+  script's `+0xb4` is decoded (`park.md`, "What a child holds, against OpenTPW"). Find its writers and readers; read the other Q992
+  addresses (`0x005588a8` the clear, `0x00558c4c` the -1, `0x0055429a` `NAME`, `0x00554c8f`..`0x00554cd3` the draw) and say in `park.md`
+  whether each holds. Dead by CONTENT in shipped scripts either way (no spawner carries `TOUR`), so nothing to build unless a reader
+  turns up that a child's shipped opcodes reach.
 - [ ] **Q993. What a written park still leaves out: a bought coaster, a kart's cars and pieces' models, and the counted names.** From the
   week-end audit 2026-10-31 (S-D1, S-S1, the Standing count; N8 of the docs sweep). **Done as Q858:** a bought kart or water ride is written whole
   (the object, script, model, footprint cells, the ride's record and sections) and the Standing count is of the objects the file holds
