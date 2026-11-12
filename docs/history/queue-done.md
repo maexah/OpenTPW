@@ -13489,3 +13489,13 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   sea's phase, so wrapping the shared phase at either breaks the other at the wrap. Fix: keep two phases (the sea's
   wrapped at 4 pi, the flags' at 20, both stepped alike from the same `Advance`), say it as a deviation at the site,
   and test that a phase either side of each wrap gives the same wave. Said at `ParkSea.Phase`.
+- [x] **Q535. An empty-hand path click takes the latch from its own pass.** From the run 5 review (Q532 1). Between
+  the press and the release the original runs mode-1 hover passes over the clicked cell, so an empty-hand click on
+  ground whose one cell is unaffordable leaves `DAT_00816d50` 1 (the money arm, `0x00535931`); ours armed (which clears
+  the latch, as the install's pass does at `0x0046d5e8`) and left it 0. Built: `PathStrip` already had the out
+  `latched`; `ParkPathBuilding.RunPath` now takes it and stores it in `ParkBuildMode.RefusalLatched` after the click's
+  `Arm` (said at the site, `ParkBuildMode.Arm`). `AnEmptyHandPathClickLeavesTheLatchOfItsOwnPass` (needing the game):
+  bare (10,10) at 20 with 19 in the bank refuses and latches, with 20 anchors clear; the store dropped and the money
+  test made `<=` each failed it. Off-screen run, pointer held on (10,10): 19 gave `latch 1`, 20 `latch 0`, the store
+  dropped `latch 0`. Not watched in the original (no original in the lane): Q1364. **Done 2026-11-12** (cloud lane c61,
+  `alexah/1040-empty-hand-click-clears-refusal-latch`).

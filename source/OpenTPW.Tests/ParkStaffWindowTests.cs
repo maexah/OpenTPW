@@ -778,6 +778,31 @@ public class ParkStaffWindowTests
 	}
 
 	/// <summary>
+	/// <b>An empty-hand path click leaves the latch its own pass over the clicked cell sets</b>, as the original's hover passes
+	/// between the press and the release do (Q535): bare ground (10,10), one cell at 20, with 19 in the bank refuses on the
+	/// money (<c>0x00535931</c>) and leaves <see cref="ParkBuildMode.RefusalLatched"/> set, though arming the tool cleared it;
+	/// with exactly 20 the cell is affordable, the click anchors and the latch is clear.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> <c>RunPath</c> not storing its latch; the money test <c>Balance &lt;= owed</c>.</remarks>
+	[TestMethod]
+	public void AnEmptyHandPathClickLeavesTheLatchOfItsOwnPass()
+	{
+		var state = Level.Current!.ParkState!;
+
+		state.Spend( state.Balance - 19 );
+		ParkBuildMode.RefusalLatched = false;
+		StringAssert.Contains( Level.Current.ClickWorldAt( 10, 10, 0 ),
+			"path: nothing laid - (10,10) would bring the run to 20 against a balance of 19, so the path tool is put away" );
+		Assert.AreEqual( ParkBuildMode.None, ParkBuildMode.Current );
+		Assert.IsTrue( ParkBuildMode.RefusalLatched, "the click's own pass refused on the money" );
+
+		state.Spend( -1 );
+		Assert.AreEqual( 20, state.Balance );
+		Assert.AreEqual( "world click: path: anchored at (10,10) - click again to lay a run", Level.Current.ClickWorldAt( 10, 10, 0 ) );
+		Assert.IsFalse( ParkBuildMode.RefusalLatched, "one cell at 20 against 20 is affordable" );
+	}
+
+	/// <summary>
 	/// <b>A placement's and the path and queue tools' refused clicks play the same sound <c>0xaf</c>, only where the press
 	/// reached the park</b>: the commit plays it once ahead of its mode switch (<c>0x00524aae</c>), so every tool shares it.
 	/// A click on (43,16), outside the park, arms the path tool and refuses at once; a click on the Belly Bounce's queue

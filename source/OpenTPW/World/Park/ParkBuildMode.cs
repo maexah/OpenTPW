@@ -85,9 +85,8 @@ public static class ParkBuildMode
 
 		// Installing a tool runs a pass under the old mode first, which clears the latch (FUN_0046d5a0, 0x0046d5e8);
 		// putting a tool away installs the idle handler, which runs none. The original's install is followed by hover
-		// passes over the pointer's cell, whose verdicts can set it again before the click lands; here the latch is
-		// not taken from RunPath's own pass over the clicked cell (Q535), so an empty-hand click on one unaffordable cell
-		// reads clear where the original reads set.
+		// passes over the pointer's cell, whose verdicts can set it again before the click lands; here the path click's
+		// own pass stands in for them (ParkPathBuilding.RunPath stores its latch after this Arm).
 		if ( mode != None )
 			RefusalLatched = false;
 
