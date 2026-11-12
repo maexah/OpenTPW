@@ -450,8 +450,21 @@ sends no flags, so the label keeps what it had. The flags `0x4c000` go to the la
 `0x40000` the colour, `0x4000` and `0x8000` the offset's two words). The base `SetText` (`0x0065f645`) runs after it
 (`0x00668d5f`, vtable `+0x24`). The setters `0x00668f5a` and `0x00668f7b`, called only from `FUN_00486660`
 (`0x00486749`, `0x00486751`), set both `+0x14c` and `+0x154` to the caller's colour; a sample of its 59 callers passes (255, 239, 0).
-Which of the park's toggles (the finance and park-info ones) are of this class is inferred, not read from their layouts.
-OpenTPW's `UiControl.TextColour` is one colour with no offset by state (`docs/QUEUE.md` Q1163).
+Which controls are of the class: every layout control of type 2 is a button (`hud.md`, `FUN_0065dd7b`), built by
+`0x006688b3`; a list's headings are type 2 (op `0xc`). Of Lost Kingdom's screens OpenTPW builds, the only buttons lettered
+with a label of their own are the list headings (all-staff, all-items, visitors, hire, buy); the finance and park-status
+screens, whose toggles the fork watch named, are not built (`ParkCategoryScreens.Show`, `FINANCE_SCREEN`,
+`PARK_STATUS_SCREEN`), and the units of the offset's two words were not read.
+
+**OpenTPW** (Q1163): a `UiButton` with `LettersByState` letters by its state (`UiButton.Lettering`): `TextColour` at (0, 0)
+plain or down, `PointerTextColour` at (1, 1) with the pointer on it (down or not), `TextColour` at (2, 1) pressed and not
+down, and disabled as it was last lettered. The offset is taken as the font's own pixels, each drawn as large as the text is
+(`UiText.Nudge`), since the original draws a font at its own size; not checked. A framed list heading (`UiList.AddHeading`
+with a frame) letters by state in the colour handed over for both, (255, 239, 0). Every other button keeps its one
+`TextColour` where it lies: the lobby's new player dialog's two `b_ltoggle` options letter black always, which this class's
+white-then-black does not explain (Q1457). OpenTPW's state numbers are its mesh parts', not the getter's above (Q1458). The debug console's `control <id>` prints a heading's colour as drawn, its offset
+and its state. Run in a cloud container, off-screen (all-staff, `Name` heading 0x10): plain (0, 0), OpenTPW's state 0; the
+pointer on it (1, 1), its state 2 (`Highlighted`); held down (2, 1), its state 3, and the release sorted the list (`sort -1`); off it (0, 0); all in (255, 239, 0).
 
 ## Escape game menu
 

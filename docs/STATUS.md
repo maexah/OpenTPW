@@ -42,10 +42,11 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the maintainer's pre-commit hook: grep it by Q-number.
 
-- **Q527 (the gadget's date lettered from UITEXT 448):** in a cloud container (no Ghidra, no original, no display; the
+- **Q1163 (a text button's lettering changes with its state):** in a cloud container (no Ghidra, no original, no display; the run's output was not kept), `UiButtonLetteringTests` (six, needing no game) pass, and five bugs put back by hand (the pointer tested before pressed, the pressed offset (1, 1), disabled lettered plain, the headings' pointer colour left black, the offset unscaled) each failed one. An off-screen run (`consoledrive.py`, `park jungle`, `screen 4`, the all-staff heading `0x10` "Name", hovered and held by `xdotool` on the window) read `control 10` as `moved (0, 0) by state 0`, then `(1, 1) by state 2`, then `(2, 1) by state 3`, back to `(1, 1)` after the release sorted the list, and `(0, 0)` with the pointer off it, in (255, 239, 0) throughout. Not seen on screen in either game, and the offset's units (taken as the font's pixels) not read: Q1456.
 
 ## Numbers (take counts fresh; these go stale within a day)
 
+- Linux, 2026-11-12, Q1163 (`capped.sh`; six tests added, needing no game; built in a cloud container, re-gated here after Q527): with the game, 5543 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5545; with no game named, 2402 passed, 0 failed, 3143 skipped.
 - Linux, 2026-11-12, Q527 (`capped.sh`; two tests added, needing the game; built in a cloud container, re-gated here after Q1047): with the game, 5537 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5539; with no game named, 2396 passed, 0 failed, 3143 skipped.
 - Linux, 2026-11-12, Q1047 (`capped.sh`; four tests added, needing the game; after Q772): with the game, 5535 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5537; with no game named, 2396 passed, 0 failed, 3141 skipped.
 - Linux, 2026-11-12, Q772 (`capped.sh`; two tests added, one needing the game; built in a cloud container, re-gated here after Q548): with the game, 5531 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5533; with no game named, 2396 passed, 0 failed, 3137 skipped.

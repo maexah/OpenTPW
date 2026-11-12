@@ -538,7 +538,8 @@ public static class DebugConsole
 
 			// Where a control of an open window is on screen, in window pixels, by its id in hex - so that a harness
 			// can `click` the middle of a button rather than work out the virtual screen's anchoring for itself, and what
-			// it letters: a box's text and whether it has the keys, any other control's text, and a lettered control's font, colour and edge. A pure getter.
+			// it letters: a box's text and whether it has the keys, any other control's text, and a lettered control's font, colour (as drawn now) and edge, and
+			// for a button lettered by its state how far its text is moved and the state. A pure getter.
 			case "control":
 				if ( parts.Length < 2 || !int.TryParse( parts[1].Replace( "0x", "" ), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var controlId ) )
 				{
@@ -565,8 +566,9 @@ public static class DebugConsole
 					+ (Hidden( control ) ? " hidden" : "")
 					+ (control is UI.UiButton { Enabled: false } ? " disabled" : "")
 					+ (control.Text is { Length: > 0 } && control is not UI.UiEdit
-						? $" lettered font {control.Font} in ({control.TextColour.R}, {control.TextColour.G}, {control.TextColour.B}) "
+						? $" lettered font {control.Font} in ({control.Lettering.Colour.R}, {control.Lettering.Colour.G}, {control.Lettering.Colour.B}) "
 							+ (control.TextShadow ? "with" : "without") + " the edge"
+							+ (control is UI.UiButton { LettersByState: true } ? $" moved ({control.Lettering.Across}, {control.Lettering.Down}) by state {control.State}" : "")
 						: "") );
 				break;
 

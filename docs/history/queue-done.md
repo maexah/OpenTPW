@@ -13840,3 +13840,15 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   one. Off-screen run: `control 20` read '2.8.2000' at `date=2000-02-08`, and '1.10.2002' after `clock 17055`
   (`date=2002-01-10`); the census had no `GADGET_DATE_UITEXT_448`. The picture is Q1388. **Done
   2026-11-12** (cloud lane c67, `alexah/1046-gadget-date-lettering`).
+- [x] **Q1163. A text button's lettering changes with its state.** From the fork watch 2026-11-12 (`verify-ui-hud.md` H2). A
+  button of class `0x00705a50` letters its label by state (`ui.md`, "A text button's lettering by state"): white at (0, 0)
+  plain or checked, black at (1, 1) with the pointer on it, white at (2, 1) pressed, unchanged disabled; a heading's caller
+  sets both colours to its own (255, 239, 0). Built: `UiButton.LettersByState` and `PointerTextColour`, read through
+  `UiControl.Lettering` (colour and offset) and drawn moved by `UiText.Nudge` in the font's pixels at the drawn scale; a framed
+  list heading (`UiList.AddHeading` with a frame, every list's) letters by state in its own colour for both. Which buttons are
+  of the class: every layout type 2 is (`hud.md`); of the screens built, only the list headings carry a label of their own,
+  and the finance and park-status screens holding the named toggles are not built. Six tests (`UiButtonLetteringTests`, no
+  game needed), five bugs put back by hand each failing one. Off-screen run (all-staff, heading `0x10` "Name", `control 10`):
+  `moved (0, 0) by state 0`, pointer on it `(1, 1) by state 2`, held `(2, 1) by state 3`, the release sorting (`sort -1`),
+  all in (255, 239, 0). Not seen: the picture in either game (no display, no original in the lane: Q1456); the offset's
+  units (taken as font pixels). **Done 2026-11-12** (cloud lane c84, `alexah/1063-text-button-lettering`).

@@ -2183,13 +2183,27 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   what they are, then build them with `WorldParticles`. Not read: whether the draw `0x00546280` runs for a ride out of view,
   and which families reach `FUN_00549db0`. Confirm: Dino Karts or the Hot Pot beside the original's, the cars launched and
   removed, `particles` against `original/emitters.py`.
-- [ ] **Q1163. A text button's lettering changes with its state.** From the fork watch 2026-11-12 (`verify-ui-hud.md` H2). A
-  button of class `0x00705a50` letters its label by state (`ui.md`, "A text button's lettering by state"): white at (0, 0)
-  plain or checked, black at (1, 1) with the pointer on it, white at (2, 1) pressed, unchanged disabled; a heading's caller
-  sets both colours to its own (255, 239, 0). Ours' `UiControl.TextColour` is one colour with no offset by state, so the
-  finance and park-info toggles and the list headings' buttons letter one way always. First read which of Lost Kingdom's
-  buttons are of the class (their layouts' controls), then build the states. Confirm: hover and press one toggle in both
-  games, photographs side by side.
+- [ ] **Q1456. A list heading's lettering by state, photographed beside the original's (from Q1163).** Q1163 moves a framed
+  heading's text (1, 1) font pixels with the pointer on it and (2, 1) pressed, in (255, 239, 0) throughout (`UiButton.Lettering`,
+  `UiText.Nudge`); it was built and read in the console's `control` line in a cloud container, never seen. Hover and hold the
+  all-staff list's "Name" heading in both games (`docs/TOOLING.md`, "Hovering and pressing a control off-screen", for ours) and
+  set the frames side by side: the text moves right and down by the same amount in each, at the same set and scale. If the
+  original's moves by more or less than a font pixel at its scale, the offset's units are not the font's (`ui.md`, "A text
+  button's lettering by state"): read them at `0x0048fc40` and fix `UiText.Nudge`.
+- [ ] **Q1457. The new player dialog's two options letter black always (from Q1163).** `NewPlayerDialog` letters its
+  `b_ltoggle` options "Instant Action" and "Full Simulation" (`0x70d`, `0x70e`) black in every state, and the options screen's
+  lines too. A type-2 button's label is lettered white where it lies and black with the pointer on it unless `FUN_00486660`
+  sets its colours (`ui.md`, "A text button's lettering by state"; the setters' only caller). Read whether the dialog's text
+  is the button's own label or a label control beside it (the lobby dialog's builder, and `0x00668f5a`/`0x00668f7b`'s callers
+  again), and photograph the dialog in the original with the pointer on and off an option. If the class letters it, set
+  `LettersByState` with its colours; if not, say why at the site.
+- [ ] **Q1458. A button's state numbers against the original's getter (from Q1163).** `lobby.md`'s row for `0x00668820` reads
+  the parts as 1 disabled, 2 checked, 3 checked with the pointer on it, 4 pressed, 5 the pointer on it, else 0, the checked
+  bit tested before pressed. `UiButton.State` numbers 2 the pointer on it, 5 down, and pressed with the pointer on it 3 (not 4),
+  and its mesh part is `Frame + State`. Read the getter again: if the row is right, every button's hover and down parts are
+  drawn swapped here unless the meshes' parts are ordered to match, so read a `b_*` mesh's parts beside the original's frames
+  of one button plain, hovered and down; correct whichever is wrong (the row or `State`), and `UiButton.Lettering`'s
+  comment with it.
 - [ ] **Q1165. The arrival manager reads this sweep's rain (from Q570).** From the run 22 review of Q570 (`review22/q570`,
   finding 1). In the original the weather (thing 7) turns in the sweep's walk, before the tail, and the tail's arrival
   manager then reads its drops (`FUN_004cf5b0`, `0x004cf609` World_Weather, `0x004cf60e` `mov ecx,[eax+0x30]`, k 0.8 or 1.2
