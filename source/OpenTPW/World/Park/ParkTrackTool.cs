@@ -744,8 +744,12 @@ public static class ParkTrackTool
 		return Preview( state, type, owner, ParkBuildMode.Anchor, TargetOf( ParkBuildMode.Anchor, x, y ), price );
 	}
 
-	/// <summary>What a run did: whether its last cell was track already (the retile pass answers nought), and what it charged.</summary>
-	public readonly record struct Laid( bool MetTrack, int Charged, int NewPieces );
+	/// <summary>
+	/// What a run did: whether its last cell was track already (the retile pass answers nought), what it charged, and whether
+	/// op <c>0x86</c>'s walk from the mouth met no station (<c>TrackRide_ShapeFromMouth</c> answering 0, so that
+	/// <c>ShapeFromOtherMouth</c> writes the opposite heading, <c>0x0052cd48</c>).
+	/// </summary>
+	public readonly record struct Laid( bool MetTrack, int Charged, int NewPieces, bool MouthOpen = false );
 
 	/// <summary>
 	/// Lays one run from the anchor to its target, pass by pass over every cell, as the click does (<c>0x00526daa</c>..
@@ -846,8 +850,10 @@ public static class ParkTrackTool
 
 		// The mouths' walks (op 0x86, 0x00538ca0): from the mouth with 1, then from the other mouth with 0 where the first met
 		// no station. Every cell of the run asks the same pair of its owner, so one pair stands for them all.
+		var mouthOpen = false;
+
 		if ( owner != 0 && state.Objects.FirstOrDefault( o => MapStep.CellId( o.CellX, o.CellY ) == owner ) is { ThingId: not 0 } ride )
-			ShapeMouths( state, ride.CellX, ride.CellY, ride.Angle, mouthPulses: true, onlyWhereOpen: true );
+			mouthOpen = !ShapeMouths( state, ride.CellX, ride.CellY, ride.Angle, mouthPulses: true, onlyWhereOpen: true ).Mouth.MetStation;
 
 		// The retile (0x00538757..0x005387da): a bend, or a crossing with links, loses its hill flags; every piece but a
 		// station's takes its row and turn again.
@@ -862,7 +868,7 @@ public static class ParkTrackTool
 			state.SetRecord( x, y, Retiled( cell ) );
 		}
 
-		return new Laid( metTrack, charged, pieces );
+		return new Laid( metTrack, charged, pieces, mouthOpen );
 	}
 
 	/// <summary>Sells one thing the way the demolisher does (<c>FUN_00527ee0</c>), and answers the line to show. The running park unless a test stands in.</summary>
@@ -941,9 +947,9 @@ public static class ParkTrackTool
 	/// The circuit's walk, <c>TrackRide_WalkCircuit( check )</c> (<c>FUN_0052a970</c>): from the station's first section
 	/// along the ride's heading in 2-cell steps, straight on through a straight or a crossing and out of a bend the way its
 	/// links leave it, until it is back where it started (1) or meets a cell that is not track or has under two links (0).
-	/// The heading is the turn's way, as it is in the original at every click but one: a click on the mouth while the anchor
-	/// is the mouth walks back towards the other mouth there, laying 1 section where this lays 2 (<c>docs/exe/park.md</c>,
-	/// "The walk"; <c>+0x2c</c> is 0 in both).
+	/// The heading is the turn's way unless <paramref name="heading"/> names another: the closing click on the mouth while
+	/// the anchor is the mouth passes its opposite where the mouth's walk met no station, as the original's
+	/// <c>ShapeFromOtherMouth</c> leaves it (<c>0x0052cd48</c>; <c>docs/exe/park.md</c>, "The walk").
 	/// Unless checking, the ride's sections go first (<see cref="ParkTrackRideTable.ClearSections"/>) and each cell lays
 	/// one: a bend 5 (links north and east), 6 (north, west), 7 (south, west) or 8 (east, south); a crossing 11; a straight
 	/// 9 east-west or 10 north-south, flagged <c>0x10000</c> on the first two cells, the station's. Checking or not, a bend
@@ -962,11 +968,12 @@ public static class ParkTrackTool
 	/// (and, unless checking, at a bend or a crossing), its bits never (<c>0x0052ade3</c>..<c>0x0052af54</c>). So an add-on
 	/// of one piece is never reached, and a later one takes an earlier one's bits.
 	/// </param>
+	/// <param name="heading">The way the walk sets out from the station's first section; the turn's way where null.</param>
 	public static (int Valid, int Steps) WalkCircuit( ParkState state, ParkWorld.CatalogueObject ride, bool check,
-		Action<int, int>? addOnCaps = null )
+		Action<int, int>? addOnCaps = null, byte? heading = null )
 	{
 		var start = ParkTrackPieces.StationOf( ride.CellX, ride.CellY, ride.Angle ).First;
-		var heading = ParkTrackPieces.HeadingOf( ride.Angle );
+		var way = heading ?? ParkTrackPieces.HeadingOf( ride.Angle );
 		var (x, y) = start;
 
 		if ( !ParkState.OnMap( x, y ) )
@@ -1000,7 +1007,7 @@ public static class ParkTrackTool
 			var mask = cell.TrackNeighbours;
 
 			if ( !IsTrack( cell.TrackType ) )
-				heading = 0;
+				way = 0;
 			else
 			{
 				var links = CellEdge.Links( mask );
@@ -1060,29 +1067,29 @@ public static class ParkTrackTool
 				// it leaves by (0x0052b1cc).
 				if ( IsBend( mask ) )
 				{
-					var back = (byte)CellEdge.Opposite( heading );
+					var back = (byte)CellEdge.Opposite( way );
 
 					if ( (back & mask) == 0 )
-						back = heading;
+						back = way;
 
-					heading = (byte)(mask ^ back);
+					way = (byte)(mask ^ back);
 
-					if ( cell.TrackDirection != heading )
+					if ( cell.TrackDirection != way )
 					{
-						state.SetRecord( x, y, Retiled( cell with { TrackDirection = heading } ) );
+						state.SetRecord( x, y, Retiled( cell with { TrackDirection = way } ) );
 						retiled = true;
 					}
 				}
 			}
 
-			if ( heading == 0 || CellEdge.Links( mask ) < 2 )
+			if ( way == 0 || CellEdge.Links( mask ) < 2 )
 				valid = 0;
 
 			// Three links: the walk goes on only where the cell beyond is of some type, and not, heading north, a piece of
 			// track with no links (0x0052b22f..0x0052b280).
 			if ( CellEdge.Links( mask ) == 3 )
 			{
-				var (bx, by) = StepOf( heading );
+				var (bx, by) = StepOf( way );
 
 				if ( !ParkState.OnMap( x + bx, y + by ) )
 					valid = 0;
@@ -1090,12 +1097,12 @@ public static class ParkTrackTool
 				{
 					var beyond = state.Record( x + bx, y + by );
 
-					if ( (IsTrack( beyond.TrackType ) && beyond.TrackNeighbours == 0 && (heading & 0x01) != 0) || beyond.TrackType == 0 )
+					if ( (IsTrack( beyond.TrackType ) && beyond.TrackNeighbours == 0 && (way & 0x01) != 0) || beyond.TrackType == 0 )
 						valid = 0;
 				}
 			}
 
-			var (dx, dy) = StepOf( heading );
+			var (dx, dy) = StepOf( way );
 			(x, y) = (x + dx, y + dy);
 			++step;
 
@@ -1676,7 +1683,15 @@ public static class ParkTrackTool
 		// where [0x008186c0], the queue node the put-down laid (FUN_0052a050), is still set (mode 3 at the entrance's front,
 		// 0x00526f84..0x00527004); ours always puts the tool away and counts nothing here, as it is not known whether the
 		// original's right click leaves that pointer set (FUN_0052f200 writes it nowhere, its eleven writers are in FUN_00524960).
-		var (valid, _) = WalkCircuit( state, ride, check: false );
+		// A click on the mouth while the anchor is the mouth, the mouth's walk meeting no station, walks back towards the other
+		// mouth: op 0x86's ShapeFromOtherMouth wrote the opposite heading there (0x0052cd48); every other closing click walks
+		// the turn's way (docs/exe/park.md, "The walk").
+		var heading = ParkTrackPieces.HeadingOf( ride.Angle );
+
+		if ( anchor == target && mouth == target && laid.MouthOpen )
+			heading = (byte)CellEdge.Opposite( heading );
+
+		var (valid, _) = WalkCircuit( state, ride, check: false, heading: heading );
 
 		Settle( state, park, script, ride.ThingId, trackType, valid );
 

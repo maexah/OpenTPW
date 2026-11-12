@@ -340,6 +340,45 @@ public class ParkTrackToolTests
 		Assert.AreEqual( 5, state.TrackRides.SectionsOf( ride.TrackRide ).Count );
 	}
 
+	/// <summary>
+	/// A bought ride closed at once, the anchor on the mouth and the click on it: the mouth's walk meets no station, so the
+	/// circuit's walk sets out back towards the other mouth and lays the station's first section alone, the original's 1
+	/// (<c>docs/exe/park.md</c>, "The walk"). Walked the turn's way it lays 2. Made to fail by passing the turn's way.
+	/// </summary>
+	[TestMethod]
+	public void AClickOnTheMouthFromTheMouthWalksBackTowardsTheOtherMouth()
+	{
+		var (state, ride) = Standing( 1, 30, 24 );
+		ParkBuildMode.ArmAt( ParkBuildMode.KartTrack, ride.ThingId, 34, 25 );
+		ParkBuildMode.Push( 34, 25 );
+
+		var said = ParkTrackTool.RunOn( state, null, null, ride, 1, 200, 34, 25, true );
+
+		StringAssert.Contains( said, "+0x2c 0" );
+		CollectionAssert.AreEqual( new[] { Section( 9, 1, 30, 25 ) }, state.TrackRides.SectionsOf( ride.TrackRide ).ToArray() );
+	}
+
+	/// <summary>
+	/// Every other closing click walks the turn's way: here a click that does not move the anchor, off the mouth, on an open
+	/// run, lays the station's two, the bend and the straight (4 sections); walked back it would lay 1. Made to fail by
+	/// reversing the heading on every open close that does not move the anchor.
+	/// </summary>
+	[TestMethod]
+	public void AClickThatDoesNotMoveTheAnchorOffTheMouthWalksTheTurnsWay()
+	{
+		var (state, ride) = Standing( 1, 30, 24 );
+		ParkBuildMode.ArmAt( ParkBuildMode.KartTrack, ride.ThingId, 34, 25 );
+		ParkBuildMode.Push( 34, 25 );
+
+		StringAssert.Contains( ParkTrackTool.RunOn( state, null, null, ride, 1, 200, 34, 29, true ), "the anchor moves to (34,29)" );
+
+		var said = ParkTrackTool.RunOn( state, null, null, ride, 1, 200, 34, 29, true );
+
+		StringAssert.Contains( said, "+0x2c 0" );
+		CollectionAssert.AreEqual( new[] { Section( 9, 1, 30, 25 ), Section( 9, 1, 32, 25 ), Section( 7, 0, 34, 25 ), Section( 10, 0, 34, 27 ) },
+			state.TrackRides.SectionsOf( ride.TrackRide ).ToArray() );
+	}
+
 	/// <summary>A crossing lays section 11 and is gone straight through; an add-on's straight lays 12 or 13.</summary>
 	[TestMethod]
 	public void ACrossingAndAnAddOnLayTheirOwnSections()
