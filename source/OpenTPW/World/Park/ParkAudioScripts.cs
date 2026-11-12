@@ -257,6 +257,14 @@ public sealed partial class ParkAudio
 		/// <summary>A plain or music voice's variation, or a chain's newest child's, zero-based, or -1 before its first.</summary>
 		public int Variation { get; set; } = -1;
 
+		/// <summary>
+		/// A chain's own variation (<c>+0x8</c>), zero-based, which its range reads (<see cref="InRange"/>): its set-up's
+		/// draw by weight among all (<c>0x006bbfc5</c> -> <c>FUN_006bc810</c>), noughted by its first child's branch
+		/// (<c>0x006bdb2b</c>), and written by each child of a held chain (<c>0x006c3e00</c>); a chain of any variation's child
+		/// writes nothing into it. -1 for a voice that is not a chain.
+		/// </summary>
+		public int RangeVariation { get; set; } = -1;
+
 		/// <summary>The volume, of a hundred, and the pitch its first sample drew.</summary>
 		public (int Volume, int Pitch) Kept { get; set; }
 
@@ -395,6 +403,10 @@ public sealed partial class ParkAudio
 		}
 		else if ( sound.Chain )
 		{
+			// The chain's set-up draws its own variation by weight among all (0x006bbfc5 -> FUN_006bc810), which its range
+			// reads until a child writes it; its first child is still the effect's first (NextChainChild).
+			sound.RangeVariation = AnyVariation( category.VariationsOf( effect ), -1, _scriptRandom );
+
 			// Out of range at the start, its first child waits for the listener (FUN_006b62b0 ticks it no sooner).
 			if ( Reached( sound ) )
 				NextChainChild( sound );
@@ -417,7 +429,8 @@ public sealed partial class ParkAudio
 
 		Log.Info( $"Park audio: {sound.Owner} started effect {effect} of type {type} (flags 0x{flags:x}, {sound.Kind}) "
 			+ $"sample '{sound.Voice?.Name ?? sound.Clip?.Name}'{(sound.Away ? " held" : "")} volume {sound.Voice?.Volume ?? 0f:0.0000} "
-			+ (sound.Place is { } place ? $"at ({place.X:0},{place.Y:0},{place.Z:0}) range {sound.Voice?.Range ?? 0f:0} gain {sound.Voice?.DistanceGain ?? 0f:0.0000}" : "flat") );
+			+ (sound.Place is { } place ? $"at ({place.X:0},{place.Y:0},{place.Z:0}) range {sound.Voice?.Range ?? 0f:0} gain {sound.Voice?.DistanceGain ?? 0f:0.0000}" : "flat")
+			+ (sound.Chain ? $", its own variation {sound.RangeVariation + 1} of range {sound.Category.VariationsOf( effect )[Math.Max( sound.RangeVariation, 0 )].Range:0}" : "") );
 
 		return ScriptSoundStart.Started;
 	}
@@ -832,11 +845,10 @@ public sealed partial class ParkAudio
 	/// Whether a script voice at <see cref="ScriptVoice.Place"/> is in range of <paramref name="ears"/>, as the sound
 	/// service's pass asks of each voice (<c>FUN_006bca10</c>, from <c>FUN_006b62b0</c>): the squared distance over the
 	/// ground's two axes alone (<c>FUN_006bb9f0</c>) not past the range's square, the range its current variation's
-	/// (<c>FUN_006bc650</c>; a held chain's is its newest child's, which the child's draw writes into it, <c>0x006c3e00</c>).
-	/// <b>Not the original's:</b> a chain of any variation, whose children write nothing into it, and a held chain before
-	/// its first child range by the variation the set-up drew by weight among all (<c>0x006bbfc5</c>), where here they
-	/// range by the newest child's or the first's: of Lost Kingdom's effects only the staff's 188, a held chain, has two
-	/// ranges (its fourth 85, the rest 90). A flat voice is never out of range. Past it the original
+	/// (<c>FUN_006bc650</c>). A chain's is its own (<see cref="ScriptVoice.RangeVariation"/>): before its first child the
+	/// variation its set-up drew by weight among all (<c>0x006bbfc5</c>), then a held chain's newest child's, which the
+	/// child's draw writes into it (<c>0x006c3e00</c>); of Lost Kingdom's effects only the staff's 188, a held chain, has
+	/// two ranges (its fourth 85, the rest 90). A flat voice is never out of range. Past it the original
 	/// flags the voice <c>0x800</c> and gives its channel up (<c>FUN_006bca70</c>), and only a voice in range is ticked
 	/// (slot <c>+0x14</c>): so it makes no child and draws no next sample.
 	/// </summary>
@@ -845,7 +857,7 @@ public sealed partial class ParkAudio
 		if ( sound.Place is not { } place )
 			return true;
 
-		var range = sound.Category.VariationsOf( sound.Effect )[Math.Max( sound.Variation, 0 )].Range;
+		var range = sound.Category.VariationsOf( sound.Effect )[Math.Max( sound.Chain ? sound.RangeVariation : sound.Variation, 0 )].Range;
 		var x = place.X - ears.X;
 		var y = place.Y - ears.Y;
 
@@ -974,6 +986,7 @@ public sealed partial class ParkAudio
 		if ( sound.ListEmpty && sound.Key != 0 && !sound.FirstChildTaken )
 		{
 			sound.Variation = -1;
+			sound.RangeVariation = 0;
 			sound.FirstChildTaken = true;
 		}
 
@@ -987,6 +1000,10 @@ public sealed partial class ParkAudio
 
 		sound.ListEmpty = false;
 		sound.Variation = next;
+
+		if ( sound.Held )
+			sound.RangeVariation = next;
+
 		sound.Kept = HeldSample( headers[next], first: true, sound.Kept, 0, 0, _scriptRandom );
 		sound.Wait = ParkScreams.GapMilliseconds( headers[next], _scriptRandom );
 		sound.NextAt = Time.Now + (sound.Wait / 1000f);

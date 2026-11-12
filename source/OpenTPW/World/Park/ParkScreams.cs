@@ -43,6 +43,13 @@ internal sealed class ParkScreams
 		/// <summary>The variation the newest child played, zero-based; -1 before the first.</summary>
 		public int Variation = -1;
 
+		/// <summary>
+		/// The chain's own variation (<c>+0x8</c>), zero-based, which its range reads (<see cref="InRange"/>): its set-up's
+		/// draw by weight among all (<c>0x006bbfc5</c> -> <c>FUN_006bc810</c>), noughted by its first child's branch
+		/// (<c>0x006bdb2b</c>), then each child's, which the child's draw writes into it (<c>0x006c3e00</c>).
+		/// </summary>
+		public int RangeVariation;
+
 		/// <summary>The time the clock must pass before the next child is made - the newest child's <c>+0x1c</c>.</summary>
 		public float NextAt;
 
@@ -122,9 +129,18 @@ internal sealed class ParkScreams
 	/// <summary>Starts a chain for a script, and makes its first child now, or, out of range, once it is in range.</summary>
 	internal Chain Start( int scriptId, int effect, int band, int level, Vector3 at, float now, int speed = ParkAudio.ScriptSpeed )
 	{
-		var chain = new Chain { Effect = effect, Band = band, Level = level, At = at, Speed = speed };
+		var chain = new Chain
+		{
+			Effect = effect, Band = band, Level = level, At = at, Speed = speed,
+			RangeVariation = Math.Max( ParkAudio.AnyVariation( _variationsOf( effect ), -1, _random ), 0 )
+		};
 
 		_chains[scriptId] = chain;
+
+		var variations = _variationsOf( effect );
+
+		Log.Info( $"Park audio: script {scriptId} scream effect {effect} set up at its own variation {chain.RangeVariation + 1}"
+			+ (variations.Count > 0 ? $" of range {variations[chain.RangeVariation].Range:0}" : "") );
 
 		if ( Reached( scriptId, chain ) )
 			Step( scriptId, chain, now );
@@ -255,16 +271,15 @@ internal sealed class ParkScreams
 	/// the ground's two axes alone (<c>FUN_006bb9f0</c>) not past the range's square. <c>STARTSCREAM</c> gives no range
 	/// (<c>FUN_00551130</c>), so the range is the newest child's variation's, which the child's draw writes into the chain
 	/// (<c>FUN_006bc650</c>, <c>0x006c3e00</c>). Only a voice in range is ticked (slot <c>+0x14</c>, <c>0x006bdae0</c>), so
-	/// out of range a chain makes no child. <b>Not the original's:</b> before its first child the original's ranges by
-	/// the variation its set-up drew by weight among all (<c>0x006bbfc5</c>), and this by the effect's first; every
-	/// variation of every kids' scream is 95, so nothing differs.
+	/// out of range a chain makes no child. Before its first child the range is the variation its set-up drew by weight
+	/// among all (<see cref="Chain.RangeVariation"/>); every variation of every kids' scream is 95, so nothing differs there.
 	/// </summary>
 	internal static bool InRange( Chain chain, IReadOnlyList<SoundCategoryFile.Variation> variations, Vector3 ears )
 	{
 		if ( variations.Count == 0 )
 			return true;
 
-		var range = variations[Math.Clamp( chain.Variation, 0, variations.Count - 1 )].Range;
+		var range = variations[Math.Clamp( chain.RangeVariation, 0, variations.Count - 1 )].Range;
 		var x = chain.At.X - ears.X;
 		var y = chain.At.Y - ears.Y;
 
@@ -279,6 +294,11 @@ internal sealed class ParkScreams
 	private void Step( int scriptId, Chain chain, float now )
 	{
 		var variations = _variationsOf( chain.Effect );
+
+		// The first child's branch noughts the chain's own variation (0x006bdb2b), which the child's draw then writes.
+		if ( chain.Plays == 0 )
+			chain.RangeVariation = 0;
+
 		var next = NextVariation( variations, chain.Variation, ParkAudio.ScreamVolume( chain.Level, chain.Speed ), _random );
 
 		if ( next < 0 )
@@ -290,6 +310,7 @@ internal sealed class ParkScreams
 
 		chain.ListEmpty = false;
 		chain.Variation = next;
+		chain.RangeVariation = next;
 		chain.Gap = gap;
 		chain.NextAt = now + (gap / 1000f);
 		++chain.Plays;

@@ -1152,7 +1152,9 @@ its first channel carried v5 again, then v6 435 ms on (from v5 the zones give 6 
 idles. Out of range at the lap's end (374, 5, 57) it held v1 until it went.
 
 **OpenTPW** (`ParkAudio.InRange`, `Reached`, `SoundAgain`, `ScriptVoice.Away`): a script's plain, music and chain voices
-are asked each frame whether the listener is in range, over the ground's two axes and the current variation's range.
+are asked each frame whether the listener is in range, over the ground's two axes and the current variation's range,
+a chain's its own (`ScriptVoice.RangeVariation`, Q576): its set-up's draw by weight among all until its first child,
+noughted then, and a held chain's newest child's after.
 Away, a plain or music voice's sample is cut and nothing is drawn; in range again its held sample starts at once with a
 silence, a volume and a pitch drawn afresh, and the next follows as before. A chain makes no child away, and one at once on its
 return. Started out of range, a voice holds its first variation (a chain its first child) until it is in range. The
@@ -1170,8 +1172,8 @@ makes no child, its first included. **Measured in the original** (`q564/orig/run
 7 came `0x802` and made none; back, 11 and 81 children. A chain that came `0x802` made its first child (v1) as the camera
 came back. The listener (`voices.py`) stood at the midpoint of the eye and the point looked at, (525, 35, 222), 28 from
 the ride. **OpenTPW** (`ParkScreams.InRange`, `Chain.Away`): each chain is asked each pass, over the ground's two axes and
-its newest child's variation's range, before its first the first variation's (the original's is its set-up's weighted
-draw, `0x006bc810`; every kids' scream variation is 95, so nothing differs); away it makes no child and the one before
+its newest child's variation's range, before its first the variation its set-up drew by weight among all (`Chain.RangeVariation`,
+`0x006bc810`, Q576; every kids' scream variation is 95, so nothing differs); away it makes no child and the one before
 plays out; in range again it makes one at once, the next its wait after; a chain let go by a second start the same. The
 stock park (`q564/confirm.py`, run2, the final binary): near 6 chains and 53 children; away 12 chains, each "out of
 range at (525,250) after 0 child(ren)", and none; back 20, a chain started away "in range again after 0 child(ren)"

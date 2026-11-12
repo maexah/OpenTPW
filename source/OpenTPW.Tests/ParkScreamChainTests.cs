@@ -288,13 +288,12 @@ public class ParkScreamChainTests
 	}
 
 	/// <summary>
-	/// A chain is in range by its newest child's variation's range (<c>FUN_006bc650</c>, which <c>0x006c3e00</c> writes),
-	/// and before its first child by the effect's first variation's: with hand-made variations of 50 and 95, a listener 70
-	/// off is out after a child of the first and in after a child of the second, and out again after one of the first.
-	/// No shipped scream can tell them apart: every kids' scream variation is 95.
+	/// A chain is in range by its own variation's range (<c>FUN_006bc650</c>), which each child's draw writes
+	/// (<c>0x006c3e00</c>): with hand-made variations of 50 and 95, a listener 70 off is out with the first and in with
+	/// the second.
 	/// </summary>
 	[TestMethod]
-	public void AChainIsInRangeByItsNewestChildsVariation()
+	public void AChainIsInRangeByItsOwnVariation()
 	{
 		var variations = new SoundCategoryFile.Variation[]
 		{
@@ -304,13 +303,42 @@ public class ParkScreamChainTests
 		var chain = new ParkScreams.Chain { Effect = 0x47, Band = 1, At = Here };
 		var ears = Here + new Vector3( 70f, 0f, 0f );
 
-		Assert.IsFalse( ParkScreams.InRange( chain, variations, ears ), "before its first child, the first variation's 50" );
+		chain.RangeVariation = 1;
+		Assert.IsTrue( ParkScreams.InRange( chain, variations, ears ), "the second's 95" );
 
-		chain.Variation = 1;
-		Assert.IsTrue( ParkScreams.InRange( chain, variations, ears ), "after a child of the second, its 95" );
+		chain.RangeVariation = 0;
+		Assert.IsFalse( ParkScreams.InRange( chain, variations, ears ), "the first's 50" );
+	}
 
-		chain.Variation = 0;
-		Assert.IsFalse( ParkScreams.InRange( chain, variations, ears ), "after one of the first again, 50" );
+	/// <summary>
+	/// <b>Before its first child a chain ranges by its set-up's draw</b> (<c>0x006bbfc5</c> -> <c>FUN_006bc810</c>, by
+	/// weight among all), not by the effect's first variation, and its first child still plays the first and writes it
+	/// into the chain (<c>0x006bdb2b</c>, <c>0x006c3e00</c>). Hand-made: the first of range 50 and weight 1, the second of
+	/// range 95 and weight a million, a listener 70 off. The set-up draws the second, so the chain is in range at once and
+	/// makes its first child, of the first variation; from then on it ranges by 50 and makes no more.
+	/// </summary>
+	[TestMethod]
+	public void BeforeItsFirstChildAChainRangesByItsSetUpsDraw()
+	{
+		var variations = new SoundCategoryFile.Variation[]
+		{
+			new( 1, 100, 100, 0, 1, [], Range: 50f ),
+			new( 1, 100, 100, 0, 1_000_000, [], Range: 95f ),
+		};
+		var played = new List<int>();
+		var screams = new ParkScreams( _ => variations, ( _, variation ) =>
+		{
+			played.Add( variation );
+			return null;
+		}, () => Here + new Vector3( 70f, 0f, 0f ), new Random( 1 ) );
+
+		var chain = screams.Start( 1, 0x47, 1, 100, Here, 0f );
+
+		Assert.AreEqual( 1, played.Count, "in range by the set-up's 95: its first child at once" );
+		Assert.AreEqual( (0, 0, false), (played[0], chain.RangeVariation, chain.Away), "the effect's first, written into the chain" );
+
+		screams.Pump( 10f );
+		Assert.AreEqual( (1, true), (played.Count, chain.Away), "then out of range by the child's 50" );
 	}
 
 	/// <summary>

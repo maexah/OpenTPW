@@ -952,7 +952,7 @@ public class ScriptSoundTests
 	/// cut as it leaves, it draws nothing until it is back, and then plays the same variation afresh. The Lava Fountain's
 	/// chain 100 makes no child away, its child before playing out, and one at once on its return, not one for each wait
 	/// missed. The staff's held chain 188 started away makes its first child, the effect's first, once in range. The range
-	/// is over the ground alone, and a chain's is its newest child's: 188's variation 4 holds 85 where the others hold 90.
+	/// is over the ground alone, and a held chain's is its newest child's: 188's variation 4 holds 85 where the others hold 90.
 	/// </summary>
 	[TestMethod]
 	public void AVoiceOutOfRangeMakesNothingNext()
@@ -1089,13 +1089,73 @@ public class ScriptSoundTests
 			park.ServeScriptSounds();
 			Assert.AreEqual( (1, 0), (late.Samples, late.Variation), "the first child, the effect's first" );
 
-			// A chain's range is its newest child's: 188's variation 4 holds 85, the others 90.
+			// A chain's range is its own variation's, a held chain's newest child's: 188's variation 4 holds 85, the others 90.
 			var place = staff.Place!.Value;
 
-			staff.Variation = 3;
+			Assert.AreEqual( staff.Variation, staff.RangeVariation, "a held chain's child writes its own" );
+			staff.RangeVariation = 3;
 			Assert.IsFalse( ParkAudio.InRange( staff, place + new Vector3( 87f, 0f, 0f ) ) );
-			staff.Variation = 0;
+			staff.RangeVariation = 0;
 			Assert.IsTrue( ParkAudio.InRange( staff, place + new Vector3( 87f, 0f, 0f ) ) );
+		} );
+
+		Time.Now = nowBefore;
+	}
+
+	/// <summary>
+	/// <b>Before its first child a chain ranges by its set-up's draw</b> (<c>0x006bbfc5</c> -> <c>FUN_006bc810</c>, by
+	/// weight among all), not by the effect's first variation (Q576). The staff's held chain 188 on the End's node 9,
+	/// whose fourth variation (weight 1354 of 65532) holds 85 and the others 90, started away: with the listener then 87
+	/// off, a chain whose set-up drew the fourth stays out of range and makes no child; one that drew another makes its
+	/// first child at once, the effect's first, which it then ranges by.
+	/// </summary>
+	[TestMethod]
+	public void BeforeItsFirstChildTheStaffsChainRangesByItsSetUpsDraw()
+	{
+		var nowBefore = Time.Now;
+		var far = new Vector3( 1000f, 1000f, 0f );
+
+		WithAParksAudio( park =>
+		{
+			Time.Now = 100f;
+
+			var nodes = RideNodes.Load( "levels/jungle/features/end", "End", (BaseFileSystem)FileSystem, false, [] )!;
+
+			ParkAudio.ScriptVoice StartStaff( int id )
+			{
+				var script = new RideScript( Build(
+					Word( Opcode.ADDOBJ ), 7, 9, 188, 41,
+					Word( Opcode.END ) ) ) { Effects = new RideEffects(), Nodes = nodes, Id = id };
+
+				HearFrom( far );
+				script.Turn( 0f );
+
+				return script.Effects!.Records.Single().Sound!;
+			}
+
+			var headers = StartStaff( 920 ).Category.VariationsOf( 188 );
+
+			Assert.AreEqual( (85f, 1354L, 65532L), (headers[3].Range, headers[3].Weight, headers.Sum( header => header.Weight )) );
+			Assert.IsTrue( headers.Where( ( _, index ) => index != 3 ).All( header => header.Range == 90f ) );
+
+			var drawsFourth = Enumerable.Range( 0, 100_000 ).First( seed => ParkAudio.AnyVariation( headers, -1, new Random( seed ) ) == 3 );
+			var drawsOther = Enumerable.Range( 0, 100_000 ).First( seed => ParkAudio.AnyVariation( headers, -1, new Random( seed ) ) != 3 );
+
+			park.ScriptRandom = new Random( drawsFourth );
+			var fourth = StartStaff( 921 );
+
+			park.ScriptRandom = new Random( drawsOther );
+			var other = StartStaff( 922 );
+
+			Assert.AreEqual( (3, true, 0), (fourth.RangeVariation, fourth.Away, fourth.Samples), "the set-up drew the fourth" );
+			Assert.AreNotEqual( 3, other.RangeVariation );
+
+			HearFrom( fourth.Place!.Value + new Vector3( 87f, 0f, 0f ) );
+			park.ServeScriptSounds();
+
+			Assert.AreEqual( (0, true), (fourth.Samples, fourth.Away), "out of range by the fourth's 85" );
+			Assert.AreEqual( (1, false, 0, 0), (other.Samples, other.Away, other.Variation, other.RangeVariation),
+				"in range by 90: its first child, the effect's first, written into the chain" );
 		} );
 
 		Time.Now = nowBefore;

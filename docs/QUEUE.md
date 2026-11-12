@@ -3594,13 +3594,16 @@ state machine.
   first sample's channel and their second's 0 to 10 s apart beyond the first's length, not at once; and the bus's voice
   back in range (waits nought) unchanged. Confirm in both games (`mixer.py`, `voices.py`; ours `scriptsounds` and the
   `Park audio: the land's own ambient 2 ... ms of silence after it` lines, which now print on the first too).
-- [ ] **Q576. A chain's range before its first child, and a chain of any variation's, by the set-up's draw** (optional; reach
-  only the staff's 188). From the run 6 review of Q563 and Q564 (`VERIFY-18.md`, Q563 4, Q564 1). The original's chain of any
-  variation ranges for its whole life by the variation its set-up drew by weight among all (`0x006bbfc5` ->
-  `FUN_006bc810`), its children writing nothing into it, and a held chain does before its first child; ours ranges by the
-  newest child's or the effect's first. Said at `ParkAudio.InRange` and `ParkScreams.InRange`. In Lost Kingdom only the
-  staff's 188 (a held chain, its fourth variation 85 of weight 1354 of 65532, the rest 90) can differ, and only in its
-  start window away. Build: draw the set-up's variation for range alone (kept apart from the first child's variation 1).
+- [ ] **Q1244. Whether a keyed chain of any variation ranges by variation 1 after its first child, and 188's set-up draw in the running game.**
+  From Q576 (a cloud lane, no Ghidra). `audio.md`, "Which variation it plays", reads that the shared tick (`0x006bdae0`)
+  noughts the chain's own variation at its first child where the effect has a key and `0x20` is clear (`0x006bdb10`), and
+  "A script's sounds" that a chain of any variation ranges by its set-up's draw "for its whole life". Q576 built the first
+  reading for both classes (`ScriptVoice.RangeVariation` noughted in `NextChainChild`), so a keyed chain of any variation
+  ranges by its first variation after its first child. Read `0x006bdb10` and the any-variation vtable (`0x0070a970`'s
+  chain) in Ghidra and settle which holds; no Lost Kingdom effect tells them apart (only the held 188 has two ranges).
+  Then confirm 188 in the running game: Q576's stock-park runs (190 s, camera on the Staff Room) never started it, so
+  start it (a staff in the Staff Room) with the listener 87 to 89 from it and read its "its own variation N of range R"
+  start line against whether its first child comes.
 - [ ] **Q578. Whether the land's following voices are heard through a pause in the original.** From the run 6 review (group N, Q558 1's decode, `audio.md`, "The pause substitution"): a voice
   with a rectangle (flag `0x1000`) is moved by `FUN_006bd5f0` to the listener's own height from `[manager + 0x60]`
   (`0x006bd5ff`), and the service's range test ignores height. If `[manager + 0x60]` holds the listener the pause lifts

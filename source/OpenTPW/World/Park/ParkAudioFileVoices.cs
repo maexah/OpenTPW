@@ -191,6 +191,7 @@ public sealed partial class ParkAudio
 		// Then the chain's own set-up draws its variation again by weight among all (0x006bbfc5 -> 0x006bc810), and never
 		// sets 0x20 (0x006bbe93): so the first time its list is empty it starts again from the effect's first variation.
 		sound.Variation = AnyVariation( headers, -1, _scriptRandom );
+		sound.RangeVariation = sound.Variation;
 
 		return (sound, null);
 	}
