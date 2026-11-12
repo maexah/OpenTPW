@@ -13164,3 +13164,14 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   Done 2026-11-12 (cloud lane c24): the `<para>` closed before the next one opens; `DebugWalk` steps
   `WalkSpeed * Time.Delta` each frame, so a paused clock walks nothing and the console's `walk` says so; test
   `TheDebugWalkStepsOnTheFrameTime`, and the walk tests pin a 1/60 s frame.
+- [x] **Q735. A walk rider's saved sprite.** From Q585 5 (VERIFY-14). `ParkPeople.Written` keeps a sprite for a rider of
+  a thing with `mFlags` `0x20` (every walk thing), and `ParkWorld.PutSprite` writes it at the navigator with the
+  picture's height and the person's facing. The original's files (`q585/walkriders-saves.out`, 38 walk slots) hold **no
+  sprite** for the 23 riders the placer hid (carried under action 1 or 4: `FUN_004f9ed0` frees it, handle 0) and, for
+  the other 15, the placer's point with the height above the ground and the slot's facing (`ride-operation.md`, "Where a
+  walk's rider is drawn"). Build it: write the sprite from `ParkGuestSprites.WalkedOnRide` (its point, its height less
+  the ground, the slot's facing) and none for a hidden rider. Harmless to a load in either game (both re-place every
+  frame; the original's hide frees a loaded sprite again; ours ignores the saved place), so this is a byte difference in
+  a park file, not a behaviour. Said at `PutSprite` and in `saves.md` ("A walk's rider is saved with a sprite where the
+  original saves none or another place, a deviation"). Confirm: a park saved with the Mayan Spinner and the Jungle Spray
+  holding riders, the sprite table beside the original's.
