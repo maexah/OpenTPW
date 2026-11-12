@@ -13567,3 +13567,10 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   sweep), as Q285's bullet asked; left out of Q285 because it changes what is drawn (he walks off) and that lane could not
   photograph. Confirm: Alexah's `jungle/New Save.TPWS` (four such handymen) loaded, the `staff` census read before and
   after a few seconds, predicted first; a photograph of one walking off.
+- [x] **Q458. The staff screen's meters average as the original's.** Done 2026-11-12 (cloud lane c63,
+  `alexah/1042-staff-meter-average`). From the week-end audit (D7, `VERIFY-16b.md` Q369 1). Each meter counts every
+  member's `ftol(h) & 0xff`: the kind's an integer mean then `(m << 10) / 100` (`0x004c9cc0`), the all-staff a float mean
+  times 1024 times 0.01f in double (`0x004c7cc0`, `0x00496a7b`): `ParkStaffScreen.KindMeter`, `AllStaffMeter`, five tests in
+  `ParkStaffMetersTests` (892 and 890 where the raw mean read 896; 511 for a mean of 50), four put-back bugs each failing
+  them; off-screen on `park jungle` the meters logged 909 from the bytes 92, 89, 89, 87, 87 (the old rule's 915).
+  `hud.md`, "What the two meters average". Not checked: the rules in Ghidra (none in the lane), the meters on screen.

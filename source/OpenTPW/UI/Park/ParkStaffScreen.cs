@@ -22,8 +22,9 @@ namespace OpenTPW.UI;
 /// <b>The two meters are stat bars in <c>happygrad.wct</c>, not the gauge's skin.</b> <c>FUN_00496620</c> hands
 /// both the stat bars' skin (<c>FUN_00477ff0</c>) with that texture, each inset 8 from its top and bottom
 /// (<c>FUN_00485e30( meter, 0, 8 )</c>) - <c>0x32c</c> the mean over all staff, <c>0x32d</c> the mean over the
-/// chosen kind - and scales each by <c>(v &lt;&lt; 10) / 100</c>, so the bar's full scale is
-/// <b>1024</b> against a percentage.
+/// chosen kind - so the bar's full scale is <b>1024</b> against a percentage. Each averages every member's
+/// <c>__ftol( happiness ) &amp; 0xff</c>, but not alike: the kind's an integer mean then <c>(m &lt;&lt; 10) / 100</c>,
+/// the all-staff a float mean times 1024 times <c>0.01f</c> (<see cref="KindMeter"/>, <see cref="AllStaffMeter"/>).
 /// </para>
 ///
 /// <para>
@@ -271,7 +272,10 @@ internal sealed class ParkStaffScreen : UiWindow
 		// Every member of staff's meter is set once, as the screen opens (FUN_00496620, FUN_004c7cc0): no tab or
 		// timer moves it. A mean over nobody reads nought, as the gadget's gauge does for a park with no guests.
 		if ( ParkPeople.Current is { } people )
-			_allHappiness.Units = Scaled( people.Staff );
+		{
+			_allHappiness.Units = AllStaffMeter( people.Staff.Select( member => member.Happiness ) );
+			Log.Info( $"Staff list: all-staff meter {_allHappiness.Units} from {MeterBytes( people.Staff )}" );
+		}
 	}
 
 	/// <summary>A meter: the stat bars' skin in <c>happygrad.wct</c>, inset 8 from the stream's rect (<c>FUN_00496620</c>).</summary>
@@ -351,8 +355,11 @@ internal sealed class ParkStaffScreen : UiWindow
 			}
 		}
 
-		_kindHappiness.Units = Scaled( people.Staff
-			.Where( member => ParkStaffPool.KindFor( member.Model ) == _kind ) );
+		_kindHappiness.Units = KindMeter( people.Staff
+			.Where( member => ParkStaffPool.KindFor( member.Model ) == _kind )
+			.Select( member => member.Happiness ) );
+		Log.Info( $"Staff list: kind {_kind}, kind meter {_kindHappiness.Units} from "
+			+ MeterBytes( people.Staff.Where( member => ParkStaffPool.KindFor( member.Model ) == _kind ) ) );
 
 		LogOrder();
 	}
@@ -450,13 +457,33 @@ internal sealed class ParkStaffScreen : UiWindow
 			+ (_list.Rows.Count > 0 ? $", row 0 {Census( _list.Rows[0] )}" : "") );
 	}
 
-	/// <summary>A mean happiness on the original's own 0-1024 scale - <c>(v &lt;&lt; 10) / 100</c>.</summary>
-	private static int Scaled( IEnumerable<Staff> staff )
-	{
-		var members = staff.ToList();
+	/// <summary>A member's happiness as both meters count it: the float truncated, then its low byte.</summary>
+	private static int MeterHappiness( float happiness ) => (int)happiness & 0xff;
 
-		return members.Count == 0
-			? 0
-			: (int)(members.Average( member => member.Happiness ) * MeterFull / 100);
+	/// <summary>For the log: the bytes a meter averages, each with the float it was cut from.</summary>
+	private static string MeterBytes( IEnumerable<Staff> staff )
+		=> "[" + string.Join( ", ", staff.Select( member => $"{MeterHappiness( member.Happiness )} ({member.Happiness:0.###})" ) ) + "]";
+
+	/// <summary>
+	/// The chosen kind's meter: the integer mean of every member's <see cref="MeterHappiness"/>, then
+	/// <c>(m &lt;&lt; 10) / 100</c> (<c>FUN_004c9cc0</c>). A kind with nobody reads nought.
+	/// </summary>
+	internal static int KindMeter( IEnumerable<float> happiness )
+	{
+		var values = happiness.Select( MeterHappiness ).ToList();
+
+		return values.Count == 0 ? 0 : ((values.Sum() / values.Count) << 10) / 100;
+	}
+
+	/// <summary>
+	/// The all-staff meter: the mean of every member's <see cref="MeterHappiness"/> as a float, times 1024 times
+	/// <c>0.01f</c> in double and truncated (<c>FUN_004c7cc0</c>, <c>0x00496a7b</c>): <c>0.01f</c> is a little under a
+	/// hundredth, so a mean of 50 reads 511, not 512. A park with no staff reads nought.
+	/// </summary>
+	internal static int AllStaffMeter( IEnumerable<float> happiness )
+	{
+		var values = happiness.Select( MeterHappiness ).ToList();
+
+		return values.Count == 0 ? 0 : (int)((double)values.Sum() / values.Count * MeterFull * (double)0.01f);
 	}
 }
