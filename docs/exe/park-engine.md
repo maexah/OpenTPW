@@ -4550,7 +4550,7 @@ Read 2026-11-12 (Q1105) in `testme.objdump`, and whole in Ghidra (Q1112: named `
 `0x0065d9dd`, flag `+0x48` bit 0). The window's thing is `[0x007c2658]` and its item is `FUN_004dd4e0`, the descriptor
 found by the thing's word `+0xe`. It runs each time the window is given a thing, on opening and on each arrow (`FUN_004ae940`, vtable `+4`, `0x004ae975`; the arrows call it at `0x0048cca5`), and whenever the window's status `+8` changes. That status is
 `FUN_00485f60( thing, 2 )`, compared and stored at `0x004ae0e0`..`0x004ae0fb` (the statuses are in
-[ride-window-door.md](ride-window-door.md)), inside `FUN_004ade40`, the window's refill, which runs only on its 4000 ms timer (`0x004af64c`), after the door's click (`0x004af871`) and at `0x004ae4c3`/`0x004ae50d`: so the verbs and the door follow a status change up to 4 s late, and an `mCanLoad` change with no status change moves no door through `FUN_004ad4e0`. `b_erase` is never touched.
+[ride-window-door.md](ride-window-door.md)), inside `FUN_004ade40`, the window's refill (its vtable `+0x14`, the table at `0x006ffbe8`), which runs on its 4000 ms timer (`0x004af64c`), after a click on the door, the call button or the three other handler cases (`0x004af871`, `0x0048ce6e`, `0x004af73b`/`76c`/`79c`), when given a thing (`0x004ae969`), when the shown ride breaks down or is condemned (`FUN_00481530` -> `FUN_004af9f0`, `0x004afa38`; events 7 and 8, as `queue-done.md` names them, not read here) and at `0x004ae4c3`/`0x004ae50d`: so any other status change (a mechanic assigned, a repair's end, a queue cut) moves the verbs and the door up to 4 s late, and an `mCanLoad` change with no status change moves no door through `FUN_004ad4e0`. `b_erase` is never touched.
 
 - **Status 3, condemned** (`0x004ad509`..`0x004ad5a8`): `UI_SetVisible( 0 )` on the other seven, door, queue, track,
   call-mechanic, move, ride-it and upgrade, and nothing else.
@@ -4566,8 +4566,10 @@ found by the thing's word `+0xe`. It runs each time the window is given a thing,
   - `b_callmech` is set down at statuses `0x11`..`0x15`, the mechanic's, and up at any other (`0x004ad684`..`0x004ad6ac`).
     **`Button_SetDown`** (`0x00668bec`, `this`, the state, a flag) stores the state in the button's byte `+0x138`; when it
     changes and the flag is set, and `DAT_00faa5d4` is not nought, it also queues the button's own message
-    (`UI_QueueMessage( this, 1, 0, 0 )`), which reaches the window's handler as a click would. What the handler then
-    does for `b_callmech` and the door was not read (Q1116).
+    (`UI_QueueMessage( this, 1, 0, 0 )`), which would reach the window's handler as a click. **It never does:**
+    `DAT_00faa5d4`'s one writer, `FUN_006590c3`, has no caller and no pointer to it anywhere in the file, the word lies
+    past `.data`'s file bytes (nought at the start), and it read 0 in the running park (Q1116). So a status change
+    moves the button's picture and nothing else ("The ride window's call for a mechanic", below).
   - `b_move` (`0x3e2c`) is set through the control's vtable `+0x14`, the slot that disables the door, to the answer of
     **`TrackRide_MayMove`** (`FUN_0052c2b0( thing )`, `0x004ad6df`..`0x004ad6fd`; read whole, Q1111). It answers 1 for any
     item whose `WhichTrackType` is not 1 or 2. For a kart or water ride it reads the thing's cell from bytes `+5` (x) and
@@ -4619,7 +4621,53 @@ door ` down`. Both draw the bomb alone under red CONDEMNED, the call button as i
 for an available mechanic" (status `0x12`, a mechanic in the park and none assigned), and the greyed door under orange
 TRACK INCOMPLETE (`orig/b-2-bouncewindow.png`, `c-3-callmech.png`, `d-2-splashwindow.png`; `run2/window-condemned.png`,
 `window-called.png`, `window-trackincomplete.png`). Ours sets them in `ParkObjectWindow.ShowTheVerbs` on
-`ParkClosedStatus.For`, every frame. A DEVIATION: the original re-reads the status only when `FUN_004ade40` runs (the 4000 ms timer `0x004af64c`, the door's click `0x004af871`) and on a new thing (`0x004ae975`), so its verbs follow a status change up to 4 s late.
+`ParkClosedStatus.For`, as the original does on a change of status or a thing given (Q1116), but reads the status every
+frame. A DEVIATION: the original re-reads it on its 4000 ms timer (`0x004af64c`), after a click on the door, the call button or the three other handler cases (`0x004af871`, `0x0048ce6e`, `0x004af73b`/`76c`/`79c`), when given a thing (`0x004ae969`) and when the shown ride breaks down or is condemned (`FUN_00481530` -> `FUN_004af9f0`, `0x004afa38`); any other status change (a mechanic assigned, a repair's end, a queue cut) shows up to 4 s late.
+
+### The ride window's call for a mechanic
+
+Read 2026-11-12 (Q1116) in Ghidra, whole: `FUN_004af600`'s case `0x3e36`, `FUN_0048ce50` and `FUN_004dfe30` (named
+`ObjectWindow_CallMechanic` and `Object_RequestService`), `Button_SetDown`, `UI_QueueMessage`, `FUN_004ade40`'s status
+compare and `FUN_004ae940`.
+
+- **The click** (`0x004af887`). `b_callmech` is a switch: the click flips its `+0x138` and posts `0x100` with the new
+  position. Down (`param_4 == 1`) calls `FUN_0048ce50( 0 )`, up calls `FUN_0048ce50( 1 )`. **`FUN_0048ce50`**, on the
+  window (`ECX` `0x7cc218`), calls the shown thing's (`[0x007c2658]`) `FUN_004dfe30( arg == 0 )`, then the window's vtable
+  `+0x14`, `FUN_004ade40`, the refresh. The toilet window's handler `FUN_00497640` calls it the same way for its own
+  control `0x15bb4`.
+- **`FUN_004dfe30( 1 )`, the call**: nothing where `+0x64` is set already; else "Object %d: wants maintenance", `+0x64` =
+  1 (`0x004dfe70`), and the close of `FUN_004df300`: `mCanLoad` 0 (`0x004dfea0`), the nominee `+0x6c` forgotten,
+  `VAR_RIDECLOSED` 1, `FUN_00454550( model, 1 )`. A mechanic's search then takes it (`ride-operation.md`).
+- **`FUN_004dfe30( 0 )`, the cancel**: "Object %d: has cancelled its request for maintenance"; nothing more where `+0x64`
+  is nought. Else `+0x64` = 0 (`0x004dff31`), then the open guard inline (`0x004dff2b`..`0x004dff8a`: not state 1, 4 or
+  2, the back of the queue connected, a type-3 track's circuit closed); where it refuses, the ride stays closed. Where
+  it allows, the guard is asked again (five "Opening non-openable ride!" lines if it refused, which it cannot) and the
+  ride opened as `FUN_004df390` opens it: `mCanLoad` 1 (`0x004e0008`), `FUN_004547c0`, `VAR_RIDECLOSED` 0, SetState(0).
+  **So a cancel opens a ride the player had closed by its door before calling.** A member already assigned keeps his
+  walk and finds nothing to fix there.
+- **When the button moves by itself.** `RideWindow_SetVerbs` runs only when `Object_WindowStatus( thing, 2 )` differs
+  from the window's `+8` (`0x004ae0eb`) and when the window is given a thing (`FUN_004ae940`: the refresh, then
+  `RideWindow_SetVerbs` whatever the status, `0x004ae969`, `0x004ae975`). Between those the switch keeps the position its
+  click left: a kart ride with its circuit open stays at `0x19` when called, so its button stays down; a ride broken and
+  under repair (`0x15`) whose button is clicked up keeps it up until the status moves. A repair's end moves the status
+  out of `0x11`..`0x15` and `Button_SetDown( 0, 1 )` lifts the button, with no message (`DAT_00faa5d4`, above), so no
+  cancel runs; and a cancel could change nothing then, the repair having cleared `+0x64` already.
+
+**Measured in both games on one file** (Q1116, `q1116/`): Q1111's file a, the Belly Bounce (13), its window open.
+The original (`thingwords.py` on 13's `+0x64`, `+0x68`, `+0x5e` and the mechanic 26's `+0x19c`, `+0x218`; `uitree.py`'s
+node (1114,800)): the click on tick 1032 set `+0x64` 1 and `mCanLoad` 0 and the node ` down`, under blue "REPAIR: Waiting
+for an available mechanic"; the mechanic took it on tick 1054 (state `0xc`, job 13); the second click, tick 1067, gave
+back `+0x64` 0 and `mCanLoad` 1 and the node up, and he walked on and fell to state 1 with no job on tick 1099, 13's
+`+0x5e` still 26; the third click, tick 1125, called again, he walked (1130), repaired (state `0xd`, 1156), and on tick
+1159 `+0x64` 0, `mCanLoad` 1, `+0x5e` 0; the node read up later, under no status box. `DAT_00faa5d4` read 0 after the
+load and after the repair. Ours (`objects`, whose line carries `service` since Q1116, `control 3e36`, the log), the
+call and the cancel under `pause`, the third with the clock running: "Object 13: wants maintenance" and "Closing...",
+` down` under the same blue text; "has cancelled its request for maintenance" and "opened", up; then mechanic 26 took
+the call and repaired it ("starts repairing ride 13 on mGameTick 999"), and the button came up with the ride open. The
+frames: `orig/c-1-called.png`, `e-2-repaired.png`; `run2/window-called.png`, `window-cancelled.png`,
+`window-repaired.png`. Not compared: the walk's ticks (the original's mechanic stood elsewhere at the call), the
+refresh's 4 s, and whether ours' assignee is kept after a cancel as the original's `+0x5e` was.
+
 
 **The shared base's three ids.** `FUN_0048cea0( stream, handler, a, b, c )` is called here as
 `(0x00755150, FUN_004af600, 0x3e24, 0x3e15, 0x3e25)`: `a` is the preview panel, kept at `this[6]` and

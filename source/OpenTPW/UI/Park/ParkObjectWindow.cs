@@ -183,6 +183,12 @@ internal sealed class ParkObjectWindow : UiWindow, IStatusBox, IObjectWindowStep
 	/// <summary>The model turning in the preview, built when the window first draws a thing and let go when it shows another.</summary>
 	private ParkObjectPreview? _model;
 
+	/// <summary>
+	/// The status the verbs were last set for, the window's <c>+8</c>; null until a thing is shown, which sets them
+	/// whatever the status (<c>FUN_004ae940</c>, <c>0x004ae975</c>).
+	/// </summary>
+	private int? _verbsFor;
+
 	/// <summary>The thing <see cref="_model"/> was last built for, or null before the first.</summary>
 	private int? _previewOf;
 
@@ -409,6 +415,7 @@ internal sealed class ParkObjectWindow : UiWindow, IStatusBox, IObjectWindowStep
 		// rebuilt every time it changes - which is what makes the cycle arrows work.
 		ShowSettings();
 		FillStats();
+		_verbsFor = null;
 		ShowTheDoor();
 
 		if ( _move != null )
@@ -1047,10 +1054,13 @@ internal sealed class ParkObjectWindow : UiWindow, IStatusBox, IObjectWindowStep
 	/// ride (<c>Button_SetDown</c>, <c>0x004ad606</c>..<c>0x004ad622</c>).
 	/// </summary>
 	/// <remarks>
-	/// DEVIATION: the original re-reads the status only when <c>FUN_004ade40</c> runs (the 4000 ms timer, <c>0x004af64c</c>;
-	/// the door's click, <c>0x004af871</c>) and when the window is given a thing (<c>0x004ae975</c>), and sets the verbs on a
-	/// change (<c>0x004ae0e0</c>..<c>0x004ae0fb</c>), so its verbs and door follow a status change up to 4 s late; this sets
-	/// them every frame.
+	/// The verbs are set when the window is given a thing (<c>0x004ae975</c>) and when the status changes
+	/// (<c>0x004ae0e0</c>..<c>0x004ae0fb</c>), so between those a switch keeps the position its click left.
+	/// DEVIATION: the original re-reads the status (<c>FUN_004ade40</c>) on its 4000 ms timer (<c>0x004af64c</c>), after a
+	/// click on the door, the call button or the three other handler cases (<c>0x004af871</c>, <c>0x0048ce6e</c>,
+	/// <c>0x004af73b</c>/<c>76c</c>/<c>79c</c>), when given a thing (<c>0x004ae969</c>) and when the shown ride breaks down or
+	/// is condemned (<c>FUN_00481530</c> -> <c>FUN_004af9f0</c>, <c>0x004afa38</c>); any other status change (a mechanic
+	/// assigned, a repair's end, a queue cut) shows up to 4 s late. This reads it every frame.
 	/// </remarks>
 	private void ShowTheDoor()
 	{
@@ -1063,14 +1073,19 @@ internal sealed class ParkObjectWindow : UiWindow, IStatusBox, IObjectWindowStep
 			? item.TrackType : 0;
 		var status = ParkClosedStatus.For( level.Park, placed, trackType );
 
-		// A closed ride the open guard refuses has its door disabled and its position left as it stands; any other is
-		// enabled and set to mCanLoad (0x004ad5c6..0x004ad632).
-		if ( ShowTheVerbs( status, trackType ) )
+		if ( _verbsFor != status )
 		{
-			_door.Enabled = !closed || ParkRideOperation.MayOpen( level.Park, placed, trackType );
+			_verbsFor = status;
 
-			if ( _door.Enabled )
-				_door.IsDown = closed;
+			// A closed ride the open guard refuses has its door disabled and its position left as it stands; any other
+			// is enabled and set to mCanLoad (0x004ad5c6..0x004ad632).
+			if ( ShowTheVerbs( status, trackType ) )
+			{
+				_door.Enabled = !closed || ParkRideOperation.MayOpen( level.Park, placed, trackType );
+
+				if ( _door.Enabled )
+					_door.IsDown = closed;
+			}
 		}
 
 		_door.HelpText = _door.IsDown ? 12 : 13;
@@ -1135,7 +1150,8 @@ internal sealed class ParkObjectWindow : UiWindow, IStatusBox, IObjectWindowStep
 	}
 
 	/// <summary>
-	/// One of the bottom row's verbs. Delete, move, queue, the upgrades list and the door are built; the rest are counted by name.
+	/// One of the bottom row's verbs. Delete, move, queue, the upgrades list, the door and the call for a mechanic are built; the
+	/// rest are counted by name.
 	/// </summary>
 	private void Verb( int id, string what )
 	{
@@ -1173,6 +1189,13 @@ internal sealed class ParkObjectWindow : UiWindow, IStatusBox, IObjectWindowStep
 			case 0x3e38:
 				if ( _door != null )
 					ParkPeople.Current?.SetRideClosed( ThingId, _door.IsDown );
+				ShowTheDoor();
+				return;
+
+			// FUN_004af600 -> FUN_0048ce50: the switch's new down state calls a mechanic, its up state cancels the call.
+			case 0x3e36:
+				if ( _verbs.TryGetValue( 0x3e36, out var callMechanic ) )
+					ParkPeople.Current?.CallAMechanic( ThingId, callMechanic.IsDown );
 				ShowTheDoor();
 				return;
 

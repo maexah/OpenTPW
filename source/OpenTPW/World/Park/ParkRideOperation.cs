@@ -1612,6 +1612,43 @@ public sealed class ParkRideOperation
 	}
 
 	/// <summary>
+	/// A mechanic called - <c>FUN_004dfe30( 1 )</c>, "Object %d: wants maintenance": nothing where one is called
+	/// already, else <c>mRequestedService</c> (<c>+0x64</c>) set and the ride closed as <see cref="Close"/> closes it.
+	/// A mechanic's search then takes it (<c>StaffBehaviour</c>); the repair's end forgets the call and opens the ride
+	/// (<see cref="Repair"/>).
+	/// </summary>
+	public void RequestService( RideScript? script, int rideId )
+	{
+		if ( !_state.TryObject( rideId, out var ride ) || ride.RequestedService != 0 )
+			return;
+
+		Log.Info( $"Object {rideId}: wants maintenance" );
+
+		_state.ReplaceObject( ride with { RequestedService = 1 } );
+		Close( script, rideId );
+	}
+
+	/// <summary>
+	/// The call cancelled - <c>FUN_004dfe30( 0 )</c>, "Object %d: has cancelled its request for maintenance": where a
+	/// mechanic was called the call is forgotten, and the ride is opened where the open guard (<see cref="MayOpen"/>,
+	/// asked inline at <c>0x004dff2b</c>..<c>0x004dff8a</c>) now allows it; otherwise it stays closed. A mechanic
+	/// already on his way is left to find nothing to fix.
+	/// </summary>
+	public static void CancelService( ParkState state, IParkInitialState? park, RideScript? script, int rideId, int trackType )
+	{
+		Log.Info( $"Object {rideId}: has cancelled its request for maintenance" );
+
+		if ( !state.TryObject( rideId, out var ride ) || ride.RequestedService == 0 )
+			return;
+
+		var forgotten = ride with { RequestedService = 0 };
+		state.ReplaceObject( forgotten );
+
+		if ( MayOpen( park, forgotten, trackType ) )
+			Open( state, script, rideId );
+	}
+
+	/// <summary>
 	/// Whether a closed ride may be opened - <c>FUN_004df290</c>, which the park's door asks of every object
 	/// before opening it: not broken down (1), condemned (4) or waiting for an upgrade (2), no mechanic called
 	/// (<c>mRequestedService</c>), and the back of its queue connected (<see cref="BackOfQueueConnected"/>).

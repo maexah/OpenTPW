@@ -246,6 +246,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0048c83a` | | OpenTPW/Global/GameClock.cs OpenTPW/UI/UiWindow.cs OpenTPW/World/Level.cs  |
 | `0x0048c868` | | OpenTPW/Global/GameClock.cs OpenTPW/World/Level.cs  |
 | `0x0048cd10` | | OpenTPW/Client/GameOptions.cs  |
+| `0x0048ce6e` | FUN_0048ce50, the call button's click: the window's refresh FUN_004ade40 through vtable `+0x14` | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x0048ceca` | Object window base FUN_0048cea0: UI_LoadTree onto the park's layer 0 | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x0048d1a0` | Object windows' preview handler: a click 0x10006 of either button moves the camera to the window's thing and closes it | OpenTPW.Tests/ParkCameraToThingTests.cs OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x0048d1c0` | Preview handler's click arm: FUN_004867b0 on the thing shown, then the window's vtable +0x2c (close) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
@@ -363,12 +364,17 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004adf28` | FUN_004ade40: Users last month handed to its painter as a number through +0x1c | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004adf40` | FUN_004ade40, the object window: its Age is FUN_004dd670, printed signed | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004ae0da` | FUN_004ade40: Scrap value handed to its painter as a number through +0x1c | OpenTPW/UI/Park/ParkObjectWindow.cs  |
-| `0x004ae0e0` | FUN_004ade40, the ride window's 4 s refill (timer `0x004af64c`, the door's click `0x004af871`): the status `FUN_00485f60( thing, 2 )` compared with `+8` and stored, the verbs set again on a change (from here) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
+| `0x004ae0e0` | FUN_004ade40, the ride window's refill (vtable `+0x14`: the 4 s timer `0x004af64c`; the clicks `0x004af871`, `0x0048ce6e`, `0x004af73b`/`76c`/`79c`; a thing given `0x004ae969`; a breakdown or condemnation `0x004afa38`): the status `FUN_00485f60( thing, 2 )` compared with `+8` and stored, the verbs set again on a change (from here) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004ae0fb` | The status compare (to here) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
+| `0x004ae969` | FUN_004ae940, the window given a thing: the refresh FUN_004ade40 through vtable `+0x14` | OpenTPW/UI/Park/ParkObjectWindow.cs  |
+| `0x004ae975` | FUN_004ae940, the window given a thing: the refresh, then RideWindow_SetVerbs whatever the status | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004af440` | The object windows' shared base, vtable `+0x3c`: writes the three buffered values onto the ride | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004af63b` | Ride window handler FUN_004af600: message 0x10 with 0x80080, the 4000 ms timer's tick, refills the figures (FUN_004ade40) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
+| `0x004af64c` | Ride window handler FUN_004af600: the 4000 ms timer's tick calls the refresh FUN_004ade40 | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004af67b` | Ride window handler FUN_004af600, message 0x15: timer 0x80080 armed at 4000 ms | OpenTPW.Tests/ParkCameraToThingTests.cs OpenTPW/UI/Park/ParkObjectWindow.cs  |
+| `0x004af73b` | Ride window handler FUN_004af600: one of three cases (with `0x004af76c`, `0x004af79c`) that refresh through vtable `+0x14` | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004af871` | Ride window handler FUN_004af600, the door (0x3e38): the figures refilled, FUN_004ade40 | OpenTPW/UI/Park/ParkObjectWindow.cs  |
+| `0x004afa38` | FUN_004af9f0( id ): the refresh where the window is open and shows the id's thing; called by FUN_00481530, the kind-17 relay (events 7 and 8) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004b8b70` | | OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
 | `0x004b8ca0` | | OpenTPW/UI/FrontEnd/FrontEnd.cs OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
 | `0x004b8ea0` | Shows the island panel again: message 6 with 1 to its tree, then the mail badge rule `0x004bbbd0` | OpenTPW/UI/FrontEnd/FrontEnd.cs  |
@@ -468,6 +474,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004dfa9b` | `FUN_004df8f0`'s upgrade arm: the new tier's speed, capacity and duration, held as the constructor holds them, begin (to `0x004dfbdf`) | OpenTPW.Tests/ParkMechanicRepairTests.cs OpenTPW/World/Park/ParkBuilding.cs OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004dfaf6` | `FUN_004df8f0`'s upgrade arm: the new tier's `InitCapacity` passed to the capacity setter `FUN_004dd7f0` | OpenTPW.Files/Formats/ItemDescriptionFile.cs  |
 | `0x004dfbdf` | `FUN_004df8f0`'s upgrade arm: the new tier's settings end | OpenTPW.Tests/ParkMechanicRepairTests.cs OpenTPW/World/Park/ParkBuilding.cs OpenTPW/World/Park/ParkRideOperation.cs  |
+| `0x004dff2b` | FUN_004dfe30( 0 ), the call cancelled: the open guard asked inline after `+0x64` is forgotten (from here) | OpenTPW/World/Park/ParkRideOperation.cs  |
+| `0x004dff8a` | The cancel's guard: a type-3 track's circuit, FUN_00441970 (to here) | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004e0554` | `FUN_004e0450` puts the queue's head out (`FUN_005012f0`) | OpenTPW.Tests/ParkClosedRideTests.cs OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004e058a` | FUN_004e0560, a sideshow's excitement: 20 - trunc(chance x sqrt(clamp(cost - price, 0, 100)) x 0.1 x -0.8f), from | OpenTPW/World/Park/ParkRideScore.cs  |
 | `0x004e05d4` | FUN_004e0560, a sideshow's excitement: to here | OpenTPW/World/Park/ParkRideScore.cs  |

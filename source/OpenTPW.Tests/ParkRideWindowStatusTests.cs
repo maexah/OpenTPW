@@ -208,7 +208,9 @@ public class ParkRideWindowVerbTests
 	[TestMethod]
 	public void AKartRideWithItsCircuitOpenDisablesTheDoorAndLeavesItsPosition()
 	{
+		// The verbs are set when the window is given a thing or its status changes: given the kart ride, as an arrow gives it.
 		state.ReplaceObject( Ride with { CatalogueId = DinoKarts, IsTrackRideValid = 1, CanLoad = 1 } );
+		window.Show( 13 );
 		window.Update();
 		Assert.IsTrue( Verb( 0x3e2a ).Visible );
 		Assert.IsFalse( Verb( 0x3e38 ).IsDown );
@@ -253,5 +255,112 @@ public class ParkRideWindowVerbTests
 		window.Update();
 		Assert.IsFalse( Verb( 0x3e36 ).IsDown, "broken down with nobody at work is status 2" );
 		Assert.AreEqual( Localization.Text( 366 ), Status.Text );
+	}
+
+	/// <summary>A switch pressed as <c>WindowStack</c> presses it: its position flips, then its click runs.</summary>
+	private void Press( int id )
+	{
+		var button = Verb( id );
+		button.IsDown = !button.IsDown;
+		button.Clicked!();
+	}
+
+	[TestMethod]
+	public void TheCallButtonCallsAMechanicAndItsSecondPressCancelsAndOpens()
+	{
+		window.Update();
+		Assert.AreEqual( 1, Ride.CanLoad, "the stock Belly Bounce is open" );
+
+		Press( 0x3e36 );
+		Assert.AreEqual( 1, Ride.RequestedService );
+		Assert.AreEqual( 0, Ride.CanLoad, "the call closes the ride" );
+		Assert.IsTrue( Verb( 0x3e36 ).IsDown );
+		Assert.AreEqual( new UiColour( 80, 100, 255 ), Status.TextColour, "a mechanic's status, 0x11 to 0x15" );
+		Assert.IsFalse( Verb( 0x3e38 ).Enabled, "the open guard refuses a ride with a mechanic called" );
+
+		Press( 0x3e36 );
+		Assert.AreEqual( 0, Ride.RequestedService );
+		Assert.AreEqual( 1, Ride.CanLoad, "the cancel opens it again" );
+		Assert.IsFalse( Verb( 0x3e36 ).IsDown );
+		Assert.IsTrue( Verb( 0x3e38 ).Enabled && !Verb( 0x3e38 ).IsDown );
+	}
+
+	[TestMethod]
+	public void ACancelOpensARideThePlayerHadClosed()
+	{
+		window.Update();
+		Press( 0x3e38 );
+		Assert.AreEqual( 0, Ride.CanLoad );
+
+		Press( 0x3e36 );
+		Press( 0x3e36 );
+		Assert.AreEqual( 1, Ride.CanLoad, "FUN_004dfe30( 0 ) opens whatever closed it, where the guard allows" );
+		Assert.IsFalse( Verb( 0x3e38 ).IsDown );
+	}
+
+	[TestMethod]
+	public void ACancelTheGuardRefusesLeavesTheRideClosed()
+	{
+		state.ReplaceObject( Ride with { State = 1, CanLoad = 0, RequestedService = 1 } );
+		window.Update();
+		Assert.IsTrue( Verb( 0x3e36 ).IsDown );
+
+		Press( 0x3e36 );
+		Assert.AreEqual( 0, Ride.RequestedService );
+		Assert.AreEqual( 0, Ride.CanLoad, "broken down, so the guard refuses the open" );
+		Assert.AreEqual( 1, Ride.State );
+	}
+
+	[TestMethod]
+	public void ACallWhereOneIsCalledAlreadyChangesNothing()
+	{
+		state.ReplaceObject( Ride with { RequestedService = 1 } );
+
+		people.CallAMechanic( 13, called: true );
+
+		Assert.AreEqual( 1, Ride.CanLoad, "FUN_004dfe30( 1 ) returns at once where +0x64 is set" );
+	}
+
+	[TestMethod]
+	public void ACancelWithNoCallStandingOpensNothing()
+	{
+		state.ReplaceObject( Ride with { CanLoad = 0, RequestedService = 0 } );
+		Assert.IsTrue( ParkRideOperation.MayOpen( Level.Current!.Park, Ride, 0 ), "the guard would open this ride" );
+
+		people.CallAMechanic( 13, called: false );
+
+		Assert.AreEqual( 0, Ride.CanLoad, "FUN_004dfe30( 0 ) does nothing more where +0x64 is nought (0x004dff1d)" );
+	}
+
+	[TestMethod]
+	public void TheSwitchKeepsItsClickWhileTheStatusStandsStill()
+	{
+		state.ReplaceObject( Ride with { CatalogueId = DinoKarts, IsTrackRideValid = 0, CanLoad = 0 } );
+		window.Show( 13 );
+		window.Update();
+		Assert.IsFalse( Verb( 0x3e36 ).IsDown );
+
+		Press( 0x3e36 );
+		window.Update();
+
+		Assert.AreEqual( 1, Ride.RequestedService );
+		Assert.AreEqual( Localization.Text( 386 ), Status.Text, "the circuit's status 0x19 comes before the call's" );
+		Assert.IsTrue( Verb( 0x3e36 ).IsDown, "the status did not move, so nothing sets the switch back" );
+	}
+
+	[TestMethod]
+	public void ARepairsEndLiftsTheSwitch()
+	{
+		window.Update();
+		Press( 0x3e36 );
+		Assert.IsTrue( Verb( 0x3e36 ).IsDown );
+
+		ParkRideOperation.Repair( state, script: null, 13 );
+		window.Update();
+
+		Assert.AreEqual( 0, Ride.RequestedService );
+		Assert.AreEqual( 1, Ride.CanLoad );
+		Assert.IsFalse( Verb( 0x3e36 ).IsDown );
+		Assert.IsTrue( Verb( 0x3e38 ).Enabled );
 	}
 }

@@ -3498,8 +3498,9 @@ makes him grade 4 (25), or the player puts him down nearer.
 
 **The request for service.** `FUN_004dfe30( 1 )`, whose two callers are `FUN_0048e0f0` and `FUN_0048ce50`,
 sets `+0x64`, shuts the object (`mCanLoad` 0, the nominee `+0x6c` forgotten, `VAR_RIDECLOSED` 1); `FUN_004dfe30( 0 )`
-cancels and reopens under the open guard. Which control calls them was not read (`FUN_00485f60`, beside them, reads
-the assignment and `+0x64`). A toilet so marked is a handyman's work from anywhere in the park, clean or not, and only
+cancels and reopens under the open guard. The ride window's and the toilet window's `b_callmech` call them through
+`FUN_0048ce50`, down calling and up cancelling, and the message bar's `mb_callmech` calls `FUN_004dfe30( 1 )`
+(`park-engine.md`, "The ride window's call for a mechanic"; `FUN_00485f60` reads the assignment and `+0x64`). A toilet so marked is a handyman's work from anywhere in the park, clean or not, and only
 a handyman's: the mechanic's search takes a `+0x64` object only without the toilet bit (`0x004dac0f`..`0x004dac1e`).
 
 **The online game** (mode 1) has no dirtying: `FUN_004e2440` instead cleans a toilet found dirty, as `FUN_004dfd80`
@@ -3519,7 +3520,7 @@ does (`0x004e24bc`..`0x004e252a`).
 | The clean's region effects | 6 unstamped, 1 stamped | built, `ParkRideOperation.Clean` (Q257e) |
 | The hurry speed on the walk to a toilet | `+0xc2` = 25 | the same, one of the three words `Staff.Pace` sums; taken off on going idle |
 | A mechanic assigned to a thing | kept while his `+0x218` names it | the same (`Staff.ObjectToRepair`; "The mechanic's repair") |
-| The request for service | shuts the object and calls a member | the search and the clean read and clear a saved `+0x64`; no control here sets one on a toilet; the ride window holds `b_callmech` down while one is set on a ride (Q1112), and its click reports itself (Q1116) |
+| The request for service | shuts the object and calls a member | the search and the clean read and clear a saved `+0x64`; no control here sets one on a toilet; the ride window's `b_callmech` calls and cancels as the original's (`ParkRideOperation.RequestService`, `CancelService`; Q1116); the toilet window's and the message bar's are not built |
 | Loaded in state 8 or 9 | carries on (the load keeps the state, `+0x218` and `+0x214`, `FUN_004d6d60`): 8 decides at once when the cell's saved `mLitterCollector` is not his (`0x004d75a5`), 9 waits `mTimeStartedCleaning + WorkDuration` (`0x004d76c9`), cleans his own cell's litter (`FUN_004d9620`, not read) and decides | counted (`HANDYMAN_LITTER_STATE_8`, `_9`), falls to idle (Q1154, Q1316) |
 
 ### The clean, in both games

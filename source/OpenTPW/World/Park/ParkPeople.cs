@@ -2947,6 +2947,20 @@ public sealed partial class ParkPeople : Entity
 			operation.Open( script, thingId );
 	}
 
+	/// <summary>
+	/// The ride window's <c>b_callmech</c>, <c>FUN_0048ce50</c>: the switch put down calls a mechanic
+	/// (<see cref="ParkRideOperation.RequestService"/>), put up cancels the call (<see cref="ParkRideOperation.CancelService"/>).
+	/// </summary>
+	internal void CallAMechanic( int thingId, bool called )
+	{
+		var script = _scriptFor?.Invoke( thingId );
+
+		if ( called )
+			new ParkRideOperation( State, Guests ).RequestService( script, thingId );
+		else if ( State.TryObject( thingId, out var thing ) )
+			ParkRideOperation.CancelService( State, _behaviour.Park, script, thingId, TrackTypeOf( thing ) );
+	}
+
 	/// <summary>The gate's test of a person, <see cref="PeepBehaviour.OnACountingCell(FixedVector)"/> of their position.</summary>
 	private bool InsideGateCensus( PeepNavigator navigator ) => _behaviour.OnACountingCell( navigator.Position );
 
