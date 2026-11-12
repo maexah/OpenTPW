@@ -800,7 +800,9 @@ public sealed class ParkBumperCars
 		Seat( ride, car, particles: false );
 		Retarget( ride, car );
 
-		// The launcher's last word: a splash where it lands, spawned at the next draw (0x0054a01d, FUN_00546280).
+		// The launcher's last word: a flag the next draw clears as it spawns particle 15 at the car (0x0054a009,
+		// FUN_00546280, 0x00546a89). ParLib names 15 P_EFFECT_BeamUpCar, not the splash (12), whatever the count's name
+		// says; what it looks like is not observed (docs/QUEUE.md Q1162).
 		car.Flags |= CarFlags.Launched;
 		Unimplemented.Report( "BUMPER_CAR_SPLASH" );
 
@@ -1479,7 +1481,8 @@ public sealed class ParkBumperCars
 		car.Smoking = false;
 		car.Smoke = NoSmoke;
 
-		// A puff where it was; its models let go of are the drawing's (ParkBumperBoats).
+		// Particle 15 at the car, which the original skips when the ride's +0x50 is 4 (0x0054aeaa); counted here every
+		// time (docs/QUEUE.md Q1162). Its models let go of are the drawing's (ParkBumperBoats).
 		Unimplemented.Report( "BUMPER_CAR_REMOVED_PARTICLE" );
 
 		if ( --ride.Cars == 0 )

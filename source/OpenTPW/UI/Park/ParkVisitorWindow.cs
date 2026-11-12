@@ -444,9 +444,10 @@ internal sealed class ParkVisitorWindow : UiWindow
 	}
 
 	/// <summary>
-	/// The guest is no longer in the park. Nothing in the original clears the shown person as a guest goes, so what it
-	/// does then is not decoded: counted, and the window closed as its refresh closes it with nobody (vtable
-	/// <c>+0x2c</c>).
+	/// The guest is no longer in the park. The original closes the window when the guest it shows is deleted: the
+	/// delete relay <c>FUN_004818c0</c> (guests only) calls <c>FUN_004b7a00</c>, then <c>FUN_0048ccd0</c>, vtable
+	/// <c>+0x2c</c> (docs/exe/hud.md, "A guest arriving or going"). Closed here the same way; still counted until Q31b
+	/// retires the count.
 	/// </summary>
 	private void Gone()
 	{

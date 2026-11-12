@@ -130,8 +130,8 @@ Confirmed two ways: `FUN_0059a940` reads the response/subject as `param_2[3]` (b
 
 | Address / offset | Original name | What it is | Evidence |
 |---|---|---|---|
-| `+0x00` | — | u16 lead field, written by `FUN_0059c0a0`. **Not** the id the gate uses | The gate's slot scan compares `+0x0c`, not this |
-| `+0x04` | — | int lead field | |
+| `+0x00` | — | u16, the record's thing: the poster's (`FUN_0059b590`, `0x0059b5a1`), replaced at a non-overridden record's speech by the score callback's word where that is not nought (`FUN_0059b620`, `0x0059b6cf`..`0x0059b6d9`, the word `FUN_0059c0a0` copies out of the balance object's `+4`). **Not** the id the gate uses | The gate's slot scan compares `+0x0c`, not this; event `0x18` carries it to the tag at its `+0xc` (`FUN_0040f740`) |
+| `+0x04` | — | int, the same from the callback's dword, the balance object's `+8` (`0x0059b6dc`..`0x0059b6e4`) | event `0x18` `+0x14` |
 | `+0x08` | — | int line index; `-1` means "choose one" | |
 | `+0x0c` | — | dword subject / response id — **this** is the id the gate keys its per-message counters on | `FUN_0059a940` passes `param_2[3]`; `FUN_0059b590` writes its argument here |
 | `+0x10` | — | int score / priority; defaults to `FUN_0059bf20(subject)` when the caller passes `< 0` | |
@@ -346,7 +346,7 @@ The ids seen so far: `0xbc` when buy opens, `0xbd` when hire opens, `0xc6` and `
 | What | State |
 |---|---|
 | The loader that fills `0x0076e300` | **Found** and emulated: the static initializer at `0x005a0a50` (above); the 40 screen-posted ids are posted-only rows of one line each |
-| The u16 at message `+0x00` | Unknown — it is written by `FUN_0059c0a0` but is not the gating id |
+| The u16 at message `+0x00` | Read: the record's thing ("The message record", above), not the gating id |
 | `Welcome` (section 2) | Row 0 of the metadata table is posted only in the running game (the emulated table has it polled), its score function (`0x0059c8c0`, `MOV EAX,[ECX + 0xa0]`) is `Welcome.Score`, and the shipped park's file holds message 0 as said on tick 1; its poster is not read. A park made with no file in the original holds it in a slot at 100,000 on tick 0 and says it on tick 1 for 31.3 s ("A fresh Full Simulation park", Q327; Q543). Its line looks like a **stub**: group 2 holds four rows, all `sample=1, anim=16`, and sample 1 is an *OpenPark* line. The park welcome probably has no audio of its own (read from the response table alone; no code that posts `Welcome` was traced) |
 | Responses 399-402 | All carry sample 1, an `OpenPark` line — the same stub shape |
 
@@ -4704,13 +4704,18 @@ nothing is selected), and the map's start, which noughts it (`FUN_0052f050`). `F
 callers, in the dispatcher, the footprint applier and the object windows; **they are not read**, so when the word
 goes back to nought after a queue is laid is not known. It read nought for 75 s of a park loaded from a file.
 
-**The line is about no thing.** Nothing was found to read the balance object's `+4`: no instruction names
-`0x00fb3544`, and the tick's post of a polled answer pushes thing nought (`0x0059a5fd`, "The poll", above). The
-original's slot held `0x71` with thing nought at 87 (`q323/orig/c-load.log`). So the tag is row 135's with no
-thing: key 383, picture 0, string 134 ("Somewhere in your park, a queue is not connected to a path." in the
-English folder, "a line" in the american one), the bar's first button of type 3, no second, 30 seconds. **Its
-button does nothing:** type 3 puts the camera on the tag's thing (`FUN_004867b0`), which returns at once for
-thing nought.
+**The line is about the ride whose queue is not joined.** The balance object's `+4` is read through a register
+(`EBX` = `0x00fb3540`), so no instruction names `0x00fb3544`: `FUN_0059c0a0` noughts its word `+4` and dword `+8`
+(`0x0059c10f`, `0x0059c115`), calls the row's score, and copies both out (`0x0059c217`, `0x0059c224`). The tick's
+post of a polled answer pushes thing nought (`0x0059a5fd`, "The poll", above) with no score, so the record is not
+overridden and its turn takes `FUN_0059b620`, which asks `FUN_0059c0a0` again, drops a score below
+`MinScoreForConsideration` (`0x0059b6c3`), and writes the word to the record's thing and the dword to its `+4`,
+each where it is not nought (`0x0059b6cf`..`0x0059b6e4`); event `0x18` carries both to the tag. The original's
+slot held `0x71` with thing nought at 87 (`q323/orig/c-load.log`), which is the record before its speech. So the
+tag is row 135's about the thing `FUN_004ccb00` answered: key 383, picture 0, string 134 ("Somewhere in your park,
+a queue is not connected to a path." in the English folder, "a line" in the american one), the bar's first button
+of type 3, no second, 30 seconds. **Its button goes to that ride:** type 3 puts the camera on the tag's thing
+(`FUN_004867b0`). Read, not clicked in the original.
 
 ### OpenTPW (`ParkAdvisorMessages.QueueUnconnected`, a topic's `QueueNotJoined`; `ParkFacts.UnjoinedQueue`; tag row 135)
 
@@ -4756,15 +4761,15 @@ in 75 s.
 | | The original | OpenTPW |
 |---|---|---|
 | Row 113 | polled; `QueueUnconnected.Score` where a choosable thing's queue is not joined at its back | the same |
-| A ride bought and its queue left unjoined | said on tick 996, line 0, no prop, tag 135 about no thing | the same |
+| A ride bought and its queue left unjoined | said on tick 996, line 0, no prop, tag 135 about the ride (read) | said on tick 996, line 0, no prop, tag 135 about no thing |
 | Every queue joined | not said | not said |
 | The tag's words | the american folder's, "a line" | the English folder's, "a queue" |
-| The tag's camera button | returns at once on thing nought (read, not clicked) | does nothing |
+| The tag's camera button | goes to the ride (read, not clicked) | does nothing |
 | The object passed over | the builder's object, `DAT_008186ac` | the queue tool's thing while the tool is armed |
 
 **Not built or not seen.** When the builder's object goes back to nought (the nineteen callers of
 `FUN_005276d0`); a ride bought with the mouse in the original, its queue tool put away, and whether the line is
-then held back. What reads the balance object's `+4`. In no game run: line 2 (sample 313; the test holds the
+then held back. In no game run: line 2 (sample 313; the test holds the
 turn), the line said again past its 120 quarter-ticks (the test holds it), a queue cut off from an open ride
 (`ride-operation.md`: the ride stays open), two rides unjoined, the tag's button clicked in the original, the
 line posted while he speaks (255 copies). Not heard in either game.
@@ -5260,8 +5265,9 @@ the first line this game says and the original's does not; row 19's poll, score 
 Read from the listing of `testme.exe`, every callback whole (fork watch 2026-10-19, `verify-advisor-ui.md` L1; rows 239
 to 241 and every helper read whole by Q713, `q713/gd/`). The score callback of row N is the dword at
 `0x0076e300 + N x 0x38 + 0x10` (the stores `0x005a5f7f`..`0x005a6527`). Each callback first asks its helper for a qualifying
-object (a handle, kept at the balance object's `+4`, which nothing reads: "A queue not joined to a path") and its
-figure `v` (kept at `+8`), nought if none. So the line is about no thing, as every polled line is.
+object (a handle, kept at the balance object's `+4`) and its figure `v` (kept at `+8`), each stored on the passing
+side only, nought if none; the speech copies both into the record ("A queue not joined to a path"). These rows have
+no tag (group 383), so neither reaches a button.
 
 | Row | Callback | Helper (group) | Scores | Log |
 |---|---|---|---|---|

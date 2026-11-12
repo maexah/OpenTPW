@@ -434,8 +434,10 @@ internal sealed class ParkLocator
 			Following = false;
 		}
 
-		// The original keeps the thing's address and reads whatever is left there: a person gone from the park is let go
-		// of here instead, the strip hidden and the camera left, as a step that finds nobody does.
+		// The original takes the panel off the arm when the located guest is deleted (FUN_004b3620, FUN_004a25f0( 1 ),
+		// from the delete relay FUN_004818c0); for a staff member it keeps the thing's address and reads whatever is left
+		// there. Here either is let go of instead, the strip hidden and the camera left, as a step that finds nobody does;
+		// the arm is not folded away for a guest, where the original's is (docs/QUEUE.md Q31b).
 		if ( Find() is not var (member, guest) )
 		{
 			Log.Info( $"Park locator: thing {Actor} is gone" );

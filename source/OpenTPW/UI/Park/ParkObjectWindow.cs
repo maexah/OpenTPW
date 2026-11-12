@@ -227,7 +227,8 @@ internal sealed class ParkObjectWindow : UiWindow, IStatusBox
 			RightClicked = GoToThing
 		} );
 
-		// FUN_004ad720 starts the status box hidden; ShowTheDoor supplies the current warning.
+		// FUN_004ad720 starts the status box hidden; ShowTheDoor supplies the current warning. The original letters it in
+		// font slot 8, black, centred (0x00485a70( 8 )); font 6 and white here are a deviation (docs/QUEUE.md Q213).
 		_broken = _preview.Add( new UiControl
 		{
 			Id = 0x3e25,

@@ -223,8 +223,13 @@ response). Response 394 is sample 469, 395 sample 470. `AdvisorQueue_Tick` (`0x0
 (`[0x00f7966c]`, which `Advisor_SayResponse` sets and the line's end or a stop clears) and when it starts a queued line;
 on a free tick with the queue armed (`0x005d5feb`) it reads the sound clock `0x005f5fa0` (wall time in milliseconds,
 `audio.md`), and restamps `+0x20` if `+0x28` was set, clearing it, or else, once the clock passes the stamp plus the
-period (unsigned, `0x005d6016`), restamps and queues the response. So the line comes 90 s of wall time after he last fell
-silent, and again 90 s after each time it is said. Read from the disassembly, not heard in the running original.
+period (unsigned, `0x005d6016`), restamps and queues the response; unarmed, a free tick clears `+0x28` (`0x005d603c`).
+The front end's setup `0x005d5f70`, run on every component by `FrontEnd_Init` (`0x005d5b37`..`0x005d5b45`) and by the
+constructor (`0x005e3f18`), noughts `+0x18`, `+0x1c`, `+0x20` and `+0x28`, so the stamp is nought on every front-end entry.
+The clock is milliseconds since Windows started (`0x005f5e80` stores `timeGetTime()` at the start, `0x005f5e92`), not since
+the program started. So the line comes 90 s of wall time after he last fell silent, and again 90 s after each time it is
+said; but an arm that begins on a free tick with `+0x28` clear and no stamp since the entry finds the boot clock past
+90,000 and queues the line at once. Read from the disassembly, not heard in the running original.
 **OpenTPW** builds none of it (`docs/QUEUE.md` Q77) and counts the arm as `LOBBY_ADVISOR_IDLE_REPEAT`, in
 `LobbyCameraMode.Update`, every frame a player is picked.
 
@@ -432,6 +437,20 @@ scales a font): at 2552 x 1355 the rows' strokes went from a share over 200 of 0
 0.199 (`q644/y-rows.png`); under a scale of 2 nothing changes. Never more than the scale, so a text is never drawn
 smaller than its texture: `Texture.UpdatePixels` rewrites the first level alone, and a shrunk text would be read from
 its stale mip maps. Under opentpw.cfg's `graphics faithful` the copy is 1 whatever the scale (Q645, `UiText.PrescaleFor`), so the sampler alone enlarges the text, as the original's.
+
+### A text button's lettering by state
+
+A button of class `0x00705a50` letters its label by its state each time it is set or changed. The constructor
+(`0x006688b3`) gives it two colours, `+0x14c` white and `+0x154` black (255), and an offset `+0x158`, `+0x159` of
+(1, 1) (`0x00668952`..`0x006689ac`). `0x00668ad3` takes the state from `0x00668820` (`lobby.md`, the state getter)
+and, through the table at `0x00668bd4`: 0 and 2 (plain, checked) letter it in `+0x14c` at (0, 0); 3 and 5 (the pointer
+on it) in `+0x154` at (`+0x158`, `+0x159`); 4 (pressed) in `+0x14c` at (`+0x158` + 1, `+0x159`), (2, 1); 1 (disabled)
+sends no flags, so the label keeps what it had. The flags `0x4c000` go to the label's text control (`0x0048fc40`:
+`0x40000` the colour, `0x4000` and `0x8000` the offset's two words). The base `SetText` (`0x0065f645`) runs after it
+(`0x00668d5f`, vtable `+0x24`). The setters `0x00668f5a` and `0x00668f7b`, called only from `FUN_00486660`
+(`0x00486749`, `0x00486751`), set both `+0x14c` and `+0x154` to the caller's colour; a sample of its 59 callers passes (255, 239, 0).
+Which of the park's toggles (the finance and park-info ones) are of this class is inferred, not read from their layouts.
+OpenTPW's `UiControl.TextColour` is one colour with no offset by state (`docs/QUEUE.md` Q1163).
 
 ## Escape game menu
 

@@ -2218,11 +2218,27 @@ a terrain hit inside its own cell's rectangle, with the cells clamped to the 96 
 thing it hit; with no hit the old point stays. So the original's viewer always starts on a walkable cell inside the
 park. A save never resumes in first person: loading zeroes `gui_CameraFlags` (`0x0042d04c`).
 
+### The walk's keys, turn and speed
+
+In first person (`gui_CameraFlags & 0x16` set and `& 0x3c` clear, `0x0042b3fc`..`0x0042b40c`) the key polls
+(`0x0042b32d`..`0x0042b3ee`, rows of the camera table `0x00748158`) turn and walk: Left and keypad 9 (actions 6 and
+`0x12`) take `0.0012 x dt` off the yaw and Right and keypad 7 (7 and `0x13`) add it (`0x0042b417`, `0x0042b432`), dt
+the frame's milliseconds clamped 1 to 100 (`0x0042b2bf`..`0x0042b2ed`): 1.2 radians a second. Up and keypad 1 (0 and
+`0x15`) walk forward 0.1 and Down and keypad 3 (1 and `0x16`) back 0.1; the across term is the 0.0 left on the stack
+(`0x0042b82a`), so nothing strafes. The pointer's turn word `0x00790ae0` is twice its excess past ±0.4 (`fadd
+st(0),st`, `0x0042b89c`, `0x0042b8bd`) with `& 0x3c` clear, and 3.5 times its excess past ±0.2 with it set
+(`0x0042b83b`..`0x0042b87d`); the yaw takes `0.0012 x turn x dt` (`0x0042bab3`..`0x0042bad3`), 2.4 radians a second a
+unit of excess past ±0.4. Each velocity term becomes `( sqrt( zoom ) x 0.02 x v + term ) x 0.5` a frame, with no dt
+(`0x0042bc2a`; `0x006fddf8`, `0x006fddfc`), so a held key settles at `sqrt( zoom ) x 0.002` units a millisecond, 21 a
+second at zoom 110. Nothing on the way in from the orbit writes the velocity `0x00790a88`..`0x00790a90` (its writers
+are `0x0042aa8b`..`0x0042aaa0`, `FUN_0042aab0` and `FUN_0042b1c0` itself), so the pan's velocity carries into the walk.
+Read from the listing; not measured in the running original.
+
 ### Where OpenTPW's camcorder differs
 
 `ParkCamcorderCameraMode.Slide` runs the sweep above pass for pass, steps 1 to 8, with the original's constants and
 its stores: `double` between them for the x87 at 53 bits, a `float` at each store (`docs/QUEUE.md` Q48b). It differs
-in these places, of which a walk in the park reaches only `FUN_0042a340`'s branch:
+in these places, of which a walk in the park reaches only `FUN_0042a340`'s branch and the last:
 - **Off the map every side is shut.** `CellEdge` holds no cell there; the original's test reads its neighbours'
   records instead (step 1's cell is never clamped). Only an entry off the park gets there (below).
 - **The passes are capped at 1024**, where the original loops until the step is spent. Every pass spends part of a
@@ -2240,6 +2256,9 @@ in these places, of which a walk in the park reaches only `FUN_0042a340`'s branc
   and only the cap ends it. The put-back loads its cell with `FILD` over a zero high word (`0x0042c0b0` and the
   others), so a cell below 0 reads as unsigned and lands past 4e10; and `__ftol` keeps the low word of a
   position past 2e10, where C# saturates. None of it is reached on the map with a finite step.
+- **The keys, the turn and the speed** (above, "The walk's keys, turn and speed"): ours turns 2.0 radians a second a
+  unit past ±0.4 (5/6 of the original's), walks 40 units a second, strafes on Right and has no key turn
+  (`docs/QUEUE.md` Q17, Q1161).
 
 Which precision is live is open (above). At 24 bits two of `ParkCamcorderWalkTests`' cases come out otherwise: a
 step of 5 from 245 is taken whole and put back at 249.999 instead of crossing onto 250, and the tie from (45, 45)
@@ -4658,10 +4677,13 @@ changes 40 of the row's 97 normals. Rows are placed at `+0x0c + r × +0x14` in t
 (it stands to the low-x, low-y side of the park). Shading shows only below that; a face turned away gets the ambient
 alone, (85, 85, 104).
 
-**Set once.** `FUN_004080e0`, called only from the park load `FUN_00407e00` (`0x00407ef2`), which state 9 calls at `0x0054ed3f`, copies the four values to
+**Set at the load.** `FUN_004080e0`, called only from the park load `FUN_00407e00` (`0x00407ef2`), which state 9 calls at `0x0054ed3f`, copies the four values to
 `0x008bd47c` (fog), `0x007a0b44` (ambient), `0x007a0b3c` (directional) and `0x007a0b30-38` (direction);
 `FUN_00458590` applies them at `0x0054ed64`. The sun is constructed earlier, at `0x0054eca4`, from those globals
-before they are filled. Nothing time-driven writes any of them; this does not on its own rule out a day-night look
+before they are filled. The map's opener keeps `[0x008bd47c]` at its `+8` and writes nought there while the map is up
+(`0x005f0b96`..`0x005f0ba7`); `0x005f11f8` writes it back (read as the restore, not traced). The exe's other writers of
+the fog word are `0x004080eb` (the load's), `0x005842e6`, `0x00584766`, `0x005d8bef`, `0x005d8db3` and `0x005d96ac`;
+the two at `0x005842e6` and `0x00584766` are not read. Nothing time-driven writes any of them; this does not on its own rule out a day-night look
 drawn some other way, which only frames of the original a few game days apart would show.
 
 **OpenTPW** lights a park this way in `content/shaders/test.shader` (per vertex, clamped, rounded to a byte) with

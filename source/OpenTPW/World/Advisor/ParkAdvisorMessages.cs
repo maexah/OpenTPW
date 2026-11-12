@@ -1769,7 +1769,9 @@ internal sealed class ParkAdvisorMessages
 		_playing = pending.Topic.Id;
 		++Attempts;
 		// The helper then sends an event of type 0x18 carrying the response's group and the record's subject
-		// (FUN_0059b620, FUN_0040f740, FUN_0040fb10); its one hearer is the tag system (FUN_00509bf0).
+		// (FUN_0059b620, FUN_0040f740, FUN_0040fb10); its one hearer is the tag system (FUN_00509bf0). For a polled
+		// record the original first writes the thing its score callback left into the record (0x0059b6cf), so row 113's
+		// tag is about the unjoined ride; ours sends the posted subject, nought (docs/QUEUE.md Q1160).
 		said?.Invoke( ResponseOf( posted )?.Group ?? pending.Topic.Group, pending.Subject, pending.Secondary );
 		Log.Info( $"Park advisor: attempt={Attempts} message={pending.Topic.Id} subject={pending.Subject} score={score} threshold={Threshold} response={response} sample={sample} line={line} tick={gameTick} duration={duration} waitUntil={WaitUntil}" );
 	}

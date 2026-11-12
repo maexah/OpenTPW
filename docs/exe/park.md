@@ -1331,7 +1331,7 @@ Q663. The yellow and green sparkles a bought thing rises among are its item's `I
 | `0x00558e87`..`0x00558ea5` | It needs the script's model (`+0xc8`) and that model's box, `FUN_00466b70` (`ride-operation.md`: the cells `+0xc0`..`+0xc4` x 10, the heights from the `.hmp`); with none, nothing | Listing |
 | `0x00558eab`..`0x00558f25` | `Particles_Spawn( effect, x, y, z )`: x and z the box's middle, y the model's base height `[[[rec + 8] + 4] + 0x78] + 0x44`, each x 1024 (`0x00700fd0` 0.5, `0x00700fdc` 1024.0) | Listing; constants read |
 | `0x00558f3d`..`0x00558fac` | `Particles_SetArea( handle, dx x 512, dy x 256, dz x 512 )` (`0x00701050`, `0x00701054`): the emitter's area `+0x44`/`+0x48`/`+0x4c`, each over 16, so half the box across and along and a quarter of its height, in place of the template's | Listing; `Particles_SetArea` decompiled |
-| `0x00558fda` | `FUN_0051c640( ... )` makes a sound-engine zone about the box's middle, kept at `+0xd4` and released at the teardown (above). What it does to the sound is not decoded | Listing |
+| `0x00558fda` | `FUN_0051c640( ... )` makes a sound-engine zone about the box's middle with a radius, kept at `+0xd4` and released at the teardown (above): an EAX 2.0 occlusion zone. The send reaches `FUN_006b8230`, which inserts it in the global list `0x00fb2038`, sorted on its fourth float (the radius), largest first (`0x006b827e`, `FUN_006c49b0`). While EAX is on (`[0x00fb2050]`, written only at `0x006b81c1`), `FUN_006b7b60` gives each placed voice (flag word `+0x14` with `0x20`, without `0x1`) inside a zone a factor f (`FUN_006c4c80`, not read) and sets its buffer's `DSPROPSETID_EAX20_BufferProperties` (GUID at `0x0070aa60`, wrapper slot `+0x48`, `0x006d6cf0`): obstruction round( f x -2000 ), occlusion round( f x -1000 ) (`0x0070a574`, `0x0070a578`) | Listing; GUIDs and floats read from the file |
 
 The place uses the model's own cells, `+0xc0`/`+0xc4` (the rule Q744 names for the build marks), never the anchor's
 footprint. **Gaps the decode leaves:** an item with no `.RSE` falls back to `Data\TestScript\test.rse`
@@ -1496,7 +1496,12 @@ timer the duration (`+0x04`), its riders the whole boarding list, its mesh `+0x0
 template's `+0x18`, plus `+0x14`, an index into the item's `SupplementalMeshes` (the item's loaded handles at `+0x4bc`, which `FUN_00413c10` fills at `0x0041434f`..`0x0041438b`, loading each name from `+0x244` on, the start taken from `ride-operation.md`'s `SupplementalMeshes[7]` at `+0x260`; whether the go-karts launch here, and not through the other readers of `+0x4bc` at `0x00543d00`, `0x0055aa00` and `0x0055e438`, is not traced), its model playing role `0xc` (the
 "no animation" sentinel, `RideAnimations.NoRole`) with flags 2, so it stands still; the first car of a ride is its lead
 (`+0x58`, flag `0x400000`). It is seated (`FUN_00549c60`), retargeted (`FUN_0054a040`) and flagged `0x4000000`, which
-the draw clears as it spawns particle `0xf`, a splash.
+the draw clears as it spawns particle `0xf` at the car (`0x00546a89`..`0x00546ac7`). Particle 15 is `P_EFFECT_BeamUpCar`
+in `ParLib`'s table (12 is `P_EFFECT_Splash`); what it looks like is not observed. The removal `FUN_0054ae50` also spawns
+`0xf` at the car unless the ride's `+0x50` is 4 (`0x0054aeaa`..`0x0054aed5`). The seating spawns particle `0x13`
+(`P_EFFECT_BeamUp`) at each rider's seat node only when its second argument is not nought (`0x00549cbd`, `0x00549d04`);
+the launch passes its own second argument (`0x00549ff3`). Whether the draw runs for a ride out of view, and which
+families reach `FUN_00549db0`, is not read.
 
 **Where in the arena.** `FUN_0054a040`'s bumper arm (types -1, -3, -6, -11, -14), for a car still flagged `0x100000`:
 up to 100 tries of a radius `rand % arena` and an angle `rand & 0x1ff`, the point `x = centre + cos·r >> 8`,

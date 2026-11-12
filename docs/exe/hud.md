@@ -989,8 +989,11 @@ player put it.** Three paths change it:
 - **A guest arriving or going.** The guest constructor `FUN_004faec0` broadcasts message `0x1c` (`0x004fb2fd`) and the
   thing delete `FUN_0050b780` broadcasts `0x1b` for every thing (`0x0050b7f9`, before the free); `FUN_0050ca50` routes
   them. `0x1c` adds that guest's row (`FUN_00493c50`: the row adder, which inserts in sort order when the list's
-  `+0x48 & 0x10` is set, then a redraw). `0x1b`, for type 1 only (`FUN_004818c0`), finds the row by its guest
-  (`FUN_00664d2a`) and removes it (`FUN_00493c10` → `FUN_006647cb`). Neither writes the top row itself. Both finish in
+  `+0x48 & 0x10` is set, then a redraw). `0x1b`, for type 1 only (`FUN_004818c0`, `0x004818ef`), first closes the visitor window
+  if it shows that guest (`FUN_004b7a00` on `0x007cc408`, then `FUN_0048ccd0`: vtable `+0x2c` when the guest is
+  `[0x007c2658]`), then finds the row by its guest (`FUN_00664d2a`) and removes it (`FUN_00493c10` → `FUN_006647cb`),
+  and last takes the locator panel off the arm if it holds that guest (`FUN_004b3620`: `FUN_004a25f0( 1 )` when
+  `[0x007cc308]` is the guest; its one caller, `0x0048190a`). A deleted staff member reaches none of the three. Neither writes the top row itself. Both finish in
   `FUN_00664495`, which sets the scrollbar's range to count − visible and puts its position back at the top row; the
   slider clamps the position, and if that moved it the list takes it back (`0x800` → `FUN_00664ea3`, `0x00664ee9`).
   So a removal near the bottom pulls the view up by the rows it lost, and nothing else moves it.
@@ -1499,11 +1502,12 @@ its effects are drawn with the gadget, so a window opened over it covers them (`
 it was; any other type takes the mesh off and hides it. Rows 515 and 516 both read "Left-click to go there".
 
 **A button's act, `FUN_0048e0f0`** (its answer in brackets): 3 `FUN_004867b0( thing )`, the camera to the thing's
-cell (0: the bar stays); 4 `FUN_004868d0( &item )` (0; not read); 9 to `0xc` `FUN_004acc70( 0..3, item )` (2);
+cell (0: the bar stays); 4 `FUN_004868d0( &item )`, the item's word a packed cell id, the camera to `( ( id − 1 ) & 0x7f ) × 10`,
+`( ( id − 1 ) >> 7 ) × 10` through `FUN_0042aab0` (`0x004868db`..`0x00486915`) (0); 9 to `0xc` `FUN_004acc70( 0..3, item )` (2);
 `0xd` to `0x11` `FUN_0049bdd0( 0..4 )` (2); `0x12` `FUN_0049fb30` (2); `0x13` `FUN_004aa480`, research (2); `0x14`
 `FUN_004a52a0` (2); `0x15` `FUN_004b2750` (2); `0x16` `FUN_004b7b00` (2); `0x17` `FUN_004dfe30( 1 )` on the
 thing, the call for a mechanic (1); `0x18` `FUN_00498d80`, the entry price screen (2); `0x1a` and `0x1b`
-`FUN_004d2df0` and `FUN_004d2ec0` on the thing `FUN_00519610` answers (2). None but 3, 9 to `0xc` and `0x18` is
+`FUN_004d2df0` and `FUN_004d2ec0` on the thing `FUN_00519610` answers (2). None but 3, 4, 9 to `0xc` and `0x18` is
 read further; 9 to `0xc`, the buy screen on a tab, are in `advisor-park.md`, "A park with no ride in it".
 `FUN_00498d80` is the entry-price screen's builder: nothing where the screen is open already (`[0x007ca210]`),
 else the screen with the Finance category's last screen noted as 10 (`FUN_004a0810( 3, 10 )`) and its own advisor
@@ -2919,8 +2923,9 @@ does (`FUN_004c7fa0`: stamp `+0x1f0b8`, count `+0x1f0bc`, flag `+0x1f0c0`; `FUN_
 Neither month so far is written. **Readers**: the park status screen's graph (`FUN_004a4b90` and its draw, bit `8` of
 `DAT_00753c48` from its fourth series button, `0x4a68bf`) plots the 10th beside the 13th (`+0x20cc0`), the 14th's float
 (`+0x20f10`), the 15th (`+0x21160`) and the 16th (`+0x213b0`); its labels are not read. **Nothing reads the 12th**: its
-every operand is the constructor's, the close's, the serialiser's and the load factory's (`FUN_005179c0`, which empties
-every ring before the read, `FUN_0051ae30`).
+every operand is the constructor's, the close's, the serialiser's and the load factory's (`FUN_005179c0`, which resets
+every ring's header before the read, `FUN_0051ae30`: `+0` nought, the head `+0x244` −1, the count `+0x248` 144, the
+wrapped byte `+0x24c` nought; the 144 words are left as the allocation `0x005188c4`, which does not zero, gave them).
 
 **The graph's scale, a ring's largest month (`0x004801d0` over integers, `0x004802a0` over floats; fork watch 2026-10-19,
 `verify-world.md` L4).** The argument 0, 1 or 2 gives a window of 12, 36 or 144 months. The samples are `0` to the window
@@ -2928,8 +2933,9 @@ inclusive, and stop at the ring's count (`+0x248`): sample `i` is `data[ head - 
 `data[ head - i + count ]` past the start only when the wrapped byte (`+0x24c`) is set, else the scan stops. A sample is kept
 only when strictly greater than the best so far (`0x00480323`..`0x0048032c` for floats); the float is truncated
 (`0x0067a830`) and raises `*out` if greater. Both keep the **index** of the best (start -1) and re-read the ring there after
-the loop, so **with no sample above nought** the index is -1 and they read `data[ head + 1 ]`, the slot past the newest: the oldest month in a wrapped ring, an
-emptied slot in an unwrapped one, and at head 143 the head word `+0x244` itself. Only an index past an unwrapped head takes the
+the loop, so **with no sample above nought** the index is -1 and they read `data[ head + 1 ]`, the slot past the newest: the oldest month in a wrapped ring, in an
+unwrapped one the file's word for that slot (the loader fills all `+0x248` words, `0x004c6307`) or, where no reader
+filled it, whatever the heap held, and at head 143 the head word `+0x244` itself. Only an index past an unwrapped head takes the
 limit fallback (`0x0048028d`, `0x00480365`). So an all-nought recent window takes its scale from that slot. (The fork's "0 when
 none is above 0" is wrong.) In each of the status screen's seven folds (`FUN_004a4b90`, `0x004a51d0`, `0x004a5e10`; e.g.
 `0x004a4c86`..`0x004a4d27`) bit 2 of `[0x00753c48]` takes the 14th ring (`+0x20f10`, the happiness float) through `0x004802a0`,

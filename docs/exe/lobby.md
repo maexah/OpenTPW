@@ -58,7 +58,7 @@ The mode is one global, and it is the reason this project loads only one park fi
 | `0x004b9340` | IslandPanel_Refresh | Refreshes the island panel | Disassembly |
 | `0x004b9840` | — | Hides the price (`0x1e0ea`) and the held key count (`0x1e0ec`) and **disables** both island arrows (`0x1e0f0`, `0x1e0f1`) — all four together, while the mode is 2 | Disassembly |
 | `0x0065da8d` | — | The enable/disable setter: puts flag **`0x2`** on the control at `+0x48` | Disassembly |
-| `0x00668820` | — | Part picker: draws **part 1**, the disabled part, for a control carrying `0x2` | Disassembly |
+| `0x00668820` | — | The button class's state getter (vtable `0x00705a50`), which picks the part drawn: **1**, the disabled part, for `+0x48 & 2`; 2 checked (`+0x139`), 3 when checked with the pointer on it (`+0x138 & 1`); 4 pressed (`+0x138 & 2`); 5 the pointer on it (`+0x138 & 1`); else 0. `0x00668ad3` letters the label by it (`ui.md`, "A text button's lettering by state") | Disassembly |
 | `0x0065d9dd` | UI_SetVisible | The hide. **Never a vtable entry** — so a virtual call at slot `+0x14` is always the enable, never the hide. That is how the two operations tell apart in a decompile | Vtable scan |
 | `0x005e1ee0`, `0x005e1f40` | — | The handlers behind the island arrows, **next** and **previous**. Both return having done nothing while the camera is leaving for a park (`[this+0x14]` non-zero, their first test), and unless the type is something other than 2 — see "The island keys wait for the fly-in" | Disassembly |
 | `0x005e1cc0` | `IslandLobby_EnterPark` | Enter this park. In Instant Action it goes straight in without counting keys | Disassembly |

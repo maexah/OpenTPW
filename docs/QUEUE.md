@@ -420,6 +420,9 @@ filed the items that cite it.
     span to the voice's start (`0x006bcafd`..`0x006bcb46`), as `Advisor.cs` holds. The `+0x3c` quirk above reaches him too: a second pause
     of the same sample does not stamp again, so its resume adds the time since the first (effect on him unproven). The window procedure's
     `(1, 1)` does not take this path: it suspends all (`0x0051bcf0`). Unproven: what the driver does to the DirectSound buffer.
+  - **Note (fork watch 2026-11-12, verify-audio-fx.md F2):** the sound wrapper's vtable is `0x00711920`: slot `+0x38` (`0x006d25a0`) is
+    `QSWaveMixPauseChannel( session, 0, 1 )` and `+0x3c` (`0x006d25c0`) `QSWaveMixRestartChannel( session, 0, 1 )`; the
+    per-channel `+0x2c` and `+0x30` (`0x006d2500`, `0x006d2540`) pass flag 0. What flag 1 does inside `QMixer.dll` is not read.
 
 - [ ] **Q741. A park file's other voices put back (Q612's rest).** From Q612 (`audio.md`, "A park file's voices"). Put
   back the classes Q612 counts: the one-shots (`PARK_FILE_SOUND_VOICE_ONE_SHOT`: the Fountain's looped 107, the level's
@@ -707,6 +710,10 @@ filed the items that cite it.
 - [ ] **Q213. The status box's lettering is smaller than the original's.** Seen 2026-10-04 with the two side by side
   (Q208): the original's "LINE NOT CONNECTED" fills the striped box in two lines of large type, OpenTPW's is small.
   Decode the font and size `FUN_004ade40` draws with. Confirm: the box photographed beside the original's.
+  - **Note (fork watch 2026-11-12, verify-ui-hud.md H3):** `FUN_004ade40` sets no font or colour. The label is made once by the window's
+    vtable slot `+0x10` (ride `0x004ad720`, shop `0x004afaa0`, sideshow `0x004b0ed0`): a text control on the base's `+0x1c` (the
+    ride build passes `0x3e25`), aligned (1, 1), font slot 8 (`0x00485a70( 8 )`, the list headings' slot), colour (0, 0, 0, 255),
+    then hidden. Ours letters `0x3e25` in font 6, white (`ParkObjectWindow.cs`, said at the site): build it so, then the photograph.
 - [ ] **Q214. A fresh Full Simulation park's four gaps.** Found by the 2026-10-04 review (`u1-startup-1` to `-4`).
   `ParkStaffPool.Roll` gives every candidate costume 0 where `FUN_00507600` stores `FUN_00541f70( kind )` at record
   `+9`, so every hired entertainer and mechanic wears bank 0 (`guests`: `bank 0+0` on all five kinds). The land
@@ -1411,12 +1418,18 @@ filed the items that cite it.
   top-up (Q356's note); not looked into. Decode what the original draws there first. Confirm: the box beside the
   original's on the same file, a screenshot and the census of what is drawn.
   - **Note (fork watch 2026-10-16, `verify-audio-fx.md` O4):** the figure is made at `0x0049bb4a` to `0x0049bb64`:
-    `0x00475a10( 0x0074f758, slot )` with the slot by role from `0x0049bb10` (5, 6, 4, 7, 8), the handle kept at
-    `[0x007ca310]`, then `0x004755d0( handle, 8, 8.0f )`. The facing and frames 0 to 7 are inside the sprite script
-    `0x0074f758`: not read.
+    `0x00475a10( 0x0074f758, kind, bank, 1, x, y, z )`, the sprite kind by role from the table at `0x0049bb90` (roles 0
+    to 4: 5, 6, 4, 7, 8), the bank the candidate's byte `+9`, set 1, the handle kept at `[0x007ca310]`, then
+    `0x004755d0( handle, 8, 8.0f )`, register 8 the draw scale. The script is read (the note of 2026-11-12, below).
   - **Note (play test 2026-10-21, note 18):** the hire screen shows no staff picture. Figure made at `0x0049bb4a` to
     `0x0049bb64`, sprite script `0x0074f758`, frames 0 to 7 (QUEUE:1170-1173).
   - **Note (play test 2026-10-31):** the same missing figure is reported on the placing cursor (Q40); settle whether this box and Q31b's `STAFF_WINDOW_PREVIEW` share one decode. Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
+  - **Note (fork watch 2026-11-12, verify-ui-hud.md H1):** the script `0x0074f758` is SetLocal 16 = `0x51000`, SetSet 1, SetLocal 15 (the
+    facing) = 5, Frame 0 to 7, Jump back to its start. `0x0049ba00` (one caller, `0x0049b97b`, in the hire handler) returns at
+    once with no candidate, and remakes the figure only when the candidate's dword `+0` (the role) or byte `+9` differs from
+    `[0x007523e8]`/`[0x007523ec]`; message `0x14` (`0x0049b7b4`) deletes it and sets both to -1. It stands on control `0x2484`'s
+    rect: x = ( left + ( right − left ) / 2 − `0x3f8` ) / 1024, y = ( `0x300` − bottom + ( bottom − top ) / 4 ) / 768, z =
+    1 − ( depth + 1 ) / 40 (`0x00476a70`); the sprite steps every 62 ms (`0x004759c4`).
 - [ ] **Q404. A park six months in the red ends.** From the fork review 2, 2026-10-16
   (`verify-economy-guests-paths.md` L4, M2). Counted, `BANK_PARK_ENDS_IN_THE_RED`. What the end does is
   `ride-operation.md`, "The end of the park": world state 4, the end screen, `VAR_BREAKSTAT` 1 on every ride guests
@@ -1975,6 +1988,9 @@ filed the items that cite it.
   `FOCUS_LOSS_PAUSE_OVERLAY`; Q577 is its sounds. Decode first what `[0x00786b68 + 0x3c]` is, whether the dimmer takes
   the pointer and whether the banner moves while the timers are held. Confirm: P in Lost Kingdom beside the original's
   (with `paused.MD2` copied into the reference install's `American/`, or after Q733).
+  - **Note (fork watch 2026-11-12, verify-ui-hud.md M2):** the table `0x00752ed0` is (-2, -6, 2, 2) twice, (2, 6, -2, -2) twice, then the
+    end word -9997, a loop: the banner swells 2 left, 6 up, 2 right and 2 down over two steps and back over two, 35 ms a
+    step, started at `0x004a274e` after the pivot `0x0065f345( right / 2, bottom / 2 )` (`0x004a2740`).
 - [ ] **Q740. The End's and the end of a park's banners, with their motion.** From the fork watch 2026-10-24
   (`verify-world-other.md` L1, M1; `verify-audio-ui.md` L2). The End's control wears `s_congrats` (`congrats.MD2`) and
   moves by table `0x0074fcf8`; the end of a park's wears `s_bkrupt` (`bankrupt.MD2`) and moves by table `0x0074fc38`,
@@ -2272,10 +2288,18 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   LINEAR, minified POINT, one mip level (`render-states.md`, "Texture filtering" and "Texture addressing"). Q15 is
   the wrap half on paths. Measure first: the lines at tile or cell edges, and whether clamping or per-tile mips (or
   padding) removes them; then the sharpness against the original at the same view (Q618 settled 32-px tiles).
+  - **Note (fork watch 2026-11-12, verify-world.md H2):** the texture page manager does place textures: the per-class limit `+0x1818` is
+    written each frame by `FUN_0058ccc0` (through `[cache+0x1800]+0x18`, `0x0058cdf3`, `0x0058ce48`), called from the frame step
+    `FUN_0058cf40` (`0x0058cf70`) before the placer `0x0058f940`. Which textures share a page, and how many pages a class holds
+    at run time, are not read, so "each tile its own clamped texture" above is not established by the page manager either way.
 - [ ] **Q969. The clear colour shows through near the back mountain.** BlueClipping.png: long straight lines of
   (72, 216, 248), the frame's clear colour, on open ground and on the rock face, away from any plot rim (Q807 and
   Q808 closed the rims). Find the camera, measure with `lib/clearseam.py`, find which edge opens (ground against the
   scenery's rock, or a cell's diagonal since Q821), then close it. Confirm: the clear-colour count at that view.
+  - **Note (fork watch 2026-11-12, verify-ui-hud.md M6):** the original's park view clears to black: the clear colour is `[0x008bd47c]`
+    (the fog) only while the render word `[0x008bcbc8]` has `0x2000` or `0x4000000`, else 0 (`0x005737aa`..`0x005737d5`), and
+    the park's word reads `0x1444100` (`park-engine.md`, measured). Ours clears to (72, 216, 248), so a seam that shows light
+    blue here would show black there. Decide what ours clears to; a colour other than black is a deviation said at the site.
 - [ ] **Q970. A guest on a toilet is drawn in its doorway.** BathroomClipping.png: the person shows through the hut's
   door while inside. Read what the original does with a toilet's user (Q52's flag `0x20` test hides a rider's sprite,
   or the toilet's script), then build. Confirm beside the original.
@@ -2309,6 +2333,8 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   ask, QMixer's software class (`0x1800b130`). Neither is `SetPan`. So the fork's SetPan law reaches flat voices only (pan 0) and does not overturn `AudioListener.PanTo`, whose comment stands; PanTo's dot product against QSound's real output is unproven. Unproven: DirectSound 3D's rolloff, whether QMixer sets min and max, which class
   a real run uses (`[0xfb201c]`, whether that caps struct is `DSCAPS`), and our dot product against QSound's real output. Capture the original's mix of a placed voice at several bearings (`mixer.py` gives the gain only, pan is unread), then compare `PanTo`; build nothing before. Never copy a QMixer address from the fork: its `QMixer.dll` is another build. Doppler needs nothing (off on every voice
   measured). Decoded in `audio.md`, "The rest of that word".
+  - **Note (fork watch 2026-11-12, verify-audio-fx.md F5):** checked again and the reading above stands: `0x006bc61b` ORs bit 0 into the
+    request's field mask `+0x14`, and the mode word is the stream's `+0x14`, copied from the request's `+0xc` (`0x006bb3f5`..`0x006bb3ff`).
 - [ ] **Q989. The Finance graph's series.** From the fork watch 2026-10-31 (`verify-ui-hud.md` L3); Q714 is the Park Status screen's, this is the
   other caller of the same draw. Each series is `0x0047fe90`'s line (oldest sample first, x in steps of width / count so a short history
   stops part way and starts at 0, a hollow 3 x 3 box at each segment end only while count is under `0x90` (`0x0047ffd5`; the 144-month period draws none), y 32-bit) and ends in its newest value printed `%d` in the
@@ -2410,6 +2436,44 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   where the original's passes over the builder's object, whose life is not read. Another: a leftover `*.TPWS.tmp` is not taken for a park here
   (Q997's S-D2 fix), but the original's own `.TPW*` search would take it, the folder being shared, and nothing deletes it.
   Build or close each with a note.
+- [ ] **Q1160. The unjoined queue's tag is about the ride, and a polled line's thing reaches its tag.** From the fork watch
+  2026-11-12 (`verify-advisor.md` A1). In the original a polled record's speech (`FUN_0059b620`) asks the score callback again
+  through `FUN_0059c0a0` and writes the thing it left (the balance object's `+4` and `+8`) into the record where not nought
+  (`0x0059b6cf`..`0x0059b6e4`), so event `0x18` carries it to the tag (`advisor-park.md`, "The message record" and "A queue not
+  joined to a path"). Row 113's callback leaves `FUN_004ccb00`'s ride, so the tag's type-3 button puts the camera on that ride;
+  row 140's leaves bus stop B's packed cell (`0x0059f4dd`), which its tag's type-4 button turns into a camera move
+  (`FUN_004868d0`, `hud.md`); rows 86-89 and 141 leave a handle too (`0x0059e4b2`.., `0x0059f54e`). Ours sends the posted
+  subject, nought, for every polled line (`ParkAdvisorMessages`, the `said` event; said at the site), so row 113's button does
+  nothing. Give row 113's said event the ride `ParkFacts.UnjoinedQueue` finds at the speech, and rows 140, 86-89 and 141 theirs
+  when they are built. Confirm in the original first: Q324's `queue-fix.TPWS`, row 113 said on tick 996, click the tag's locate
+  button (by the bytes the camera goes to thing 43, the Aztec Mayhem); then ours beside it.
+- [ ] **Q1161. The camcorder's keys turn, and its turn rate and walk speed are the original's.** From the fork watch 2026-11-12
+  (`verify-other.md` L2, `verify-world.md` M3, M4). The original's first person is read in `park-engine.md`, "The walk's keys,
+  turn and speed": Left and keypad 9, Right and keypad 7 turn at 1.2 radians a second; Up, Down and keypads 1 and 3 walk; the
+  pointer turns 2.4 radians a second a unit past ±0.4; the walk settles at `sqrt( zoom ) x 0.002` units a millisecond (21 a
+  second at zoom 110) by a half step a frame; the orbit's pan velocity carries in. Ours (`ParkCamcorderCameraMode`) turns
+  2.0 a unit, walks 40 a second, strafes on Right (Q17) and has no key turn; each is said at the site. Build them on
+  `Time.Delta` (rule 10: the per-frame half step becomes its time-based equivalent, said at the site). Confirm under Proton
+  first (`campoi.py` in first person: the yaw after a held Left of known length, the position after a held Up at zoom 110),
+  then ours' `camcorder` census against it.
+- [ ] **Q1162. The bump cars' particle 15: its name, the removal's skip and the seating beam's gate.** From the fork watch
+  2026-11-12 (`verify-world.md` M2). The launch's draw spawns particle `0xf` at the car (`park.md`, "Where a bumper ride's cars
+  float"), which `ParLib` names `P_EFFECT_BeamUpCar`, not the splash (12); ours counts it as `BUMPER_CAR_SPLASH`. The removal
+  `FUN_0054ae50` spawns `0xf` too, but not when the ride's `+0x50` is 4 (`0x0054aeaa`..`0x0054aed5`); ours counts
+  `BUMPER_CAR_REMOVED_PARTICLE` on every removal. The seating `FUN_00549c60` spawns `0x13` per rider only for a rider whose seat
+  node is found and only when its second argument is not nought (`0x00549cbd`, `0x00549d04`); ours' `Seat` counts per rider
+  whatever the node, and passes `particles: false` at the launch, where the original passes the launcher's own second
+  argument (`0x00549ff3`, not traced). Decode what `+0x50` 4 is and the launcher's argument, give the counts names that say
+  what they are, then build them with `WorldParticles`. Not read: whether the draw `0x00546280` runs for a ride out of view,
+  and which families reach `FUN_00549db0`. Confirm: Dino Karts or the Hot Pot beside the original's, the cars launched and
+  removed, `particles` against `original/emitters.py`.
+- [ ] **Q1163. A text button's lettering changes with its state.** From the fork watch 2026-11-12 (`verify-ui-hud.md` H2). A
+  button of class `0x00705a50` letters its label by state (`ui.md`, "A text button's lettering by state"): white at (0, 0)
+  plain or checked, black at (1, 1) with the pointer on it, white at (2, 1) pressed, unchanged disabled; a heading's caller
+  sets both colours to its own (255, 239, 0). Ours' `UiControl.TextColour` is one colour with no offset by state, so the
+  finance and park-info toggles and the list headings' buttons letter one way always. First read which of Lost Kingdom's
+  buttons are of the class (their layouts' controls), then build the states. Confirm: hover and press one toggle in both
+  games, photographs side by side.
 
 ## B. Docs and comments
 
@@ -2531,6 +2595,9 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   - **Note (play test 2026-10-21, note 33):** Alexah felt the strafe as part of an arcade feel; see Q25's note. Q631
     decides which of A and D remain in the orbit view; the camcorder's A and D stay strafe-free (the original has none).
     (Inferred from the notes: Alexah's WASD request is stated for the camera scroll, notes 6 and 11, not the camcorder.)
+  - **Note (fork watch 2026-11-12, verify-other.md L2):** the original's first person has no strafe at all: Left and Right (and keypad 9
+    and 7) turn, and the across term is 0.0 (`0x0042b82a`; `park-engine.md`, "The walk's keys, turn and speed"). Removing the
+    strafe leaves Left and Right to Q1161's turn.
 - [ ] **Q18. The advisor draws in front of the dimmed screen.** `Level.Render` draws the HUD, then
   the overlay pass with the advisor. Pausing does not hide him either; only the options screen's quiet stop takes him off (`ui.md`, "Pausing him"). Draw the
   dimmer over him, or hide him while such a window is open. Confirm: screenshot with the buy screen open.
@@ -2616,6 +2683,10 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   `q478/orig/b-3-ride.png` and `b-4-ride-again.png`, 138 and 141 in `b-2-queue.png` and `b-5-shop.png`), the object
   arm's calls at `0x00487712` (a new object) and `0x004878ce` (the same one). From Q494: `[0x007afda0]` is the model the picker's object march met (`FUN_00469340`), which
   ours keeps as `ParkPicking.Marched` (the thing), whether or not its point beat the ground's.
+  - **Note (fork watch 2026-11-12, verify-world.md M1):** `FUN_00469410`, run each frame after the pulse tick (`0x0054e306`), writes
+    `0xffffffff` into every vertex colour (the `+0x64` table) of each mesh without flag `0x4000` of the highlighted model
+    `[0x007a1ce0]`, the one the swap `FUN_00469180` stores: the hovered model is drawn full white, not pulsed (its
+    `GetTickCount` is dropped, `0x00469424`). It fits Q478's brighter Belly Bounce; not measured against it.
 - [ ] **Q25. The camcorder button should give a crosshair and place the camera where you click.**
   `ParkGadget.EnterCamcorder` enters the mode at once. The original installs a mouse-interaction mode
   (`FUN_00481a10`, `park-engine.md`, "Camcorder mode — the first-person view"). Its click handler was decoded by Q48
@@ -2703,13 +2774,17 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
 - [ ] **Q38. What building and selling look and sound like.** Counted, not built: the death particle
   (`DESTROY_PARTICLE_EFFECT`, `Info.DestroyParticleEffect`, 75-78, a world effect spread over the
   footprint) and the demolish sound (`DEMOLISH_SOUND`, `0x96`-`0x99` by size; Q1000 caught the pillar's sale in the original playing `0x98` once, category word 3, X 40 = 10 x the picture's width, `park-engine.md`, "The demolisher's per-cell tail, and its sale sound"). The build side's particle is
-  counted (`CREATE_PARTICLE_EFFECT`, Q663) and its build is Q683; not yet counted: the `+0xd4` sound zone the script
+  counted (`CREATE_PARTICLE_EFFECT`, Q663) and its build is Q683; not yet counted: the `+0xd4` sound zone (an EAX 2.0 occlusion zone) the script
   loader makes when an item has one (`park.md`, "What building a thing gives off"). The world pass to draw them in is `WorldParticles`.
   - **Note (fork watch 2026-10-16, `verify-audio-fx.md` A6):** particle caller ids read in the listing: `0x004d95bf`
     50, `0x00544dd8` 2, `0x005480fc` 96, `0x0055dba3` 39, `0x0055dc22` and `0x0055dca1` 40, `0x005999ad` 87,
     `0x0048de1a` 91; also `0x00546ac7` and `0x0054aed5` (15), `0x00549d04`, `0x0054ad24`, `0x00557334`, `0x00557f0e`
     (19), `0x004b8f6e` to `0x004b961c` (97, 98), `0x00548481`, `0x00548a4b` (1), `0x005488d4` (10). Which fire for a
     Lost Kingdom build or sale is not read.
+  - **Note (fork watch 2026-11-12, verify-audio-fx.md F1):** the `+0xd4` zone is an EAX 2.0 occlusion zone (`park.md`, "What building a
+    thing gives off"): a placed voice inside one gets obstruction and occlusion by a factor, only while EAX is on
+    (`[0x00fb2050]`). Not read: the factor `0x006c4c80`, which of the five arguments are x, y and z, and the teardown's release.
+    Inferred, unproven: with no EAX 2.0 (a modern DirectSound, Proton) the zones are built and never heard.
 - [ ] **Q40. The place-staff mode's cell rule and its carry preview.** Found by Q6's decode (`park-engine.md`,
   "Putting a candidate down: the type-5 mode"), so this is a build. The original takes a worker only on a
   cell of `mType` 0, 1, 3 or 9, not flagged `0x40`, whose track record after the 12/17 parent redirect is
@@ -2749,7 +2824,7 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   constructors are not: `0x006be090` (106 records) and `0x006be680` (2).
   - **Note (fork review 2, 2026-10-16, `verify-audio-lips-video.md` leads 4 and 1):** the pool is rebuilt every
     service pass (`0x006b6ba0`): a voice is admitted when not finished, expired, replaced (`0x100`) or waiting
-    (`0x40`), passing the device gate `0x006bc760`, in range or flagged `0x8` (`0x006bca10`), and keyed strictly above
+    (`0x40`), passing the group-enable gate `0x006bc760` (the device's enable bytes `+0x44`..`+0x47` against the voice's mask `+0x47`; a closed group stops the voice and frees its handle), in range or flagged `0x8` (`0x006bca10`), and keyed strictly above
     the pool's minimum, by insertion sort, the earlier voice keeping a tie. The key's low word is `0xFFFF` less round(
     0.01 d² ) over x and z (`0x006bb9f0`), left stale past 65535; only pooled voices are ticked. Screams carry
     priority 2700, the crowd 5300. A script's sound id its category lacks is silent with no fallback (`park.md`):
@@ -2976,6 +3051,13 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   - **Note (Q636's review, run 9):** the sideshow window's bars `0xa094`, `0xa096`, `0xa099`, `0xa09e`, the toilet window's
     `0x15bbb` and the resting-staff list `0x1e7b` are inset (0, 10) by `FUN_00485e30` in the original: build them so.
   - **Note (play test 2026-10-31):** clicking a walking member's window shows no figure (`STAFF_WINDOW_PREVIEW` reached). The sideshow window is split out as Q960 and the feature window (the Security Camera) as Q961; this item keeps the rest. Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
+  - **Note (fork watch 2026-11-12, verify-other.md L6, verify-ui-hud.md M4):** a guest's delete closes the visitor window when it shows that
+    guest and takes the locator panel off the arm when it holds that guest (`hud.md`, "A guest arriving or going": `FUN_004818c0`,
+    `0x004b7a00`, `0x004b3620`). Ours closes the visitor window already: retire `VISITOR_WINDOW_GUEST_GONE` into that, and fold
+    the locator's arm for a deleted guest (`ParkLocator`, said at the site). The relay does nothing for staff; whether another
+    original path closes the staff window on a deleted member is not read, so `STAFF_WINDOW_MEMBER_GONE` stays. The portrait clone
+    is one, shared by both person windows (handle `[0x007c24a0]`, person `[0x007c24d8]`; staff 8.0 at depth + 1, `0x004b537a`;
+    visitor 12.0, `0x004b6bda`); the staff vtable's `+0x20` (`0x004b6b80`, `jmp 0x00486630`) deletes it.
 - [ ] **Q681. Light every model by its file's own normals, as the original does (from Q657). Measure first.** The
   original's lighter takes entry *i* of a mesh's `+0x64` table for vertex-order entry *i* (`Light_ModelVertexColours`
   `0x00574660`, the one routine for every model); OpenTPW lights the advisor by it (Q657) and every other model, the
@@ -3001,7 +3083,8 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   half the box across and along and a quarter of its height in place of the template's area (`park.md`, "What building
   a thing gives off"). Here `ParkRides.BindNew` counts `CREATE_PARTICLE_EFFECT`; `ParticleSystem` takes no area but the
   template's. Build both, with the same box for the destroy effect's (Q38). Leave the `+0xd4` sound zone alone: uncounted,
-  reached exactly with `CREATE_PARTICLE_EFFECT` (`0x00558e81`, the box tests `0x00558ea5` and `0x00558f4d`), and undecoded. Confirm: the Round Fountain bought in both games, `particles` against `original/emitters.py` (effect 81,
+  reached exactly with `CREATE_PARTICLE_EFFECT` (`0x00558e81`, the box tests `0x00558ea5` and `0x00558f4d`), an EAX 2.0
+  occlusion zone (`park.md`, "What building a thing gives off"; Q38's note), its factor `0x006c4c80` not read. Confirm: the Round Fountain bought in both games, `particles` against `original/emitters.py` (effect 81,
   life 30, most 146 at density 500, about 1.5 s) and the build's first frames side by side (`q663/side-by-side.png`).
 - [ ] **Q684. The map's overlay, its six switches and two pickers (Q664's build).** From Q664 (`hud.md`, "The map's
   overlay"; FileFormats `park-map.md`, "The overlay's six sprites"). Build the six layer switches (`0x987`, `0x993`, `0x994`,
@@ -3021,6 +3104,12 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
     op 0x12 row and one held down (3) its op 0x11 row; a row of -1 posts the empty text (`HelpBar_PostControlRow` `0x00492070`).
     The map's six switches carry two rows each (`hud.md`); `hud.md`'s staff switch (`b_route`, second help 87) was measured NOT shown (`q431/confirm.py`): reconcile that run with this static reading (state byte exactly 1 while on). The new
     player dialog's own case is Q772.
+  - **Note (fork watch 2026-11-12, verify-other.md L1):** the coaster lines are drawn by one of four routines picked by the picture's bits a
+    pixel (`0x005f2fd0`, `( [map+0x3c] + 7 ) >> 3`: `0x005edad0`, `0x005ee580`, `0x005ef040`, `0x005efb10`); the picture takes the
+    texture cache's format record `0x008bd558 + 32 x [0x008bd554]` (`0x005f1f81`..`0x005f1fcc`), so at the shipped `TEXTURE32 0`
+    (`textures.md`) they are `0x005ee580`'s, into A4R4G4B4, with the 32-bit routine's blend (`v = s x c + d x ( 255 − c )` a
+    channel, `( ( v >> 8 ) + v + 1 ) >> 8`, `0x005ee79e`..`0x005ee825`), each channel then cut to four bits. The option-to-entry
+    link is `textures.md`'s, not re-read; the end point, a zero-length line and the neighbour order are not read.
 - [ ] **Q685. The map's hover and its click (Q665's build).** From Q665 (`hud.md`, "The map's hover and click"); needs
   Q684's records and code grid. On each pointer move over the map keep the nearest shown record within 5 game pixels
   (in x and in y, then by distance, the first of equals) and the cell's thing id; repaint the picture when a member is
@@ -3404,6 +3493,10 @@ state machine.
   armed at `0x005e184c`, `docs/exe/ui.md`); sample 470 is never heard today. The arm and the queue's timer are read
   (`ui.md`, "The lobby's idle repeat"), and the arm is counted as `LOBBY_ADVISOR_IDLE_REPEAT` (Q69); when the first nag
   comes wants one sitting with the original first. Confirm: the line heard after 90 idle seconds, by capture.
+  - **Note (fork watch 2026-11-12, verify-advisor.md A4):** the front end's setup noughts the stamp on every entry and the clock is ms since
+    Windows started (`ui.md`, "The lobby's idle repeat"), so an arm that begins on a free frame queues the nag at once. Q77's
+    sitting tests it: the lobby with no player, the greeting over, pick a player, time the first 469/470. Whether picking a
+    player makes him speak (which would stamp) is not read.
 - [ ] **Q78. The lobby's sea from `lobby/Terrain/base.md2` (plan item 9). Decode first.** The lobby has a sea: a
   `Water` entity (`Level`) that `Sky` seals the horizon against. The item is re-sourcing it from `base.md2` through the
   park terrain loader - but `Sky`'s own note says the original's lobby has no sea below its islands, which contradicts

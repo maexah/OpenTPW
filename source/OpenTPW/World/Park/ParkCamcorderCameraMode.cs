@@ -33,12 +33,11 @@ namespace OpenTPW;
 ///
 /// <para>
 /// <b>It is not a faithful copy.</b> The exe
-/// has two first-person sub-branches and they are mutually exclusive: only the one selected by
-/// <c>(flags &amp; 0x3c) == 0</c> sets an eye height, and it pairs that with the +/-0.4 bands and a
-/// scale of 2.0, while the 3.5 belongs to the +/-0.2 bands of the <i>other</i> sub-branch, which sets
-/// no eye height at all. This follows the first of those. Which flag bits choose between them is not
-/// traced, so the yaw control law is a reading rather than a reproduction, and the walk speed is
-/// frankly a choice - both are marked where they are defined.
+/// has two first-person sub-branches, chosen by <c>flags &amp; 0x3c</c> (<c>0x0042b836</c>): clear, it
+/// sets an eye height and turns by twice the pointer's excess past the +/-0.4 bands; set, it turns by
+/// 3.5 times the excess past +/-0.2 and sets no eye height. This follows the first. Its turn rate, its
+/// walk speed and its keys differ from the original's (Left and Right turn there, nothing strafes):
+/// each is marked where it is defined (docs/QUEUE.md Q1161).
 /// </para>
 /// </summary>
 public sealed class ParkCamcorderCameraMode : CameraMode
@@ -136,9 +135,10 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 	/// turn accelerates as the pointer goes further out and is zero inside the band.
 	///
 	/// <para>
-	/// <b>2.0 goes with the 0.4 band.</b> The original carries two pairs - <c>_DAT_006fdddc</c> 3.5
-	/// with its +/-0.2 bands and <c>_DAT_006fdde8</c> 2.0 with its +/-0.4 ones - so the 0.4 band with
-	/// the 3.5 would be neither of the original's settings.
+	/// <b>A deviation: 5/6 of the original's rate.</b> The original's 0.4 branch doubles the excess
+	/// (<c>fadd st(0),st</c>, <c>0x0042b89c</c>; nothing reads <c>_DAT_006fdde8</c>) and turns
+	/// <c>0.0012</c> radians a millisecond per unit of that (<c>0x0042bab3</c>..<c>0x0042bad3</c>), 2.4
+	/// radians a second per unit past the band. The 3.5 belongs with the +/-0.2 bands of the other branch.
 	/// </para>
 	/// </summary>
 	private const float YawRate = 2.0f;
@@ -164,10 +164,11 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 	private const float PitchScale = 1.2f;
 
 	/// <summary>
-	/// How fast the viewer walks, in world units a second. <b>A choice, not a finding</b> - the
-	/// original's speed is folded into the flag-branch integration in FUN_0042b1c0 along with an
-	/// acceleration and a drag term, and reading a single number out of that would be guessing. This is
-	/// a fifth of <see cref="ParkOrbitCameraMode"/>'s scroll, which reads as a walk rather than a glide.
+	/// How fast the viewer walks, in world units a second. <b>A choice, not the original's</b>, a fifth of
+	/// <see cref="ParkOrbitCameraMode"/>'s scroll. The original's velocity is <c>( sqrt( zoom ) x 0.02 x v
+	/// + last ) x 0.5</c> each frame, with no frame time (<c>0x0042bc2a</c>; v the keys' +/-0.1), so it
+	/// settles at <c>sqrt( zoom ) x 0.002</c> units a millisecond, 21 a second at zoom 110
+	/// (docs/QUEUE.md Q1161).
 	/// </summary>
 	private const float WalkSpeed = 40f;
 

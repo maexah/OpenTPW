@@ -1995,7 +1995,7 @@ all 12 coaster scripts, stores `FUN_0043b050( script id )` (`0x00554a9f`), the `
 script starter then writes the id to it (`FUN_004dcf90` to `FUN_004685c0`, the mesh instance's flag `0x40000`,
 `FUN_00436f60`, `0x00436f87`). **The rating**: only `FUN_0043df90` writes `+0x104` (`0x0043e012`): `clamp( 0.5 × last
 + 1.7 × peak, 0, 100 )` of the excitement the per-sample run keeps (`FUN_0043c450` to `FUN_0043dc50`: each sample
-`max( 0, 0.1v + Σ|g| + 5|b| − ( |g0| + U ) )`, plus half the last, from `fInitialExcitement` 1.0). The weights are
+`max( 0, 0.1v + Σ|g| + 5|b| − ( |g0| + T ) )`, where T is nought while `|b|` ≤ π/2 and otherwise, with u = `|b| − π/2 + 1`, u when g1 ≥ 0.1, 2u when 0 ≤ g1 < 0.1 and 6u when g1 < 0 (`+0x344` 1.0, `+0x348` 2.0, ×3.0 at `0x006fe0c0`; `0x0043ddb3`..`0x0043de3e`; the `|b|` of the 5 term is `|b − [0x007923dc]|`, a word only the reset writes, nought), plus half the last, from `fInitialExcitement` 1.0). The weights are
 `sCoasterType` fields (`FUN_0042f390`) that no shipped `Coaster.sam` sets, so the compiled defaults (`FUN_0042fd90`)
 are live. The run is redone on the next state tick (`FUN_00435a30` from `0x0054fa8f`) for a node whose `node[0]` bit 0
 is set, as `FUN_0043c3d0` sets it whenever the speed setting changes: the cap `+0x34`: t = s × 0.01f, then `( 1 − t ) × min + t × max`
