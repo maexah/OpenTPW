@@ -699,7 +699,7 @@ public sealed class RideScript
 	/// <c>NAME</c> writes anywhere.
 	///
 	/// <para>
-	/// <b>The loader leaves this at -1 rather than at nought</b> (<c>puVar7[0x1d] = 0xffffffff</c>), and
+	/// <b>The loader leaves this at -1 rather than at nought</b> (<c>0x00558c4c</c>, over a frame it has cleared), and
 	/// <c>FINDSCRIPTRAND</c>'s walk skips a script whose value is negative. That is what makes "has never
 	/// named itself" different from "is called whatever sits at offset nought", and it is load-bearing:
 	/// <b>31 of the 308 shipped scripts never run <c>NAME</c></b>, and not one of them can ever be found.
@@ -3272,7 +3272,7 @@ public sealed class RideScript
 	}
 
 	/// <summary>
-	/// <c>NAME</c>: the script says what it is called.
+	/// <c>NAME</c> (<c>0x0055429a</c>): the script says what it is called.
 	///
 	/// <para>
 	/// The handler stores the operand's string <b>offset</b> at <c>+0x74</c> and does nothing else, and it
@@ -3297,10 +3297,18 @@ public sealed class RideScript
 	/// <para>
 	/// The engine builds a path from its own directory at <c>+0x38</c> and the string operand, hands it to
 	/// the loader, and keeps <b>the id</b> that comes back rather than a pointer. It then finds the new
-	/// script in the registry and copies five things into it: this script's id, as the child's parent, and
-	/// the fields at <c>+0xac</c>, <c>+0x9c</c>, <c>+0xb4</c> and <c>+0xc8</c>. The last of those is the
-	/// model handle and <c>+0xac</c> is the thing, both of which are copied here; <c>+0x9c</c> and
-	/// <c>+0xb4</c> remain unmodelled and are nought on both sides.
+	/// script in the registry and copies five things into it (<c>0x0055516b</c>): this script's id, as the child's
+	/// parent, and the fields at <c>+0xac</c>, <c>+0x9c</c>, <c>+0xb4</c> and <c>+0xc8</c>. The last of those is the
+	/// model handle and <c>+0xac</c> is the thing, both of which are copied here. <c>+0x9c</c> is <c>TOUR</c>'s record and
+	/// <c>+0xb4</c> has no reader decoded; neither is modelled, and no shipped script that spawns a child carries <c>TOUR</c>
+	/// (dead by CONTENT, <c>docs/exe/park.md</c>, "The script-to-script family").
+	/// </para>
+	///
+	/// <para>
+	/// The child keeps the rest of the frame its loader cleared (<c>0x005588a8</c>), which saw no thing: so it has no head
+	/// table, and no <see cref="TrackRide"/> or <see cref="Bumpers"/>, where the engine's <c>BUMP</c> would reach the ride
+	/// through the copied thing. None of the 16 spawned files carries <c>ADDHEAD</c>, <c>DELHEAD</c>, <c>BUMP</c>,
+	/// <c>COAST</c> or <c>TOUR</c>.
 	/// </para>
 	///
 	/// <para>
@@ -4169,7 +4177,7 @@ public sealed class RideScript
 	/// <summary>
 	/// <c>ADDHEAD</c> (<c>0x00554c3e</c>): puts <paramref name="handle"/> on a free head slot drawn at random and hangs
 	/// their head on that slot's node, or does nothing where the script has no head table or no free slot. It writes no
-	/// register. The draw is <c>RAND</c>'s, halved, taken modulo the slot count and drawn again until the slot is free
+	/// register, and tests no duplicate: a visitor already held takes a second slot (<c>0x00554c8f</c>..<c>0x00554cd3</c>). The draw is <c>RAND</c>'s, halved, taken modulo the slot count and drawn again until the slot is free
 	/// (<c>0x00554caf</c>..<c>0x00554ccb</c>), so each retry is one draw on this script's generator - the per-script
 	/// generator <see cref="NextRandom"/> says is a deviation. The head is drawn from the table
 	/// (<c>ParkGuestSprites</c>); a slot whose node the model lacks holds the visitor and shows no head, as the

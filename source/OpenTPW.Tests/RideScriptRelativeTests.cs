@@ -288,6 +288,67 @@ public class RideScriptRelativeTests
 	}
 
 	/// <summary>
+	/// <b>A child takes its parent's thing and model, and no head table; a sound script takes nothing.</b>
+	/// <c>SPAWNCHILD</c>'s copy (<c>0x0055516b</c>) writes the parent's id, its thing word <c>+0xac</c> and its model
+	/// <c>+0xc8</c> into the child (with <c>+0x9c</c> and <c>+0xb4</c>, nought in every shipped spawner); the child was made
+	/// by a loader that saw no thing, whose frame starts cleared (<c>0x005588a8</c>), so its <c>+0x30</c> head table is
+	/// null whatever the parent's. <c>SPAWNSOUND</c> stores the id at <c>+0x14</c> and returns (<c>0x00555255</c>).
+	/// </summary>
+	[TestMethod]
+	public void AChildTakesItsParentsThingAndModelAndNoHeadTableAndASoundScriptTakesNothing()
+	{
+		var parent = Script( 0, ["child.rse", "EventMap.rse"],
+			Word( Opcode.SPAWNCHILD ), Str( 0 ),
+			Word( Opcode.SPAWNSOUND ), Str( Offset( ["child.rse"], 1 ) ),
+			Word( Opcode.END ) );
+		var scheduler = new RideScriptScheduler { Loader = _ => Script( 1, [], Word( Opcode.END ) ) };
+		var animations = RideAnimations.None( "mumbo" );
+
+		parent.ThingId = 43;
+		parent.Animations = animations;
+		parent.SizeHeads( 5 );
+		scheduler.Add( 1, parent );
+		parent.Turn( 0f );
+
+		var child = scheduler.Find( parent.ChildId );
+		var sound = scheduler.Find( parent.SoundChildId );
+
+		Assert.IsNotNull( child, "nothing was spawned, so this proves nothing" );
+		Assert.AreEqual( 43, child!.ThingId, "the child drives its parent's thing" );
+		Assert.AreSame( animations, child.Animations, "and its model's player" );
+		Assert.AreEqual( 0, child.HeadSlots, "the child's head table is the cleared frame's, not its parent's" );
+
+		Assert.IsNotNull( sound, "no sound script was spawned, so this proves nothing" );
+		Assert.AreEqual( 0, sound!.ThingId, "SPAWNSOUND copies no thing" );
+		Assert.IsNull( sound.Animations, "nor a model" );
+	}
+
+	/// <summary>
+	/// <b>A child takes its parent's model nodes too</b>, the same object: the nodes are the other half of <c>+0xc8</c>, which
+	/// a child's <c>ADDOBJ</c> places its effect on (Mumbo's <c>Effects.rse</c>, the TV Sim's <c>torches.rse</c>).
+	/// </summary>
+	[TestMethod]
+	public void AChildTakesItsParentsModelNodes()
+	{
+		var data = GameData.Required();
+		var item = new ParkItemCatalogue( "jungle", data ).All.Single( item => item.Stem == "mumbo" );
+		using var stream = new MemoryStream( data.ReadAllBytes( $"{item.Directory}/{item.Stem}.MD2" ) );
+		var nodes = new RideNodes( new ModelFile( stream ), item.Stem, false, [] );
+
+		var parent = Script( 0, ["Effects.rse"], Word( Opcode.SPAWNCHILD ), Str( 0 ), Word( Opcode.END ) );
+		var scheduler = new RideScriptScheduler { Loader = _ => Script( 1, [], Word( Opcode.END ) ) };
+
+		parent.Nodes = nodes;
+		scheduler.Add( 1, parent );
+		parent.Turn( 0f );
+
+		var child = scheduler.Find( parent.ChildId );
+
+		Assert.IsNotNull( child, "nothing was spawned, so this proves nothing" );
+		Assert.AreSame( nodes, child!.Nodes, "the child places its effects on its parent's model" );
+	}
+
+	/// <summary>
 	/// A parent writes into its child's variable and reads one back out. These are two halves of the same
 	/// engine block, reached with the child id rather than the parent's.
 	/// </summary>

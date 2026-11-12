@@ -12145,6 +12145,11 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q992. A script's graph records: the parent copy and the head table's draw.** From the fork watch 2026-10-31 (`verify-world.md` M11,
+  confirmed). `0x0055516b` takes the parent id and copies `+0xac`, `+0x9c`, `+0xb4`, `+0xc8`; `0x00555255` stores only `[parent+0x14]`; the
+  constructor clears `0x3d` dwords (`0x005588a8`); `ADDHEAD` (`0x00554c8f`..`0x00554cd3`) asks for a free slot first, redraws until it gets
+  0 and does no duplicate test; `NAME` is `0x0055429a`, with -1 at `0x00558c4c`. Compare with `RideScript` and `park.md`, "The head
+  table", and file what differs.
 
 ## B. Docs and comments
 

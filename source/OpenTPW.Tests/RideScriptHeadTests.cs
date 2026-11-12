@@ -125,6 +125,28 @@ public class RideScriptHeadTests
 	}
 
 	/// <summary>
+	/// <b><c>ADDHEAD</c> makes no duplicate test</b> (<c>0x00554c8f</c>..<c>0x00554cd3</c>: a free slot asked for, then
+	/// drawn until a slot holds nought, then stored): one visitor added twice holds two slots, and <c>DELHEAD</c>'s
+	/// walk with no break is what frees both.
+	/// </summary>
+	[TestMethod]
+	public void AVisitorAddedTwiceHoldsTwoSlots()
+	{
+		var script = new RideScript( Build(
+			Word( Opcode.ADDHEAD ), 7,
+			Word( Opcode.ADDHEAD ), 7,
+			Word( Opcode.END ) ) );
+
+		script.SizeHeads( 3 );
+		script.Turn( 0f );
+
+		var held = script.Heads().Select( head => head.Handle ).ToArray();
+
+		CollectionAssert.AreEqual( new[] { 7, 7 }, held, "the second ADDHEAD took a slot of its own" );
+		Assert.AreEqual( 2, script.Heads().Select( head => head.Node ).Distinct().Count(), "on two different nodes" );
+	}
+
+	/// <summary>
 	/// <b><c>DELHEAD</c> frees every slot holding the visitor</b>, with no break after the first, and leaves the rest;
 	/// <b>neither instruction writes the result register</b>.
 	/// </summary>
