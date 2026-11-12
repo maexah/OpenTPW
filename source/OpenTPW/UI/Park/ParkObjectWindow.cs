@@ -570,15 +570,10 @@ internal sealed class ParkObjectWindow : UiWindow, IStatusBox
 		if ( _stats.TryGetValue( 0x3e1b, out var age ) )
 			age.Text = placed.Built.IsSet ? Localization.Format( AgeText, (8, $"{state.AgeInDays( placed )}") ) : null;
 
-		// FUN_004e2400: the age-bucket scrap percentage times the item's build price (+0x1b8), over 100, lettered as
-		// money by row 449, "$ {P13}" (FUN_00490250). The percentage (FUN_004e2290, SCRAP_VALUE_DEPRECIATION, already
-		// counted where Sell refunds) answers 100 only for a thing under thirty days old with no customer yet, so the
-		// build price is wrong once a ride is used or ages (Q158).
+		// FUN_004e2400: the age-bucket scrap percentage (FUN_004e2290) times the item's build price (+0x1b8), over 100,
+		// lettered as money by row 449, "$ {P13}" (FUN_00490250): what a sale would give back now.
 		if ( _stats.TryGetValue( 0x3e23, out var scrap ) )
-		{
-			scrap.Text = ParkItemsScreen.Money( item.BuildPrice );
-			Unimplemented.Report( "SCRAP_VALUE_DEPRECIATION" );
-		}
+			scrap.Text = ParkItemsScreen.Money( ParkScrap.Value( item.BuildPrice, ParkScrap.Percent( state, placed, item ) ) );
 
 		// The two condition gauges that are fully derived. Both are 0..100 in the save and the
 		// original maps them onto a 0..1024 bar with ((v & 0xff) << 10) / 100, so as a proportion

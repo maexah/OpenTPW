@@ -62,12 +62,14 @@ public class ParkStandInCountsTests
 	}
 
 	/// <summary>
-	/// <b>An object window letters a built ride's age as UITEXT 433 and its scrap row as money, and counts the scrap
-	/// percentage it does not compute</b>; a thing with no build date has no age, and its scrap row still prints.
+	/// <b>An object window letters a built ride's age as UITEXT 433 and its scrap row as money at the scrap percentage</b>
+	/// (<c>FUN_004e2400</c>): the stock Belly Bounce, 32 days old, "$ 250", half its 500; a thing with no build date and no
+	/// customer has no age, and its scrap row is the whole "$ 500". Nothing is counted for the row.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> the scrap report taken out; the age a bare number; the age's row 434 or 435; the age with no build date lettered; the scrap row a bare number.</remarks>
+	/// <remarks><b>Mutations:</b> the build price whole fails "$ 250"; a flat half fails "$ 500"; the age a bare number; the age's
+	/// row 434 or 435; the age with no build date lettered.</remarks>
 	[TestMethod]
-	public void AnObjectWindowWordsItsAgeAsDaysAndLettersItsScrapAsMoneyAndCountsThePercentage()
+	public void AnObjectWindowWordsItsAgeAsDaysAndLettersItsScrapAtThePercentage()
 	{
 		var scrap = Times( "SCRAP_VALUE_DEPRECIATION" );
 
@@ -78,21 +80,19 @@ public class ParkStandInCountsTests
 		Assert.IsTrue( state.TryObject( 13, out var built ) );
 		_catalogue.TryGet( built.CatalogueId, out var item );
 
-		Assert.AreEqual( $"{state.AgeInDays( built )} days", Find( window.Root, 0x3e1b ).Text, "UITEXT 433, always days" );
-		Assert.AreEqual( ParkItemsScreen.Money( item.BuildPrice ), Find( window.Root, 0x3e23 ).Text, "UITEXT 449" );
-		Assert.IsTrue( Find( window.Root, 0x3e23 ).Text!.StartsWith( "$ " ) );
-		Assert.IsTrue( Times( "SCRAP_VALUE_DEPRECIATION" ) > scrap, "its scrap row is the build price" );
+		Assert.AreEqual( (32, 500), (state.AgeInDays( built ), item.BuildPrice), "the stock Belly Bounce" );
+		Assert.AreEqual( "32 days", Find( window.Root, 0x3e1b ).Text, "UITEXT 433, always days" );
+		Assert.AreEqual( "$ 250", Find( window.Root, 0x3e23 ).Text, "UITEXT 449 at 50 per cent" );
 
-		// A thing with no build date prints no age; its scrap row still prints.
+		// A thing with no build date prints no age; its scrap row is the whole price.
 		state.AddObject( new ParkWorld.CatalogueObject( ThingId: 9000, CatalogueId: built.CatalogueId, RawX: built.RawX, RawY: built.RawY, Angle: 0 ) );
-
-		scrap = Times( "SCRAP_VALUE_DEPRECIATION" );
 
 		var unbuilt = new ParkObjectWindow( _stack, 9000 );
 		_stack.Open( unbuilt );
 
 		Assert.IsTrue( string.IsNullOrEmpty( Find( unbuilt.Root, 0x3e1b ).Text ), "no build date, no age" );
-		Assert.IsTrue( Times( "SCRAP_VALUE_DEPRECIATION" ) > scrap, "the scrap row prints for it all the same" );
+		Assert.AreEqual( "$ 500", Find( unbuilt.Root, 0x3e23 ).Text, "new and unused: 100 per cent" );
+		Assert.AreEqual( scrap, Times( "SCRAP_VALUE_DEPRECIATION" ), "nothing counted" );
 	}
 
 	/// <summary>

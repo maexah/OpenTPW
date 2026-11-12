@@ -429,17 +429,10 @@ public static class ParkBuilding
 	/// Sells something standing in the park and gives the money back.
 	///
 	/// <para>
-	/// <b>The refund is the full price, and that is the original's answer for a NEW object rather than
-	/// a simplification.</b> <c>FUN_004dd0a0</c> refunds <c>price * FUN_004e2290( thing ) / 100</c>,
-	/// and that percentage is picked from a four-year scrap table by the object's age bucket -
-	/// returning a literal <b>100</b> for one under thirty days old that has had no customer yet
-	/// (<c>0x004e2390</c>) and whose item's level-0 first-year figure is above nought (<c>0x004e23b2</c>). The park's own screens call it "Scrap value".
-	/// </para>
-	/// <para>
-	/// <b>The depreciation itself is NOT built</b>, and is counted rather than guessed: the table's age buckets
-	/// (<c>FUN_004e2290</c>: years, then months, of <see cref="ParkState.CalendarNow"/> less the thing's stamp) are
-	/// not built. So anything sold refunds in full, which is right the moment it is built and increasingly wrong
-	/// afterwards.
+	/// <b>The refund is the price at the scrap percentage</b>: <c>FUN_004dd0a0</c> refunds <c>price * FUN_004e2290( thing ) / 100</c>
+	/// (<see cref="ParkScrap.Percent(ParkState, ParkWorld.CatalogueObject, ParkItemCatalogue.Item)"/>), the item's four-year
+	/// table picked by the thing's age and upgrade tier, and a literal <b>100</b> for one under thirty days old that has had
+	/// no customer yet (<c>0x004e2390</c>). The park's own screens call it "Scrap value".
 	/// </para>
 	/// </summary>
 	public static string Sell( int thingId )
@@ -515,10 +508,6 @@ public static class ParkBuilding
 		if ( item.UiType is < 0 or > ItemDescriptionFile.Feature )
 			return new( $"sell: thing {thingId} ('{item.Name}') is UI type {item.UiType}, which nothing can demolish" );
 
-		// The age-based scrap percentage, computed by ParkScrap.Percent and not yet applied here (Q1054) - see the remarks. Reported
-		// once and counted, rather than a number invented to fill the gap.
-		Unimplemented.Report( "SCRAP_VALUE_DEPRECIATION" );
-
 		// The demolish sound, one of 0x96..0x99 by how many body cells the thing covered (FUN_00527ee0,
 		// after the destructor, whenever a saved layout is not being replayed).
 		Unimplemented.Report( "DEMOLISH_SOUND" );
@@ -530,7 +519,10 @@ public static class ParkBuilding
 		if ( ParkTrackAddOn.Is( item ) )
 			Unimplemented.Report( "SALE_TRACK_ADD_ON" );
 
-		var refund = item.BuildPrice;
+		// The scrap percentage, read now: the destructor reads it after the unlink (FUN_004dd0a0), and nothing between here and
+		// there changes the thing's age, tier or customers, but taking it out of the state below lets its rings go.
+		var percent = ParkScrap.Percent( state, placed, item );
+		var refund = ParkScrap.Value( item.BuildPrice, percent );
 		var covered = ParkObjects.CoveredCells( item, placed.CellX, placed.CellY, placed.Angle ).ToList();
 
 		// Before the footprint goes, what the demolisher does outside it (FUN_00527ee0): a queued thing's
@@ -540,14 +532,14 @@ public static class ParkBuilding
 
 		if ( item.HasQueue )
 		{
-			queueRefund = ParkPathBuilding.DrainQueue( state, park, placed );
+			queueRefund = ParkPathBuilding.DrainQueue( state, park, placed, percent );
 
 			// Karts and the water ride clear their track cells and pay for it; any other track type withdraws
 			// nought, which still writes the bank's last balance (0x00528179).
 			if ( item.TrackType is ItemDescriptionFile.CarTrack or ItemDescriptionFile.WaterTrack )
 			{
 				if ( ParkTrackPieces.SellBareStation( state, item.TrackType, placed.CellX, placed.CellY,
-					ParkTrackPieces.PieceCost( Level.Current, item.TrackType ) ) == null )
+					ParkTrackPieces.PieceCost( Level.Current, item.TrackType ), percent ) == null )
 					Unimplemented.Report( "SALE_TRACK_TEARDOWN" );
 			}
 			else if ( item.TrackType != 0 )
@@ -595,7 +587,7 @@ public static class ParkBuilding
 
 		ParkSurfaces.Rebuild();
 
-		Log.Info( $"Building: sold '{item.Name}' (thing {thingId}) for {refund} - the park has {state.Balance}" );
+		Log.Info( $"Building: sold '{item.Name}' (thing {thingId}) for {refund}, {percent}% of {item.BuildPrice} - the park has {state.Balance}" );
 
 		return new( $"sell: '{item.Name}' thing {thingId} sold for {refund}" +
 			(queueRefund != 0 ? $", its queue for {queueRefund}" : "") + $", balance {state.Balance}", Done: true );

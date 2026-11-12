@@ -473,7 +473,7 @@ public class ParkQueueRemeasureTests
 
 			Assert.AreEqual( calls + 4, Times( "QUEUE_DRAIN_ADVISOR_0xCB" ), "mode 3, then a re-arm on each of three calls" );
 			Assert.IsTrue( ParkState.Counter >= counter + 2, "and measured after each, a counter value a measure" );
-			StringAssert.Contains( answer, "its queue for 225", "four cells refunded, one taken back" );
+			StringAssert.Contains( answer, "its queue for 263", "four cells refunded whole (no Level is loaded for the cells' owner), one taken back at the ride's 50 per cent" );
 		}
 		finally
 		{

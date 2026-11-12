@@ -76,7 +76,7 @@ public class ParkMoveTests
 	/// </summary>
 	/// <remarks>
 	/// <b>Mutations:</b> selling and then buying at the cell, rather than selling and taking the item into the
-	/// hand, leaves the hand empty; refunding nothing at the sale leaves the balance 500 short; not putting
+	/// hand, leaves the hand empty; refunding nothing at the sale leaves the balance 250 short, the whole price 250 over; not putting
 	/// the tool away leaves the path tool armed.
 	/// </remarks>
 	[TestMethod]
@@ -105,9 +105,10 @@ public class ParkMoveTests
 		Assert.IsFalse( state.TryObject( BellyBounceThing, out _ ), "it was sold where it stood" );
 		Assert.AreEqual( 0, rides.ScriptFor( BellyBounceThing ), "and its script went with it" );
 
-		// The ride's 500 and its queue's 225 (four cells, less the one the placer laid for nothing), banked at
+		// The ride's 250 (its 500 at the stock ride's 50 per cent scrap value, FUN_004e2290) and its queue's 263 (four cells
+		// at the whole 75, no Catalogue being loaded for the cells' owner, less the node's 37 at 50 per cent), banked at
 		// pickup - and nothing charged, which a sale alone in a second copy of the park agrees with.
-		Assert.AreEqual( before + 500 + 225, state.Balance, "the refund is banked at pickup and nothing is charged" );
+		Assert.AreEqual( before + 250 + 263, state.Balance, "the refund is banked at pickup and nothing is charged" );
 
 		var sold = new ParkState( world );
 		ParkBuilding.Sell( sold, world, catalogue, null, null, BellyBounceThing );

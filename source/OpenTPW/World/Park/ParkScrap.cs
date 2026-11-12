@@ -2,8 +2,10 @@ namespace OpenTPW;
 
 /// <summary>
 /// What a scrapped object is worth, as a percentage of its price - the original's <c>FUN_004e2290</c>
-/// (<c>docs/exe/park-engine.md</c>, "DEMOLISH refunds"). The queue's clear reads it for the ride a cell belongs to
-/// (<see cref="ParkPathBuilding.QueueRefund"/>).
+/// (<c>docs/exe/park-engine.md</c>, "Sell, move and the scrap value"). Its readers: the queue's clear for the ride a cell
+/// belongs to (<see cref="ParkPathBuilding.QueueRefund"/>), a sale's refund (<see cref="ParkBuilding.Sell(int)"/>) and its
+/// bare station's two pieces (<see cref="ParkTrackPieces.SellBareStation"/>), the track tool's per-piece refund
+/// (<see cref="ParkTrackTool.TakeBack"/>) and the object and shop windows' scrap row (<c>FUN_004e2400</c>).
 /// </summary>
 public static class ParkScrap
 {
@@ -37,4 +39,19 @@ public static class ParkScrap
 
 		return item.ScrapValueAt( tier, year == 1 ? 2 : year == 2 ? 3 : 4 );
 	}
+
+	/// <summary>
+	/// The percentage for a thing standing in the park: <see cref="Percent(DateTime, ParkWorld.BuiltWhen, int, int, ParkItemCatalogue.Item)"/>
+	/// with its stamp, its customers (<see cref="ParkObjectRings.NumCustomers"/>, <c>+0x1a0</c>) and its upgrade tier, on
+	/// the park's calendar now. Read it before the thing is taken out of the state, which lets its rings go.
+	/// </summary>
+	public static int Percent( ParkState state, ParkWorld.CatalogueObject placed, ParkItemCatalogue.Item item )
+		=> Percent( state.CalendarNow, placed.Built, state.RingsFor( placed.ThingId ).NumCustomers, placed.UpgradeLevel, item );
+
+	/// <summary>
+	/// <c>price * percent / 100</c>, the product taken unsigned and the divide truncating, as the queue cell's
+	/// (<c>0x00536a7f</c>..<c>0x00536aa8</c>) and a track piece's (<c>0x0053b603</c>..<c>0x0053b627</c>) are; for the
+	/// prices and percentages the game holds the product is positive, so a signed divide gives the same.
+	/// </summary>
+	public static int Value( int price, int percent ) => (int)(unchecked((uint)(price * percent)) / 100);
 }

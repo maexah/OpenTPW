@@ -104,11 +104,11 @@ public class ParkShopWindowTests
 	/// <summary>
 	/// <b>A shop's click opens its window</b> (<c>FUN_00486920</c>'s arm 1), as the original's on the same shop
 	/// (<c>q31/orig/b-1-window.png</c>): titled "Drinks Shop", the labels UITEXT 32 to 38, "0 of 0", "$ 20", "$ 0", "$ 0",
-	/// satisfaction 50 as a bar of 512, the price box "$ 30", the quality's middle icon lit, "Amount of ice", and with
+	/// the scrap value "$ 325" (its 650 at 50 per cent, <c>docs/exe/hud.md</c>, "Measured in the original"), satisfaction 50 as a bar of 512, the price box "$ 30", the quality's middle icon lit, "Amount of ice", and with
 	/// one shop no arrows; nothing counted as <c>SHOP_WINDOW</c>.
 	/// </summary>
 	/// <remarks><b>Mutations:</b> the arm 1 route gone; a label's row; C and M swapped in UITEXT 460; the quality's
-	/// divide by 50; the ingredient's row less one; the arrows shown under two shops.</remarks>
+	/// divide by 50; the scrap row the whole build price; the ingredient's row less one; the arrows shown under two shops.</remarks>
 	[TestMethod]
 	public void AShopsClickOpensItsWindow()
 	{
@@ -122,7 +122,7 @@ public class ParkShopWindowTests
 			new[] { "Customers last month", "Cost of goods", "Takings last month", "Profit last month", "Customer satisfaction", "Scrap value", "Local happiness" },
 			new[] { 0xc075, 0xc071, 0xc072, 0xc073, 0xc074, 0xc07a, 0xc07b }.Select( id => Find( window.Root, id ).Text ).ToArray() );
 
-		CollectionAssert.AreEqual( new[] { "0 of 0", "$ 20", "$ 0", "$ 0", "$ 650" },
+		CollectionAssert.AreEqual( new[] { "0 of 0", "$ 20", "$ 0", "$ 0", "$ 325" },
 			new[] { 0xc070, 0xc076, 0xc077, 0xc078, 0xc07d }.Select( id => Find( window.Root, id ).Text ).ToArray() );
 
 		Assert.AreEqual( 512, ((ParkObjectWindow.UiStatBar)Find( window.Root, 0xc079 )).Units, "satisfaction 50 with no day" );

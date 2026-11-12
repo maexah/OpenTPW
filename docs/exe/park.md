@@ -1956,8 +1956,9 @@ wall levels down (the lift rule's map type 4 cell, built by Q775), cursor 6, the
 pieces: the cell over the camera is not in the total, `O-O2.png`); the click laid pieces on (36,29), (38,29) and (40,29) (the
 last `gk_trckQ`, row 1, turn 90), the camera's pole gone from the frame (`O-O3.png`) and the anchor moved to (40,29), the tool
 armed still. The bank fell 445 over that click, the park's clock running (the day turned 2.19 to 2.20 between the two frames):
-600 for three pieces less a refund of about 155 and the clock's own costs, not separated; ours refunds the camera's 250
-whole (the scrap percentage, `SCRAP_VALUE_DEPRECIATION`, is not built) and falls 350 on the same clicks, the clock held.
+600 for three pieces less a refund of about 155 and the clock's own costs, not separated; ours then refunded the camera's 250
+whole and fell 350 on the same clicks, the clock held. Since Q1054 ours refunds it at its scrap percentage (`ParkScrap`, the
+sale's), not measured again on these clicks.
 **Ours** answers the blue and tears the thing down as above; a feature of two by two or more reaches the south cell, which counts as
 part of the answer where one of the three asked cells is the feature too. Where another cell of the anchor is refused by a rule
 of ours (a ride's footprint on the south cell, path, queue, another ride's track, map type 7 or 0x15) the run stays red and is
@@ -2337,8 +2338,8 @@ did not, with the way out of it, and with one link left takes the way away from 
 does not link back, and back at the first entry breaks a bend at the mouth, letting go at both ends of the link not to
 the station; then the walk pairs.
 **OpenTPW** (Q765, `ParkTrackTool.Backtrack`, `TakeBack`): Backspace takes the last run back so, the anchor on its start
-and the tool armed, each removed piece refunded at its whole price (the scrap percentage is counted,
-`SCRAP_VALUE_DEPRECIATION`), no pieces' clips (Backspace calls neither clip walk: Q781, "The pieces' clips"), the pulse as the walks that follow give it (Q767). Measured in ours on the final
+and the tool armed, each removed piece refunded at the ride's scrap percentage of its price (since Q1054,
+`ParkScrap.Percent`; the run below, measured before that, gave the whole price, which a ride bought that session is due), no pieces' clips (Backspace calls neither clip walk: Q781, "The pieces' clips"), the pulse as the walks that follow give it (Q767). Measured in ours on the final
 binary (`q765/ours-b`), by the original's clicks: the second run taken back, 3 pieces, +600, (34,29) links 0x01 way 0x10
 over 0 piece 3/1/180, the three others bare at row 55, as `q587/orig/A-load.log` at 199.64 s (earlier evidence); the
 run laid again and the loop closed as Q763's.

@@ -718,7 +718,7 @@ public class ParkPathBuildingTests
 		Assert.AreEqual( ParkPathBuilding.NoModify, ParkState.CellFor( park, 20, 15 ).Flags, "the exit's path starts NOMODIFY" );
 
 		var balance = state.Balance;
-		var returned = ParkPathBuilding.DrainQueue( state, park, ride );
+		var returned = ParkPathBuilding.DrainQueue( state, park, ride, 100 );
 
 		Assert.AreEqual( 3 * 75, returned, "four cells, one taken back (the owner-not-found fallback, whole price: no Catalogue; the percentage is ParkScrapTests')" );
 		Assert.AreEqual( balance + (3 * 75), state.Balance, "and the park has it" );
@@ -735,6 +735,34 @@ public class ParkPathBuildingTests
 		Assert.AreEqual( 0, ParkState.CellFor( park, 20, 15 ).Flags, "the exit's path is ordinary path again" );
 		Assert.AreEqual( CellEdge.Path, ParkState.CellFor( park, 20, 15 ).Type );
 		Assert.AreEqual( 0, ParkState.CellFor( park, 20, 15 ).Neighbours & 0x01, "and no longer names the exit" );
+	}
+
+	/// <summary>
+	/// <b>The drain's debit takes the thing's scrap percentage</b> (<c>0x00527fe8</c>): the same four cells, the debit at 50 per
+	/// cent 37, so 300 less 37. The cells' refunds here are the no-<c>Catalogue</c> fallback's whole 75 each, so the debit is all
+	/// that moves.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the debit at the whole price answers 225.</remarks>
+	[TestMethod]
+	public void TheDrainsDebitTakesTheScrapPercentage()
+	{
+		var park = World();
+		var state = new ParkState( park );
+		var ride = Ride( state );
+		var owner = MapStep.CellId( 19, 11 );
+
+		LayPath( state, park, 16, 10 );
+		StandOnItsFootprint( state );
+		ParkBuilding.MarkWaysInAndOut( state, park, 20, 11, 20, 14, 0x10, 0x10, 0, hasQueue: true, owner );
+		ParkPathBuilding.StampQueueCell( state, park, 19, 10, 20, 10, ride, firstOfRun: false );
+		ParkPathBuilding.StampQueueCell( state, park, 18, 10, 19, 10, ride, firstOfRun: false );
+		ParkPathBuilding.StampQueueCell( state, park, 17, 10, 18, 10, ride, firstOfRun: false );
+		ParkPathBuilding.JoinQueueToPath( state, park, 17, 10, 16, 10, ride );
+
+		var balance = state.Balance;
+
+		Assert.AreEqual( 4 * 75 - 37, ParkPathBuilding.DrainQueue( state, park, ride, 50 ) );
+		Assert.AreEqual( balance + 4 * 75 - 37, state.Balance );
 	}
 
 	/// <summary>
@@ -778,7 +806,7 @@ public class ParkPathBuildingTests
 			ParkRideOperation.BackOfQueueConnected( park, ride )) );
 
 		var balance = state.Balance;
-		var returned = ParkPathBuilding.DrainQueue( state, park, ride );
+		var returned = ParkPathBuilding.DrainQueue( state, park, ride, 100 );
 
 		CollectionAssert.AreEqual( new[] { (3, true), (1, false), (1, false) }, measured.ToArray(),
 			"three cells still linked to the corner's place, then the bare node, twice" );
@@ -821,7 +849,7 @@ public class ParkPathBuildingTests
 		var balance = state.Balance;
 		var otherKinds = Times( "QUEUE_DRAIN_CLEARS_ANOTHER_KIND" );
 
-		Assert.AreEqual( -75, ParkPathBuilding.DrainQueue( state, park, ride ), "nothing refunds, one cell is taken" );
+		Assert.AreEqual( -75, ParkPathBuilding.DrainQueue( state, park, ride, 100 ), "nothing refunds, one cell is taken" );
 		Assert.AreEqual( balance - 75, state.Balance );
 		Assert.AreEqual( CellEdge.Path, ParkState.CellFor( park, 20, 10 ).Type, "the path stays" );
 		Assert.AreEqual( otherKinds, Times( "QUEUE_DRAIN_CLEARS_ANOTHER_KIND" ), "a run ending on a path is not cleared at all" );
@@ -848,7 +876,7 @@ public class ParkPathBuildingTests
 
 		var balance = state.Balance;
 
-		Assert.AreEqual( 0, ParkPathBuilding.DrainQueue( state, park, ride ), "one refunded, one taken" );
+		Assert.AreEqual( 0, ParkPathBuilding.DrainQueue( state, park, ride, 100 ), "one refunded, one taken" );
 		Assert.AreEqual( balance, state.Balance );
 		Assert.AreEqual( CellEdge.Nothing, ParkState.CellFor( park, 20, 10 ).Type, "the node goes" );
 	}
@@ -872,7 +900,7 @@ public class ParkPathBuildingTests
 		var balance = state.Balance;
 		var posts = Times( "QUEUE_DRAIN_ADVISOR_0xCB" );
 
-		Assert.AreEqual( 0, ParkPathBuilding.DrainQueue( state, park, ride ), "nothing drained" );
+		Assert.AreEqual( 0, ParkPathBuilding.DrainQueue( state, park, ride, 100 ), "nothing drained" );
 		Assert.AreEqual( balance, state.Balance, "and nothing taken" );
 		Assert.AreEqual( posts + 1, Times( "QUEUE_DRAIN_ADVISOR_0xCB" ), "mode 3 is armed before the gate" );
 	}
@@ -905,7 +933,7 @@ public class ParkPathBuildingTests
 		var balance = state.Balance;
 		var posts = Times( "QUEUE_DRAIN_ADVISOR_0xCB" );
 
-		Assert.AreEqual( -75, ParkPathBuilding.DrainQueue( state, park, ride ), "nothing refunds, one cell is taken" );
+		Assert.AreEqual( -75, ParkPathBuilding.DrainQueue( state, park, ride, 100 ), "nothing refunds, one cell is taken" );
 		Assert.AreEqual( balance - 75, state.Balance );
 		Assert.AreEqual( ParkRideChoice.QueueCellType, ParkState.CellFor( park, 20, 10 ).Type, "the other queue stays" );
 		Assert.AreEqual( posts + 2, Times( "QUEUE_DRAIN_ADVISOR_0xCB" ), "mode 3, and the one call's re-arm" );
@@ -930,7 +958,7 @@ public class ParkPathBuildingTests
 
 		var balance = state.Balance;
 
-		Assert.AreEqual( -75, ParkPathBuilding.DrainQueue( state, park, ride ), "two cleared, none refunded" );
+		Assert.AreEqual( -75, ParkPathBuilding.DrainQueue( state, park, ride, 100 ), "two cleared, none refunded" );
 		Assert.AreEqual( balance - 75, state.Balance );
 		Assert.AreEqual( CellEdge.Nothing, ParkState.CellFor( park, 19, 10 ).Type, "the cells go all the same" );
 		Assert.AreEqual( CellEdge.Nothing, ParkState.CellFor( park, 20, 10 ).Type );

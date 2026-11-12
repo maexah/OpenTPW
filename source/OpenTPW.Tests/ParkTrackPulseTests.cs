@@ -259,7 +259,7 @@ public class ParkTrackPulseTests
 			ParkBuildMode.Push( at.Item1, at.Item2 );
 
 		_pulses.Clear();
-		ParkTrackTool.BacktrackOn( state, ride, 200 );
+		ParkTrackTool.BacktrackOn( state, ride, 200, 100 );
 
 		CollectionAssert.AreEqual( new[] { (34, 29, false), (28, 25, true) }, _pulses );
 
@@ -268,7 +268,7 @@ public class ParkTrackPulseTests
 		ParkBuildMode.Push( 34, 25 );
 		_pulses.Clear();
 
-		Assert.IsTrue( ParkTrackTool.BacktrackOn( state, ride, 200 ).Contains( "nothing laid" ) );
+		Assert.IsTrue( ParkTrackTool.BacktrackOn( state, ride, 200, 100 ).Contains( "nothing laid" ) );
 		CollectionAssert.AreEqual( new[] { (34, 29, false), (28, 25, true) }, _pulses );
 	}
 

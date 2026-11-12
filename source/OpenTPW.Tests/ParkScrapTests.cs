@@ -154,4 +154,28 @@ public class ParkScrapTests
 		Assert.AreEqual( 75, ParkPathBuilding.QueueRefund( state, new ParkWorld.MapCell { Type = ParkRideChoice.QueueCellType, ParentId = (ushort)MapStep.CellId( 90, 90 ) }, 75 ) );
 		Assert.AreEqual( before + 1, Unimplemented.Summary.FirstOrDefault( entry => entry.What == "QUEUE_REFUND_OWNER_NOT_FOUND" ).Times );
 	}
+
+	/// <summary>
+	/// <b>A sale refunds the price at the thing's percentage</b> (<c>FUN_004dd0a0</c>): half the Belly Bounce's 500 once it
+	/// has had customers, all of it bought just now with none, 60 per cent at tier one, and the bank's balance steps by the
+	/// refund alone.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the whole price fails the stock and tier rows; the percentage read after the thing leaves the
+	/// state (its rings gone, no customer) refunds the used fresh ride's all; the tier left out fails the tier row.</remarks>
+	[TestMethod]
+	public void ASaleRefundsThePercentOfThePrice()
+	{
+		Assert.AreEqual( 500, ride.BuildPrice, "the jungle Belly Bounce's +0x1b8" );
+
+		foreach ( var (age, customers, tier, refund) in new[] { (32, 40, 0, 250), (2, 0, 0, 500), (2, 1, 0, 250), (100, 1, 1, 300), (400, 1, 0, 150) } )
+		{
+			var (park, state, thing) = Stocked( TimeSpan.FromDays( age ), customers, tier );
+			var before = state.Balance;
+
+			var said = ParkBuilding.Sell( state, park, catalogue, null, null, thing.ThingId );
+
+			StringAssert.Contains( said, $"sold for {refund}," );
+			Assert.AreEqual( before + refund, state.Balance, $"{age} days, {customers} customers, tier {tier}: the balance's step" );
+		}
+	}
 }

@@ -20,8 +20,7 @@ namespace OpenTPW.UI;
 /// </para>
 ///
 /// <para>
-/// <b>Counted, not built:</b> the title's rename box (<c>RENAME_OBJECT</c>, Q28) and the age-bucket scrap percentage
-/// (<c>SCRAP_VALUE_DEPRECIATION</c>: the row shows the build price). <b>Not built:</b> the cursor Up and Down keys, which
+/// <b>Counted, not built:</b> the title's rename box (<c>RENAME_OBJECT</c>, Q28). <b>Not built:</b> the cursor Up and Down keys, which
 /// step the window in the original (<c>0x0048d200</c>) and reach no object window here (Q547).
 /// </para>
 /// </summary>
@@ -480,9 +479,6 @@ internal sealed class ParkShopWindow : UiWindow, IStatusBox
 		_satisfaction.Units = figures.SatisfactionUnits;
 		_localHappiness.Units = figures.LocalHappinessUnits;
 
-		// FUN_004e2400: the age-bucket scrap percentage times the build price, the percentage not computed here.
-		Unimplemented.Report( "SCRAP_VALUE_DEPRECIATION" );
-
 		var status = Level.Current is { } level ? ParkClosedStatus.For( level.Park, shop ) : 0;
 
 		if ( status != _shownStatus )
@@ -502,7 +498,8 @@ internal sealed class ParkShopWindow : UiWindow, IStatusBox
 	/// <c>FUN_004b01d0</c>'s figures: the customers of the last thirty finished days "of" those plus the walk-aways (UITEXT
 	/// 460, C of M); the cost of goods the buffered quality (times 50) and amount would book (<c>FUN_004e1a30</c>); the
 	/// thirty days' takings; their profit (<c>FUN_004e1c70</c>); the satisfaction (<c>FUN_004e1e30</c>) as a bar,
-	/// <c>(s &lt;&lt; 10) / 100</c>; the scrap value (the build price); and the local happiness (<c>FUN_004cd880( cell, 1 )</c>)
+	/// <c>(s &lt;&lt; 10) / 100</c>; the scrap value, the build price at the scrap percentage (<c>FUN_004e2400</c>,
+	/// <see cref="ParkScrap"/>); and the local happiness (<c>FUN_004cd880( cell, 1 )</c>)
 	/// as a bar.
 	/// </summary>
 	internal static Figures FiguresOf( ParkState state, ParkWorld.CatalogueObject shop, ParkItemCatalogue.Item item,
@@ -518,7 +515,8 @@ internal sealed class ParkShopWindow : UiWindow, IStatusBox
 		} );
 
 		return new Figures( customers, asked, cost, rings.Takings.LastDays( MonthDays ), rings.ProfitOfLastDays( MonthDays ),
-			(rings.SatisfactionOfLastDays( MonthDays ) << 10) / 100, item.BuildPrice,
+			(rings.SatisfactionOfLastDays( MonthDays ) << 10) / 100,
+			ParkScrap.Value( item.BuildPrice, ParkScrap.Percent( state, shop, item ) ),
 			(LocalHappiness( state, shop.CellX, shop.CellY, GuestHappiness ) << 10) / 100 );
 	}
 
