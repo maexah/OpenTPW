@@ -3562,7 +3562,14 @@ move pickup both reach it, so **a move puts everyone off as a sale does**.
   (`0x0050212b`): set, it keeps the sprite and sets `+0x28`; clear, it destroys the sprite (`0x00502147`), and the
   eviction makes a new one (`FUN_004d4140(3, ...)` at `0x004fb3cd`) whose position is still nought when the sound
   reads it, so **that sound plays at the world's origin**. Every visitable thing in Lost Kingdom's save carries
-  `0x20` (the Belly Bounce's flags are `0x012c`).
+  `0x20` (the Belly Bounce's flags are `0x012c`); of the jungle's items a guest may visit, 15 of 32 leave it clear
+  (Crazy Ape, Rocky Racers, Mumbo, Eruption, Tom Tom Twister, The Hot Pot, Dino Karts, Splish Splash, Jurassic Tours,
+  Temple Of Gloom, Chac Atak, Gorilla Thrilla, the Costume Shop, the Arcade, the Super Toilet; measured from the items'
+  files, Q52). **OpenTPW** draws no body for a rider on a thing without it (`ParkPeople.RidesWithoutASprite`, which the
+  writer asks too; the `guests` census line ends `RIDES WITHOUT A SPRITE, body not drawn`), a head a ride hangs still
+  drawn as its own sprite; it keeps the sprite record rather than destroying it. A walk holding such a rider is not
+  decoded (does the placer make a sprite for handle 0?): it is counted, `WALK_RIDER_ON_A_THING_KEEPING_NO_SPRITE`, and
+  the rider left hidden.
 - **Queueing** - `FUN_00502430`: state 11 to 14, or state 8 with the saved state 11 to 14 - runs `FUN_005012f0`:
   event 6; the kids' `0x80` only when the guest's own id `& 7` is nought (`0x0050133d`); happiness down by
   `MediumHappinessChange`; `mQPrev`, `mQNext`, `mBeenAdmitted` (`+0x1f8`), `MajorDest` and `mQueuePos` zeroed;

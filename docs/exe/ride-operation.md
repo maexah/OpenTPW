@@ -3748,8 +3748,9 @@ child its id gives (`ParkPeople.Admit`, `ParkSpriteBanks.ChildOf`); a load reduc
 undresses (`ParkRideOperation.DressOrUndress`), counting event `0xb` (`SETTLE_UP_COSTUME_EVENT`); and a guest is drawn in
 `Peep.SpriteKind` and `SpriteBank` (`ParkGuestSprites`), every child and costume bank packed. Its departures: the costume's
 draw is the ride turn's generator; the picture changes at the settle-up, which the original's case `0xf` follows straight
-after, where OpenTPW hides a rider only where a walk carries them under action 1, 2 or 4 (Q52; "Where a walk's rider is
-drawn"); and the heads drawn here are a bumper boat's riders'
+after, where OpenTPW hides a rider where admission destroyed the sprite (a thing without flag `0x20`, every costume
+shop among them: `ParkPeople.RidesWithoutASprite`, Q52) and where a walk carries them under action 1, 2 or 4 ("Where a
+walk's rider is drawn"); and the heads drawn here are a bumper boat's riders'
 (Q179b, `ParkGuestSprites.DrawHead`: the head of the rider's child bank, or their costume's), `ADDHEAD`'s (Q190,
 `ParkGuestSprites.HeadOnRide`; `park.md`, "The head table") and `WALKON` action 4's (Q257u, `RideScript.WalkHeads`;
 `saves.md`, "OpenTPW's writer, a walk's head"), while the coasters' and the tour cars' are not drawn.

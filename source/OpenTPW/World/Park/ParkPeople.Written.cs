@@ -67,9 +67,7 @@ public sealed partial class ParkPeople
 			// A rider's sprite is the thing's to keep: admission destroys it on a thing without the bit (0x00502147).
 			// A walk's rider has the sprite its placer left (FUN_005580a0): none where it hid them (FUN_004f9ed0 frees it).
 			var walked = decides ? null : ParkGuestSprites.WalkedOnRide( this, id );
-			var drawn = (decides || peep.State != PeepState.Riding
-				|| (State.TryObject( major, out var ridden ) && (ridden.Flags & ParkWorld.CatalogueObject.KeepsRidersSpriteFlag) != 0))
-				&& walked is not { Hidden: true };
+			var drawn = (decides || !RidesWithoutASprite( peep.State, major )) && walked is not { Hidden: true };
 
 			var guest = new ParkWorld.GuestState(
 				State: (int)(decides ? PeepState.Deciding : peep.State),

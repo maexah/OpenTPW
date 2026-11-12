@@ -2236,6 +2236,20 @@ public sealed partial class ParkPeople : Entity
 	/// </summary>
 	internal IReadOnlyDictionary<int, Peep> Guests => _byId;
 
+	/// <summary>
+	/// Whether this guest rides a thing that keeps no rider's sprite: admission tests the thing's flag bit <c>0x20</c>
+	/// (<see cref="ParkWorld.CatalogueObject.KeepsRidersSpriteFlag"/>, <c>0x0050212b</c>) and, without it, destroys the
+	/// sprite (<c>0x00502147</c>), so nothing of their body is drawn until leaving builds it again (<c>FUN_004d4140</c>).
+	/// A head a ride hangs is a sprite of its own. <c>docs/exe/park-engine.md</c>, the sale's riders.
+	/// </summary>
+	internal bool RidesWithoutASprite( int thingId )
+		=> _byId.TryGetValue( thingId, out var peep ) && RidesWithoutASprite( peep.State, peep.MajorDest );
+
+	/// <summary>The rule of <see cref="RidesWithoutASprite(int)"/> for a state and the thing it names.</summary>
+	internal bool RidesWithoutASprite( PeepState state, int ridden )
+		=> state == PeepState.Riding
+			&& !(State.TryObject( ridden, out var thing ) && (thing.Flags & ParkWorld.CatalogueObject.KeepsRidersSpriteFlag) != 0);
+
 	/// <summary>Every member of staff: the newest hire first, then the save's in the order it lists them.</summary>
 	internal IReadOnlyList<Staff> Staff => _staff;
 

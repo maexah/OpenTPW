@@ -3214,9 +3214,10 @@ car for any ride its handle names (Q285).
 **A rider saved with no sprite is given one at the load, a deviation.** A rider on a thing that keeps none (the
 Hot Pot: `mFlags` without `0x20`) is in the file with sprite slot nought, since admission destroyed it
 (`0x00502147`), and the original makes it again from what they wear as the thing lets them go (`FUN_004d4140`).
-Nothing here destroys a rider's sprite, and a guest's head in a boat is drawn through their own, so
-`ParkPeople` makes it at the load: standing, on a new slot, of the person's `mESPSprite` and `mSpriteID`. Before
-this a rider loaded so was drawn by nothing, on the ride or after it.
+Here a rider's sprite record is kept and only not drawn while they ride such a thing (`ParkPeople.RidesWithoutASprite`,
+Q52), and a guest's head in a boat is drawn through their own, so `ParkPeople` makes it at the load: standing, on a
+new slot, of the person's `mESPSprite` and `mSpriteID`. Before this a rider loaded so was drawn by nothing, on the
+ride or after it.
 
 **A walk's rider is saved where its placer left them, as the original's files hold them** (Q735). The writer asks the walk that holds a guest (`ParkGuestSprites.WalkedOnRide`, the placer `FUN_005580a0`'s rule) as it writes them: one it hid (carried under action 1, 2 or 4: `FUN_004f9ed0` frees the sprite, handle 0) is written with sprite slot nought and no sprite, and one it shows has its sprite at the placer's point, the height the point's less the ground under it (`0x004f9e91`) and the slot's facing (`+0x14`), not the navigator and the person's own octant (`ParkPeople.Written`, `ParkWorld.WrittenPerson.SpritePlaced`). The original's files (`q585/walkriders-saves.out`, 38 walk slots) hold no sprite for the 23 riders the placer hid and the placer's point and facing for the other 15 ("Where a walk's rider is drawn", `ride-operation.md`). A load in either game is the same either way (both re-place every frame); a guest saved so with no sprite is given one at the load, as above.
 

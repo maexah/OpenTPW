@@ -1087,6 +1087,16 @@ public sealed class ParkGuestSprites : ModelEntity
 				continue;
 			}
 
+			// A rider on a thing without flag bit 0x20 has no body: admission destroyed the sprite (0x00502147). What a
+			// walk's placer does with such a rider is not decoded, so one is counted and left hidden, as the writer leaves it.
+			if ( people?.RidesWithoutASprite( person.ThingId ) == true )
+			{
+				if ( WalkedOnRide( people, person.ThingId ) != null )
+					Unimplemented.Report( "WALK_RIDER_ON_A_THING_KEEPING_NO_SPRITE" );
+
+				continue;
+			}
+
 			// A visitor a walk holds is placed by it: on their leg, on their node, or not drawn at all.
 			var walked = WalkedOnRide( people, person.ThingId );
 
@@ -1995,7 +2005,8 @@ public sealed class ParkGuestSprites : ModelEntity
 				$"{(walked is { } by ? (by.Hidden ? " WALK hides" : $" WALK at ({by.At.X:0.000},{by.At.Y:0.000},{by.At.Z:0.000}) facing {by.Facing}") : "")} " +
 				$"saved ({sprite.X:0.0},{sprite.Y:0.0}) " +
 				$"cellsize {cellX:0.##}x{cellY:0.##} walk {(walk == null ? "none" : "found")}" +
-				$"{(InTheHand( people, person.ThingId ) ? " IN THE HAND, not drawn" : "")}";
+				$"{(InTheHand( people, person.ThingId ) ? " IN THE HAND, not drawn" : "")}" +
+				$"{(people?.RidesWithoutASprite( person.ThingId ) == true ? " RIDES WITHOUT A SPRITE, body not drawn" : "")}";
 		}
 	}
 
