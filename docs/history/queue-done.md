@@ -12847,3 +12847,47 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   loads the "Boarder" file, empties its list and writes again: nobody listed (the old rule: one). Tested only; not
   run in either game.
 - [x] **Q1104. The bought TV Sim's ride window door, its queue joined to a path, in ours and the original (a piece of Q913).** Q913 listed "the bought TV Sim's ride window opening it"; Q927 found that a bought ride's door cannot open it while its queue's back is not joined (`ParkRideOperation.MayOpen`). **Done (lane A run 22, `q1104/`, `PREDICTION.txt`; binary md5 `00f2bf1f`, the branch's build of `17902877`, no code change; `lib/doorscene.py` stored and run as `run3`):** in the stock jungle park Aztec Mayhem (1104, the jungle TV Sim) bought at (44,25) turned 180 (cells 41..44 x 22..25, its queue node (43,26)) logs `Object 43: Closing...` and `back of queue is not connected`, `canload 0`, `VAR_RIDECLOSED 1`; its door clicked then logs nothing and leaves both. The queue tool from (43,27) to the path along y=28: `back of queue is connected`, `Object 43: opened` (the remeasure's reopen), `canload 1`, script 16 'Simulator' at 61 with child 17 ('Torches and Worn script for TVsim') after 7 s and four effect-25 emitters at the braziers (`particles`). The door, a real click on `b_door`: `Object 43: Closing...`, `canload 0`, `VAR_RIDECLOSED 1`, script 16 at 207 with child 0 within a second, no emitter at the braziers, the Closed hoardings up (`run3/5-closed-b0.png`); again: `Object 43: opened`, child 18 within a second, the four emitters back, the hoardings down (`run3/7-reopened-b0.png`). Saved open: 16 records, h 16 child 18, h 18 parent 16 (`scriptrecords.py`). The original given that file (`run2/q1104-open.TPWS`, `loadfile.sh` with `origscripts.py`): the same 16 scripts and links; a click on the ride opened its window, its door (766,434) closed it (h 16 at pc 207 with child 0, h 18 gone, the hoardings up, `orig/b-4-closed-1.png`) and opened it again (a new child, h 21, under 16; hoardings down, `orig/b-7-reopened-1.png`). Fire over the four braziers (pixels of the flame's colour, the same boxes each frame, compared within each game): ours joined 107 to 154, closed 4, reopened 47 to 90 (`run3`); the original open 552, closed 3, reopened 85 to 267. One miss recorded (the paused buy's script read word 0, not 5..8). Seen in the original's window and not built here: EXIT NOT CONNECTED over the preview while open (status 24, Q212: the exit's stub at (42,26) joins no path) and no `b_track` (filed Q1105). Not seen: Windows and macOS; a door on a ride bought in the original itself (it was given ours' file).
+- [x] **Q286. Seven tests cannot fail for what their names say.** From the week-end audit (stage 6, the second
+  reading of each commit). Each passes with the bug it is named for put back; strengthen each and prove it with
+  `mutate.py`. One bullet a test.
+  - ASavedStampIsKept reads a stamp of nought from the shipped park and then checks only that the Staff
+    constructor copies a value handed to it, so the entertainer's read of mTimeStartedEntertaining at record +503
+    can be moved and the suite stays green. It should write a park with a performing entertainer whose stamp is
+    not nought and read it back, as ParkMechanicRepairTests does for the mechanic's +503, the layout being
+    FileFormats saves.md's entertainer row (mTimeStartedEntertaining 4, mNext 2).
+    (`OpenTPW.Tests/ParkEntertainerPerformanceTests.cs`, line 263; commit `63660f76`)
+  - No test reaches a whole purchase, so the one line that stamps a bought toilet's, camera's or fireworks' region
+    effect (`ParkBuilding.Build`, the `StampEffects` call after `AddObject`) can be deleted with the suite green;
+    `ParkRegionEffectsTests.Bought` calls `StampEffects` itself. A test should buy a Security Camera through
+    `ParkBuilding.Build`'s own path with objects that place, and read security 20 on its cell, which is what
+    `0x004db458` does and what q257e's mutation run showed only the game run catches.
+    (`OpenTPW.Tests/ParkRegionEffectsTests.cs`, line 143; commit `8b70a8d8`)
+  - TheSavedStampIsReadAndKept asserts that no other kind of staff reads a researcher's stamp, but the shipped
+    save holds nought at +503 for all four other members, so the assertion passes with the model guard in
+    ParkWorld.ReadStaff removed (mutation m38 and m38b of q134/mutations.txt survived). It should read a record
+    built with a non-zero +503 for a mechanic, a handyman, an entertainer and a guard (bytes patched in a copy of
+    Easymode.TPWI, or a park written by ParkWorld.People's writer with an entertainer's stamp set) and assert
+    nought, which m38 would then fail. (`OpenTPW.Tests/ParkResearcherResearchTests.cs`, line 109; commit
+    `50516f7c`)
+  - No test holds the range a bumper ride's engine voice is started with: taking `range: rides.RangeOf( effect, 0
+    )` off `ParkCarSounds.Play` fails nothing (`q265/mut-run1.out`, m21 survives), and only the game run
+    `q265/engine.py` showed it. A test should stand a track ride's script far enough to start the engine voice and
+    read its range as the variation's own, 100 for the Hot Pot's (`docs/exe/audio.md`, "Measured here,
+    2026-10-10"). (`OpenTPW/World/Park/ParkCarSounds.cs`, line 92; commit `a069af13`)
+  - `TheBootsSoundIsPlayedAtItsVariationsVolume` asserts `UiSounds.BootVolume` alone, and `UiSounds.Boot`, which
+    hands that volume to `SoundCategory.Play` for effect 210, is called by no test, so a `Boot` that plays at
+    volume 1 or plays the click's effect passes the suite. `Boot` answers nothing and plays only once sound is up
+    (`Audio.Ready`), so it wants a seam first and then a test through it (the voice played: its clip and its
+    volume of nought), which is known by putting `1f` in the `Play` call at
+    `UiSounds.cs:73` and seeing the suite stay green. (`OpenTPW.Tests/ParkCountedPathsTests.cs`, line 205; commit
+    `da9443ff`)
+  - The test `ARideBoughtFacingAPathKeepsItsLinkToItsQueue` builds its purchase by hand and calls
+    `ParkBuilding.LayEnds` itself, so no test fails when `Build` stops calling `LayEnds` (`ParkBuilding.cs:164`)
+    or calls it before `Stamp`. A test should drive `Build` (or `Buy`/`PlaceCarried` on a level) for a Crazy Ape
+    on (41,22) and read cell (42,22) links `0x01` and a queue of one cell; putting the bug back at line 164 shows
+    the gap. (`OpenTPW.Tests/ParkFileWriterBoughtAndSoldTests.cs`, line 647; commit `2dec6b66`)
+  - The test `AThingsVoiceIsSoundedAtTheMiddleOfItsCells` checks `ParkObjects.BoxMiddle` alone, so putting the
+    scream back at the thing's corner in `TrySoundPlace`, or not keeping the footprint in `Place`, fails no test
+    (q266/mutations.py m08 to m10 fail none). A test should stand a thing in a `ParkObjects` and read
+    `TrySoundPlace` for it, the Belly Bounce at (51,23) answering (525, 250), so the wiring is held by the suite
+    and not by one game run. (`OpenTPW.Tests/ParkFootprintTests.cs`, line 141; commit `9ec9a7a9`)

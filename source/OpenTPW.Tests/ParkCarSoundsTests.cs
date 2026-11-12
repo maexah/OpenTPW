@@ -329,6 +329,75 @@ public class ParkCarSoundsTests
 	}
 
 	/// <summary>
+	/// The engine started from a track ride's own scripts: the Hot Pot's script stood under a scheduler with the
+	/// <c>EventMap</c> its <c>SPAWNSOUND</c> names, run until the map's slot 0 names the engine, 194; the lead's
+	/// <see cref="ParkCarSounds.Play"/> for the ride's handle then plays that effect over its variation's own range, 100
+	/// (<c>docs/exe/audio.md</c>, "Measured here, 2026-10-10").
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the range taken off the voice the cars start, or the slot's effect not read, fails here.</remarks>
+	[TestMethod]
+	public void TheEngineStartedFromTheRidesScriptPlaysOverItsVariationsRange()
+	{
+		var data = GameData.Required();
+
+		FileSystem = data;
+
+		using var stream = new System.IO.MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
+		var shipped = new ParkWorld( new SaveReader( stream ).ReadFile() );
+		var catalogue = new ParkItemCatalogue( "jungle", data );
+		var rides = new ParkRides( "jungle", shipped, catalogue, data );
+		var ready = typeof( Audio ).GetProperty( nameof( Audio.Ready ) )!;
+		List<Voice> before;
+
+		lock ( Audio.Lock )
+			before = [.. Audio.Voices];
+
+		ParkAudio? park = null;
+
+		try
+		{
+			Assert.IsTrue( catalogue.TryGet( 1140, out var hotPot ) );
+
+			var scheduler = rides.Scheduler;
+			var parent = scheduler.Find( scheduler.Spawn( ParkRides.ScriptPathFor( hotPot )! ) )!;
+			var mapId = scheduler.Spawn( parent.SpawnPaths( Opcode.SPAWNSOUND ).Single() );
+
+			for ( var tick = 0; tick < 5; ++tick )
+				scheduler.Advance( 31f * tick );
+
+			Assert.AreEqual( 194, scheduler.Find( mapId )!.VariableAt( ParkBumperCars.EngineSlot ), "the map names the engine" );
+
+			var table = new ParkTrackRideTable();
+			var handle = table.Take( -1 );
+
+			parent.SoundChildId = mapId;
+			parent.Bumpers = table.Cars;
+			parent.TrackRide = handle;
+
+			ready.SetValue( null, true );
+			park = new ParkAudio( "jungle" );
+
+			var held = new ParkCarSounds( scheduler ).Play( handle, ParkBumperCars.EngineSlot, Centre, Centre ) as ParkCarSounds.Held;
+
+			Assert.IsNotNull( held, "the engine is started" );
+			Assert.AreEqual( 194, held.Effect );
+			Assert.AreEqual( 100f, held.Voice.Range, "over the variation's own range" );
+			Assert.IsNull( new ParkCarSounds( scheduler ).Play( handle + 1, ParkBumperCars.EngineSlot, Centre, Centre ), "no script holds another handle" );
+		}
+		finally
+		{
+			park?.Delete();
+			rides.Delete();
+			Entity.ApplyDeletions();
+
+			lock ( Audio.Lock )
+				Audio.Voices.RemoveAll( voice => !before.Contains( voice ) );
+
+			ready.SetValue( null, false );
+		}
+	}
+
+	/// <summary>
 	/// <c>FUN_006d2820</c>'s tables read one step past the pitch: 2^((p ± 1) / 96), checked against the table's own
 	/// floats at <c>0x00782f40</c> and <c>0x00783540</c>.
 	/// </summary>

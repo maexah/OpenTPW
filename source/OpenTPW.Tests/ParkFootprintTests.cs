@@ -163,6 +163,42 @@ public class ParkFootprintTests
 	}
 
 	/// <summary>
+	/// The same middle read through the wiring: the shipped Belly Bounce at (51,23) stood in a <see cref="ParkObjects"/> by
+	/// <c>Place</c>'s last step, its model at its anchor's corner, answers (525, 250) at the model's height from
+	/// <see cref="ParkObjects.TrySoundPlace"/>, not the corner.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> <c>TrySoundPlace</c> answering the model's origin, or the stand not keeping the footprint, fails here.</remarks>
+	[TestMethod]
+	public void AStoodThingsVoiceIsSoundedAtTheMiddleOfItsCells()
+	{
+		Log ??= new();
+		FileSystem = data;
+		Unimplemented.Forget();
+
+		var world = World();
+		var catalogue = new ParkItemCatalogue( "jungle", data );
+		var placed = world.Objects.Single( thing => (thing.CellX, thing.CellY) == (51, 23) );
+
+		Assert.IsTrue( catalogue.TryGet( placed.CatalogueId, out var item ) );
+
+		// A model with only the position the voice reads: the GPU-side parts are not built.
+		var model = (LobbyModel)System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject( typeof( LobbyModel ) );
+		var corner = new Vector3( 510f, 230f, 7f );
+
+		typeof( LobbyModel ).GetField( "_placedOrigin", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance )!
+			.SetValue( model, corner );
+
+		var objects = new ParkObjects( "jungle", null, null );
+
+		objects.StandPlaced( placed, item, model, RideAnimations.None(), null, [], 0, [], 0, () => default );
+
+		Assert.IsTrue( objects.TrySoundPlace( placed.ThingId, out var at ) );
+		Assert.AreEqual( new Vector3( 525f, 250f, 7f ), at, "the middle of its cells, at its model's height" );
+		Assert.IsFalse( Unimplemented.Summary.Any( gap => gap.What == "SOUND_PLACE_NO_CELL_RECTANGLE" ) );
+		Assert.IsFalse( objects.TrySoundPlace( placed.ThingId + 1000, out _ ), "nothing stands under another id" );
+	}
+
+	/// <summary>
 	/// Which cells a footprint of this size, anchored here and turned this far, ends up on.
 	///
 	/// <para>

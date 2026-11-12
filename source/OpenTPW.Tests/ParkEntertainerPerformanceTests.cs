@@ -256,17 +256,45 @@ public class ParkEntertainerPerformanceTests
 	}
 
 	/// <summary>
-	/// A saved <c>mTimeStartedEntertaining</c> is kept. The shipped park's own reads nought, so the read at +503
-	/// is pinned by no file here.
+	/// A saved <c>mTimeStartedEntertaining</c> is kept. The shipped park's own reads nought, so the park is written with
+	/// the entertainer performing since a stamp that is not, and read back: the record holds it at +503 (FileFormats
+	/// <c>saves.md</c>, the entertainer's row: <c>mTimeStartedEntertaining</c> 4, <c>mNext</c> 2), the reader finds it
+	/// there, and the member made from the file keeps it.
 	/// </summary>
+	/// <remarks><b>Mutations:</b> the read at +503 moved (to +505, or the mechanic's guard put on it) or the write moved fails here.</remarks>
 	[TestMethod]
 	public void ASavedStampIsKept()
 	{
-		var saved = Park().People.Single( person => person.ThingId == Entertainer );
+		const int stamp = 0x00012345;
 
-		Assert.AreEqual( 0, saved.Staff!.Value.TimeStartedEntertaining );
-		Assert.AreEqual( 640, new Staff( saved.ThingId, saved.Model,
-			saved.Staff.Value with { TimeStartedEntertaining = 640 }, saved.Navigator ).TimeStartedEntertaining );
+		var world = Park();
+
+		Assert.AreEqual( 0, world.People.Single( person => person.ThingId == Entertainer ).Staff!.Value.TimeStartedEntertaining );
+
+		var state = new ParkState( world );
+		var people = new ParkPeople( world, Balance(), gateStatus: null, state, new ParkItemCatalogue( "jungle", data ) );
+
+		try
+		{
+			people.Staff.Single( staff => staff.ThingId == Entertainer ).StartPerforming( 0, stamp );
+
+			var again = new ParkWorld( ParkFileWriter.Body( world, new ParkFileWriter.Running( world.GameTick, false, 0, 0,
+				world.Camera.Saved!.Value, People: people.Written( Level.WrittenThings( world ).Contains ) ) ) );
+
+			Assert.IsNull( again.Problem );
+			Assert.AreEqual( stamp, BitConverter.ToInt32( again.RecordOf( Entertainer )!, 503 ), "mTimeStartedEntertaining at +503" );
+
+			var written = again.People.Single( person => person.ThingId == Entertainer ).Staff!.Value;
+
+			Assert.AreEqual( (int)StaffActivity.Performing, written.State );
+			Assert.AreEqual( stamp, written.TimeStartedEntertaining );
+			Assert.AreEqual( stamp, ParkPeople.StaffIn( again ).Single( staff => staff.ThingId == Entertainer ).TimeStartedEntertaining );
+		}
+		finally
+		{
+			people.Delete();
+			Entity.ApplyDeletions();
+		}
 	}
 
 	/// <summary>

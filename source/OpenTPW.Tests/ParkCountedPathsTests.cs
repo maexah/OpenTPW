@@ -568,6 +568,50 @@ public class ParkCountedPathsTests
 		Assert.AreEqual( 0f, UI.UiSounds.BootVolume( [] ), "no header: nought" );
 	}
 
+	/// <summary>
+	/// <b>The boot plays effect 210 at its volume of nought</b> once sound is up (<c>0x0054dcf0</c>): the voice it starts is the
+	/// effect's sample at volume nought, and it is effect 210 that it took, so 210 waits out its repeat while the click, effect
+	/// 31 on the same sample, is free.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> <c>Boot</c> playing at <c>1f</c>, at the click's volume, or the click's effect fails here.</remarks>
+	[TestMethod]
+	public void TheBootPlaysEffect210AtVolumeNought()
+	{
+		FileSystem = GameData.Required();
+
+		var ready = typeof( Audio ).GetProperty( nameof( Audio.Ready ) )!;
+		var category = typeof( UI.UiSounds ).GetField( "_category", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static )!;
+		var before = category.GetValue( null );
+		List<Voice> voices;
+
+		lock ( Audio.Lock )
+			voices = [.. Audio.Voices];
+
+		Assert.IsNull( UI.UiSounds.Boot(), "no sound up: nothing played" );
+
+		ready.SetValue( null, true );
+		category.SetValue( null, null );
+
+		try
+		{
+			var voice = UI.UiSounds.Boot();
+
+			Assert.IsNotNull( voice );
+			Assert.AreEqual( 0f, voice.Volume, "the variation's volume of nought" );
+			Assert.AreEqual( UI.UiSounds.Category!.PickSample( 210, out _, out _ )!.Name, voice.Name, "effect 210's sample" );
+			Assert.IsNull( UI.UiSounds.Category.Play( 210, 0f ), "210 was the effect taken: it waits out its repeat" );
+			Assert.IsNotNull( UI.UiSounds.Category.Play( 31, 0f ), "the click's was not" );
+		}
+		finally
+		{
+			lock ( Audio.Lock )
+				Audio.Voices.RemoveAll( voice => !voices.Contains( voice ) );
+
+			category.SetValue( null, before );
+			ready.SetValue( null, false );
+		}
+	}
+
 	/// <summary>A park's stack as entering one makes it: the gadget and the viewfinder under the real park front end.</summary>
 	private static UI.WindowStack APark()
 	{

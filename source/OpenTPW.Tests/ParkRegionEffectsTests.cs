@@ -168,6 +168,39 @@ public class ParkRegionEffectsTests
 		CollectionAssert.AreEqual( file, state.Effects.ToArray() );
 	}
 
+	/// <summary>
+	/// A Security Camera bought through <see cref="ParkBuilding.Build"/>'s own path, its model stood by a stand-in, stamps security's
+	/// 20 on its cell and 2 at the edge of its reach, as the constructor does (<c>0x004db458</c>): the build itself makes the stamp,
+	/// where <see cref="APurchaseStampsAndASaleTakesOff"/> makes it by hand.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the <c>StampEffects</c> call after <c>AddObject</c> in <c>Build</c> deleted fails here.</remarks>
+	[TestMethod]
+	public void ACameraBoughtThroughTheBuildStampsSecurityOnItsCell()
+	{
+		var catalogue = new ParkItemCatalogue( "jungle", data );
+		var state = new ParkState( shipped );
+		var rides = new ParkRides( "jungle", shipped, catalogue, data );
+
+		CollectionAssert.AreEqual( new short[] { 0, 0, 0, 0, 0 }, state.EffectsAt( 30, 60 ).ToArray(), "nothing there before" );
+
+		ParkBuilding.StandThing = _ => true;
+
+		try
+		{
+			var built = ParkBuilding.Build( state, shipped, catalogue, null, rides, CameraItem, 30, 60, 0 );
+
+			Assert.AreNotEqual( 0, built.ThingId, built.Answer );
+			CollectionAssert.AreEqual( new short[] { 0, 0, 0, 20, 0 }, state.EffectsAt( 30, 60 ).ToArray(), "security 20 on its cell" );
+			CollectionAssert.AreEqual( new short[] { 0, 0, 0, 2, 0 }, state.EffectsAt( 35, 64 ).ToArray(), "and 2 at its reach's edge" );
+		}
+		finally
+		{
+			ParkBuilding.StandThing = null;
+			rides.Delete();
+			Entity.ApplyDeletions();
+		}
+	}
+
 	/// <summary>Selling a toilet of the file's takes the clean one's effect off, or the dirty one's where it has been dirtied.</summary>
 	[TestMethod]
 	[DataRow( false )]

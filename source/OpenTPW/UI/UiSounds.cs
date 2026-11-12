@@ -63,20 +63,27 @@ internal static class UiSounds
 	}
 
 	/// <summary>
-	/// The boot's play of effect 210, once sound is up, at its variation's own volume - see the class remarks.
+	/// The boot's play of effect 210, once sound is up, at its variation's own volume - see the class remarks. Answers the
+	/// voice it played, null with no sound up; the boot ignores it, and a test reads it.
 	/// </summary>
-	public static void Boot()
+	public static Voice? Boot()
 	{
 		Preload();
 
 		if ( _category == null )
-			return;
+			return null;
 
 		var volume = BootVolume( _category.VariationsOf( BootSound ) );
 		var voice = _category.Play( BootSound, volume, respectDelay: false );
 
 		Log.Info( $"UI sounds: the boot's effect {BootSound} at volume {volume:0.00}, {(voice == null ? "no voice" : "a voice")}" );
+
+		return voice;
 	}
+
+	/// <summary>The interface's category once <see cref="Preload"/> has loaded it, null before.</summary>
+	/// Dead by CODE: only ParkCountedPathsTests reads it.
+	internal static SoundCategory? Category => _category;
 
 	/// <summary>The volume an effect's first variation asks for, its low bound of a hundred; nought with no header.</summary>
 	internal static float BootVolume( IReadOnlyList<SoundCategoryFile.Variation> variations )
