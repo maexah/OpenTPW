@@ -2588,7 +2588,7 @@ public static class DebugConsole
 				break;
 
 			// The running particle system's census: each emitter of the world's with its effect, where it stands in
-			// park units, its life and how many particles it holds, then how many the last frame drew. `emitters`
+			// park units, its life, how many particles it holds and the area it throws them over, then how many the last frame drew. `emitters`
 			// is the loaded FILE's. `particles <slot>` prints every particle of that emitter instead: its place less
 			// the emitter's in park units, its velocity, size, frame, colour and the ticks it has left of its life.
 			case "particles":
@@ -2660,7 +2660,7 @@ public static class DebugConsole
 					Reply( $"particles: slot {slot} effect {emitter.Effect} at ({emitter.X / 64},{emitter.Y / 64},{emitter.Z / 64}) "
 						+ $"aim {(emitter.Aim is { } aimed ? $"({aimed.X},{aimed.Y},{aimed.Z})" : "none")} life {emitter.Lifetime} particles {emitter.Count} highest {highest} "
 						+ $"flags 0x{emitter.Template.DrawFlags:x} set {emitter.Template.SpriteSet} frames {emitter.Template.Frames} "
-						+ $"rates ({string.Join( ", ", emitter.Rates )}) most {emitter.MaxParticles} raw ({emitter.X},{emitter.Y},{emitter.Z})" );
+						+ $"rates ({string.Join( ", ", emitter.Rates )}) most {emitter.MaxParticles} area ({emitter.Area.X},{emitter.Area.Y},{emitter.Area.Z}) raw ({emitter.X},{emitter.Y},{emitter.Z})" );
 				}
 
 				Reply( $"particles: {ofTheWorld} emitters of the world, {alive} particles alive, {WorldParticles.Current?.Drawn ?? 0} drawn last frame, density {particleSystem.Density}, steps {particleSystem.Steps}" );

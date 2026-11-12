@@ -2493,7 +2493,7 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
 - [ ] **Q38. What building and selling look and sound like.** Counted, not built: the death particle
   (`DESTROY_PARTICLE_EFFECT`, `Info.DestroyParticleEffect`, 75-78, a world effect spread over the
   footprint) and the demolish sound (`DEMOLISH_SOUND`, `0x96`-`0x99` by size; Q1000 caught the pillar's sale in the original playing `0x98` once, category word 3, X 40 = 10 x the picture's width, `park-engine.md`, "The demolisher's per-cell tail, and its sale sound"). The build side's particle is
-  counted (`CREATE_PARTICLE_EFFECT`, Q663) and its build is Q683; not yet counted: the `+0xd4` sound zone (an EAX 2.0 occlusion zone) the script
+  started since Q683 over the model's box (`ParkCreateEffect.Box`, the box the destroy effect is spread over too); not yet counted: the `+0xd4` sound zone (an EAX 2.0 occlusion zone) the script
   loader makes when an item has one (`park.md`, "What building a thing gives off"). The world pass to draw them in is `WorldParticles`.
   - **Note (fork watch 2026-10-16, `verify-audio-fx.md` A6):** particle caller ids read in the listing: `0x004d95bf`
     50, `0x00544dd8` 2, `0x005480fc` 96, `0x0055dba3` 39, `0x0055dc22` and `0x0055dca1` 40, `0x005999ad` 87,
@@ -2792,17 +2792,18 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
     `Light_ModelSetup` (`0x0057aa30`, `0x0057aa66`) skip the relight and `DrawList_AddMesh` (`0x00581d56`) read mesh `+0x64` as
     the draw's colour stream; it is set at run time only (`FUN_00469580`, the hover tint `FUN_00469180`), 0 of 4,923 meshes and
     2,606 transform records carry it. A mesh with it must not be lit by normals. The lobby's light is Q769.
-- [ ] **Q683. Start a bought thing's create effect (Q663's build).** The script loader starts the item's
-  `Info.CreateParticleEffect` (`ItemDescriptionFile.CreateParticleEffect`) once as a bought or moved thing's script is made (a move's put-down
-  rebuilds the object through the same constructor: `0x00525417`, `FUN_00528a70`, `FUN_004db090`; `park-engine.md`), never
-  at a load or a layout replay: `Particles_Spawn` at the middle of the model's box (`FUN_00466b70`: the model's own
-  cells `+0xc0`/`+0xc4` x 10, not the anchor's footprint, Q744's rule) at its base height, then `Particles_SetArea` with
-  half the box across and along and a quarter of its height in place of the template's area (`park.md`, "What building
-  a thing gives off"). Here `ParkRides.BindNew` counts `CREATE_PARTICLE_EFFECT`; `ParticleSystem` takes no area but the
-  template's. Build both, with the same box for the destroy effect's (Q38). Leave the `+0xd4` sound zone alone: uncounted,
-  reached exactly with `CREATE_PARTICLE_EFFECT` (`0x00558e81`, the box tests `0x00558ea5` and `0x00558f4d`), an EAX 2.0
-  occlusion zone (`park.md`, "What building a thing gives off"; Q38's note), its factor `0x006c4c80` not read. Confirm: the Round Fountain bought in both games, `particles` against `original/emitters.py` (effect 81,
-  life 30, most 146 at density 500, about 1.5 s) and the build's first frames side by side (`q663/side-by-side.png`).
+- [ ] **Q1568. Photograph a bought thing's create effect beside the original's (Q683's confirm, desk lane).** Q683 starts
+  the effect and was confirmed by the census alone in a cloud container with no display to photograph: buy the Round
+  Fountain in ours on a desk (`buy 1403 64 18 0`, or by a click at the original's place in `late30.TPWS`), take the build's
+  first frames, and set them beside `q663/orig/a`'s (`orig-build-strip.png`) as `q663/side-by-side.png`; read `particles`
+  against `original/emitters.py` (effect 81, life 30, most 146 at density 500, gone about 1.5 s later). Look at whether the
+  sparkles spread over the fountain's box as the original's do (the area is (960, 544, 960) in the emitter's units).
+- [ ] **Q1569. A save made while a bought thing's create effect is alive (from Q683).** The original's park file holds
+  its particle system's live image (`saves.md`, "The particles module"), so a save made in the effect's 1.5 s may hold its
+  emitter, which a load starts again with no particles; ours writes only the emitters scripts started
+  (`ParkFileWriter.PutEmitters`), so it holds none. Read in the original whether such a file holds an emitter of effect 79
+  to 82 (save within a second of a placing click, `original/emitters.py` on the loaded file), and write it if so, its area
+  (`+0x44`) the box's as `ParkCreateEffect` sets it.
 - [ ] **Q684. The map's overlay, its six switches and two pickers (Q664's build).** From Q664 (`hud.md`, "The map's
   overlay"; FileFormats `park-map.md`, "The overlay's six sprites"). Build the six layer switches (`0x987`, `0x993`, `0x994`,
   `0x982`, `0x989`, `0x983`; toggles, flags `0x11`, their help pairs) and the two radio groups (`0x98e`, `0x98f`, `0x98c`,
