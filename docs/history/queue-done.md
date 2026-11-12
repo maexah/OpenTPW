@@ -12789,3 +12789,11 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `0x1`. Of the 2,073 models read, 16 lookup records carry `0x400` with no position (the Hallowed ogre's `ogrepipe01`
   first), none in `jungle`; the shipped park's 14 things still read as built. The other eight park files were not in
   the container and were not compared.
+- [x] **Q758. A click on the mouth while the anchor is the mouth walks back towards the other mouth in the original; ours walks
+  forward.** From the Q763 review (VERIFY-4, the residual of finding 1; `park.md`, "The walk"). In that one case op `0x86`
+  runs `TrackRide_ShapeFromMouth` (answers 0 on an open mouth) and then `ShapeFromOtherMouth`, whose write of the
+  opposite heading (`0x0052cd48`) the walk reads: 1 section in the original, 2 in ours, `+0x2c` 0 in both, nothing a
+  player sees reads the difference (`ParkTrackRideTable.LayoutOf` of a run with no bend is the same). Give
+  `WalkCircuit` the heading as a parameter and pass `CellEdge.Opposite( HeadingOf( angle ) )` from `RunOn` when
+  `anchor == target && mouth == target` and the circuit from the mouth does not close; keep the turn's way everywhere
+  else (the finder's "opposite on every open no-move close" is wrong). Test it with a bought ride closed at once.

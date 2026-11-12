@@ -1993,8 +1993,8 @@ turn's way (east, north, west, south for 0, 90, 180, 270: `FUN_0052a3a0`) at eve
 no pass and walks with it (`0x00526d86`..`0x00526da4`); otherwise op `0x86`'s `TrackRide_ShapeFromMouth` writes the turn's
 way again (`0x0052c791`) and, where it answers 0, `ShapeFromOtherMouth` its opposite (`0x0052cd48`; `FUN_00530830`'s second
 write the same, `0x00530bdd`), so the walk heads out of the mouth except at a click on the mouth while the anchor is the
-mouth, which walks back towards the other mouth (the original lays 1 section there, ours 2: `+0x2c` 0 in both, and
-nothing a player sees reads the difference, `ParkTrackRideTable.LayoutOf` of a run with no bend being the same); a start on a piece's other cell (0xc, 0x11, `TrackCell_IsPieceCell`) asks its anchor whether
+mouth, which walks back towards the other mouth (the original lays 1 section there, the station's first, where the turn's
+way would lay 2; `+0x2c` 0 either way); a start on a piece's other cell (0xc, 0x11, `TrackCell_IsPieceCell`) asks its anchor whether
 there is track and whose ride it is (`0x0052aa1c`), and with none the walk answers 0 before it clears anything. A
 straight or crossing keeps the heading; a bend leaves by `mask ^ opposite( heading )`, or `mask ^ heading` where the
 bend has no link back (`0x0052b1cc`), checking or not, and **where its way on (`+0xd`) is not that, takes it and is
@@ -2009,7 +2009,9 @@ two-click edit (`0x0052693e` with 1, `0x00526bd0` with 0); each stores the answe
 then open the ride where it is 1 and the open guard lets it (`0x00526f18`..`0x00526f2d`).
 **OpenTPW** (Q763, `ParkTrackTool.WalkCircuit`) builds the walk at the closing click: the sections, the bends' way on
 and retile, `+0x2c` and the opening; it clears the last walk's sections, their objects and buoys (Q766's, below), and
-no car, a kart or water ride having no bumper record (Q588), and the step count is answered, not kept on the cells. The pieces' clips that follow are Q781's ("The pieces' clips", below).
+no car, a kart or water ride having no bumper record (Q588), and the step count is answered, not kept on the cells. The
+heading is the turn's way, or its opposite at a click on the mouth while the anchor is the mouth where op `0x86`'s walk
+from the mouth met no station (Q758: `RunOn` passes it, `Laid.MouthOpen`). The pieces' clips that follow are Q781's ("The pieces' clips", below).
 
 **An add-on's end caps in the walk** (read for Q778 from `q762/dump/0052a970.c` and `q778/dump`; measured in the original
 under Proton, `q778/orig/O1`, `O2`). An add-on (Lost Kingdom's Dino Karts Jump 1500 and Tunnel 1501 on the karts, the Splish
