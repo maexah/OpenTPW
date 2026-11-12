@@ -374,10 +374,17 @@ public sealed partial class ParkWorld
 	/// object on it must be in the objects gone, and a person or an object on it now is written whole as made. The
 	/// made, people and objects together, go newest first by its stamps.
 	/// </para>
+	///
+	/// <para>
+	/// <paramref name="clock"/> is the clock reading the file is written with (its <c>CLOK</c>); a sprite made here
+	/// comes due one default interval after it (<see cref="MadeSprite"/>). Null is the file's own reading.
+	/// </para>
 	/// </summary>
 	internal byte[] PutPeople( byte[] body, IReadOnlyList<WrittenPerson> people, ObjectEdits? objects,
-		IReadOnlyList<WrittenSprite>? letGo, HeadEdits? heads, ThingIds? ids, out PeopleWritten report )
+		IReadOnlyList<WrittenSprite>? letGo, HeadEdits? heads, ThingIds? ids, out PeopleWritten report, uint? clock = null )
 	{
+		// A file whose clock does not read gives no time to measure from: its made sprites are left due at nought.
+		var madeDue = (clock ?? Clock.Reading) is { } reading ? unchecked(reading + SpriteMadeInterval) : 0u;
 		var madeObjects = objects?.Made ?? [];
 		var goneObjects = objects?.Gone ?? new HashSet<int>();
 		var deleted = ids?.Deleted ?? new HashSet<int>();
@@ -534,7 +541,7 @@ public sealed partial class ParkWorld
 			else if ( held != null )
 				throw new InvalidOperationException( $"a rider's head is given sprite slot {rider.Slot}, which holds another sprite" );
 			else
-				sprites[rider.Slot] = HeadSprite( rider );
+				sprites[rider.Slot] = HeadSprite( rider, madeDue );
 
 			Room( rider.Slot );
 		}
@@ -555,7 +562,7 @@ public sealed partial class ParkWorld
 			if ( slot == 0 || !sprites.ContainsKey( slot ) )
 			{
 				slot = FreeSlot();
-				sprites[slot] = MadeSprite( slot, picture, sprites.Values, person.StateSetByte ?? person.MadeSetByte, ref unmatched );
+				sprites[slot] = MadeSprite( slot, picture, sprites.Values, person.StateSetByte ?? person.MadeSetByte, madeDue, ref unmatched );
 			}
 			else if ( person.StateSetByte is { } setByte )
 			{
@@ -627,7 +634,7 @@ public sealed partial class ParkWorld
 				|| BinaryPrimitives.ReadInt32LittleEndian( held.AsSpan( SpriteType ) ) != other.Picture.Type )
 			{
 				slot = FreeSlot();
-				sprites[slot] = MadeSprite( slot, other.Picture, sprites.Values, other.MadeSetByte, ref unmatched );
+				sprites[slot] = MadeSprite( slot, other.Picture, sprites.Values, other.MadeSetByte, madeDue, ref unmatched );
 			}
 
 			PutOtherSprite( sprites[slot], other );
@@ -1031,10 +1038,12 @@ public sealed partial class ParkWorld
 	public int SpriteFlagsOf( int slot )
 		=> _spriteRecords.TryGetValue( slot, out var at ) ? ReadInt32At( at + SpriteFlagsAt ) : 0;
 
-	// Dead by CODE: nothing calls it.
 	private const int SpriteDueAt = 0x7c;
 
 	private const int SpriteIntervalAt = 0x80;
+
+	/// <summary>The interval the constructor gives every sprite, <c>0x3e</c> (<c>FUN_004758f0</c>, <c>0x004759c4</c>).</summary>
+	private const int SpriteMadeInterval = 0x3e;
 
 	private const int SpriteScaleAt = 0xa4;
 
@@ -1046,8 +1055,10 @@ public sealed partial class ParkWorld
 
 	/// <summary>
 	/// A sprite record as the original's constructor leaves one (<c>FUN_004758f0</c>): its slot, state 1, an empty loop stack,
-	/// scale 1 and nought elsewhere; the program, interval, place, alpha and picture are the caller's to write. Its <c>+0x7c</c> is
-	/// nought, a time already past, so it takes its first turn at once.
+	/// scale 1, the interval <c>0x3e</c> at <c>+0x80</c> (<c>0x004759c4</c>), <paramref name="due"/> at <c>+0x7c</c>, and nought
+	/// elsewhere; the program, place, alpha and picture are the caller's to write, and the caller's interval over the constructor's.
+	/// <paramref name="due"/> is the written clock plus <c>0x3e</c>, as the constructor stores its clock plus that interval
+	/// (<c>0x004759df</c>), so a sprite made here waits one interval after a load before its first turn, as the original's does.
 	///
 	/// <para>
 	/// Its <c>+0xbc</c> is <paramref name="setByte"/>, the frames a direction of the set it is made on
@@ -1056,12 +1067,14 @@ public sealed partial class ParkWorld
 	/// (<see cref="PeopleWritten.UnmatchedSpriteSets"/>).
 	/// </para>
 	/// </summary>
-	private static byte[] MadeSprite( int slot, Sprite picture, IEnumerable<byte[]> held, int? setByte, ref int unmatched )
+	private static byte[] MadeSprite( int slot, Sprite picture, IEnumerable<byte[]> held, int? setByte, uint due, ref int unmatched )
 	{
 		var record = new byte[SpriteRecordSize];
 
 		Put32( record, SpriteSlotAt, slot );
 		Put32( record, SpriteState, SpriteConstructedState );
+		Put32( record, SpriteDueAt, unchecked((int)due) );
+		Put32( record, SpriteIntervalAt, SpriteMadeInterval );
 		Put32( record, SpriteLoopRoomAt, SpriteLoopDepth );
 		PutSingle( record, SpriteScaleAt, 1f );
 		PutSingle( record, SpriteScaleAt + 4, 1f );
@@ -1131,12 +1144,13 @@ public sealed partial class ParkWorld
 	/// "OpenTPW's writer, a rider's head"): made on <see cref="HeadProgram"/> with no place, set or frame
 	/// (<c>FUN_00475a10</c> handed noughts), then run its first turn, so state 2 and shown, one word pushed, and
 	/// the program's own drawing flags. What the record keeps of its last drawing is left nought, as on every
-	/// sprite made here.
+	/// sprite made here. Its <c>+0x7c</c>
+	/// and <c>+0x80</c> are the constructor's (<see cref="MadeSprite"/>).
 	/// </summary>
-	private static byte[] HeadSprite( WrittenHead head )
+	private static byte[] HeadSprite( WrittenHead head, uint due )
 	{
 		var unmatched = 0;
-		var record = MadeSprite( head.Slot, default, [], HeadSetByte, ref unmatched );
+		var record = MadeSprite( head.Slot, default, [], HeadSetByte, due, ref unmatched );
 
 		Put32( record, SpritePcAt, HeadRestingWord );
 		Put32( record, SpriteScriptAt, HeadProgram );
@@ -1145,7 +1159,6 @@ public sealed partial class ParkWorld
 		Put32( record, SpriteLoopRoomAt, SpriteLoopDepth - 1 );
 		Put32( record, SpriteLoopsAt + ((SpriteLoopDepth - 1) * 4), HeadPushedWord );
 		Put32( record, SpriteDepthAt, 1 );
-		Put32( record, SpriteIntervalAt, 0x3e );
 		Put32( record, SpriteAlpha, 0xff );
 		Put32( record, SpriteType, head.Kind );
 		Put32( record, SpriteBank, head.Bank );

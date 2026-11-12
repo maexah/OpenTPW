@@ -1411,9 +1411,12 @@ follow the list. It runs after the scripts, the track rides and the models are s
 - **The staff lists** are written from the list's order, as the files' run.
 - **The sprite table.** A kept person keeps their slot; a made one takes the lowest empty, and the table grows
   by fifty when it is full; a gone one's is emptied. A made record is the constructor's (`FUN_004758f0`): its
-  slot, state 1, an empty loop stack (`+0x1c` 20), alpha 255, scale 1, the program and the place, and nought in `+0x7c`, where the
-  constructor stores its clock plus the interval `0x3e` (`0x004759df`): a time
-  already past. A live slot's handle is the slot's own number, which the reader only tests against nought.
+  slot, state 1, an empty loop stack (`+0x1c` 20), alpha 255, scale 1, the program and the place, the interval `0x3e` at
+  `+0x80` (`0x004759c4`; a person's, a balloon's and a bubble's own interval is written over it) and, at `+0x7c`, the clock
+  the file is written with (its `CLOK`) plus that `0x3e`, as the constructor stores its clock plus the interval (`0x004759df`;
+  Q274): a sprite made here waits one interval after a load before its first turn, as the original's does, where a
+  nought here was a time already past. A head made here (below) takes the same two words, where one of the original's
+  that has run its turn holds that turn's clock plus its interval (not compared). A live slot's handle is the slot's own number, which the reader only tests against nought.
   **`+0xbc` is the frames a direction of the set the sprite was made on** ("A sprite's `+0xbc`", below): a made
   person's is their bank's set 0's, and a state's animation started since writes its own set's over a made
   sprite's and a kept one's alike. Only where the bank is not to hand is it copied from the nearest sprite the

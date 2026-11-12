@@ -12145,6 +12145,15 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q274. A sprite the writer makes takes its first turn at once, where the original's waits one interval.**
+  From the week-end audit (stage 4; read twice from the listing). The constructor `FUN_004758f0` writes `0x3e` to
+  `+0x80` (`0x004759c4`) and the clock plus that `0x3e` to `+0x7c` (`0x004759df`). `ParkWorld.People`'s made sprite
+  leaves `+0x7c` nought, says the constructor does, and writes no `+0x80`. Confirm: a guest made here and saved,
+  the two words read in the file and beside the original's for a guest it made.
+  **Done 2026-11-12 (cloud lane c38, `alexah/1017-made-sprite-first-turn-waits`).** `ParkWorld.MadeSprite` writes
+  `+0x80` = `0x3e` and `+0x7c` = the written `CLOK` reading plus `0x3e` (`ParkFileWriter` hands `PutPeople` the clock it
+  writes); a guest admitted off-screen and saved read back `+0x7c` 44640 against `CLOK` 44578. Not checked: the
+  original's words for a guest it made (no original here), filed as Q1272.
 
 ## B. Docs and comments
 

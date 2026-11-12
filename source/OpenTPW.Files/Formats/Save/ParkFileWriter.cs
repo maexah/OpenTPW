@@ -544,7 +544,8 @@ public static class ParkFileWriter
 		// After the modules behind the world are spliced: the people change the world's length, and only the map's effects follow.
 		if ( running.People is { } written )
 		{
-			body = loaded.PutPeople( body, written, edits, running.LetGo, heads, running.Ids, out var report );
+			// A sprite made here is due one interval after the clock the file is written with, the file's own where the things are not given.
+			body = loaded.PutPeople( body, written, edits, running.LetGo, heads, running.Ids, out var report, running.Things?.Clock );
 			people = report;
 		}
 

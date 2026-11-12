@@ -1057,11 +1057,11 @@ filed the items that cite it.
   square first. The last bit of a saved direction can differ. Confirm: a written model record's direction words
   compared bit for bit with the original's save of the same park.
 
-- [ ] **Q274. A sprite the writer makes takes its first turn at once, where the original's waits one interval.**
-  From the week-end audit (stage 4; read twice from the listing). The constructor `FUN_004758f0` writes `0x3e` to
-  `+0x80` (`0x004759c4`) and the clock plus that `0x3e` to `+0x7c` (`0x004759df`). `ParkWorld.People`'s made sprite
-  leaves `+0x7c` nought, says the constructor does, and writes no `+0x80`. Confirm: a guest made here and saved,
-  the two words read in the file and beside the original's for a guest it made.
+- [ ] **Q1272. A made guest's sprite `+0x7c` and `+0x80` beside the original's.** The rest of Q274: Q274 built the
+  constructor's two words from the decode (`FUN_004758f0`, `0x004759c4` and `0x004759df`) and read them in a file this game
+  wrote (`+0x7c` = `CLOK` + `0x3e`), but no original ran. Confirm: a guest the original makes and saves at once, its
+  sprite's `+0x7c` less the file's `CLOK` reading (`parkfile.head`, `parkfile.clock`), beside ours' 62; and whether the
+  original, loading our file, holds the made guest's first turn back one interval.
 
 - [ ] **Q276. A rider's head is always drawn from their own bank.** From the week-end audit (stage 4; read twice
   from the listing). `FUN_004fcac0` gives the rider's own `mSpriteID` only where a costume bank (kind 3) is loaded
