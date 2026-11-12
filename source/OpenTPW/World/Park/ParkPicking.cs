@@ -250,12 +250,8 @@ public static class ParkPicking
 			return null;
 		}
 
-		var gate = ParkFixedItems.Current?.ThingFor( "gates" ) ?? 0;
-		var (entranceA, entranceB) = Level.Current?.Balance is { } balance
-			? (ParkAdmission.Cell( balance, "EntranceA" ), ParkAdmission.Cell( balance, "EntranceB" ))
-			: ((-9, -9), (-9, -9));
-
-		var thing = ParkItemHeights.ThingAnswering( state, entranceA, entranceB, gate, x, y );
+		var row = ParkItemHeights.ParkGateRow();
+		var thing = ParkItemHeights.ThingAnswering( state, row.EntranceA, row.EntranceB, row.Gate, x, y );
 
 		if ( PlacedThing( state, thing ) is not { } placed || objects?.ModelFor( thing ) is not { } model || catalogue == null
 			|| !catalogue.TryGet( placed.CatalogueId, out var item ) || ParkItemHeights.For( item ) is not { } file )

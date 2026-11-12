@@ -13403,3 +13403,14 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   no Ghidra here): `ParkPeople.Sweep` runs the arrivals, the vehicle and the staff pool after the advisor's `Tick` and the
   free list; `ParkAdvisorBeforeTailTests` holds row 17 both ways on the shipped pool, and the off-screen run logged the
   poll on 1083 (`candidates=0`) before the pool's top-up, main's build the other way. The gate's retry is Q1312.
+- [x] **Q271. The model under a point misses the park gate's row.** From the week-end audit (stage 4; read twice
+  from the listing). `FUN_00527e80` (called at `0x00452a82`) answers the gate thing the world keeps at `+0x1da732`
+  for every cell of the entrance's row, from one cell before EntranceA's x to one past EntranceB's, without reading
+  the cell, and only otherwise goes to `FUN_00527d60` (`park.md`, "The scene's height under a point").
+  `ParkSceneHeight.StandingOn` answers null there. Measure first whether the gate thing's type byte is 3
+  (`0x00452ac8`): without it the original answers nought there too. Confirm: the height read under a point on the
+  gate's row in both games.
+  Done as Q271 in cloud lane c50: `ParkSceneHeight` answers the gate on every cell of its row (the rule now
+  `ParkItemHeights.OnGateRow`, shared with the pick's march), nothing where the gate is no placed object; the
+  stock park's gate is a placed object (model word 3) whose model takes mode 4, counted. Measured off-screen with
+  the new console `scene X Y`; the original's side is Q1320.

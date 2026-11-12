@@ -206,7 +206,7 @@ internal static class ParkItemHeights
 	internal static int ThingAnswering( ParkState state, (int X, int Y) entranceA, (int X, int Y) entranceB, int gate,
 		int x, int y )
 	{
-		if ( y == entranceA.Y && x >= entranceA.X - 1 && x <= entranceB.X + 1 )
+		if ( OnGateRow( entranceA, entranceB, x, y ) )
 			return gate;
 
 		return state.Record( x, y ).Type is CellEdge.Footprint or CellEdge.RideEnd or CellEdge.RideFarEnd
@@ -214,6 +214,24 @@ internal static class ParkItemHeights
 			? placed.ThingId
 			: 0;
 	}
+
+	/// <summary>
+	/// Whether a cell is on the gate's row as <c>FUN_00527e80</c> reads it: the entrance's row, from one cell before
+	/// <paramref name="entranceA"/>'s x to one past <paramref name="entranceB"/>'s (Lost Kingdom's (46,17) to (49,17)).
+	/// </summary>
+	internal static bool OnGateRow( (int X, int Y) entranceA, (int X, int Y) entranceB, int x, int y )
+		=> y == entranceA.Y && x >= entranceA.X - 1 && x <= entranceB.X + 1;
+
+	/// <summary>The gate's thing (the world's <c>+0x1da732</c>) and the two entrance cells its row is read from.</summary>
+	internal readonly record struct GateRow( int Gate, (int X, int Y) EntranceA, (int X, int Y) EntranceB );
+
+	/// <summary>
+	/// The running park's gate row: the thing its fixed items stood the gate as, nought with none, and its balance's
+	/// <c>EntranceA</c> and <c>EntranceB</c>; off the map where no level is loaded, so no cell is on it.
+	/// </summary>
+	internal static GateRow ParkGateRow() => new( ParkFixedItems.Current?.ThingFor( "gates" ) ?? 0,
+		Level.Current?.Balance is { } balance ? ParkAdmission.Cell( balance, "EntranceA" ) : (-9, -9),
+		Level.Current?.Balance is { } other ? ParkAdmission.Cell( other, "EntranceB" ) : (-9, -9) );
 
 	/// <summary>
 	/// The placed thing a cell belongs to: the one anchored there, else the one its <c>mParentID</c> names -
