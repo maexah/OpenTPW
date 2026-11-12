@@ -598,15 +598,13 @@ filed the items that cite it.
   `CellReroute.Run` stops where it starts. Decode the corner cases (the other sign combinations from `0x00510c73`), build the pass, and
   run the routes of the stock park through the old and the new to see how many steps change. Confirm: a guest's route over a bent path
   in both builds, the waypoints printed, predicted first.
-- [ ] **Q864. The reverb handoff of the camera's ride is neither built nor counted.** From Q157's Q126 note. `FUN_0055a470`
-  (`0x0054f828`, every eighth step) finds the ride the camera is on (`FUN_0042a4e0`) and hands its `+0xd8`, or `[0x0078578c]`
-  (`Sound.Reverb`, 0 in Lost Kingdom), to `FUN_0051c8d0`, the reverb preset holder (`audio.md`, "The fade, the SoundInfo settings and
-  the reverb"); a negative `+0xd8` sends nothing. Reverb itself stays cut, so only a name in the count is wanted: report it where the
-  original calls it (`Unimplemented.Report( "CAMERA_RIDE_REVERB" )`), once a ride is under the camera. Confirm: `unimplemented`
-  with the camcorder on a ride, predicted first, and without one.
-  - **Note (Q580, 2026-10-20):** the Sun God reaches `SETREVERB` (`incagod` at 162 and 188, in every run of it), counted at the dispatch
-    default as `Inca God: SETREVERB at 162`. Building it is the store of its operand at the script's `+0xd8` for the preset holder above;
-    with reverb cut nothing would read it, so a name of its own in the count is all it needs (`q580fs/run-S2`).
+- [ ] **Q1236. Two of the camera reverb handoff's facts are taken, not read.** From Q864 (a cloud lane, no Ghidra). Q864 counts
+  `CAMERA_RIDE_REVERB` while `ParkRideViewCameraMode` is on, the End's view among them, taking `FUN_0042a4e0` to answer the
+  viewed thing in any ride's view (`gui_CameraFlags & 0x4`, which the End's `FUN_0042ab20( 4, 1, model, 0, 0, 1 )` sets).
+  Read in Ghidra (1) what `FUN_0042a4e0` answers in the End's view and in first person, and (2) whether `FUN_0055a470`
+  reaches `FUN_0051c8d0` with no ride under the camera (handing `Sound.Reverb`), which ours does not count. Correct
+  `ParkLoop.HandTheReverb` and `audio.md`, "The reverb", where either differs; confirm with `endfeature make` and
+  `unimplemented`, predicted first.
 
 - [ ] **Q158. Four park-screen readouts are stand-ins; each is counted where it is drawn (Q865).** Found by the 2026-09-26 staleness
   audit (`AGENTS.md` rule 4). `ParkObjectWindow`'s scrap row letters the build price as money (row 449, "$ 500"), where `FUN_004e2400`

@@ -11,7 +11,8 @@ namespace OpenTPW;
 /// </summary>
 /// <remarks>
 /// Run by <see cref="Level.Update"/> at the top of a park's frame, before the entities' once-a-frame work. The original's
-/// flying cars (<c>0x0054f5ef</c>) are not built (Q408), and its every-32nd block, the music's level and the crowd's voice, is
+/// flying cars (<c>0x0054f5ef</c>) are not built (Q408), its every-eighth reverb handoff is counted (<see cref="HandTheReverb"/>),
+/// and its every-32nd block, the music's level and the crowd's voice, is
 /// asked once a frame after the loop (<see cref="ParkAudio"/>), so in a frame owing a 32nd tick and a sweep after it the
 /// level counts the guests after that later sweep (Q1120).
 /// </remarks>
@@ -57,7 +58,10 @@ internal static class ParkLoop
 			rides?.Tick( i );
 
 			if ( people == null )
+			{
+				HandTheReverb( tick );
 				continue;
+			}
 
 			people.StepSprites( tick );
 
@@ -80,6 +84,8 @@ internal static class ParkLoop
 						+ $" on mGameTick {GameCalendar.Counter}, weather turn {weather?.Turns.ToString() ?? "none"}";
 				}
 			}
+
+			HandTheReverb( tick );
 
 			if ( told )
 				Log.Info( $"Park loop: tick {tick}: particles to {particles?.Steps.ToString() ?? "none"}, scripts to {rides?.Scheduler.Tick.ToString() ?? "none"}{swept}" );
@@ -111,6 +117,20 @@ internal static class ParkLoop
 	{
 		calendar?.Invoke( people );
 		weather?.Turn();
+	}
+
+	/// <summary>
+	/// The every-eighth step's reverb handoff, <c>FUN_0055a470</c> (<c>0x0054f828</c>, after the sweep and run on a step whose
+	/// sweep was dropped too; <c>docs/exe/audio.md</c>, "The reverb"): the ride the camera is on hands its script's level, or the
+	/// level's <c>Sound.Reverb</c>, to the reverb preset holder (<c>FUN_0051c8d0</c>). Reverb is cut (no backend has a slot),
+	/// so the handoff is counted, <c>CAMERA_RIDE_REVERB</c>, on each such step while the camera is in a ride's view
+	/// (<see cref="ParkRideViewCameraMode.Active"/>, the End's alone in this build). Not counted with no ride under the camera,
+	/// though the original then hands <c>Sound.Reverb</c> (0 in Lost Kingdom), as Q864 asks.
+	/// </summary>
+	internal static void HandTheReverb( int tick )
+	{
+		if ( (tick & (ParkPeople.ThingTickEvery - 1)) == 0 && ParkRideViewCameraMode.Active )
+			Unimplemented.Report( "CAMERA_RIDE_REVERB" );
 	}
 
 	/// <summary>How many of the <paramref name="ticks"/> ticks from <paramref name="first"/> fall on the thing sweep's beat.</summary>
