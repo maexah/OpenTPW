@@ -2924,9 +2924,10 @@ public sealed partial class ParkPeople : Entity
 	/// <c>0x00519f17</c>..<c>0x00519f66</c>), which writes nothing else.
 	/// </summary>
 	/// <remarks>
-	/// The set is the door's own, an object a guest may be offered: the end's walk calls <c>FUN_004e0db0</c> only on a thing
-	/// that is an object (<c>+2 == 3</c>), live (<c>+3 == 0</c>) and has <c>+0x32 &amp; 4</c> (<c>0x005169a0</c>..<c>0x005169b3</c>),
-	/// <see cref="ParkWorld.CatalogueObject.IsVisitable"/> over <see cref="ParkState.ObjectsInChainOrder"/>.
+	/// The set is the door's own, an object a guest may be offered: the end's walk calls <c>FUN_004e0db0</c> only on a slot of
+	/// the thing list that holds a thing, not marked dead (<c>+3 == 0</c>), an object (<c>+2 == 3</c>) with <c>+0x32 &amp; 4</c>
+	/// (<c>0x0051699c</c>..<c>0x005169b3</c>), <see cref="ParkWorld.CatalogueObject.IsVisitable"/> over
+	/// <see cref="ParkState.ObjectsInChainOrder"/>.
 	/// </remarks>
 	internal void EndThePark()
 	{

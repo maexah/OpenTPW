@@ -42,10 +42,27 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the maintainer's pre-commit hook: grep it by Q-number.
 
-- **Q19 (VSync and a frame limiter; the Options row split off as Q1592):** in a cloud container (no Ghidra, no original, no photograph; the run's output was not kept), the eight `FramePacingTests` (needing no game) pass, and seven bugs put back by hand (a fixed first limit, no floor at 30, VSync ignored, the due counted from the frame's start, no wait, the `vsync` line not read, the `framelimit` line not clamped) each failed one or more. Off-screen (`consolerun.py`, llvmpipe, a copied build at a 512 x 384 window, its own `opentpw.cfg`), the `Frames:` line read 22.68 ms a frame unlimited, 35.23 ms at `framelimit 30` (33.3 without its one 303 ms start-up hitch) and 26.22 ms at `framelimit 40` (25.0 without it), as predicted; a first launch logged the 60 taken where SDL says the refresh rate is 0 and wrote `framelimit 60`. Not checked: VSync's own pacing (Xvfb has no refresh to wait on), a real monitor's refresh rate being read, and the sleep's precision on Windows (SDL's timer resolution) or macOS; no Options row exists to photograph.
+- **Q1425 (the end of the park, decoded):** off-screen on lane B (the private Ghidra copy, `lib/testme.objdump`; no
+  original, no desk display). The end's set is the door's (`+0x32 & 4`, live, not dead); the advisor hears the bank's
+  `0x13` first (set `0x13` is things 3, 4, 5, 8, 9 in all 1,227 park files) and posts record `0x6a`, which waits unsaid
+  in state 4 (now built, `ParkAdvisorMessages.Bankrupted`); the render flag `0x00763f84` gates every world sprite and so
+  every shadow (built: `ParkState.SpritesDrawn`, `ParkGuestSprites` draws none); its first review found the load clears
+  it for a file's state 4 and that litter is a sprite of the same table, both built in the merge; the end frees the pending deletes as the
+  sweep's tail does (built; the run 22 review's group L had built the same, and one implementation is kept). Two tests
+  added (`AnEndedParksFrameWritesNoQuad`; `AnEndedParkDrawsNoLitter`, the review's; both needing the game; its
+  `TheEndFreesTheDeletedIds` dropped in the merge, as group L's `TheEndFreesThePendingDeletes` asserts the same and more),
+  five changed (the bank's six months, the ended park's load now reading the flag, the held member's frame, the tags'
+  groups, the records' count 118), group L's End-feature test reading the post in place of the count, and two
+  `Advisor.sam` fixtures given `Bankrupted.Score`; eight bugs put back by `mutate.py`, eight failed, and in the merge six more by hand (the end's two frees, the post
+  only when ending, the load's flag set or cleared for every state, litter whatever the flag), each failing a test. The final build's off-screen run (`q1425/run3`, the
+  Q404 recipe): `circle` 18 before the end and 0 after with `guests 18` both, `post message=106 ... score=100000 ...
+  tick=5611 result=queued` on the line before `Park: the park ends`, `pending=2 attempts=0 ... slot=106` after eight
+  seconds, `1x PARK_END_SCREEN` alone, the saved slot `(0, 0, 106, 100000, 1, -1, 0, 0)`. Not photographed on the desk
+  and not run beside the original (Q1564); the line not heard (never said).
 
 ## Numbers (take counts fresh; these go stale within a day)
 
+- Linux, 2026-11-12, Q1425 (`capped.sh`; the park's end decoded, with its first review applied; five tests added on balance, needing the game; built in lane B, merged by an agent onto Q684 and here after Q19): with the game, 5784 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5786; with no game named, 2497 passed, 0 failed, 3289 skipped.
 - Linux, 2026-11-12, Q19 (`capped.sh`; VSync and a frame limiter; eight tests added, none needing the game; built in a cloud container, re-gated here after Q521): with the game, 5779 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5781; with no game named, 2497 passed, 0 failed, 3284 skipped.
 - Linux, 2026-11-12, Q521 (`capped.sh`; a person's shadow at high detail in the orbit view; one test added, needing the game; built in a cloud container, re-gated here after Q747): with the game, 5771 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5773; with no game named, 2489 passed, 0 failed, 3284 skipped.
 - Linux, 2026-11-12, Q747 (`capped.sh`; the Escape puff after the entry cancel; two tests added, needing the game; built in a cloud container, re-gated here after Q448): with the game, 5770 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5772; with no game named, 2489 passed, 0 failed, 3283 skipped.

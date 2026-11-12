@@ -837,41 +837,54 @@ public class ParkBankTests
 
 	/// <summary>
 	/// <b>Six thirty-day months in the red end the park</b>: 4148 sweeps at the shipped rate, not 4147, and world state 4
-	/// (<c>FUN_005168f0</c>); the end screen counted once, the advisor's record counted on every month that finds it so.
+	/// (<c>FUN_005168f0</c>); the end screen counted once. The advisor is posted record <c>0x6a</c> on every month that
+	/// finds it so (<c>0x0059aee7</c>): about no thing, its line his own, unforced, at <c>Bankrupted.Score</c>, into a slot.
+	/// Said (here by a tick the ended park would not give him), the next month posts it again.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> five months ending it; the end not setting state 4; a second month ending it again.</remarks>
+	/// <remarks><b>Mutations:</b> five months ending it; the end not setting state 4; a second month ending it again; the
+	/// advisor not posted; posted another record; posted only in the month that ends it.</remarks>
 	[TestMethod]
 	public void SixMonthsInTheRedEndThePark()
 	{
 		GameCalendar.Rebase();
 		var bank = Bank( balance: 0 );
+		bank.AdvisorMessages = new ParkAdvisorMessages( new SettingsFile( new MemoryStream( System.Text.Encoding.ASCII.GetBytes(
+			"GeneralAdvisor.MinScoreForConsideration 25\nMessageGroups[0].MinTimeSameMessage 0\nMessageGroups[0].SayOnlyOnce 0\n"
+			+ "MessageGroups[0].DiscardAfterSlaps 0\nBankrupted.Score 100000\n" ) ) ) );
 		bank.Spend( 1 );
 
 		for ( var i = 0; i < 4147; ++i )
 			bank.AdvanceGameTick();
 
-		var (screen, advisor) = (Times( "PARK_END_SCREEN" ), Times( "ADVISOR_PARK_ENDED_IN_THE_RED" ));
+		var screen = Times( "PARK_END_SCREEN" );
 		bank.TurnTheMonth( null );
 
-		Assert.AreEqual( (5, 0, screen, advisor), (bank.MonthsInTheRed(), bank.WorldState, Times( "PARK_END_SCREEN" ),
-			Times( "ADVISOR_PARK_ENDED_IN_THE_RED" )), "five months: the park goes on" );
+		Assert.AreEqual( (5, 0, screen, 0), (bank.MonthsInTheRed(), bank.WorldState, Times( "PARK_END_SCREEN" ),
+			bank.AdvisorMessages.PendingCount), "five months: the park goes on" );
 
 		bank.AdvanceGameTick();
 		bank.TurnTheMonth( null );
 
-		Assert.AreEqual( (6, ParkState.EndedWorldState, screen + 1, advisor + 1), (bank.MonthsInTheRed(), bank.WorldState,
-			Times( "PARK_END_SCREEN" ), Times( "ADVISOR_PARK_ENDED_IN_THE_RED" )), "six: the park ends" );
+		Assert.AreEqual( (6, ParkState.EndedWorldState, screen + 1), (bank.MonthsInTheRed(), bank.WorldState,
+			Times( "PARK_END_SCREEN" )), "six: the park ends" );
+		Assert.AreEqual( new ParkWorld.AdvisorSlot( 0, 0, 0x6a, 100000, true, -1, false, false ),
+			bank.AdvisorMessages.WrittenSlots( _ => 0 )[0], "and the advisor is posted record 0x6a" );
+
+		var said = new List<(int, int)>();
+		bank.AdvisorMessages.Tick( bank.GameTick, 0, ( response, sample ) => { said.Add( (response, sample) ); return 0; } );
+		CollectionAssert.AreEqual( new[] { (274, 424) }, said, "its first line" );
+		Assert.AreEqual( 0, bank.AdvisorMessages.PendingCount );
 
 		bank.TurnTheMonth( null );
 
-		Assert.AreEqual( (ParkState.EndedWorldState, screen + 1, advisor + 2), (bank.WorldState, Times( "PARK_END_SCREEN" ),
-			Times( "ADVISOR_PARK_ENDED_IN_THE_RED" )), "the next month: not ended again, the advisor told again" );
+		Assert.AreEqual( (ParkState.EndedWorldState, screen + 1, 1), (bank.WorldState, Times( "PARK_END_SCREEN" ),
+			bank.AdvisorMessages.PendingCount), "the next month: not ended again, the advisor posted again" );
 		Assert.AreEqual( -1, bank.Balance, "and the bank goes on" );
 	}
 
 	/// <summary>
 	/// <b>The End feature standing, six months in the red end nothing</b>: the handler skips while the End's handle is held
-	/// (<c>FUN_00516c00</c>, <c>0x004d031b</c>), the advisor's record still counted.
+	/// (<c>FUN_00516c00</c>, <c>0x004d031b</c>), the advisor still posted record <c>0x6a</c> (his handler comes first).
 	/// </summary>
 	/// <remarks><b>Mutation:</b> the End feature's test dropped from the bank's guard.</remarks>
 	[TestMethod]
@@ -879,6 +892,9 @@ public class ParkBankTests
 	{
 		GameCalendar.Rebase();
 		var bank = Bank( balance: 0 );
+		bank.AdvisorMessages = new ParkAdvisorMessages( new SettingsFile( new MemoryStream( System.Text.Encoding.ASCII.GetBytes(
+			"GeneralAdvisor.MinScoreForConsideration 25\nMessageGroups[0].MinTimeSameMessage 0\nMessageGroups[0].SayOnlyOnce 0\n"
+			+ "MessageGroups[0].DiscardAfterSlaps 0\nBankrupted.Score 100000\n" ) ) ) );
 		bank.Spend( 1 );
 
 		for ( var i = 0; i < 4148; ++i )
@@ -886,7 +902,7 @@ public class ParkBankTests
 
 		var current = typeof( ParkEndFeature ).GetProperty( nameof( ParkEndFeature.Current ),
 			System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static )!;
-		var (screen, advisor) = (Times( "PARK_END_SCREEN" ), Times( "ADVISOR_PARK_ENDED_IN_THE_RED" ));
+		var screen = Times( "PARK_END_SCREEN" );
 
 		try
 		{
@@ -898,8 +914,8 @@ public class ParkBankTests
 			current.SetValue( null, null );
 		}
 
-		Assert.AreEqual( (6, 0, screen, advisor + 1), (bank.MonthsInTheRed(), bank.WorldState, Times( "PARK_END_SCREEN" ),
-			Times( "ADVISOR_PARK_ENDED_IN_THE_RED" )) );
+		Assert.AreEqual( (6, 0, screen, 1), (bank.MonthsInTheRed(), bank.WorldState, Times( "PARK_END_SCREEN" ),
+			bank.AdvisorMessages.PendingCount) );
 
 		bank.TurnTheMonth( null );
 		Assert.AreEqual( ParkState.EndedWorldState, bank.WorldState, "the End gone, the next month ends it" );
@@ -907,7 +923,7 @@ public class ParkBankTests
 
 	/// <summary>
 	/// <b>The end frees the ids deleted in its sweep</b>, as the sweep's end does: its loop empties the same list
-	/// (<c>0x005169f7</c>..<c>0x00516acf</c>, <c>FUN_00516200</c>'s work inline), so the last deleted is given out first.
+	/// (<c>0x005169f7</c>..<c>0x00516acf</c>, <c>FUN_00516200</c>'s work inline), so the first deleted is the first given out.
 	/// </summary>
 	/// <remarks><b>Mutation:</b> the end leaving the list as it is.</remarks>
 	[TestMethod]
@@ -949,10 +965,12 @@ public class ParkBankTests
 
 	/// <summary>
 	/// <b>A park loaded in world state 4 has ended</b>: the state is the file's (<c>mWorldState</c>, header field 19), so
-	/// the bank does not end it again; and an ended park's save writes 4 back where the file's 0 was.
+	/// the bank does not end it again; and an ended park's save writes 4 back where the file's 0 was. Loaded, it draws
+	/// nobody: the load clears the render flag for state 4.
 	/// </summary>
 	/// <remarks><b>Mutations:</b> the state not read from the file; the writer not writing it, or writing it elsewhere; the
-	/// load's put-back not counted, or counted for any state.</remarks>
+	/// load's put-back not counted, or counted for any state; the load's render flag set for state 4
+	/// (<c>0x00518d82</c>..<c>0x00518d93</c>), or cleared for any state.</remarks>
 	[TestMethod]
 	public void AnEndedParksStateIsWrittenAndReadBack()
 	{
@@ -974,9 +992,11 @@ public class ParkBankTests
 		var loaded = new ParkState( written );
 		Assert.IsTrue( loaded.Ended, "a park run from it has ended" );
 		Assert.AreEqual( putBack + 1, Times( "PARK_END_SCREEN_PUT_BACK" ), "its end screen counted at the load" );
+		Assert.IsFalse( loaded.SpritesDrawn, "and its render flag cleared, so nobody is drawn" );
 
-		_ = new ParkState( new ParkWorld( plain ) );
+		var running = new ParkState( new ParkWorld( plain ) );
 		Assert.AreEqual( putBack + 1, Times( "PARK_END_SCREEN_PUT_BACK" ), "and not for a park running" );
+		Assert.IsTrue( running.SpritesDrawn, "whose render flag is set" );
 	}
 
 	/// <summary>

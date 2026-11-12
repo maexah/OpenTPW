@@ -62,7 +62,9 @@ public class ParkTagsTests
 			.Concat( Enumerable.Repeat( ParkTags.NoTag, 20 ) ).Concat( new[] { 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, ParkTags.NoTag, 24, ParkTags.NoTag, 100, 30, 31, 32, 33, 34, 62, 73, 77, 81, 75, 76, 79, 83, 84, 87, 82, 78, 80, 64, 135, 68, 70, 71, 72, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, ParkTags.NoTag, 95, 96, 97, 98, 99, 155, 156, 157, 158, ParkTags.NoTag } )
 			// The golden tickets' fifteen: their lines' groups are their responses' own (ParkAdvisorMessages.ResponseOf);
 			// then their four hints, whose responses, 541 and 574 to 577, leave none.
-			.Concat( Enumerable.Repeat( ParkTags.NoTag, 15 + 4 ) ).ToArray(), ParkAdvisorMessages.ParkTopics.Select( topic => topic.Group ).ToArray(),
+			.Concat( Enumerable.Repeat( ParkTags.NoTag, 15 + 4 ) )
+			// Row 106, the park ended six months red.
+			.Concat( new[] { 128 } ).ToArray(), ParkAdvisorMessages.ParkTopics.Select( topic => topic.Group ).ToArray(),
 			"each built topic's lines' group" );
 	}
 

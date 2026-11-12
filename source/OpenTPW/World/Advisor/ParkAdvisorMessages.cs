@@ -116,6 +116,11 @@ internal sealed class ParkAdvisorMessages
 	internal const int QueueUnconnected = 0x71;
 	internal const int Opened = 128;
 	internal const int Closed = 129;
+	/// <summary>
+	/// Message 0x6a, posted when the bank's month finds the park six months red: message 0x13 with 2 reaches the advisor
+	/// before the bank (FUN_0059ae20, 0x0059aee7), about no thing, its line his own choice, not forced.
+	/// </summary>
+	internal const int Bankrupted = 0x6a;
 	/// <summary>Message 0x42, posted by a ride's wear (FUN_004df670, 0x004df8be) with the ride as its subject.</summary>
 	internal const int RideWornOut = 66;
 	/// <summary>Message 0x44, posted by the mechanics' base as a ride breaks down in a park with no mechanic (FUN_004dadc0, 0x004dae62).</summary>
@@ -931,7 +936,11 @@ internal sealed class ParkAdvisorMessages
 		new( TicketExplanation, "GoldTicketExplanation.Score", 541, 558, Lines: 1, Prop: AdvisorProps.ThemeCostume, Category: Tutorial, Polled: true, FullSimulationOnly: true, Hint: TicketHint.Explanation ),
 		new( NearFirstTicket, "GoldTicketNearToFirstOne.Score", 574, 597, Lines: 1, Prop: AdvisorProps.ThemeCostume, Polled: true, FullSimulationOnly: true, Hint: TicketHint.NearFirst ),
 		new( NearVisitorsTicket, "GoldTicketNearToXPeeps.Score", 576, 599, Lines: 1, Prop: AdvisorProps.ThemeCostume, Polled: true, FullSimulationOnly: true, Hint: TicketHint.NearVisitors ),
-		new( NearHappinessTicket, "GoldTicketNearToXHappiness.Score", 577, 600, Lines: 1, Prop: AdvisorProps.ThemeCostume, Polled: true, FullSimulationOnly: true, Hint: TicketHint.NearHappiness )
+		new( NearHappinessTicket, "GoldTicketNearToXHappiness.Score", 577, 600, Lines: 1, Prop: AdvisorProps.ThemeCostume, Polled: true, FullSimulationOnly: true, Hint: TicketHint.NearHappiness ),
+
+		// Row 106 (0x6a), posted only, either game, one copy, scored by Bankrupted.Score (0x0059eb70); its two lines wear
+		// costume ids 11 and 12. Posted as the park ends, so it waits in a slot: state 4 gives him no turn to say it.
+		new( Bankrupted, "Bankrupted.Score", 274, 424, Prop: 11, SecondProp: 12, Group: 128 )
 	];
 
 	/// <summary>

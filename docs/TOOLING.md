@@ -479,6 +479,9 @@ Each was found by trial in the item named, and cost a run to find.
   `1 resume`, `8 pause`: the month's change on tick 5611 ends it (`Bank: 6 months in the red - the park ends`, `Park end:
   ...`). `money` then reads `world state 4 months red 6`, `gate` `command 2`, `scriptvar 13 VAR_BREAKSTAT` 1. A `SECS`
   counts after its command, so `1 resume` runs one second, about four sweeps; a clock jump across months turns one month.
+  Since Q1425 the advisor's `post message=106` comes on the line before the end, `circle` lists nobody once it has
+  ended (the render flag) and `advisor` reads `slot=106`. Through `parkrun.py` (off-screen or on the desk), `reply()` in
+  place of the timings: `q1425/confirm.py` (paused at 1378 and 5610, resumed 6 s and 8 s).
 - **A hire candidate carried and put down in a cloud container** (Q40, `lib/consolerun.py`, off-screen): `40 park jungle`,
   `3 pause`, `2 candidates` (the ids), `2 carrystaff 1` (the hire list's pick, without the screen), `2 pointer` (`cursor Carry`),
   then `2 worldclick X Y`: a refused cell logs `Staff: cannot place <name> at (X,Y) - <why>` and keeps them in the hand

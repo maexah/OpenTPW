@@ -893,6 +893,9 @@ public sealed class ParkState
 		VisitorsToDate = park?.NumberOfVisitorsToDate ?? 0;
 		ParkIsClosed = park is not null && park.ParkClosed != 0;
 		WorldState = park?.WorldState ?? 0;
+		// FUN_005179c0's tail: the render flag cleared for a file's mWorldState 4 (FUN_005408f0), set otherwise
+		// (FUN_005408e0), 0x00518d82..0x00518d93.
+		SpritesDrawn = WorldState != EndedWorldState;
 
 		// A park loaded in state 4 has the end's screen put back over it (FUN_004815e0 -> FUN_0048adb0, docs/exe/saves.md):
 		// not built (Q1424), so it runs on with no screen.
@@ -1856,7 +1859,8 @@ public sealed class ParkState
 	/// instalment withdrawn, its months repaid counted, <see cref="ProfitThisYear"/> given the principal's share back
 	/// by the original's unsigned division, and the loan closed at its period; then, with the balance and
 	/// <see cref="LastBalance"/> both below nought, the whole thirty-day months since <see cref="TurnEnteredRed"/> -
-	/// at six the park ends (<see cref="EndThePark"/>) unless it has ended or the End feature stands.
+	/// at six the advisor is posted record 0x6a (<see cref="ParkAdvisorMessages.Bankrupted"/>) and the park ends
+	/// (<see cref="EndThePark"/>) unless it has ended or the End feature stands.
 	/// </summary>
 	/// <param name="guestsInside">
 	/// The guests on a counting cell (<c>FUN_004c7fa0</c> asked with nought, so counted afresh unless the same quarter tick
@@ -1924,12 +1928,13 @@ public sealed class ParkState
 				+ $"bought {loan.Bought}, profit {ProfitThisYear}" );
 		}
 
-		// The bank broadcasts message 0x13 with 2 (0x004d054c..0x004d05b2); its own handler ends the park (FUN_004d02d0) and the
-		// advisor raises record 0x6a (0x0059aee7), which is not built.
+		// The bank broadcasts message 0x13 with 2 (0x004d054c..0x004d05b2) to set 0x13, things 3, 4, 5, 8 and 9 in every park
+		// file, each handler done before the next in rising id: the advisor posts record 0x6a (0x0059aee7) first, and then
+		// the bank's own handler ends the park (FUN_004d02d0); the other three do nothing with 2.
 		if ( Balance < 0 && MonthsInTheRed() >= MonthsInTheRedToEnd )
 		{
 			Log.Info( $"Bank: {MonthsInTheRed()} months in the red - the park ends" );
-			Unimplemented.Report( "ADVISOR_PARK_ENDED_IN_THE_RED" );
+			AdvisorMessages?.Post( ParkAdvisorMessages.Bankrupted, GameTick );
 
 			if ( WorldState == EndedWorldState || ParkEndFeature.Current != null )
 				Log.Info( $"Bank: the park is not ended again, world state {WorldState}, End feature "
@@ -1950,15 +1955,24 @@ public sealed class ParkState
 
 	/// <summary>
 	/// What the park's people do as it ends - the rides told they are broken and the gate commanded 2 (<c>ParkPeople.EndThePark</c>);
-	/// with nobody set, only the world's state changes and the deleted ids are looked at.
+	/// with nobody set, only the world's state, the render flag and the deleted ids change.
 	/// </summary>
 	internal Action? ParkEnded { get; set; }
 
 	/// <summary>
+	/// Whether the world's sprites are drawn, the render flag <c>0x00763f84</c>: the one test of <c>FUN_00542010</c>, which
+	/// hands every person, head, balloon, thought bubble and piece of litter to the draw (and so their shadows). A park's load
+	/// sets it, or clears it when the file's <c>mWorldState</c> is 4 (<c>0x00518d82</c>..<c>0x00518d93</c>), so an ended
+	/// park loaded from its file is drawn with nobody in it; the end clears it (<see cref="EndThePark"/>).
+	/// </summary>
+	public bool SpritesDrawn { get; private set; } = true;
+
+	/// <summary>
 	/// The end of the park, <c>FUN_005168f0</c> (<c>docs/exe/ride-operation.md</c>, "The end of the park"): world state 4; the end
-	/// screen and a render flag, counted; then the people's part (<see cref="ParkEnded"/>): <c>VAR_BREAKSTAT</c> 1 on the rides,
-	/// the pending deletes freed (<see cref="FreeDeletedThings"/>) and the gate's <c>VAR_COMMAND</c> 2. <see cref="ParkIsClosed"/>
-	/// is not moved: the gate's end path writes the command alone (<c>FUN_00519ef0( 0, 1 )</c>, <c>0x00519f17</c>).
+	/// screen, counted; the sprites no longer drawn (<see cref="SpritesDrawn"/>); then the people's part (<see cref="ParkEnded"/>):
+	/// <c>VAR_BREAKSTAT</c> 1 on the rides, the pending deletes freed (<see cref="FreeDeletedThings"/>) and the gate's
+	/// <c>VAR_COMMAND</c> 2. <see cref="ParkIsClosed"/> is not moved: the gate's end path writes the command alone
+	/// (<c>FUN_00519ef0( 0, 1 )</c>, <c>0x00519f17</c>).
 	/// </summary>
 	internal void EndThePark()
 	{
@@ -1968,8 +1982,9 @@ public sealed class ParkState
 
 		// The end screen, FUN_00481b50 to FUN_0048ac40 (docs/exe/park-engine.md, the full-screen view's table): Q1424.
 		Unimplemented.Report( "PARK_END_SCREEN" );
-		// The render flag 0x00763f84 cleared: what reads it is not decoded.
-		Unimplemented.Report( "PARK_END_RENDER_FLAG" );
+		// The render flag 0x00763f84 cleared (FUN_005408f0).
+		SpritesDrawn = false;
+		Log.Info( "Park: the render flag cleared, no sprite drawn" );
 
 		if ( ParkEnded is { } ended )
 			ended();

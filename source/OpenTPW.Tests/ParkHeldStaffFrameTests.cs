@@ -14,7 +14,8 @@ namespace OpenTPW.Tests;
 /// predicate <see cref="ParkGuestSprites.InTheHand"/> alone (<c>ParkStaffWindowTests.PickUpPutsTheMemberInTheHand</c>) cannot
 /// see the draw loop's skip taken out (Q211, Q432). Skipped without the game (<see cref="GameData"/>).
 /// </summary>
-/// <remarks><b>Mutations:</b> the <c>InTheHand</c> skip out of the draw loop.</remarks>
+/// <remarks><b>Mutations:</b> the <c>InTheHand</c> skip out of the draw loop; the render flag's test out of the frame; the
+/// end leaving the flag set.</remarks>
 [TestClass]
 public class ParkHeldStaffFrameTests
 {
@@ -32,7 +33,40 @@ public class ParkHeldStaffFrameTests
 	/// they are picked up, the 50 and the 20 alone.
 	/// </summary>
 	[TestMethod]
-	public void AFrameWritesNoQuadForTheMemberInTheHand()
+	public void AFrameWritesNoQuadForTheMemberInTheHand() => ThreeStanding( ( people, member, pool ) =>
+	{
+		Assert.IsTrue( people.PickUp( member ) );
+		Assert.IsTrue( ParkGuestSprites.InTheHand( people, member ) );
+
+		var (used, _) = pool.WriteTheFrame();
+		var (_, depths) = pool.Written;
+
+		Assert.AreEqual( 4, used, "the member in the hand has no quad" );
+		CollectionAssert.AreEqual( new[] { 50f, 50f, 20f, 20f }, depths.Take( used ).Select( d => MathF.Round( d, 2 ) ).ToArray(), "the other two, furthest first" );
+	} );
+
+	/// <summary>
+	/// <b>An ended park's frame writes no quad</b>: the end clears the render flag <c>0x00763f84</c>, the one test of
+	/// <c>FUN_00542010</c>, so the three standing, six quads before, are none after it, and none is left to pick.
+	/// </summary>
+	[TestMethod]
+	public void AnEndedParksFrameWritesNoQuad() => ThreeStanding( ( people, _, pool ) =>
+	{
+		Assert.IsTrue( people.State.SpritesDrawn, "a loaded park draws its sprites" );
+
+		people.State.EndThePark();
+
+		Assert.IsFalse( people.State.SpritesDrawn, "the end clears the render flag" );
+		Assert.AreEqual( 0, pool.WriteTheFrame().Used, "the ended park draws none of the three" );
+		Assert.AreEqual( 0, pool.ShadowsDrawn.Count, "nor a shadow" );
+	} );
+
+	/// <summary>
+	/// The shipped park's people with three sprites stood 5, 50 and 20 along the line of sight, the nearest the park's own
+	/// handyman's, each a picture and the facing dash: six quads, the control, before <paramref name="test"/> is handed the
+	/// people, the handyman's id and the pool.
+	/// </summary>
+	private static void ThreeStanding( Action<ParkPeople, int, ParkGuestSprites> test )
 	{
 		var data = FileSystem = GameData.Required();
 		Log ??= new();
@@ -83,14 +117,7 @@ public class ParkHeldStaffFrameTests
 
 			Assert.AreEqual( 6, pool.WriteTheFrame().Used, "the control: all three stand, a picture and a dash each" );
 
-			Assert.IsTrue( people.PickUp( member.ThingId ) );
-			Assert.IsTrue( ParkGuestSprites.InTheHand( people, member.ThingId ) );
-
-			var (used, _) = pool.WriteTheFrame();
-			var (_, depths) = pool.Written;
-
-			Assert.AreEqual( 4, used, "the member in the hand has no quad" );
-			CollectionAssert.AreEqual( new[] { 50f, 50f, 20f, 20f }, depths.Take( used ).Select( d => MathF.Round( d, 2 ) ).ToArray(), "the other two, furthest first" );
+			test( people, member.ThingId, pool );
 		}
 		finally
 		{

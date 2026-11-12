@@ -904,6 +904,7 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// <c>SPR_LI</c>, picture 0 (each set holds one), at its sprite's place, the land under that place
 	/// (<see cref="StandsOn"/>, <c>FUN_004527f0</c>) plus the shadows' lift, 0.6, or 0.25 in first person (<c>[0x008bd4ec]</c>).
 	/// The mesh grows to the count; answers this frame's quads and how many the upload has to reach (<see cref="Fold"/>'s rule).
+	/// An ended park (<see cref="ParkState.SpritesDrawn"/> clear) draws none.
 	/// <b>Not read:</b> whether the bank's v0 is its top row; the decoder writes rows top first and this takes it so.
 	/// </summary>
 	internal (int Used, int Reach) WriteLitter( HeightfieldFile? field )
@@ -914,7 +915,9 @@ public sealed class ParkGuestSprites : ModelEntity
 			return (0, 0);
 
 		var lift = FirstPerson ? ParkPersonShadows.FirstPersonLift : ParkPersonShadows.Lift;
-		var littered = ParkLitter.Littered( state ).ToList();
+		// The render flag 0x00763f84 cleared (an ended park): FUN_00542010 skips every sprite of the table 0x007b49f0, the
+		// litter's too (0x0054203c), so none is taken and the leftover quads fold to nothing (ParkState.SpritesDrawn).
+		var littered = state.SpritesDrawn ? ParkLitter.Littered( state ).ToList() : [];
 
 		if ( littered.Count * 4 > _litterVertices.Length )
 			BuildLitter( Math.Max( 16, littered.Count * 2 ), withModel: _litterModel != null );
@@ -1039,6 +1042,11 @@ public sealed class ParkGuestSprites : ModelEntity
 
 		// The simulation, if this park is running one. Asked once a frame rather than once a person.
 		var people = ParkPeople.Current;
+
+		// The render flag 0x00763f84 cleared by the park's end: FUN_00542010 hands no sprite to the draw, so no person, head,
+		// balloon or thought bubble is drawn, nor the shadow of one (ParkState.SpritesDrawn).
+		if ( people?.State is { SpritesDrawn: false } )
+			return (0, Finish( 0 ));
 
 		// Room for the balloons bursting, which the crowd's size does not cover, before anything is written.
 		if ( people is { Bursting.Count: > BurstingRoom } && ((_people.Count * QuadsAPerson) + people.Bursting.Count) * 4 > _vertices.Length )

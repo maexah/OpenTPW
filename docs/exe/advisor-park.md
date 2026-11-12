@@ -412,6 +412,34 @@ rotation back to line 0, and zero playback-return consumption. Those applicable 
 regression-tested; the actual busy/disabled speaker guards are code-reviewed only. The first score-26 capture was partial because
 its harness deadline was too short for the cooldown step; the completed final run replaces that proof.
 
+## The park ended six months red (message `0x6a`, Q1425)
+
+**Who posts it.** The bank's month (`FUN_004d0370`), finding the balance and `mLastBalance` both below nought six
+thirty-day months after `mTurnEnteredRed`, sends message `0x13` with 2 (`MsgBus_Send`, `0x004d05b2`) every month it
+finds so. Set `0x13` is things 3, 4, 5, 8 and 9 in all 1,227 park files on hand (`q1425/sweep13.py`), and the bus hands
+it on in rising id, so **the advisor hears it before the bank's own handler ends the park** (`ride-operation.md`, "The
+end of the park"). `Advisor_OnMessage` case `0x13` hands the 2 to `FUN_0059ae20`, whose case 2 builds the record as the
+door's cases 3 and 4 do (`0x0059aed6`..`0x0059aef5`): message `0x6a`, no thing (`FUN_00409cd0( 0 )`), line -1, not
+forced, no score given, then `Advisor_Post`.
+
+**The row** (`lib/advisorrow.py 0x6a`): row 106, posted only, category 0, either game (`+0x0c` 2), one copy, score
+`0x0059eb70` (`[ECX + 0x350]`, `Bankrupted.Score`, 100000 in the shipped `Advisor.sam`), responses 274 and 275,
+samples 424 and 425 ("you've lost money for six months and well you're broke ... the park's been closed down";
+"you've been losing money for six months and now you're bankrupt ... the park's been closed down", the stored
+transcripts), props 11 and 12, group 128, selection 2.
+
+**It is never said in the ended park.** `Advisor_Post` (`0x0059a940`..`0x0059aa60`) only fills a slot. A slot is said
+by `FUN_0059b620`, whose one caller is the advisor's tick (`FUN_0059a550`, `0x0059a87f`), whose one caller is the thing
+turn (`FUN_0050b360`, `0x0050b437`); the sweep skips every thing's turn in state 4 (`0x0051639e`), and the bank's month
+comes in the sweep's tail, after his turn. So the record waits in its slot, and a save writes it there; each later
+month's post finds that copy waiting. Category 0, so F1's kept line is not it.
+
+**OpenTPW** (Q1425; `ParkAdvisorMessages.Bankrupted`, a `ParkTopics` row; `ParkState.TurnTheMonth`): posted before
+`EndThePark`, every month that finds the park six months red. Off-screen (`q1425/run3`, the Q404 recipe):
+`post message=106 subject=0 score=100000 threshold=25 tick=5611 result=queued` on the line before `Park: the park ends`,
+`advisor` then `pending=2 attempts=0 ... slot=106/subject=0` with no attempt after eight seconds resumed, and the
+saved park's slots `(0, 0, 106, 100000, 1, -1, 0, 0)`. Not run in the original; not heard.
+
 ## A ride about to break down (message `0x42`, Q305)
 
 **Who posts it.** A ride's wear, `FUN_004df670`, on the turn its State of repair's byte falls below 10 with the

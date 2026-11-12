@@ -1237,13 +1237,14 @@ filed the items that cite it.
   Counted, `PARK_END_SCREEN` at the end and `PARK_END_SCREEN_PUT_BACK` at a load of a park saved ended (Q404 writes
   `mWorldState` 4, so a Lost Kingdom park saved after its end reaches it). OpenTPW registers no language mesh yet. Confirm: the stock park held in the red to its end
   (`docs/TOOLING.md`, "Recipes", the Q404 line), photographed beside the original's.
-- [ ] **Q1425. What Q404 read from the doc's words, checked in the disassembly (split from Q404).** (The end's set and
-  its pending-delete list were read in the run 22 review: the door's set, `0x005169a0`..`0x005169b3`, and the ids freed,
-  `0x005169f7`..`0x00516acf`.) (2) The advisor's
-  record `0x6a` (`0x0059aee7`): how it is constructed (line, forced, score), and whether it can be said with the advisor's
-  turn skipped in state 4; counted, `ADVISOR_PARK_ENDED_IN_THE_RED`. (3) The render flag `0x00763f84` and what reads it;
-  counted, `PARK_END_RENDER_FLAG`. (5) The order the bank's broadcast reaches the bank's
-  handler and the advisor.
+- [ ] **Q1564. The ended park drawn with nobody in it, photographed on the desk beside the original (split from Q1425).**
+  The end clears the render flag `0x00763f84`, the one test of `FUN_00542010`, so no walker, member of staff, rider's
+  head, balloon, thought bubble or litter is drawn, nor a shadow (`ride-operation.md`, "The end of the park"); OpenTPW's
+  `ParkState.SpritesDrawn` (Q1425) was measured off-screen only (`circle` 18 before, 0 after). Confirm: the stock park held
+  in the red to its end (`docs/TOOLING.md`, "Recipes", the Q404 line) photographed on the desk before and after, and the
+  original's park the same after its own end (the end screen's banner aside, Q1424), predicted first: nobody drawn in
+  either. A park loaded from an ended park's file is drawn with nobody in it in both (the load clears the flag for state 4,
+  `0x00518d8c`). Look for litter too: it is a sprite of the same table, so none is drawn after the end.
 - [ ] **Q1512. The hire screen's figure beside the original's (split from Q419).** Filed by Q419, 2026-11-12, for a desk
   lane: Q419 built the figure in a cloud container, which cannot photograph the original. On the stock park, the cleaners'
   and the mechanics' tabs, ours' portrait beside the original's (`q412/orig/a-button.png`), a frame a tab, and ours'
@@ -3253,7 +3254,7 @@ Back to the advisor in a park; saving a fresh park is Q783, in section A. Also l
   - `DOOR_PRICE_ANALYSER_SAMPLE` (`PeepPriceOpinion.cs`; `ride-operation.md`)
   - `NEEDS_THOUGHT_4_SOUND` (`Thoughts.cs`; `ride-operation.md`)
   - `NEEDS_THOUGHT_LITTER_SHARE` (`Thoughts.cs`; `ride-operation.md`)
-- [ ] **Q1192. Counted, not built, and owned by no item: staff, strikes, research and the advisor's posts (14 names, from Q243).** Filed by Q243's census,
+- [ ] **Q1192. Counted, not built, and owned by no item: staff, strikes, research and the advisor's posts (13 names, from Q243; Q1425 built one).** Filed by Q243's census,
   2026-11-12: `python3 tools/gap_census.py` found each name below counted by `Unimplemented.Report` and named by no other item
   here. A session takes one name or a few: read the site and the `docs/exe/` page given, classify the path (`AGENTS.md`
   rule 3; only a site's own "dead by" words were read, given below, and the rest are not classified), then build it or
@@ -3265,7 +3266,6 @@ Back to the advisor in a park; saving a fresh park is Q783, in section A. Also l
   - `SAVED_STAFF_CANDIDATE_OF_NO_KIND` (`ParkStaffPool.cs`)
   - `SAVED_STAFF_CANDIDATE_ON_POINTER` (`ParkStaffPool.cs`)
   - `ROLLED_STAFF_COSTUME` (`ParkStaffPool.cs`; `park-engine.md`)
-  - `ADVISOR_PARK_ENDED_IN_THE_RED` (`ParkState.cs`; `ride-operation.md`)
   - `STRIKE_CALLED_OFF_TO_THE_ADVISOR` (`ParkStrikes.cs`; `ride-operation.md`)
   - `STRIKE_WARNING_TO_THE_ADVISOR` (`ParkStrikes.cs`; `ride-operation.md`)
   - `STRIKE_TO_THE_ADVISOR` (`ParkStrikes.cs`; `ride-operation.md`)

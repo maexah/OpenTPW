@@ -182,6 +182,35 @@ public class ParkLitterTests
 		Assert.AreEqual( (414.4140625f, 416.40625f, 209.96875f, 211.84375f), (sick[0].X, sick[2].X, sick[0].Y, sick[2].Y) );
 	}
 
+	/// <summary>
+	/// <b>An ended park draws no litter</b>: a drop is a sprite of the table <c>0x007b49f0</c> (<c>FUN_00475480</c>,
+	/// <c>0x004d9585</c>), and <c>FUN_00542010</c> skips every sprite of it while the render flag <c>0x00763f84</c> is clear
+	/// (<c>0x0054203c</c>), which the end clears. One drop drawn before the end, none after, the cell still littered.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the litter taken whatever the render flag.</remarks>
+	[TestMethod]
+	public void AnEndedParkDrawsNoLitter()
+	{
+		FileSystem = GameData.Required();
+		Log ??= new();
+
+		var shipped = Read( FileSystem.ReadAllBytes( ShippedPark ) );
+		var art = new ParkGuestSprites.GuestArt(
+			pictures => (new NoAtlas(), [.. pictures.Select( picture => new ParkGuestSprites.Region( 0f, 0f, 1f, 1f, picture.Width, picture.Height, picture.OriginX, picture.OriginY ) )]),
+			( _, _ ) => { } );
+		var pool = new ParkGuestSprites( "jungle", shipped, null, art );
+		var state = new ParkState( shipped );
+
+		Assert.IsTrue( state.DropLitter( 47, 22, 3 ) );
+		Assert.AreEqual( 1, pool.WriteLitter( null ).Used, "drawn while the park runs" );
+
+		state.EndThePark();
+
+		Assert.AreEqual( (0, 1), pool.WriteLitter( null ), "none drawn once it has ended, the last quad cleared" );
+		Assert.AreEqual( 0, pool.LitterDrawn.Count );
+		Assert.AreEqual( 1, state.LitteredCells, "the cell still littered" );
+	}
+
 	private sealed class NoAtlas : IPictureAtlas
 	{
 		public void Delete()

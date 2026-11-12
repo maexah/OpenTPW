@@ -14482,3 +14482,13 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   longest 258.81: 25.0 without it), as predicted; a first launch logged `limit 60 (no framelimit line, so the monitor's
   refresh rate, which SDL does not say, so 60)` and wrote `framelimit 60`. Eight tests (`FramePacingTests`), seven
   bugs put back each failing one. The row is not built: the screen is 1:1 and has no free row (`ui.md`, "Game Options").
+- [x] **Q1425. What Q404 read from the doc's words, checked in the disassembly (split from Q404).** (1) The set the end
+  gives `VAR_BREAKSTAT` 1 (`FUN_005168f0`'s walk to `FUN_004e0db0`): ours is the door's, `+0x32 & 4`. (2) The advisor's
+  record `0x6a` (`0x0059aee7`): how it is constructed (line, forced, score), and whether it can be said with the advisor's
+  turn skipped in state 4; counted, `ADVISOR_PARK_ENDED_IN_THE_RED`. (3) The render flag `0x00763f84` and what reads it;
+  counted, `PARK_END_RENDER_FLAG`. (4) Which list the end empties, and whether it frees the ids or drops them; ours counts
+  `PARK_END_PENDING_DELETES` when its deleted ids are pending. (5) The order the bank's broadcast reaches the bank's
+  handler and the advisor.
+  Done (lane B, 2026-11-12): all five decoded (`ride-operation.md`, "The end of the park"; `advisor-park.md`, "The park
+  ended six months red"); the record `0x6a` posted, the render flag and the pending deletes built; the photograph is Q1564. (1) and (4) were also read by the run 22
+  review's fix group L; one implementation of each kept.

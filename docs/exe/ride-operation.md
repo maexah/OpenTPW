@@ -4526,33 +4526,60 @@ buys one point and loses 10. Only the withdrawal is gated, so with withdrawals o
 - The end of the park: when the balance and `mLastBalance` are both below nought after the loans, the time since
   `mTurnEnteredRed` (`FUN_004f88b0`: the ticks × the clock's rate / 4, in seconds) is divided into thirty-day months,
   and at 6 or more (4148 sweeps at the shipped rate, about 17 minutes of play) the bank broadcasts message `0x13` with
-  2 (`0x004d054c`..`0x004d05b2`). Its own handler then ends the park (`FUN_005168f0`) unless it is ending already, and
-  the advisor raises record `0x6a` (`0x0059aee7`). The end sets world state 4, opens the end screen (`FUN_00481b50` to
-  `FUN_0048ac40`), clears a render flag (`0x00763f84`), sets `VAR_BREAKSTAT` to 1 on every live ride guests can choose
-  (`FUN_004e0db0`), empties the pending-delete list and closes the gate (`FUN_00519ef0( 0, 1 )`). In state 4 no thing
-  takes a turn (`park-gate.md`), but the clock and the bank go on, so every member of staff is still paid in the
-  ended park. A park that spends past nought and stays there reaches it.
+  2 (`0x004d054c`..`0x004d05b2`, `MsgBus_Send`), every month it finds so. The bus hands it to set `0x13`, things 3, 4,
+  5, 8 and 9 in all 1,227 park files on hand (models 11, 12, 13, 16 and 17; `q1425/sweep13.py`), one handler finished
+  before the next, in rising id: **the advisor first**, who posts record `0x6a` (`FUN_0059ae20`, `0x0059aee7`;
+  `advisor-park.md`, "The park ended six months red"); the tag system (`FUN_00509bf0`: 7 to 9 only), the analyser
+  (`0x004c7370`: 3 only) and thing 9 (`FUN_0050ca50`: 5 and 6 only) do nothing with 2; the bank's own handler
+  (`FUN_004d02d0`) ends the park (`FUN_005168f0`) unless its state is 4 already or the End feature stands
+  (`FUN_00516c00`, `[0x007cf4f4]` non-nought). The end, in its order:
+  - world state 4 (`0x00516939`), the end screen opened (`FUN_00481b50` to `FUN_0048ac40`);
+  - the render flag `0x00763f84` cleared (`FUN_005408f0`). Its one reader is `FUN_00542010`, which hands each sprite of
+    the list `FUN_00475430` walks (table `0x007b49f0`: every walker, member of staff, rider's head, balloon, thought
+    bubble and piece of litter, `FUN_00475480` placing a drop's at `0x004d9585`) to the draw's
+    sixteen buckets only while the flag is set (read at `0x0054203c`), and the shadows are drawn only for the sprites in those
+    buckets (`park-engine.md`, "A person's shadow"): the ended park is drawn with nobody and no litter in it.
+    `FUN_00540900` (a scene's sprite banks, from `Game_StateMachine`) sets it, and then a park's load sets it, or clears
+    it when the file's `mWorldState` is 4 (`FUN_005179c0`'s tail, `0x00518d82`..`0x00518d93`, after state 9's
+    `FUN_00540900` at `0x0054ed2c`), so an ended park loaded from its file is drawn with nobody in it too;
+  - `VAR_BREAKSTAT` 1 (`FUN_004e0db0`: "Object %d requested breakdown", the script's variable 4 written) on every thing
+    of the thing list that is live, not marked dead (`+3` nought), an object (`+2` 3) and offered to guests (`+0x32 & 4`)
+    (the tests `0x0051699c`..`0x005169af`, the call at `0x005169b3`);
+  - the pending-delete list (`0x00801f3c`, count `0x00801f44`) emptied as the sweep's tail empties it, inlined: each id
+    popped and its slot freed onto the free list's head, `Thing_FreeSlot` (`FUN_00516200`) word for word
+    (`0x005169f7`..`0x00516acf`). A sweep frees its own before the tail that turns the month, so the list is empty when
+    the bank ends the park unless the month's message deleted something before it reached the bank (which things hear
+    it first, and whether any of them deletes, is not decoded);
+  - the gate closed (`FUN_00519ef0( 0, 1 )`).
+
+  In state 4 no thing takes a turn (`park-gate.md`), but the clock and the bank go on, so every member of staff is still
+  paid in the ended park. A park that spends past nought and stays there reaches it.
 
   **OpenTPW** (Q404; `ParkState.EndThePark`, `ParkPeople.EndThePark`): the bank's month ends the park at six such months
   unless its state is already 4 or the End feature stands (`ParkEndFeature.Current`); `ParkState.WorldState` is the
-  running state, the file's at the load and written back by the save (`ParkFileWriter.Running.WorldState`). The end sets
-  4, counts the end screen (`PARK_END_SCREEN`, Q1424) and the render flag (`PARK_END_RENDER_FLAG`), writes `VAR_BREAKSTAT`
-  1 through the script of every object a guest may be offered (`+0x32 & 4`, the door's set: the end's walk calls
-  `FUN_004e0db0` only on an object, `+2 == 3`, live, `+3 == 0`, with `+0x32 & 4`, `0x005169a0`..`0x005169b3`), frees the
-  pending deletes as the sweep's end does (`FreeDeletedThings`: the end's loop `0x005169f7`..`0x00516acf` empties the same
-  list, count `0x00801f44`, and does `FUN_00516200`'s unlink and free inline; ours are freed at each sweep's end, before
-  the tail that turns the month, so none is pending), and writes the gate's `VAR_COMMAND` 2, the door left as it was. A
-  park loaded in state 4 runs on with no end screen put back (`FUN_0048adb0`), counted `PARK_END_SCREEN_PUT_BACK` (Q1424);
-  in state 4 the arrival manager calls no load and stops a held one, counted `ARRIVALS_IN_AN_ENDED_PARK`. In state 4 the sweep gives no guest, member of
+  running state, the file's at the load and written back by the save (`ParkFileWriter.Running.WorldState`). The advisor
+  is posted record `0x6a` first (Q1425). The end sets 4, counts the end screen (`PARK_END_SCREEN`, Q1424), clears the
+  render flag (`ParkState.SpritesDrawn`: `ParkGuestSprites` then writes no quad, so no person, head, balloon, bubble or
+  shadow, nor any litter (`ParkGuestSprites.WriteLitter`); a load starts it set unless the file's state is 4), writes `VAR_BREAKSTAT` 1 through the script of every object a guest may be offered
+  (`+0x32 & 4`, the door's set: the end's walk calls `FUN_004e0db0` only on a slot holding a thing that is not marked
+  dead, `+3 == 0`, an object, `+2 == 3`, with `+0x32 & 4`, `0x0051699c`..`0x005169b3`), frees the pending deletes as the
+  sweep's end does (`FreeDeletedThings`: the end's loop `0x005169f7`..`0x00516acf` empties the same list, count
+  `0x00801f44`, and does `FUN_00516200`'s unlink and free inline; ours are freed at each sweep's end, before the tail that
+  turns the month, so none is pending), and writes the gate's `VAR_COMMAND` 2, the door left as it was. A park loaded in
+  state 4 runs on with no end screen put back (`FUN_0048adb0`), counted `PARK_END_SCREEN_PUT_BACK` (Q1424); in state 4
+  the arrival manager calls no load and stops a held one, counted `ARRIVALS_IN_AN_ENDED_PARK`. In state 4 the sweep gives no guest, member of
   staff, ride or the advisor a turn and the weather does not turn (its walk's turn, `ParkLoop.Tail`), while `mGameTick`,
   the arrival manager's tail, the staff pool, the gate's retry, the free list, the calendar and the bank go on; the music
-  and the crowd's voice read the running state. The advisor's record `0x6a` is counted on every month that finds the park
-  six months red (`ADVISOR_PARK_ENDED_IN_THE_RED`, Q1425). Measured off-screen in a cloud lane (`consolerun.py`, the stock
+  and the crowd's voice read the running state. The advisor's record `0x6a` is posted on every month that finds the park
+  six months red, and waits unsaid. Measured off-screen in a cloud lane (`consolerun.py`, the stock
   park: `money balance 100` and `clock 1378`, the wages took it red on 1.3.2000 at tick 1383; `money balance -100000` and
   `clock 5610`, the month's change on tick 5611): `Bank: 6 months in the red - the park ends`, world state 4, the six
   visitable objects 23, 22, 21, 16, 14 and 13 given `VAR_BREAKSTAT` 1, the gate's command 2 with `closed 0`, the five wages
   withdrawn after it, `mGameTick` 5614 to 5618 with the thirteen guests' turns and idle stamps unchanged; the gate's
   script then started `fail.mp2` and a ride's `breakdown1.mp2`. Not photographed, and not run beside the original.
+  Q1425's off-screen run (`q1425/run3`, `parkrun.py` on lane B, the same recipe): `post message=106 ... tick=5611` on the
+  line before the end, `the render flag cleared`, `circle` 18 people drawn before and none after with `guests 18` both,
+  and no pending delete; not photographed on the desk (Q1564).
 
 **The wage, `FUN_00504c70`**: `PerTypeStaffConsts[type].PayMultiplier` × `PerGradeStaffConsts[grade].BaseWage`
 (`0x00504ca4`; the type is 0 to 4 for the handyman, mechanic, entertainer, guard and researcher, `FUN_00506490`),
@@ -4590,8 +4617,8 @@ the rest counted `ANALYSER_MONTH_CLOSE`; the
 batch deposited, the bought loans paid with the unsigned division, and `MonthsInTheRed` as `FUN_004f88b0` and the
 thirty-day divisor count it), then `ParkPeople.PayTheWages` (`ParkStaffPool.WageFrom` through `ParkState.Spend`, in
 ascending thing id). The strike look thing 1 makes after the training is built (`ParkStrikes.Look`, Q138b). The end of a park six months in
-the red is built but for its screen (Q404, "The end of the park" above); the advisor's record `0x6a` is counted
-(`ADVISOR_PARK_ENDED_IN_THE_RED`). A grade with no `PoundsPerTrainingPoint`, which the
+the red is built but for its screen (Q404, "The end of the park" above), the advisor posted record `0x6a` first
+(Q1425). A grade with no `PoundsPerTrainingPoint`, which the
 original divides by unguarded and no shipped file has below grade 4, is counted (`STAFF_TRAINING_NO_POINT_COST`) and
 buys nothing. The Staff Training Budgets screen sets the budgets (Q352; `hud.md`); no screen buys a loan yet, so the loans keep what the save holds. OpenTPW's calendar
 is the date of `mGameTick` (Q149): its first month's change after the same load is 1 March on tick 1383, as the

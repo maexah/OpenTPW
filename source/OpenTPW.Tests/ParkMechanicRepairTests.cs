@@ -88,7 +88,7 @@ public class ParkMechanicRepairTests
 	private static ParkAdvisorMessages Advisor()
 		=> new( new SettingsFile( new MemoryStream( Encoding.ASCII.GetBytes(
 			"GeneralAdvisor.MinScoreForConsideration 25\nMessageGroups[0].MinTimeSameMessage 120\n"
-			+ "MessageGroups[0].SayOnlyOnce 0\nParkNowOpen.Score 20\nParkNowClosed.Score 20\n"
+			+ "MessageGroups[0].SayOnlyOnce 0\nParkNowOpen.Score 20\nParkNowClosed.Score 20\nBankrupted.Score 100000\n"
 			+ "RidesBreakdownImminent.Score 100\nRidesBreakdownNoMechanics.Score 105\n"
 			+ "RidesBreakdownBusyMechanics.Score 107\nRidesBreakdownMechanicOnIt.Score 110\n"
 			+ "MessageGroups[0].DiscardAfterSlaps 0\nMessageGroups[1].MinTimeSameMessage 0\nMessageGroups[1].SayOnlyOnce 1\nMessageGroups[1].DiscardAfterSlaps 3\nHelpMessage.Score 1000\nTutorialUIPanel.AfterTime 10\nTutorialUIPanel.CutoffTime 60\nTutorialUIPanel.Score 110\nTutorialExplainTooltips.AfterTime 20\nTutorialExplainTooltips.CutoffTime 80\nTutorialExplainTooltips.Score 100\n"
