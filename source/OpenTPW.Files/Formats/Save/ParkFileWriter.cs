@@ -83,7 +83,10 @@ public static class ParkFileWriter
 	/// analyser's four rings of the recently researched (<see cref="ParkWorld.PutRecentlyResearched"/>); the file's where
 	/// it is null. <see cref="Ids"/> is what the park has done to the numbering since the load (<see cref="ParkWorld.ThingIds"/>):
 	/// the file's ids deleted, each a new thing wherever it is held again, and when each thing made was made; with
-	/// it null nothing was deleted and the higher id is the newer.
+	/// it null nothing was deleted and the higher id is the newer. <see cref="VoicesLetGo"/> is the voices put back from the
+	/// file and let go since, which are left out; <see cref="VoicesNotPutBack"/> says the park ran with no sound device, so
+	/// none was put back, and each held chain a script named at the load and none written names is left out
+	/// (<see cref="WithoutUnnamedChains"/>).
 	/// </summary>
 	public readonly record struct Running( int GameTick, bool ParkClosed, int VisitorsToDate, int Balance,
 		ParkCameraModule.View Camera, IReadOnlyDictionary<int, ParkWorld.MapCell>? Cells = null,
@@ -102,7 +105,7 @@ public static class ParkFileWriter
 		ParkWorld.EconomyState? Economy = null, (int Month, int Day)? Calendar = null,
 		ParkWorld.WeatherState? Weather = null, ParkWorld.WrittenLab? Lab = null,
 		IReadOnlyList<ParkWorld.ResearchedRing>? RecentlyResearched = null, ParkWorld.ThingIds? Ids = null,
-		IReadOnlySet<int>? VoicesLetGo = null );
+		IReadOnlySet<int>? VoicesLetGo = null, bool VoicesNotPutBack = false );
 
 	/// <summary>
 	/// The file's objects, scripts and models as the running park has them (<c>docs/exe/saves.md</c>, "OpenTPW's
@@ -554,11 +557,53 @@ public static class ParkFileWriter
 		if ( running.VoicesLetGo is { Count: > 0 } letGo )
 			body = ParkVoices.Without( body, letGo );
 
+		// With no sound device nothing was put back, so nothing was let go: each held chain a script named at the load and
+		// none written names goes, as a park with sound lets it go.
+		if ( running.VoicesNotPutBack )
+			body = WithoutUnnamedChains( loaded.ScriptStates.SoundHandles, body );
+
 		// The aerial's tags end the body, behind every module (FUN_004164c0's last call, FUN_004816a0).
 		if ( running.Tags is { } tags )
 			body = ParkTagRecords.Put( body, tags );
 
 		return body;
+	}
+
+	/// <summary>
+	/// <paramref name="body"/> less each held chain of its voice list that a sound record of the loaded file's scripts named
+	/// (<paramref name="namedAtLoad"/>) and no sound record of its own scripts names: what a park that ran with no sound
+	/// device writes, where nothing was put back and so nothing let go. It is what a park with sound lets go: a chain whose
+	/// record took it and then stopped it, by its <c>KILLOBJ</c> or its script's end (a Loudspeaker sold, the Staff Room
+	/// emptied), which would otherwise come back at a load with sound under a handle nothing names. The body as it is where
+	/// its scripts did not read.
+	///
+	/// <para>
+	/// A chain no record named at the load stays, as a park with sound keeps it under no script: the gates' 177, which
+	/// their <c>EVENT</c> starts and keeps no record of (<c>docs/exe/audio.md</c>, "A script's sounds"), and the screams'.
+	/// <b>Not the original's:</b> its save with the sound off writes no voice list at all (FileFormats <c>saves.md</c>,
+	/// "Sound": the records are written when both dwords are set), so its next load with sound has no gates' chain either.
+	/// Here the rest of the list is kept, as a save with sound keeps it.
+	/// </para>
+	/// </summary>
+	internal static byte[] WithoutUnnamedChains( IReadOnlySet<int> namedAtLoad, byte[] body )
+	{
+		ArgumentNullException.ThrowIfNull( namedAtLoad );
+
+		var scripts = new ParkScriptStates( body );
+		var voices = new ParkVoices( body );
+
+		if ( scripts.Problem != null )
+		{
+			Log.Warning( $"Save: the park ran with no sound device and the scripts written would not read, so the file's voices are all kept - {scripts.Problem}" );
+			return body;
+		}
+
+		var unnamed = voices.HeldChainsNotIn( scripts.SoundHandles ).Where( namedAtLoad.Contains ).ToHashSet();
+
+		Log.Info( $"Save: the park ran with no sound device, so {unnamed.Count} of the file's {voices.Saved.Count} voice(s), each a held chain "
+			+ $"a script named at the load and none written names, left out [{string.Join( ' ', unnamed.Select( handle => $"0x{handle:x8}" ) )}]" );
+
+		return unnamed.Count > 0 ? ParkVoices.Without( body, unnamed ) : body;
 	}
 
 	/// <summary>A companion's whole record: a child holds <paramref name="parentModel"/>, a sound child no model.</summary>

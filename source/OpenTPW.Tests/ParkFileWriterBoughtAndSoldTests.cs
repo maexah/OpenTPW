@@ -161,6 +161,39 @@ public class ParkFileWriterBoughtAndSoldTests
 	}
 
 	/// <summary>
+	/// <b>A thing sold in a park that ran with no sound device takes its held chain out of the save</b> (Q655): nothing was
+	/// put back, so nothing was let go, and the voice list keeps every voice of the file but the held chains a script
+	/// named at the load and none written names (<see cref="ParkFileWriter.WithoutUnnamedChains"/>). The shipped gates'
+	/// chain is made the Fountain's, as a Loudspeaker's <c>ADDOBJ 4 -1 177 10</c> holds its own: kept while the Fountain
+	/// stands, gone with it sold, and kept with it sold by a park that ran with sound, whose let-go set says what goes.
+	/// </summary>
+	[TestMethod]
+	public void ASoldThingsHeldChainIsLeftOutOfASaveMadeWithNoSoundDevice()
+	{
+		var gates = shipped.Voices.Saved.Single( voice => voice.Type == ParkVoices.HeldChainType );
+		var fountain = shipped.ScriptStates.ByHandle.Values.Single( script => (script.Effects ?? []).Any( effect => effect.Handle == 0x01320063 ) );
+
+		shipped = new ParkWorld( shipped.ScriptStates.Splice( payload, [], [], new Dictionary<int, SavedEffect[]>
+		{
+			[fountain.Handle] = [new SavedEffect( 4, gates.Handle, -1, -1, 10 ), .. fountain.Effects!]
+		} ) );
+
+		ParkVoices Saved( HashSet<int> gone, bool noDevice ) => new ParkWorld( ParkFileWriter.Body( shipped,
+			Running( Things( gone: gone ) ) with { VoicesNotPutBack = noDevice } ) ).Voices;
+
+		Assert.IsTrue( shipped.ScriptStates.SoundHandles.Contains( gates.Handle ) );
+		Assert.AreEqual( 10, Saved( [], noDevice: true ).Saved.Count, "the Fountain standing" );
+
+		var sold = Saved( [fountain.Thing], noDevice: true );
+
+		Assert.IsNull( sold.Problem );
+		Assert.AreEqual( (9, 9), (sold.Count, sold.Saved.Count) );
+		Assert.IsFalse( sold.Saved.Any( voice => voice.Handle == gates.Handle ) );
+		Assert.IsTrue( sold.Saved.Any( voice => voice.Handle == 0x01320063 ), "the Fountain's 107 is a one-shot, not a held chain" );
+		Assert.AreEqual( 10, Saved( [fountain.Thing], noDevice: false ).Saved.Count, "with sound, what was let go says" );
+	}
+
+	/// <summary>
 	/// A made object's record, byte by byte where the page puts each field: the middle of its anchor cell, its item
 	/// and date, the model handle, its flags, both lines of its name, its script, <c>mState</c>, <c>mTopLeft</c>, its
 	/// ends, its link, the door, six rings of thirty days, the running fields and the three floats.

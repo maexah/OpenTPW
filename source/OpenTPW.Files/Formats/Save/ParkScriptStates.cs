@@ -386,6 +386,17 @@ public sealed partial class ParkScriptStates
 		}
 	}
 
+	/// <summary>
+	/// The handles the sound records of every script read name (types 3 to 10, <see cref="SavedEffect"/>): the voices a
+	/// load hands back to a script's record (<c>0x006b6fc3</c>).
+	/// </summary>
+	public IReadOnlySet<int> SoundHandles
+		=> _byHandle.Values.SelectMany( script => script.Effects ?? [] )
+			.Where( effect => effect.Type > LastParticleType && effect.Handle != 0 ).Select( effect => effect.Handle ).ToHashSet();
+
+	/// <summary>The last of the two particle types of an object record; 3 to 10 are sounds (<see cref="SavedEffect"/>).</summary>
+	private const int LastParticleType = 2;
+
 	/// <summary>The saved state of the script an object record names, or null where there is none.</summary>
 	public SavedScript? For( int handle )
 		=> _byHandle.TryGetValue( handle, out var saved ) ? saved : null;

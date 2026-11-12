@@ -1907,16 +1907,6 @@ filed the items that cite it.
   voice until the next child is made: `ParkScreams.Stop` and `ParkAudio.StopScriptSound` cut it. Check in Ghidra that the
   stop (`0x006bd9b0`) reaches only the list, then let the pruned child go on the empty pass (`Chain.Voice`,
   `ScriptVoice.Voice`), with a test that stops a chain on that pass.
-- [ ] **Q655. A sold Loudspeaker's chain carried by a save made without sound.** From the run 9 review (Q612 M4). With no sound
-  device `PutBackFileVoices` puts nothing back, so `ParkAudio.FileVoicesLetGo` is empty and `ParkFileWriter` carries every
-  voice of the loaded file; a Loudspeaker sold on such a machine is saved with its 177 chain, and that file loaded where
-  there is sound puts the chain back under a handle no record names (the thing is gone): `FileOwner` for ever, beasts at an
-  empty spot. The original's save with its sound off writes no voice list (FileFormats `saves.md`: records are written when
-  both dwords are set). When the park ran with no sound device, leave out every held chain whose handle no surviving script
-  record names (or write the list empty, as the original's soundless save does), and say it at `Level`'s save. Confirm:
-  buy a Loudspeaker, sell it, save without a device (`SDL_AUDIODRIVER=dummy` is not that; use a test with `Audio.Ready`
-  false), load the save with sound, and `PARK_FILE_SOUND_VOICE_*` / the log show no chain for the sold speaker; the bug
-  put back fails a test in `ParkVoicesTests`.
 - [ ] **Q660. Does the original free or hide a boundary record no anchor claims? (from Q620.)** At load the original clears
   each anchor's saved handle and re-claims its piece by matching item, cell and angle (`FUN_0053b1a0` through
   `FUN_00522f20( ..., 1 )` and `FUN_00463ab0`, which marks a match `0x10000`); `ParkBoundaryHoarding` draws every

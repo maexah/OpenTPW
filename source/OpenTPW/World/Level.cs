@@ -1113,14 +1113,17 @@ public class Level
 			state.RandomSeed,
 			people != null ? (people.Strikes.ForceWord, people.Strikes.Records) : null,
 			state.Economy, state.CalendarAtLastUpdate, ParkWeather.Current?.Written( loaded.WeatherRecord ), research?.Written,
-			state.RecentlyResearched.Written, ids, ParkAudio.Current?.FileVoicesLetGo );
+			state.RecentlyResearched.Written, ids, ParkAudio.Current?.FileVoicesLetGo,
+			ParkAudio.Current?.FileVoicesNotPutBack == true );
 
 		// The sound module goes out as the loaded file's, less the voices put back from it and let go since: the original
 		// writes the manager's live voices (Sound_SaveModule, 0x0051c350), so what was started here, and each put-back
 		// voice's children and draws since, are not written. Carried, as the coasters' and the advisor's modules are, and
 		// counted where the park holds a voice started here (PARK_FILE_SOUND_WRITER_LIVE_VOICES). With no sound device
-		// nothing was put back, so nothing is let go and the file's voices are all carried, where the original's save
-		// writes no voice list at all (FileFormats saves.md): a sold Loudspeaker's chain survives such a save.
+		// nothing was put back, so nothing is let go: there each held chain a script's record named at the load and none
+		// written names is left out instead (ParkFileWriter.WithoutUnnamedChains), so a sold Loudspeaker's chain does not
+		// come back under a handle nothing names. A deviation: the original's save with its sound off writes no voice list at
+		// all (FileFormats saves.md, "Sound"); this one keeps the rest, the gates' unnamed chain too, as a save with sound does.
 		if ( ParkAudio.Current is { HoldsVoicesStartedHere: true } )
 			Unimplemented.Report( "PARK_FILE_SOUND_WRITER_LIVE_VOICES" );
 

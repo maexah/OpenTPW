@@ -1352,9 +1352,14 @@ with their classes (the rest is Q741). **The writer** writes the loaded file's l
 since (`ParkVoices.Without`), so a chain stopped here, a sold Loudspeaker's, does not come back at the next load with
 nothing to stop it; it writes nothing started here, nor a put-back voice's draws since (carried as the coasters' and the advisor's modules
 are, and counted `PARK_FILE_SOUND_WRITER_LIVE_VOICES` at a save where the park holds a script voice started here; the
-original writes the live voices, `0x0051c350`). With no sound device nothing is put back, so the writer lets nothing go
-and carries every voice of the loaded file, where the original's soundless save writes none: a Loudspeaker sold on such a
-machine is saved with its chain (filed).
+original writes the live voices, `0x0051c350`). With no sound device nothing is put back, so nothing is let go; there the
+writer leaves out each held chain a script's sound record named at the load and no written script names
+(`ParkFileWriter.WithoutUnnamedChains`, Q655), which is what a park with sound lets go: a sold Loudspeaker's chain, the
+Staff Room's after its `KILLOBJ 1`. A held chain no record named at the load stays, as a park with sound keeps it under no
+script: the stock park's gates' 177, which their `EVENT` starts and keeps no record of (no script record of
+`Easymode.TPWI` names `0x012e0055`), and the screams'. **Not the original's:** its soundless save writes no voice list at
+all (FileFormats `saves.md`, "Sound"), so its next load with sound has no gates' chain either; here the rest of the list is
+kept, as a save with sound keeps it.
 Here (`q612/confirm.py`, run5 on the final binary, off-screen, the log, the census and the game's own mix):
 the stock park's 177 put back under `0x012e0055` at (450,160,0), its kept child `TP BEAST 9.mp2` (variation 8's) first,
 the next due 2,990 ms after the put-back (its 2,740 ms and 250), then 17 children in 40 s with no repeat, gaps 1,502 to
