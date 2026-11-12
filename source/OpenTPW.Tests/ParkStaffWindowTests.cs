@@ -190,6 +190,28 @@ public class ParkStaffWindowTests
 	}
 
 	/// <summary>
+	/// <b>The cursor keys walk the staff as the arrows do</b> (Q547, <c>FUN_0048d200</c>): from the newest, Down steps towards
+	/// the oldest to the second, Up back, and Up again round from the newest to the oldest.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> Up and Down swapped; the staff member's window left without the keys.</remarks>
+	[TestMethod]
+	public void TheCursorKeysWalkTheStaff()
+	{
+		var staff = _people.Staff.Select( member => member.ThingId ).ToList();
+		Assert.IsTrue( staff.Count >= 3, "three staff, so round from the newest is not the second" );
+
+		ParkStaffWindow.Open( _stack, staff[0] );
+		var window = Window!;
+
+		Assert.AreEqual( 1, ParkFrontEnd.ObjectWindowKeys( _stack.Windows[^1], [NeoVeldrid.Key.Down] ) );
+		Assert.AreEqual( staff[1], window.ThingId, "Down: towards the oldest" );
+
+		ParkFrontEnd.ObjectWindowKeys( _stack.Windows[^1], [NeoVeldrid.Key.Up, NeoVeldrid.Key.Up] );
+		Assert.AreEqual( staff[^1], window.ThingId, "Up twice: back, then round from the newest" );
+		_stack.Close( window );
+	}
+
+	/// <summary>
 	/// <b>The arrows walk the staff</b>, newest first as the list keeps them: b_ardown towards the oldest, b_arup towards the
 	/// newest, round from either end; with fewer than two staff both are hidden (<c>0x004b5a60</c>).
 	/// </summary>

@@ -373,6 +373,59 @@ public class ParkShopWindowTests
 	}
 
 	/// <summary>
+	/// <b>The cursor keys step the shop's window as its arrows do</b> (Q547, <c>FUN_0048d200</c>): the stock park with a
+	/// second Drinks Shop bought (60) and a Balloon Shop (61), so the list reads 60, 61, 16. From 16 with its quality
+	/// moved, Up is <c>FUN_0048cbe0</c>, the next towards the newest, 61, with 16's quality written first; Down twice is
+	/// <c>FUN_0048caf0</c>, back to 16 and round from the tail to 60, the other Drinks Shop, its title and census naming
+	/// it.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> Up and Down swapped; the apply before the step gone.</remarks>
+	[TestMethod]
+	public void TheCursorKeysStepTheShopsWindow()
+	{
+		LoadThePark();
+		_state.AddObject( new ParkWorld.CatalogueObject( 61, 1209, 30 << 8, 30 << 8, 0 ) );
+		_state.AddObject( new ParkWorld.CatalogueObject( 60, 1203, 32 << 8, 30 << 8, 0 ) );
+
+		var window = Open();
+		QualityToTheRight( window );
+
+		Assert.AreEqual( 1, ParkFrontEnd.ObjectWindowKeys( _stack.Windows[^1], [NeoVeldrid.Key.Up] ) );
+		Assert.AreEqual( (61, 100), (window.ThingId, Shop.QualityOfGoods), "Up: towards the newest, 16's quality applied first" );
+
+		ParkFrontEnd.ObjectWindowKeys( _stack.Windows[^1], [NeoVeldrid.Key.Down] );
+		Assert.AreEqual( DrinksShop, window.ThingId, "Down: towards the oldest" );
+
+		ParkFrontEnd.ObjectWindowKeys( _stack.Windows[^1], [NeoVeldrid.Key.Down] );
+		Assert.AreEqual( 60, window.ThingId, "Down: round from the tail to the head" );
+		StringAssert.StartsWith( window.Census(), "thing 60 title \"Drinks Shop\"" );
+
+	}
+
+	/// <summary>
+	/// <b>The cursor keys step the ride's window too</b> (Q547): Belly Bounces bought as 61, then the Lava Jump add-on 62,
+	/// then 60. From 60 Down steps towards the oldest past the add-on to 61, Up back to 60.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> Up and Down swapped; the ride's window left without the keys.</remarks>
+	[TestMethod]
+	public void TheCursorKeysStepTheRidesWindow()
+	{
+		LoadThePark();
+		_state.AddObject( new ParkWorld.CatalogueObject( 61, 1100, 30 << 8, 30 << 8, 0 ) );
+		_state.AddObject( new ParkWorld.CatalogueObject( 62, 1500, 36 << 8, 30 << 8, 0 ) );
+		_state.AddObject( new ParkWorld.CatalogueObject( 60, 1100, 33 << 8, 30 << 8, 0 ) );
+
+		_park.OpenObjectWindow( 60 );
+		var window = RideWindow!;
+
+		Assert.AreEqual( 1, ParkFrontEnd.ObjectWindowKeys( _stack.Windows[^1], [NeoVeldrid.Key.Down] ) );
+		Assert.AreEqual( 61, window.ThingId, "Down: towards the oldest, past the add-on" );
+
+		ParkFrontEnd.ObjectWindowKeys( _stack.Windows[^1], [NeoVeldrid.Key.Up] );
+		Assert.AreEqual( 60, window.ThingId, "Up: towards the newest" );
+	}
+
+	/// <summary>
 	/// <b>Apply to all, pressed, writes every shop of the shown one's item</b> (<c>0xc081</c>, <c>FUN_00481bc0( 0x200,
 	/// 0x004b0ae0 )</c>): a second Drinks Shop takes the shown one's quality 100 and price 35 with it; a Balloon Shop does
 	/// not move.

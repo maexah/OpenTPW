@@ -1674,12 +1674,6 @@ filed the items that cite it.
     player's first park (`0x0054f2d7`/`0x0054f33b`). Both sends are counted now as `PARK_ADVISOR_EVENT_0_NOT_BUILT`
     (`Level.Advise`, `ParkAdvisorMessages.FirstPark`). Still to read: whether the save's load replaces the setup's post in
     the slots, what 0x143 says, and whether a duplicate post of message 0 is refused (`advisor-park.md`, "Still unknown").
-- [ ] **Q547. The cursor Up and Down keys step an object window.** From Q31. The base window proc `0x0048d200` takes key
-  down `0x2600` and `0x2800` to `0x0048cbe0` and `0x0048caf0` (`hud.md`, "The shop, sideshow and ride windows"), which
-  apply and step to the next or the previous object of the class; no object window here hears a key. Build it for the
-  ride's and the shop's windows (and the staff member's and the visitor's, if the same proc serves them: read first), and
-  confirm in either game: the stock park with a second Drinks Shop bought, Down in the shop's window, the title and the
-  `shopwindow` census naming the other shop.
 - [ ] **Q548. The ride window's title is white; `UI_SetTitle` letters it yellow.** From Q31: the shop's window takes
   `UI_SetTitle`'s font 5 in (234, 239, 102) with its shadow over the widened rect (`hud.md`, "The shop's window"), as the
   visitor's and the staff member's do; `ParkObjectWindow` letters the ride's title white in the stream's own rect. The

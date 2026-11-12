@@ -27,7 +27,7 @@ namespace OpenTPW.UI;
 /// <c>VISITOR_WINDOW_PREVIEW</c>; the panel stands empty and its click still goes to the guest.
 /// </para>
 /// </summary>
-internal sealed class ParkVisitorWindow : UiWindow
+internal sealed class ParkVisitorWindow : UiWindow, IObjectWindowSteps
 {
 	/// <summary>The status words, the table the boot loads as <c>mUIKidStates</c> (table <c>0x3ec</c>, <c>[0x0078baa0]</c>).</summary>
 	internal const string StatusTable = "Language/English/KIDSTATES.str";
@@ -402,6 +402,9 @@ internal sealed class ParkVisitorWindow : UiWindow
 		ThingId = next;
 		Show();
 	}
+
+	/// <summary>The cursor Up and Down keys' step (<see cref="IObjectWindowSteps"/>): the arrows' own.</summary>
+	public void Step( bool newer ) => Cycle( newer );
 
 	/// <summary>
 	/// The guest after <paramref name="current"/> in <paramref name="newestFirst"/>: towards its head with

@@ -13574,3 +13574,9 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `ParkStaffMetersTests` (892 and 890 where the raw mean read 896; 511 for a mean of 50), four put-back bugs each failing
   them; off-screen on `park jungle` the meters logged 909 from the bytes 92, 89, 89, 87, 87 (the old rule's 915).
   `hud.md`, "What the two meters average". Not checked: the rules in Ghidra (none in the lane), the meters on screen.
+- [x] **Q547. The cursor Up and Down keys step an object window.** From Q31. The base window proc `0x0048d200` takes key
+  down `0x2600` and `0x2800` to `0x0048cbe0` and `0x0048caf0` (`hud.md`, "The shop, sideshow and ride windows"), which
+  apply and step to the next or the previous object of the class; no object window here hears a key. Build it for the
+  ride's and the shop's windows (and the staff member's and the visitor's, if the same proc serves them: read first), and
+  confirm in either game: the stock park with a second Drinks Shop bought, Down in the shop's window, the title and the
+  `shopwindow` census naming the other shop.
