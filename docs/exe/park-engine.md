@@ -2299,8 +2299,8 @@ in these places, of which a walk in the park reaches only `FUN_0042a340`'s branc
   others), so a cell below 0 reads as unsigned and lands past 4e10; and `__ftol` keeps the low word of a
   position past 2e10, where C# saturates. None of it is reached on the map with a finite step.
 - **The keys, the turn and the speed** (above, "The walk's keys, turn and speed"): ours turns 2.0 radians a second a
-  unit past ±0.4 (5/6 of the original's), walks 40 units a second, strafes on Right and has no key turn
-  (`docs/QUEUE.md` Q17, Q1161).
+  unit past ±0.4 (5/6 of the original's), walks 40 units a second and has no key turn (`docs/QUEUE.md` Q1161);
+  like the original's, its across term is 0, so A and D strafe nobody (Q17).
 
 Which precision is live is open (above). At 24 bits two of `ParkCamcorderWalkTests`' cases come out otherwise: a
 step of 5 from 245 is taken whole and put back at 249.999 instead of crossing onto 250, and the tie from (45, 45)

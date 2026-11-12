@@ -2264,7 +2264,7 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   turn and speed": Left and keypad 9, Right and keypad 7 turn at 1.2 radians a second; Up, Down and keypads 1 and 3 walk; the
   pointer turns 2.4 radians a second a unit past ±0.4; the walk settles at `sqrt( zoom ) x 0.002` units a millisecond (21 a
   second at zoom 110) by a half step a frame; the orbit's pan velocity carries in. Ours (`ParkCamcorderCameraMode`) turns
-  2.0 a unit, walks 40 a second, strafes on Right (Q17) and has no key turn; each is said at the site. Build them on
+  2.0 a unit, walks 40 a second and has no key turn (its strafe is gone, Q17); each is said at the site. Build them on
   `Time.Delta` (rule 10: the per-frame half step becomes its time-based equivalent, said at the site). Confirm under Proton
   first (`campoi.py` in first person: the yaw after a held Left of known length, the position after a held Up at zoom 110),
   then ours' `camcorder` census against it.
@@ -2411,16 +2411,6 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   A model's texture clamps unless its frame wraps (Q363). `ParkPaths` and `ParkGround` bind an array, which
   `Material.Set` samples as Wrap whatever the flag; `Texture.SamplerFor`'s Mirror is used only for a texture bound
   alone; the sea keeps its wrap.
-- [ ] **Q17. Camcorder mode can strafe.** `ParkCamcorderCameraMode.Walk` passes
-  `Input.Right` into `Step`. `park-engine.md`, "Walking on the ground is swept against the cell edges", decodes the sweep by two velocities but not the
-  keys. Remove the strafe. Confirm: press the strafe key, the stand position in the `camcorder` census
-  does not move sideways, screenshot.
-  - **Note (play test 2026-10-21, note 33):** Alexah felt the strafe as part of an arcade feel; see Q25's note. Q631
-    decides which of A and D remain in the orbit view; the camcorder's A and D stay strafe-free (the original has none).
-    (Inferred from the notes: Alexah's WASD request is stated for the camera scroll, notes 6 and 11, not the camcorder.)
-  - **Note (fork watch 2026-11-12, verify-other.md L2):** the original's first person has no strafe at all: Left and Right (and keypad 9
-    and 7) turn, and the across term is 0.0 (`0x0042b82a`; `park-engine.md`, "The walk's keys, turn and speed"). Removing the
-    strafe leaves Left and Right to Q1161's turn.
 - [ ] **Q18. The advisor draws in front of the dimmed screen.** `Level.Render` draws the HUD, then
   the overlay pass with the advisor. Pausing does not hide him either; only the options screen's quiet stop takes him off (`ui.md`, "Pausing him"). Draw the
   dimmer over him, or hide him while such a window is open. Confirm: screenshot with the buy screen open.

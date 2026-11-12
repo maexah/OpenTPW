@@ -36,8 +36,8 @@ namespace OpenTPW;
 /// has two first-person sub-branches, chosen by <c>flags &amp; 0x3c</c> (<c>0x0042b836</c>): clear, it
 /// sets an eye height and turns by twice the pointer's excess past the +/-0.4 bands; set, it turns by
 /// 3.5 times the excess past +/-0.2 and sets no eye height. This follows the first. Its turn rate, its
-/// walk speed and its keys differ from the original's (Left and Right turn there, nothing strafes):
-/// each is marked where it is defined (docs/QUEUE.md Q1161).
+/// walk speed and its keys differ from the original's (Left and Right turn there; here nothing turns them):
+/// each is marked where it is defined (docs/QUEUE.md Q1161). Neither strafes.
 /// </para>
 /// </summary>
 public sealed class ParkCamcorderCameraMode : CameraMode
@@ -466,16 +466,18 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 	/// <remarks>
 	/// A held right button (<see cref="RightHeld"/>) adds the forward key's amount to the forward term, the original's
 	/// Up arrow's 0.1, on top of what the keys give and whatever RMB cancel is set to (<c>0x0042b935</c>): with the
-	/// forward key it walks twice as fast, and with the back key it stands.
+	/// forward key it walks twice as fast, and with the back key it stands. The across term is 0, as the original's
+	/// 0.0 left on the stack is (<c>0x0042b82a</c>; docs/exe/park-engine.md, "The walk's keys, turn and speed"): A and
+	/// D, the orbit's sideways keys (<see cref="Input.Right"/>), walk nobody aside. Their turn is Q1161's.
 	/// </remarks>
 	internal static void Walk()
 	{
 		var forward = Input.Forward + (RightHeld ? 1f : 0f);
 
-		if ( forward == 0f && Input.Right == 0f )
+		if ( forward == 0f )
 			return;
 
-		Step( forward, Input.Right, WalkSpeed * Time.Delta );
+		Step( forward, 0f, WalkSpeed * Time.Delta );
 	}
 
 	/// <summary>

@@ -142,9 +142,10 @@ public class ParkFirstPersonRightButtonWalkTests
 
 	/// <summary>
 	/// <b>The button's amount is added to the keys'</b>: with the forward key it walks twice as far, with the back key it
-	/// stands, and a sideways key is left as it is.
+	/// stands, and with a sideways key it walks forward as before and nowhere aside: nothing strafes (<c>0x0042b82a</c>).
 	/// </summary>
-	/// <remarks><b>Mutations:</b> the button taken only when no key walks; the button overriding the keys.</remarks>
+	/// <remarks><b>Mutations:</b> the button taken only when no key walks; the button overriding the keys; the strafe
+	/// put back (<see cref="Input.Right"/> passed as the across term).</remarks>
 	[TestMethod]
 	public void ItAddsToWhatTheKeysGive()
 	{
@@ -163,7 +164,32 @@ public class ParkFirstPersonRightButtonWalkTests
 		Input.Right = 1f;
 		Frame( stack, true, View, 11.0f );
 		Assert.AreEqual( Start.Y + (3 * OneStep), ParkCamcorderCameraMode.Stand.Y, 0.001f, "with a sideways key: forward as before" );
-		Assert.AreEqual( Start.X + OneStep, ParkCamcorderCameraMode.Stand.X, 0.001f, "and aside as the key asks" );
+		Assert.AreEqual( Start.X, ParkCamcorderCameraMode.Stand.X, 0.001f, "and none aside: nothing strafes" );
+	}
+
+	/// <summary>
+	/// <b>A sideways key alone walks nowhere</b>, either way and turned: the original's across term is 0.0
+	/// (<c>0x0042b82a</c>; <c>docs/exe/park-engine.md</c>, "The walk's keys, turn and speed").
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the strafe put back (<see cref="Input.Right"/> passed as the across term); the key read as
+	/// a forward walk.</remarks>
+	[TestMethod]
+	public void ASidewaysKeyAloneWalksNowhere()
+	{
+		var stack = APark();
+		InFirstPerson( true );
+
+		var now = 10.0f;
+
+		foreach ( var (right, yaw) in new[] { (1f, 0f), (-1f, 0f), (1f, 1.1f), (-1f, -2.3f) } )
+		{
+			ParkCamcorderCameraMode.Yaw = yaw;
+			Input.Right = right;
+			Frame( stack, false, View, now += FrameLength );
+
+			Assert.AreEqual( Start.X, ParkCamcorderCameraMode.Stand.X, 0.001f, $"right {right} at yaw {yaw}: no step aside" );
+			Assert.AreEqual( Start.Y, ParkCamcorderCameraMode.Stand.Y, 0.001f, $"right {right} at yaw {yaw}: none forward" );
+		}
 	}
 
 	/// <summary>
