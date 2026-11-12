@@ -6,9 +6,9 @@ using System.Linq;
 namespace OpenTPW.Tests;
 
 /// <summary>
-/// The deciding turn's arms either side of its leave test - <c>FUN_004fec90</c>: the happy jump, the vomit, litter,
-/// watching fireworks and the pranks, counted, each test asserting the count moves exactly where the original's own
-/// test holds; and watching an entertainer, built.
+/// The deciding turn's arms either side of its leave test - <c>FUN_004fec90</c>: the happy jump, built; the vomit,
+/// litter, watching fireworks and the pranks, counted, each test asserting the count moves exactly where the
+/// original's own test holds; and watching an entertainer, built.
 ///
 /// <para>
 /// These read real game files and are skipped where there is no installation - see <see cref="GameData"/>.
@@ -67,28 +67,72 @@ public class ParkDecidingArmsTests
 	}
 
 	/// <summary>
-	/// <b>The happy jump is counted above 80 and more than 100 sweeps past the last spot animation</b>
-	/// (<c>0x004fecd2</c>, <c>0x004fece2</c>), and at neither edge.
+	/// <b>A guest above 80 and more than 100 sweeps past their last spot animation jumps</b> (<c>0x004fecd2</c>,
+	/// <c>0x004fece2</c>, <c>0x004fecea</c>): spot animation 5 for eleven sweeps, back to deciding, and no jump again
+	/// until more than 100 sweeps past the jump; at neither edge does a guest jump.
 	/// </summary>
 	[TestMethod]
-	public void TheHappyJumpIsCountedAboveEightyAndPastTheGap()
+	public void AHappyGuestJumpsAboveEightyAndPastTheGap()
 	{
 		// An arm-2 roll, so the split does nothing and the guest stays deciding.
 		var (guest, turn, _) = DecidingAt( 47, 22, SeedWhere( roll => roll % 3 == 2 ) );
-		var from = Counted( "DECIDE_HAPPY_SPOT_ANIMATION" );
 		var stamp = guest.TimeOfLastSpotAnim;
 
 		guest.Happiness = 80.9f;
 		turn( stamp + 101 );
-		Assert.AreEqual( from, Counted( "DECIDE_HAPPY_SPOT_ANIMATION" ), "the byte 80 is not above 80" );
+		Assert.AreEqual( PeepState.Deciding, guest.State, "the byte 80 is not above 80" );
 
-		guest.Happiness = 81f;
+		guest.Happiness = 90f;
 		turn( stamp + 100 );
-		Assert.AreEqual( from, Counted( "DECIDE_HAPPY_SPOT_ANIMATION" ), "100 sweeps on is not more than 100" );
+		Assert.AreEqual( PeepState.Deciding, guest.State, "100 sweeps on is not more than 100" );
 
-		turn( stamp + 101 );
-		Assert.AreEqual( from + 1, Counted( "DECIDE_HAPPY_SPOT_ANIMATION" ), "81, and 101 sweeps on" );
-		Assert.AreNotEqual( PeepState.PlayingSpotAnimation, guest.State, "counted, not built: nobody jumps" );
+		var jump = stamp + 101;
+		turn( jump );
+		Assert.AreEqual( (PeepState.PlayingSpotAnimation, PeepState.Deciding, PeepBehaviour.SpotHappy, jump),
+			(guest.State, guest.SavedState, guest.NextAnimation, guest.TimeOfLastSpotAnim), "90, and 101 sweeps on" );
+
+		for ( var tick = jump + 1; tick <= jump + 10; tick++ )
+		{
+			turn( tick );
+			Assert.AreEqual( PeepState.PlayingSpotAnimation, guest.State, $"still jumping at {tick - jump} sweeps on" );
+		}
+
+		turn( jump + 11 );
+		Assert.AreEqual( PeepState.Deciding, guest.State, "back to deciding on the eleventh sweep" );
+
+		// The later draws are not the seed's first, so a guest the split sends off is put back to deciding.
+		for ( var tick = jump + 12; tick <= jump + 100; tick++ )
+		{
+			if ( guest.State != PeepState.Deciding )
+				guest.SetState( PeepState.Deciding, tick, new Random( 1 ) );
+
+			turn( tick );
+			Assert.AreNotEqual( PeepState.PlayingSpotAnimation, guest.State, $"no jump again at {tick - jump} sweeps on" );
+		}
+
+		guest.SetState( PeepState.Deciding, jump + 101, new Random( 1 ) );
+
+		turn( jump + 101 );
+		Assert.AreEqual( (PeepState.PlayingSpotAnimation, jump + 101), (guest.State, guest.TimeOfLastSpotAnim),
+			"and again at 101 sweeps on" );
+	}
+
+	/// <summary>
+	/// <b>The jump ends the turn</b> (the return after <c>0x004fecea</c>): a guest who jumps is not also counted
+	/// for the vomit the same turn would have reached.
+	/// </summary>
+	[TestMethod]
+	public void TheJumpEndsTheTurnBeforeTheVomit()
+	{
+		var (guest, turn, _) = DecidingAt( 47, 22, SeedWhere( roll => roll % 3 == 0 ) );
+		guest.TimeStartedIdling = 1000;
+		guest.Vomit = 100f;
+		guest.Happiness = 90f;
+		var from = Counted( "DECIDE_VOMIT" );
+
+		turn( guest.TimeOfLastSpotAnim + 101 );
+		Assert.AreEqual( (PeepState.PlayingSpotAnimation, from), (guest.State, Counted( "DECIDE_VOMIT" )),
+			"jumped, and the vomit's test not reached" );
 	}
 
 	/// <summary>

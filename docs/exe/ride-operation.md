@@ -1218,7 +1218,7 @@ restored bugs each fail it (the count-and-walk-on, no `Forget`, no return, no `L
 #### Spot animations - `FUN_004fc800` and state 8
 
 Decoded from the disassembly (`docs/QUEUE.md` Q98). The function, state 8's turn and the queue turn's two calls are
-built (Q98b), and so is the deciding turn's call of 4 (Q107); its calls of 5 and 7 are counted, not built (Q224, Q226).
+built (Q98b), and so are the deciding turn's calls of 4 (Q107) and 5 (Q224); its call of 7 is counted, not built (Q226).
 
 **`FUN_004fc800( n )`**, a guest thiscall, in order:
 
@@ -1778,6 +1778,15 @@ entertainer, facing him, every turn. Both are built (Q668). On the build (`q668/
 miserable), 169 gone, the state-6 gain about +922 by sweep 972, the mean happiness at sweep 972 38.5 against the
 original's 39.8 and 37.3; up to 17 guests stood round him at a census. The census of guests a minute, this game's
 against the original's round `a`: 225/225, 221/222, 200/206, 178/168, 131/132, 133/117, 109/108, 101/94, 100/93.
+
+**Q224: arm (a), the happy jump, is built** (`PeepBehaviour.JumpsForJoy`, first in `Decide`, ahead of the counted arms):
+more than 100 sweeps, unsigned, past `+0x208` and the happiness byte above 80 calls `PlaySpotAnimation` with 5 and ends
+the turn, so the vomit, litter, leave and later arms are not reached that turn; `DECIDE_HAPPY_SPOT_ANIMATION` is no
+longer counted. Predicted and read off-screen in a cloud lane (`lib/consolerun.py`, the stock Lost Kingdom park,
+`happy 90` every 5 s for 150 s; the output was not kept): 47 deciding turns played animation 5 from `Deciding`, among 26
+guests; all 47 returned to `Deciding` 11 sweeps later; of the 28 that came after an earlier spot animation of the same
+guest, the fewest sweeps since it was 101 (guest 41: animation 4 at tick 1179, then 5 at 1280); the count read nought.
+What it looks like is not checked here (no display to photograph; Q1340).
 
 **Q111: the arms either side of the leave test are counted**, none built, the listing re-read first-hand
 (`0x004fecb9`..`0x004ff3ae`; the corrections are in the list above). `PeepBehaviour.CountBeforeLeaving` counts

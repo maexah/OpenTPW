@@ -778,12 +778,11 @@ filed the items that cite it.
   offer gate refuses it, and a load called on that sweep is 4, not 12 (one run of two, `q26b/gate`); the original's
   passed the gate on every sweep of two runs.
 
-- [ ] **Q224. A happy guest does not jump on their deciding turn.** Found by Q111 (`ride-operation.md`, "The state-6
-  turn, in order", (a)). More than 100 sweeps past `+0x208` and happiness above 80: spot animation 5 and the turn ends
-  (`0x004fecd2`..`0x004fecea`). Every part is built (`PeepBehaviour.PlaySpotAnimation`, `SpotHappy`); build it where
-  `DECIDE_HAPPY_SPOT_ANIMATION` is counted. The original's stock park made one in 964 sweeps (guest 33 at 83).
-  Confirm: a guest at happiness 90 deciding, set 5 for eleven sweeps and no sooner than 101 sweeps again; a screenshot
-  of the jump, beside the original's.
+- [ ] **Q1340. The deciding guest's happy jump, photographed.** Split from Q224, built in a cloud lane with no display
+  (`docs/exe/ride-operation.md`, "Q224"). A guest at happiness 90 deciding in Lost Kingdom plays spot animation 5 for
+  eleven sweeps (the log's `Person N: spot animation 5 from Deciding at tick T` then `spot animation over at tick
+  T+11, back to Deciding`). Confirm on a desk: a screenshot of that guest's jump (set 12, both arms up), beside the
+  original's at the same point; `happy 90` in the console makes one within a few seconds.
 - [ ] **Q225. A guest full of litter neither walks to a bin nor drops it (decoded in Q899).** Found by Q111, arm (c).
   Build, where `DECIDE_LITTER_BIN_ERRAND` and `DECIDE_LITTER_DROPPED` are counted (`PeepBehaviour.CountBeforeLeaving`), as
   `ride-operation.md` says in "The state-6 turn" (c), "A cell's litter" and "The bin errand": the nearest `HoldsLitter` thing
