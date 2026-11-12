@@ -13330,3 +13330,12 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   nodes at rest at four turns: 1,228 of 8,216 directions change in a bit, none in a word x1024, the only form any caller
   takes, so no shipped node's particle aim changes (seen in a park run: the Jungle Spray's jets aimed (0,25,30) and
   (0,19,34)). The comparison with the original's save is Q1268.
+- [x] **Q1164. Up and Down in a name box - first piece: Up and Down counted until the 0x805 default is read.** The
+  window's default for `0x805` (vtable `+0x118`, `0x0065f688`) and the new player dialog's handler are not decoded in
+  `docs/exe/` and were not read here (a cloud container with no Ghidra), so what the original does with the two keys is
+  open. Rule 4 counts a path the program reaches whose original is unread, so `WindowStack.Keyboard` now drops Up and Down
+  in a focused box and counts them, `EDIT_BOX_KEY_UP` and `EDIT_BOX_KEY_DOWN`, beside Delete, Left, Right, Home and End;
+  said at the site and in `hud.md`, "Up and Down in a name box". `TheBoxDropsAndCountsUpAndDown` (needs the game): Up once
+  and Down twice in Save Park's box leave the name, keep the screen open and count 1 and 2 under their own names; two bugs
+  put back by hand (the keys uncounted, Down counted as Up) each failed it. The read is Q1260. Done as Q1164 in cloud
+  lane c35.
