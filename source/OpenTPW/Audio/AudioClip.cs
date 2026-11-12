@@ -53,8 +53,13 @@ public sealed class AudioClip
 	/// Null rather than an exception because a bank is loaded as a unit and one bad sample in it
 	/// should cost that sample, not the park's whole ambience. The decoder throws on 80 entries that
 	/// ship, one single-frame placeholder in global/Speech/speechHD.SDT, so this is not theoretical.
+	///
+	/// <paramref name="playedBytes"/> is the bank's played length (<see cref="MP2File.DecodedSize"/>), in bytes of 16-bit
+	/// PCM at the stream's own rate and channels: the clip keeps that many bytes' frames of the decode and drops the
+	/// encoder's tail, as the original's read stops there (<c>0x006c8429</c>; docs/exe/audio.md, "How a voice is
+	/// decoded"). Nought or less keeps the whole decode; no shipped entry has one.
 	/// </summary>
-	public static AudioClip? Decode( string name, byte[] data )
+	public static AudioClip? Decode( string name, byte[] data, int playedBytes )
 	{
 		try
 		{
@@ -90,6 +95,10 @@ public sealed class AudioClip
 			// Whole frames only. A stereo clip that ended mid-frame would put every later sample
 			// on the wrong channel.
 			count -= count % channels;
+
+			// The played length, cut at the stream's rate before any resampling, since it counts the stream's own frames.
+			if ( playedBytes > 0 )
+				count = Math.Min( count, playedBytes / (sizeof( short ) * channels) * channels );
 
 			if ( count != pcm.Length )
 				Array.Resize( ref pcm, count );

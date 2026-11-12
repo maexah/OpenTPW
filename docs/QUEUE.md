@@ -2010,16 +2010,6 @@ filed the items that cite it.
   buy a Loudspeaker, sell it, save without a device (`SDL_AUDIODRIVER=dummy` is not that; use a test with `Audio.Ready`
   false), load the save with sound, and `PARK_FILE_SOUND_VOICE_*` / the log show no chain for the sold speaker; the bug
   put back fails a test in `ParkVoicesTests`.
-- [ ] **Q659. Trim each decoded MPEG clip to the bank's played length (from Q147).** `AudioClip.Decode( name, data )`
-  (`AudioClip.cs:54`) takes no length and decodes until `ReadSamples` answers 0, so every MPEG entry plays its whole
-  stream, 14.4 to 82.8 ms past the bank's played length (`DecodedSize / (2 x channels x rate)`, the entry's `+0x20`),
-  over all 3,739 entries (`Mp2DurationTests`). The original clamps its read to `min( request, [voice+0x30] -
-  [voice+0x14] )` before the slot's `+0x5c` (`0x006c8429`..`0x006c8457`, FileFormats `sounds.md` lines 81-84; that
-  `+0x30` holds the bank's `+0x20` is FileFormats' claim, not re-traced). Trim each decoded clip to
-  `DecodedSize / (2 x channels)` frames. Probably inaudible (encoder padding), so minor. The only user of
-  `DecodedSize` outside the tests is `SoundBank.cs:91`'s memory estimate. Confirm: a clip's frame count against the
-  played length for the five MPEG-1 entries and a sample of MPEG-2 ones; `docs/exe/audio.md` (the decode, ~line 1444)
-  says nothing of the tail and should.
 - [ ] **Q660. Does the original free or hide a boundary record no anchor claims? (from Q620.)** At load the original clears
   each anchor's saved handle and re-claims its piece by matching item, cell and angle (`FUN_0053b1a0` through
   `FUN_00522f20( ..., 1 )` and `FUN_00463ab0`, which marks a match `0x10000`); `ParkBoundaryHoarding` draws every

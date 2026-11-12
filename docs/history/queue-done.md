@@ -12145,6 +12145,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q659. Trim each decoded MPEG clip to the bank's played length (from Q147).** `AudioClip.Decode( name, data )`
+  (`AudioClip.cs:54`) takes no length and decodes until `ReadSamples` answers 0, so every MPEG entry plays its whole
+  stream, 14.4 to 82.8 ms past the bank's played length (`DecodedSize / (2 x channels x rate)`, the entry's `+0x20`),
+  over all 3,739 entries (`Mp2DurationTests`). The original clamps its read to `min( request, [voice+0x30] -
+  [voice+0x14] )` before the slot's `+0x5c` (`0x006c8429`..`0x006c8457`, FileFormats `sounds.md` lines 81-84; that
+  `+0x30` holds the bank's `+0x20` is FileFormats' claim, not re-traced). Trim each decoded clip to
+  `DecodedSize / (2 x channels)` frames. Probably inaudible (encoder padding), so minor. The only user of
+  `DecodedSize` outside the tests is `SoundBank.cs:91`'s memory estimate. Confirm: a clip's frame count against the
+  played length for the five MPEG-1 entries and a sample of MPEG-2 ones; `docs/exe/audio.md` (the decode, ~line 1444)
+  says nothing of the tail and should.
 
 ## B. Docs and comments
 

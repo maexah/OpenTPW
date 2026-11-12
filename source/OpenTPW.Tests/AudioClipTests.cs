@@ -39,6 +39,108 @@ public class AudioClipTests
 	}
 
 	/// <summary>
+	/// Frames of silence an MPEG Layer I decoder takes: a header and every subband's allocation nought, so each frame is 384
+	/// samples a channel of nothing. Built here, so the test needs no game. <paramref name="mpeg1"/> picks MPEG-1 at 44,100 Hz
+	/// (64 kbit/s, 68 bytes a frame), otherwise MPEG-2 at 22,050 Hz (64 kbit/s, 136 bytes a frame).
+	/// </summary>
+	private static byte[] SilentLayerI( int frames, bool mpeg1, bool stereo )
+	{
+		var length = mpeg1 ? 68 : 136;
+		var data = new byte[frames * length];
+
+		for ( int f = 0; f < frames; ++f )
+		{
+			data[f * length] = 0xFF;
+			data[(f * length) + 1] = (byte)(mpeg1 ? 0xFF : 0xF7);
+			data[(f * length) + 2] = (byte)(mpeg1 ? 0x20 : 0x40);
+			data[(f * length) + 3] = (byte)(stereo ? 0x00 : 0xC0);
+		}
+
+		return data;
+	}
+
+	/// <summary>
+	/// A clip keeps the bank's played length, <c>DecodedSize / (2 x channels)</c> frames of its stream, and no more (Q659): five
+	/// frames are 1,920 a channel, and the bank says to play fewer. A stereo clip counts both channels' bytes; a 44,100 Hz clip
+	/// is cut at its own rate and then halved; a played length past the stream adds nothing; nought keeps the whole decode.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> no cut (1920); the channels left out of the divisor (stereo 1000, not 500); the cut made
+	/// after the resample (44,100 Hz: 700, not 350); the cut made as a sample count, not whole frames (stereo, odd bytes).</remarks>
+	[TestMethod]
+	public void AClipIsCutToTheBanksPlayedLengthInItsStreamsOwnFrames()
+	{
+		var mono = AudioClip.Decode( "mono", SilentLayerI( 5, mpeg1: false, stereo: false ), 2000 );
+		Assert.IsNotNull( mono );
+		Assert.AreEqual( 1, mono!.Channels );
+		Assert.AreEqual( 1000, mono.Frames, "2,000 bytes of mono 16-bit PCM" );
+
+		var stereo = AudioClip.Decode( "stereo", SilentLayerI( 5, mpeg1: false, stereo: true ), 2002 );
+		Assert.IsNotNull( stereo );
+		Assert.AreEqual( 2, stereo!.Channels );
+		Assert.AreEqual( 500, stereo.Frames, "2,002 bytes of stereo 16-bit PCM: 500 whole frames" );
+		Assert.AreEqual( 1000, stereo.Samples.Length );
+
+		var fast = AudioClip.Decode( "fast", SilentLayerI( 5, mpeg1: true, stereo: false ), 1400 );
+		Assert.IsNotNull( fast );
+		Assert.AreEqual( 350, fast!.Frames, "700 frames at 44,100 Hz, then brought to 22,050" );
+
+		Assert.AreEqual( 1920, AudioClip.Decode( "long", SilentLayerI( 5, mpeg1: false, stereo: false ), 100000 )!.Frames, "nothing added past the stream" );
+		Assert.AreEqual( 1920, AudioClip.Decode( "none", SilentLayerI( 5, mpeg1: false, stereo: false ), 0 )!.Frames, "no played length, the whole decode" );
+	}
+
+	/// <summary>
+	/// Every shipped clip is as long as its bank's played length, at the device's rate, and every one is cut by it: the stream
+	/// is always the longer (Mp2DurationTests). The five MPEG-1 entries, at 44,100 Hz, are named and checked by frame count.
+	/// The stream's channel count, which the cut divides by, is the bank's for every entry.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> no cut (every clip long); the cut after the resample (the five MPEG-1 entries twice their length).</remarks>
+	[TestMethod]
+	public void EveryShippedClipIsItsBanksPlayedLength()
+	{
+		GameData.Required();
+
+		var options = new EnumerationOptions { RecurseSubdirectories = true, MatchCasing = MatchCasing.CaseInsensitive };
+		var entries = Directory.EnumerateFiles( GameDir.Data, "*.sdt", options )
+			.SelectMany( path =>
+			{
+				using var archive = new SdtArchive( path );
+				return archive.soundFiles.Select( entry => (Path: Path.GetRelativePath( GameDir.Data, path ).Replace( '\\', '/' ), Entry: entry) ).ToList();
+			} )
+			.ToList();
+
+		var cut = 0;
+		var wrong = new System.Collections.Concurrent.ConcurrentBag<string>();
+		var fast = new System.Collections.Concurrent.ConcurrentBag<string>();
+
+		Parallel.ForEach( entries, item =>
+		{
+			var (path, entry) = item;
+			var clip = AudioClip.Decode( entry.Name, entry.SoundData, entry.DecodedSize );
+
+			if ( clip == null )
+				return;
+
+			var bankChannels = entry.SoundType == MP2File.SoundTypes.MP2_STEREO ? 2 : 1;
+			var played = entry.DecodedSize / (2 * bankChannels);
+			var expected = (int)((long)played * Audio.SampleRate / entry.SampleRate);
+
+			if ( clip.Channels != bankChannels || clip.Frames != expected )
+				wrong.Add( $"{path}:{entry.Name} {clip.Channels}ch {clip.Frames} frames, expected {bankChannels}ch {expected}" );
+
+			if ( entry.SampleRate != Audio.SampleRate )
+				fast.Add( $"{path}:{entry.Name} {played}>{clip.Frames}" );
+
+			Interlocked.Increment( ref cut );
+		} );
+
+		Assert.AreEqual( 0, wrong.Count, string.Join( "; ", wrong.Take( 5 ) ) );
+		Assert.AreEqual( 3659, cut, "every clip NLayer decodes" );
+		CollectionAssert.AreEqual( new[] { "global/sound/RideHD.sdt:mortar_2.mp2", "global/sound/RideHD.sdt:mortar_3.mp2",
+			"global/sound/RideHD.sdt:tp_riderepaired", "global/sound/RideHD.sdt:tp_sideshowwin_", "global/sound/SfxHD.sdt:keyexplode.mp2" },
+			fast.Select( f => f[..f.LastIndexOf( ' ' )] ).Order().ToList(), "the five 44,100 Hz entries: " + string.Join( ", ", fast.Order() ) );
+	}
+
+	/// <summary>
 	/// Every shipped clip, decoded here by NLayer's own float decode and by <see cref="AudioClip.Decode"/>: each stored
 	/// word is that float taken to the nearest 16-bit word and held to the range. The clips that peak past full scale are the ones a missing
 	/// clamp gets wrong, and they are counted.
@@ -60,6 +162,7 @@ public class AudioClipTests
 
 		var compared = 0;
 		var past = 0;
+		var pastPlayed = 0;
 		var skipped = 0;
 		var resampled = 0;
 		var firstWrong = new System.Collections.Concurrent.ConcurrentBag<string>();
@@ -93,12 +196,12 @@ public class AudioClipTests
 			catch ( Exception )
 			{
 				// The entries NLayer will not decode are the ones Decode returns null for.
-				Assert.IsNull( AudioClip.Decode( entry.Name, entry.SoundData ), $"{path}:{entry.Name} would not decode here but did there" );
+				Assert.IsNull( AudioClip.Decode( entry.Name, entry.SoundData, entry.DecodedSize ), $"{path}:{entry.Name} would not decode here but did there" );
 				Interlocked.Increment( ref skipped );
 				return;
 			}
 
-			var clip = AudioClip.Decode( entry.Name, entry.SoundData );
+			var clip = AudioClip.Decode( entry.Name, entry.SoundData, entry.DecodedSize );
 
 			if ( floats.Length == 0 )
 			{
@@ -111,6 +214,12 @@ public class AudioClipTests
 
 			if ( floats.Any( f => MathF.Abs( f ) > 1f ) )
 				Interlocked.Increment( ref past );
+
+			// The clip is cut to the bank's played length before anything else (Q659), so the comparison is too.
+			floats = [.. floats.Take( Math.Min( floats.Length, entry.DecodedSize / (2 * channels) * channels ) )];
+
+			if ( floats.Any( f => MathF.Abs( f ) > 1f ) )
+				Interlocked.Increment( ref pastPlayed );
 
 			// The five that are not at the device's rate go through the resampler first, then to words.
 			if ( rate != Audio.SampleRate )
@@ -141,6 +250,7 @@ public class AudioClipTests
 		Assert.AreEqual( 0, firstWrong.Count, "stored words differ from the float decode's: " + string.Join( ", ", firstWrong.Take( 5 ) ) );
 		Assert.AreEqual( 3659, compared, "the clips NLayer decodes, compared" );
 		Assert.AreEqual( 336, past, "clips whose float decode peaks past full scale (docs/exe/audio.md says 336)" );
+		Assert.AreEqual( 335, pastPlayed, "of them, the clips that peak past it within the played length: one only in the tail that is cut" );
 		Assert.AreEqual( 5, resampled, "the clips shipped at 44,100 Hz" );
 		Assert.AreEqual( 80, skipped, "the clips NLayer refuses, set aside (Decode refuses them too)" );
 	}
