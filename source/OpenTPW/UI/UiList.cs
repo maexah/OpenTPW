@@ -946,7 +946,9 @@ internal sealed class UiList : UiControl
 	/// The row of <paramref name="id"/> picked and brought into view (<c>FUN_00664d2a</c>, then <c>FUN_00665739</c>): a row
 	/// outside the window becomes its top, held so the window ends at the last row. Nothing for an id with no row.
 	/// </summary>
-	internal void Pick( int id )
+	internal void Pick( int id ) => PickRow( id, posted: false );
+
+	private void PickRow( int id, bool posted )
 	{
 		var index = _rows.FindIndex( row => row.Id == id );
 
@@ -961,9 +963,16 @@ internal sealed class UiList : UiControl
 				_scrollTop = _rows.Count - VisibleRows;
 		}
 
-		Select( index );
+		Select( index, posted );
 		Refresh();
 	}
+
+	/// <summary>
+	/// <see cref="Pick"/> with its <c>0x401</c> queued as the original's is (<c>FUN_00658ccc</c>), not handed over now: it
+	/// is taken by <see cref="TakePosted"/>, after any pick the fill posted. Only the last post is kept, so a fill's
+	/// pick followed by this one is taken as the second alone; the screen that uses it ends on the same row either way.
+	/// </summary>
+	internal void PickPosted( int id ) => PickRow( id, posted: true );
 
 	/// <summary>How far down the list the visible window starts: the index of the row in the first slot.</summary>
 	internal int ScrollTop => _scrollTop;
@@ -1077,7 +1086,7 @@ internal sealed class UiList : UiControl
 		return slot < VisibleRows && index < _rows.Count ? index : -1;
 	}
 
-	private void Select( int index )
+	private void Select( int index, bool posted = false )
 	{
 		// FUN_0066525c places the highlight on the slot even when the index does not move, and posts only when it does.
 		_highlightSlot = index - _scrollTop;
@@ -1086,7 +1095,11 @@ internal sealed class UiList : UiControl
 			return;
 
 		_selected = index;
-		SelectionChanged?.Invoke( _rows[index].Id );
+
+		if ( posted )
+			_posted = index;
+		else
+			SelectionChanged?.Invoke( _rows[index].Id );
 	}
 
 	/// <summary>

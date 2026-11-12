@@ -509,6 +509,12 @@ Each was found by trial in the item named, and cost a run to find.
   `place("1e497")` rectangle scaled from (272, 181, 1817, 930) at row-area x (294 + 1720) / 2, y 315 + 56n + 28.
   Escape shuts the screen and V opens it again with the pointer left at rest; `key("Down")`, `key("Home")` are the
   cursor keys.
+- **A list's fill pick read in a cloud container** (Q232, `lib/consolerun.py`, off-screen): `40 park jungle`, `3 pause`,
+  `3 !w=$(xdotool search --onlyvisible --name . | head -1); xdotool windowfocus --sync $w mousemove --window $w 1250 700
+  sleep 0.3 key v` (the pointer right of every list's rows in the 1280 x 1024 window), `3 control 1e497` (the visitors
+  list's `selected index`, beside the `Visitors list: sort 1, N rows:` line naming the row sorted first); then
+  `2 buyscreen`, `2 control 1f8` (the buy list) and `footprint` more than half a second later (`row R shown`, `help item
+  R`). A second `key v` there opened the visitors list again rather than shutting it.
 - **The update notice and a ride's window, photographed on the desk, and a person's puffs counted by cell** (Q945; `q945/photos.py fake`, `q945/ours2.py <out> <bin> <secs>`, both run with the venv's python): `photos.py` is `q941/confirm.py`'s `fake` case with `openthing 13` and a frame of the Belly Bounce's window added at the end, so one launch gives the lobby, the lobby's Escape menu, the park's Escape menu (each with the gold "Update available" above the label) and the window; its three teal checks (P6, P8, P9) read `NOT as predicted` since the notice went gold (`(6, 236, 162, 4)`), which is the old script, not a fault. `ours2.py` plays the stock park on the desk, the camera on the Belly Bounce, and groups the log's `Person puff:` lines by the cell they stood on; the riders' counts to set beside them are the log's `Person N been AdmitPerson'd to ride 13` (taken on) and `Person N: successfully left ride 13` (let off). A bus load's arrival cell is (53, 5) for the small vehicle and (53, 3) for a larger one (`ParkPeople.ArrivalCell`), so a run's arrival puffs stand at one or the other. The arrival puff stands under the bus shelter's glass roof and was not photographed from above or from behind the bus.
 
 - **The daily fork watch** (2026-10-16, `fork-review-2/watch/2026-10-16/`): what the meneerkrabs fork newly reads from

@@ -75,6 +75,10 @@ internal abstract class ParkFileScreen : UiWindow
 			RowFont = RowFont,
 			RowHeight = UiList.RowHeightOf( RowFont ),
 
+			// The add picks the top row as the first goes in (FUN_0066403b). The Load and Save Park handlers (FUN_0049e880,
+			// the Save's 0x0049ea30) have no 0x401 arm, so the pick is the highlight alone.
+			PicksFirstRow = true,
+
 			// The list's flags carry 0x80.
 			SelectsUnderPointer = true,
 			Activated = RowClicked

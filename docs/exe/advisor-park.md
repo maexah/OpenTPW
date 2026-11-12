@@ -1682,7 +1682,8 @@ key's value plus the per-day key's for each day of `DaysSinceTheFirstSweep`. The
 standing, where the original counts the ride items with one standing: the same nought. Its poll line ends
 ` rides=N`. `ParkTags.Rows` lists row 64. The bar's buttons of types 9 to `0xc` open `ParkBuyScreen` on the tab
 the type names (`openOn`), or pick it on the one open (`PickTab`), and take the tag off as the entry-price
-button does; a tag that names an item counts `TAG_BAR_BUY_ITEM_ROW` (no listed row does). The console's
+button does; a tag that names an item has its row selected on the screen after the fill (`ParkBuyScreen.PickItem`,
+Q232; no listed row names one). The console's
 `windows` names the buy screen's tab.
 
 **The original first** (`q322/PREDICTION.txt`, round 1; `q322/orig/run.sh <file>`, `advisor.py ...
@@ -1726,8 +1727,8 @@ message 62, no attempt, no tag by tick 1000, the count one more.
 | The buy screen's own line | `0xbc` posted at 1000 as the screen is built, and said | the same ("The buy screen's own line") |
 | The ride count | the items' control records' `+0x18` | the ride things standing |
 
-**Not built or not seen.** The row of a tag's item selected on the buy screen
-(`TAG_BAR_BUY_ITEM_ROW`). In no game run: lines 2 and 3 (samples 180 and 181; the test holds the turn), the line
+**Not seen.** The row of a tag's item selected on the buy screen (built by Q232, held by a test, no listed row
+names an item). In no game run: lines 2 and 3 (samples 180 and 181; the test holds the turn), the line
 said again past its 120 quarter-ticks, button types `0xa` to `0xc` and the button with the buy screen open (the test
 holds `0xb` and the open screen), a ride bought after the line. Not heard in either game.
 

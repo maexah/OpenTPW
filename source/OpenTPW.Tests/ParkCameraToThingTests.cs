@@ -268,6 +268,37 @@ public class ParkCameraToThingTests
 		Assert.IsFalse( _stack.Windows.Contains( screen ), "and the screen closed" );
 	}
 
+	/// <summary>
+	/// <b>The visitors list opens with its first row picked</b> (<c>FUN_0066403b</c>'s <c>FUN_0066525c( 0 )</c>; the
+	/// handler <c>0x00493230</c> has no <c>0x401</c> arm): the row sorted first is selected and highlighted on the top
+	/// slot, nothing is counted, and a right click on the strip under the rows, missing every row, goes to its guest.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the visitors list without the pick.</remarks>
+	[TestMethod]
+	public void TheVisitorsListOpensOnItsFirstRow()
+	{
+		var guests = new int[4];
+		for ( var n = 0; n < 4; ++n )
+			Assert.AreNotEqual( 0, guests[n] = _people.Admit( 42 + n, 5 + n ) );
+
+		var picks = Times( "LIST_FIRST_ROW_SELECTED" );
+		var screen = new ParkVisitorsScreen( _stack );
+		_stack.Open( screen );
+
+		var list = (UiList)typeof( ParkVisitorsScreen ).GetField( "_list", Private )!.GetValue( screen )!;
+		Assert.IsTrue( list.Rows.Count >= 4 );
+		Assert.AreEqual( (list.Rows[0].Id, 0), (list.Selected, list.HighlightSlot), "the row sorted first, on the top slot" );
+		Assert.AreEqual( picks, Times( "LIST_FIRST_ROW_SELECTED" ), "the pick is built, not counted" );
+
+		var cell = _people.Guests[list.Rows[0].Id].Navigator.Position.Cell;
+		Assert.AreNotEqual( Start, Corner( cell ) );
+		var below = new Vector2( RowMiddle( list, 0 ).X, list.RowArea.Bottom - 3 );
+		Frame( true, below, 30.00f );
+		Frame( false, below, 30.08f );
+		Assert.AreEqual( Corner( cell ), ParkOrbitCameraMode.PointOfInterest, "the miss goes to the first row's guest" );
+		Assert.IsFalse( _stack.Windows.Contains( screen ) );
+	}
+
 	/// <remarks><b>Mutations:</b> the staff list not wired; its screen left open.</remarks>
 	[TestMethod]
 	public void ARightClickOnAStaffRowGoesToThatMemberAndClosesTheScreen()
@@ -484,8 +515,8 @@ public class ParkCameraToThingTests
 			Hover( items, ((Dictionary<int, UiList>)typeof( ParkItemsScreen ).GetField( "_lists", Private )!.GetValue( items )!)[2],
 				"misc", id => Corner( ParkOrbitCameraMode.CellOfThing( id, null, _state )!.Value ), 50f );
 
-			// The first row and the last on the visitors; the last alone on the staff and the tab, which picked their first.
-			Assert.AreEqual( 4, picks, "one log line a pick" );
+			// The last alone on each: every list picked its first row as it filled.
+			Assert.AreEqual( 3, picks, "one log line a pick" );
 		}
 		finally
 		{

@@ -884,39 +884,39 @@ filed the items that cite it.
   root, `wheel.sh PID -1 1`: predict 110. (f) Escape or the cross closes it: predict mValid 0; F1 then: no slot, the
   kept record unchanged. A frame (`orig.sh shot`) at (c), (d), (e) and (f). Ours the same steps by `q870/run1.py`
   (TOOLING), the log's `Park advisor: post message=188` lines and `camera`'s zoom= beside them.
-- [ ] **Q232. A list opens with no row selected, where the original's opens with one highlighted.** Found by Q117
-  (`hud.md`, "A right click on a list"); decoded in Q871 (`hud.md`, "What moves the highlight after the fill's
-  pick"). Build: (1) the add's pick (`UiList.PicksFirstRow`) on the visitors, buy and Load and Save Park lists, which
-  count it (`LIST_FIRST_ROW_SELECTED`); the buy screen's `0x401` arm takes it, the others' handlers have none, so there
-  it is the highlight alone. (2) After an opener's fill, a list the pointer rests on selects the row under it (`0x10001`, taken
-  at the next pump, after the add's pick). The fill's first add hides the list's scroll bar and that re-runs the hover
-  test with the list linked. A point over no row leaves the selection.
-  (3) The cursor cluster's End, Home, Up and Down (`0x2300`, `0x2400`, `0x2600`, `0x2800`; not the keypad's), with no
-  modifier, on each key down including the held key's auto-repeats (`0x1000a`; the release does nothing), go to the
-  list that last took the accelerator. A list with flag `0x200` takes it on its own `0x15` at the pump after it is
-  built and on `0x1a` when it becomes the last pressed control, but not while it holds the focus (`FUN_0065e640`). It
-  keeps it while visible, ahead of the focus and the last pressed (`0x0066997e`..`0x006699eb`), until it is destroyed
-  (`0x0065c325`). Home selects index 0, End the last row, Up the selected index less one, Down plus one
-  (`FUN_00665b51`), through `FUN_00665739`: a negative index clears the selection (Up on the first row, or with none
-  selected); an index past the end is the last row (Down on the last row changes nothing and posts nothing); a row
-  outside the window becomes the top row, the top no more than count less visible rows; the scroll bar follows; the
-  screen gets `0x401` when the selection changes and `0x405` when the top row moves. The visitors, all-staff,
-  all-items and hire lists (`0x291`); not the buy (`0x91`) or Load/Save Park (`0x81`) lists. Until built, ours counts
-  the pick at rest and the keys where they are reached (a counter added with the build). (4) The buy list's handed item (`TAG_BAR_BUY_ITEM_ROW`). Confirm: the visitors list opened by V under a
-  pointer resting on row 3 beside the original's, then Down and Home, the highlighted row predicted first and read
-  from memory (`+0x14c`); a screenshot each.
-  From Q233b: the buy list now selects the row under a moving pointer (`UiList.SelectsUnderPointer`, the flag `0x80`). With
-  no first row selected, the buy screen's panel stays empty until the pointer has been over a row, where the
-  original's shows the top row half a second after the list fills.
-  From Q495 (`hud.md`, "The buy screen's help rows"): the fill's pick is also the buy screen's help item, so in the
-  original the first row's help row is posted as soon as the pointer comes onto the row area; ours posts nothing before
-  a row is selected. After a tab's click the original's bar was hidden with the pointer on the tab (`q495/orig/`,
-  O9), where ours keeps the tab's row: look at it with the pick.
-  From Q356 (`hud.md`, "The first row is picked as a list fills"): the pick is built for the hire list
-  (`UiList.PicksFirstRow`, its `0x401` posted and taken by the screen's `Update`); a list sets it once its screen's
-  handler of `0x401` is read.
-  From Q375 (`hud.md`, "The miscellaneous tab: a row an object, and each tab's sort"): the pick is built for the
-  four all-items lists too (their handler has no `0x401` arm).
+
+- [ ] **Q1428. A list built under a pointer at rest on its rows selects the row under it (piece (2) of Q232).** Decoded in
+  Q871 (`hud.md`, "What moves the highlight after the fill's pick", the pointer at rest). After an opener's fill, a
+  list the pointer rests on selects the row under it (`0x10001`, taken at the next pump, after the add's pick): the
+  fill's first add hides the list's scroll bar and that re-runs the hover test with the list linked (`FUN_006589f9`).
+  A point over no row leaves the selection. Ours hands a list the point only on a frame the pointer moved
+  (`WindowStack`), so a list opened under a resting pointer keeps the fill's pick: count it where it is reached until
+  built. Confirm: the visitors list opened by V under a pointer resting on row 3, `control 1e497` reading index 2,
+  beside the original's (`+0x14c`) and a screenshot each.
+
+- [ ] **Q1429. End, Home, Up and Down move a list's highlight (piece (3) of Q232).** Decoded in Q871. The cursor
+  cluster's End, Home, Up and Down (`0x2300`, `0x2400`, `0x2600`, `0x2800`; not the keypad's), with no modifier, on
+  each key down including the held key's auto-repeats (`0x1000a`; the release does nothing), go to the list that last
+  took the accelerator. A list with flag `0x200` takes it on its own `0x15` at the pump after it is built and on `0x1a`
+  when it becomes the last pressed control, but not while it holds the focus (`FUN_0065e640`). It keeps it while
+  visible, ahead of the focus and the last pressed (`0x0066997e`..`0x006699eb`), until it is destroyed (`0x0065c325`).
+  Home selects index 0, End the last row, Up the selected index less one, Down plus one (`FUN_00665b51`), through
+  `FUN_00665739`: a negative index clears the selection (Up on the first row, or with none selected); an index past
+  the end is the last row (Down on the last row changes nothing and posts nothing); a row outside the window becomes
+  the top row, the top no more than count less visible rows; the scroll bar follows; the screen gets `0x401` when the
+  selection changes and `0x405` when the top row moves. The visitors, all-staff, all-items and hire lists (`0x291`);
+  not the buy (`0x91`) or Load/Save Park (`0x81`) lists. Until built, count the keys where they are reached. Confirm:
+  the visitors list opened by V, then Down and Home, the highlighted row predicted first and read from memory
+  (`+0x14c`) beside ours' `control 1e497`; a screenshot each.
+
+- [ ] **Q1430. The first row's highlight photographed beside the original's (from Q232).** Q232 built the fill's pick on
+  the visitors, buy and Load and Save Park lists in a cloud container with no display to photograph. Photograph ours
+  and the original's: the visitors list opened by V with the pointer away from the rows (the highlight on the row
+  sorted first), the buy screen opened by its gadget button (the top row highlighted and its footprint in the panel
+  half a second later, the help bar on the top row's help once the pointer comes onto the rows), a tab's click on the
+  buy screen with the pointer on the tab (Q495's O9: the original's bar hidden there; look whether ours keeps the
+  tab's row), and the Load Park list's first saved park. A message-bar tag naming an item (none listed does) is not
+  reachable in Lost Kingdom.
 
 - [ ] **Q754. The lobby's build label letters one pixel right of the original's.** From the Q752 review (finding 2).
   GAME8.bf4's 'v' has left 0, and the original's "v 2.0" has its ink at 751 to 772 of the 800 x 600 picture

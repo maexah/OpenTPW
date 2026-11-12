@@ -12145,6 +12145,19 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q232. A list opens with no row selected, where the original's opens with one highlighted.** Done 2026-11-12
+  (lane c77, pieces (1) and (4); a cloud container: no Ghidra, no original, no display to photograph). Decoded in Q871
+  (`hud.md`, "What moves the highlight after the fill's pick"). (1) The visitors, buy and Load and Save Park lists set
+  `UiList.PicksFirstRow`, so every list the game builds picks its first row as it fills; the buy screen's `Update` takes
+  the posted `0x401` (`TakePosted`), so its help item and its panel's half-second wait start on the row sorted first,
+  and the others have the highlight alone. (4) A tag's item on the message bar's buy buttons selects its row after the
+  fill on either half of the opener (`ParkBuyScreen.PickItem`, its `0x401` queued behind the fill's,
+  `UiList.PickPosted`); `TAG_BAR_BUY_ITEM_ROW` is gone. Tests: `TheVisitorsListOpensOnItsFirstRow`,
+  `TheBuyListOpensOnItsFirstRowAndThePanelShowsItHalfASecondLater`, `TheOpenersItemIsSelectedAfterTheFillsPick`, the
+  Load Park test's selection; six bugs put back by hand, each failed. Off-screen on the stock park (the run's output not
+  kept): V's visitors list read `selected index 0 (row 38), sprite on slot 0`, 38 sorted first and 42 logged first;
+  the buy screen's `footprint` read `row 1104 shown, none waiting, list selection 1104` and `help item 1104` with no
+  pointer on the rows; no `LIST_FIRST_ROW_SELECTED`. Left: (2) Q1428, (3) Q1429, the photographs Q1430.
 
 ## B. Docs and comments
 
