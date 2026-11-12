@@ -115,6 +115,10 @@ internal sealed class ParkVisitorsScreen : UiWindow
 		_list = Root.Add( new UiList
 		{
 			Id = 0x1e497,
+
+			// Flag 0x10 in the stream (0x291): a sorted list, so its headings click Select3 (WindowStack.Release).
+			Sorted = true,
+
 			Rect = new UiRect( 272, 181, 1817, 930 ),
 			HelpText = 135,
 			Mesh = UiMesh.Get( "list_kids" ),

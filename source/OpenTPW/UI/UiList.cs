@@ -71,6 +71,14 @@ internal sealed class UiList : UiControl
 	/// </summary>
 	internal bool[] TextColumns { get; init; } = [];
 
+	/// <summary>
+	/// The style bit <c>0x10</c> of the list's layout flags (<c>+0x48</c>): set on all seven sorted list records (buy <c>0x91</c>, the
+	/// rest <c>0x291</c>), clear on the Load and Save Park list's <c>0x81</c>. The click hook (<c>0x00485780</c>) picks the click by the
+	/// style of the control the click is told to, and a heading tells its list, so a heading of a list with it plays <c>Select3</c>
+	/// (<c>hud.md</c>, "Which window the click sound is for").
+	/// </summary>
+	internal bool Sorted { get; init; }
+
 	/// <summary>The column the list is sorted on (<c>list+0x168</c>), or -1 for a list no screen has given a sort.</summary>
 	private int _sortColumn = -1;
 
@@ -336,9 +344,8 @@ internal sealed class UiList : UiControl
 	/// cells it made itself - the same reason the tab groups survive it.
 	/// </para>
 	/// <para>
-	/// <b>A deviation (Q711):</b> the original clicks <c>Select3</c> (<c>0xbd</c>) for a heading, because the click hook
-	/// (<c>0x00485780</c>) picks the sound by the list's style bit <c>0x10</c>; this heading is a button with
-	/// <c>Toggles</c> false and plays <c>BUTTON01</c> (<c>hud.md</c>, "Which window the click sound is for").
+	/// <b>Its click is <c>Select3</c> (<c>0xbd</c>) on a <see cref="Sorted"/> list</b>, by the list's style and not the heading's
+	/// (<c>WindowStack.Release</c>; <c>hud.md</c>, "Which window the click sound is for").
 	/// </para>
 	/// </remarks>
 	internal UiButton AddHeading( int column, UiRect rect, string text, string? mesh = null, int? font = null,

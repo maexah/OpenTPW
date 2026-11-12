@@ -947,6 +947,79 @@ public class ParkListScreenRewriteTests
 	}
 
 	/// <summary>
+	/// <b>A heading click on every list screen plays <c>Select3</c> (189), not <c>BUTTON01</c> (31)</b>: the click hook picks the sound
+	/// by the style bit <c>0x10</c> of the control the click is told to (<c>0x00485780</c>, <c>0x004857cb</c>), a heading tells its list,
+	/// and all seven sorted list records carry it (<c>docs/exe/hud.md</c>, "Which window the click sound is for"). Each heading is
+	/// clicked at its middle through a real <see cref="WindowStack"/>, the release's own path.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> the receiver's flag not read (every heading 31); the flag left off one screen's list; the rule read off the
+	/// heading's own style.
+	/// </remarks>
+	[TestMethod]
+	public void EveryListScreensHeadingClicksSelect3()
+	{
+		var real = new WindowStack();
+		var clicked = new List<string>();
+
+		// A heading click changes the sort each screen keeps for its next opening: put back as it was.
+		var kept = new[] { typeof( ParkHireScreen ), typeof( ParkBuyScreen ), typeof( ParkStaffScreen ), typeof( ParkVisitorsScreen ) }
+			.Select( screen => screen.GetField( "_sort", BindingFlags.Static | BindingFlags.NonPublic )! )
+			.Select( field => (field, field.GetValue( null )) ).ToList();
+		var items = (int[])typeof( ParkItemsScreen ).GetField( "_sorts", BindingFlags.Static | BindingFlags.NonPublic )!.GetValue( null )!;
+		var itemsKept = items.ToArray();
+
+		try
+		{
+			ClickEveryHeading( real, clicked );
+		}
+		finally
+		{
+			foreach ( var (field, value) in kept )
+				field.SetValue( null, value );
+
+			itemsKept.CopyTo( items, 0 );
+		}
+
+		CollectionAssert.AreEqual( clicked.Select( line => line[..line.LastIndexOf( ' ' )] + " 189" ).ToList(), clicked,
+			string.Join( "; ", clicked ) );
+	}
+
+	private static void ClickEveryHeading( WindowStack real, List<string> clicked )
+	{
+		foreach ( var (name, open) in new (string, Func<UiWindow>)[]
+		{
+			("hire", () => new ParkHireScreen( real )), ("buy", () => new ParkBuyScreen( real )),
+			("all staff", () => new ParkStaffScreen( real )), ("all items", () => new ParkItemsScreen( real )),
+			("visitors", () => new ParkVisitorsScreen( real ))
+		} )
+		{
+			var screen = open();
+			real.Open( screen );
+
+			var headings = Descendants( screen.Root ).OfType<UiList>()
+				.SelectMany( list => list.Children.OfType<UiButton>().Where( heading => heading.Id >= 0x10 && heading.Id < 0x18 && heading.Visible ) )
+				.ToList();
+
+			Assert.IsTrue( headings.Count >= 2, $"{name}: its headings" );
+
+			foreach ( var heading in headings )
+			{
+				var at = heading.Pixels;
+				UiSounds.LastClick = null;
+				real.ClickAt( at.X + (at.Width / 2f), at.Y + (at.Height / 2f) );
+				clicked.Add( $"{name} 0x{heading.Id:x} {UiSounds.LastClick?.ToString() ?? "none"}" );
+			}
+
+			real.Close( screen );
+		}
+	}
+
+	/// <summary>The shown controls under <paramref name="control"/>: a hidden one and all under it left out.</summary>
+	private static IEnumerable<UiControl> Descendants( UiControl control )
+		=> control.Children.Where( child => child.Visible ).SelectMany( child => Descendants( child ).Prepend( child ) );
+
+	/// <summary>
 	/// <b>The hire and buy lists letter the name from the left and the wage or the price from the right</b>, as their
 	/// stylers <c>FUN_0049c880</c> and <c>FUN_004ad340</c> leave the name's label at its default and hand the figure
 	/// <c>FUN_0065c428( 2, 1 )</c>; the buy list's tick-box is a mesh with no lettering (<c>docs/exe/hud.md</c>, "How a

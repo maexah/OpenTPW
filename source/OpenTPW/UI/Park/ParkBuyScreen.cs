@@ -197,6 +197,10 @@ internal sealed class ParkBuyScreen : UiWindow
 		_list = Root.Add( new UiList
 		{
 			Id = 0x1f8,
+
+			// Flag 0x10 in the stream (0x91): a sorted list, so its headings click Select3 (WindowStack.Release).
+			Sorted = true,
+
 			Rect = new UiRect( 1009, 179, 1813, 902 ),
 			Mesh = UiMesh.Get( "f_buyitem" ),
 			RowArea = new UiRect( 1037, 427, 1727, 871 ),

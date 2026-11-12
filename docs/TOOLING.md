@@ -441,6 +441,7 @@ Read this before aiming a click or comparing two pictures. Each fact names the i
 
 Each was found by trial in the item named, and cost a run to find.
 
+- **Which click sound a button plays, in a cloud lane** (Q711, `lib/consoledrive.py`): `park jungle`, then `hirescreen` (or `screen 4`, `screen 6`), `control <hex id>` for a button's `middle`, and `click X Y`: the reply ends `click sound 189` (`Select3`), `click sound 31` (`BUTTON01`) or `no click sound`. A list's headings are ids `10` up; the hire screen's all-things button `2495` is a plain one (31). The console prints its replies as `[dbg] control ...`, so an `ask` regex anchored on `^control` waits out its timeout: match `control 0x`.
 - **The console's `walk` in a cloud container** (Q14, `lib/consolerun.py`): `40 park jungle`, `3 camcorder 481.897 166.285` (the path, so a short walk crosses no shut edge; `camcorder 500 500` stops at y 510 on the first walk), then `walk 1 0 N`. Each of the N steps is a fixed sixtieth of a second (`Time.StepDelta`), 0.667 units, whatever the frame rate (xvfb's 13 to 14 frames a second too), so N = 60 walks 40 units and `stand=` can be predicted from N before it is read back; it walks under `pause` as well, so a paused walk then a grab photographs a crossing.
 - **A fade's steps read in a run** (Q509, `lib/consolerun.py`, off-screen): `40 park jungle`, `2 speech 5` (his voice starts 0.8 s after the line is
   given, so a quieten sooner finds nothing), `0.02 quieten`, then `0.04 voices` lines: a stepping voice reads `fading <volume>`; the

@@ -1876,9 +1876,13 @@ public static class DebugConsole
 					break;
 				}
 
+				// The click sound the release asked for, if any: BUTTON01 (31) or Select3 (189).
+				UI.UiSounds.LastClick = null;
+
 				if ( clickStack.ClickAt( Argument( 1 ), Argument( 2 ) ) )
 				{
-					Reply( $"click: the interface took ({Argument( 1 ):F0},{Argument( 2 ):F0})" );
+					Reply( $"click: the interface took ({Argument( 1 ):F0},{Argument( 2 ):F0})"
+						+ (UI.UiSounds.LastClick is { } clickSound ? $", click sound {clickSound}" : ", no click sound") );
 					break;
 				}
 
