@@ -39,6 +39,8 @@ public class BalanceRowCountTests
 	/// <summary>
 	/// Two subscripts written, nought and five: the original's count is 6. A table-size rule says 8 and a rule
 	/// counting the rows written says 2. A later layer writing a higher subscript raises it, as one object's merge does.
+	/// Written falling (five, then nought) it is still 6, and a later layer's lower subscript leaves it: the original keeps
+	/// the highest (<c>0x00401aa7</c>), where a rule taking the last subscript seen says 1 and 2.
 	/// </summary>
 	[TestMethod]
 	public void AnArraysRowsAreTheHighestSubscriptWrittenPlusOne()
@@ -50,6 +52,12 @@ public class BalanceRowCountTests
 
 		var layered = ParkBalance.FromText( "PeepTypes[0].StartingCash 300\n", "PeepTypes[6].PreferredExcitement.StartingCash 40 500\n" );
 		Assert.AreEqual( 7, layered.RowsOf( "PeepTypes" ) );
+
+		var falling = ParkBalance.FromText( "PeepTypes[5].StartingCash 400\nPeepTypes[0].StartingCash 300\n" );
+		Assert.AreEqual( 6, falling.RowsOf( "PeepTypes" ), "subscripts written falling" );
+
+		var lowerLater = ParkBalance.FromText( "PeepTypes[6].StartingCash 400\n", "PeepTypes[1].StartingCash 300\n" );
+		Assert.AreEqual( 7, lowerLater.RowsOf( "PeepTypes" ), "a later layer writing a lower subscript" );
 	}
 
 	/// <summary>

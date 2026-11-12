@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """projpoint.py PID X,Y,Z ... : world points (Y the height) put through the ORIGINAL's draw matrix [0x0087b088] to pixels of
 its 1024 x 768 frame, as camera.py's corners are, with each point's w; first the eye (the camera matrix 0x0087aff0's last
-row) and the stored point looked at (0x007908f0). Read-only. Q1106: at 595,355 zoom 70 rotation 180 over ground 2.6265,
+row) and the orbit's stored point (0x007908f0, which nothing aims at: park-engine.md, "Nothing is aimed at"). Read-only.
+The general form of aimat.py (one cell's middle at a height, whole pixels): any points, two decimals. Q1106: at 595,355 zoom 70 rotation 180 over ground 2.6265,
 (595, 2.6265, 355) went to (512.00, 384.00): the frame's middle is the point lifted by the ground, not the stored point
 (whose height reads 0)."""
 import struct, sys

@@ -197,6 +197,52 @@ public class ParkFileWriterReusedIdTests
 		Assert.AreEqual( shipped.People.Count + 1, written.People.Count );
 	}
 
+	/// <summary>
+	/// <b>A park saved by the level with no sound device leaves out a sold thing's held chain</b> (Q655): the level hands
+	/// the writer <see cref="ParkAudio.FileVoicesNotPutBack"/>, so the shipped gates' chain, made the Fountain's as a
+	/// Loudspeaker's <c>ADDOBJ 4 -1 177 10</c> holds its own, is written while the Fountain stands and goes with it sold.
+	/// A test run has no sound device, so nothing is put back. <b>Mutation:</b> the level passing false for it (or
+	/// leaving the argument out) keeps the chain.
+	/// </summary>
+	[TestMethod]
+	public void ALevelSavedWithNoSoundDeviceLeavesOutASoldThingsHeldChain()
+	{
+		var gates = shipped.Voices.Saved.Single( voice => voice.Type == ParkVoices.HeldChainType );
+		var fountain = shipped.ScriptStates.ByHandle.Values.Single( script => (script.Effects ?? []).Any( effect => effect.Handle == 0x01320063 ) );
+
+		using ( var stream = new MemoryStream( data.ReadAllBytes( ShippedPark ) ) )
+		{
+			var reader = new SaveReader( stream );
+			var payload = reader.ReadFile();
+
+			shipped = new ParkWorld( shipped.ScriptStates.Splice( payload, [], [], new Dictionary<int, SavedEffect[]>
+			{
+				[fountain.Handle] = [new SavedEffect( 4, gates.Handle, -1, -1, 10 ), .. fountain.Effects!]
+			} ), reader.Preamble );
+		}
+
+		Assert.IsFalse( Audio.Ready, "a test run has no audio device" );
+
+		var (people, state, rides) = Park();
+		var audio = new ParkAudio( Theme );
+
+		made.Add( audio );
+		Assert.AreEqual( 0, audio.PutBackFileVoices( shipped.Voices ).Count );
+		Assert.IsTrue( audio.FileVoicesNotPutBack );
+
+		var standing = Saved( people, state, rides, "FountainStanding" ).Voices;
+
+		Assert.IsTrue( standing.Saved.Any( voice => voice.Handle == gates.Handle ), "kept while the Fountain stands" );
+
+		StringAssert.StartsWith( ParkBuilding.Sell( state, shipped, catalogue, null, rides, fountain.Thing, people ), "sell: " );
+
+		var sold = Saved( people, state, rides, "FountainSold" ).Voices;
+
+		Assert.IsNull( sold.Problem );
+		Assert.AreEqual( standing.Saved.Count - 1, sold.Saved.Count );
+		Assert.IsFalse( sold.Saved.Any( voice => voice.Handle == gates.Handle ), "gone with the Fountain" );
+	}
+
 	/// <summary><b>A guest on a sold object's id is written whole</b>, and the object and its script are gone.</summary>
 	[TestMethod]
 	public void AGuestOnASoldObjectsIdIsWrittenWhole()

@@ -177,4 +177,76 @@ public class GapCensusTests
 			RepoFiles.DeleteTree( folder );
 		}
 	}
+
+	/// <summary>The census over one scratch source file and a one-line queue: its exit code and its output.</summary>
+	private static (int Exit, string Output) CensusOver( string source, string queue )
+	{
+		var root = RepoFiles.Root();
+		var folder = Path.Join( Path.GetTempPath(), "opentpw-gapcensus-" + Guid.NewGuid().ToString( "N" ) );
+
+		if ( RepoFiles.Python( ["--version"] ) is not { Exit: 0 } )
+			Assert.Inconclusive( "skipped: no Python here" );
+
+		try
+		{
+			Directory.CreateDirectory( Path.Join( folder, "tools" ) );
+			Directory.CreateDirectory( Path.Join( folder, "docs" ) );
+			Directory.CreateDirectory( Path.Join( folder, "source", "OpenTPW" ) );
+			File.Copy( Path.Join( root, "tools", "gap_census.py" ), Path.Join( folder, "tools", "gap_census.py" ) );
+			File.WriteAllText( Path.Join( folder, "source", "OpenTPW", "R.cs" ), source.Replace( "\r", "" ) );
+			File.WriteAllText( Path.Join( folder, "docs", "QUEUE.md" ), queue );
+
+			var result = RepoFiles.Python( ["tools/gap_census.py"], null, folder )!.Value;
+			return (result.Exit, result.Output.Replace( "\r", "" ).Trim());
+		}
+		finally
+		{
+			RepoFiles.DeleteTree( folder );
+		}
+	}
+
+	/// <remarks>
+	/// A raw string with one quote inside, a character literal <c>'"'</c> in an interpolation hole and a raw
+	/// interpolated string with two dollars each read as C# does, so the calls after them are still found, and a name
+	/// joined to something by <c>+</c> is a site to read by hand, not a made-up name.
+	/// <b>Mutation:</b> raw strings read as <c>""</c> then a plain string, or a hole that reads no character literal
+	/// (the rest of the file taken for a string: no site at all, exit 0); a joined string taken for its prefix
+	/// (<c>PREFIX_</c> reported as a name).
+	/// </remarks>
+	[TestMethod]
+	public void RawStringsAndCharactersInHolesHideNoCallAfterThem()
+	{
+		const string source = """"
+			class R
+			{
+				void G( bool a, int k )
+				{
+					var t = """one " quote""";
+					var u = $"{(a ? '"' : 'b')}";
+					var v = $$"""{{k}} "" {""";
+					Unimplemented.Report( "AFTER_IT" );
+					Unimplemented.Report( "PREFIX_" + k );
+					Unimplemented.Report( $$"""RAW_{{k}}""" );
+				}
+			}
+
+			"""";
+
+		var (exit, output) = CensusOver( source, "- [ ] **Q1. Item.** `AFTER_IT` and `RAW_*`.\n" );
+
+		Assert.AreEqual( 1, exit, output );
+		Assert.AreEqual( "source/OpenTPW/R.cs:9: INDIRECT Report( \"PREFIX_\" + k ): no name-shaped string in the file; find its names by hand\n"
+			+ "3 report site(s) (INDIRECT 1, NAME 1, PATTERN 1); 1 name(s) not in the queue, at 1 site(s)", output );
+	}
+
+	/// <remarks><b>Mutation:</b> a literal left open to the file's end taken as a string, so the census counts what it
+	/// read before it and exits nought, and any call after it is lost unsaid.</remarks>
+	[TestMethod]
+	public void ALiteralThatNeverClosesStopsTheCensusWithTwo()
+	{
+		var (exit, output) = CensusOver( "class U { void G() => Unimplemented.Report( \"AFTER_IT\" ); string S = \"open; }\n", "- [ ] **Q1. Item.** `AFTER_IT`.\n" );
+
+		Assert.AreEqual( 2, exit, output );
+		StringAssert.StartsWith( output, "source/OpenTPW/R.cs: a string or character literal opened at line 1 does not close" );
+	}
 }

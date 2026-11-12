@@ -55,6 +55,8 @@ public partial class Renderer
 
 	public Renderer()
 	{
+		// The guard is tested through StartSize alone (RendererStartSizeTests): this constructor makes a window, so no
+		// test reaches this line, and a read of Settings.Default here without StartSize would pass them all.
 		var (width, height) = StartSize( () => Settings.Default.GameWindowSize );
 		Window = new( width, height, "Theme Park World", true );
 		Window.Resized += OnWindowResized;

@@ -3082,8 +3082,8 @@ the water ride (-1): `BUMP 14` stores minus the laps (`park.md`, "The two templa
 Karts, turned 180 on its anchor, the formula gives (24,20), which the file's ride chunk holds
 (`0x12000`, `0xf000`); a bought Dino Karts on (32,25) turned 0 lies at (32,26) and Splish Splash on (20,20) at (20,20).
 
-**The Standing count.** The object controls' standing count (`+0x18`) and first-build stamp (`+0x1c`) go out with the
-other structural edits (`ParkWorld.PutControls`). The park counts every purchase (`AddObject`) and every sale, so
+**The Standing count.** The object controls' standing count (`+0x18`) and first-build stamp (`+0x1c`) go out on every
+save that writes the things (`ParkWorld.PutControls`), whether or not anything was bought, sold or relisted (Q997, S-M1). The park counts every purchase (`AddObject`) and every sale, so
 what is bought and left out of the file (a coaster) is not in the file and what is sold and kept in it is:
 `ParkState.WrittenBuilt` writes the count of the objects the file holds, and an item whose only builds were left
 out takes the file's stamp back. Before, a kart bought with a shop wrote Standing +1 for a kart that was not in the

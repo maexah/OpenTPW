@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""aimat.py PID CX CY H - the pixel (of the original's 1024 x 768 frame) of cell (CX, CY)'s middle at ground height H, as original/camera.py --aim but with H."""
+"""aimat.py PID CX CY H - the pixel (of the original's 1024 x 768 frame) of cell (CX, CY)'s middle at ground height H, as original/camera.py --aim but with H.
+Whole pixels, cut toward nought; projpoint.py takes any points and gives two decimals and w."""
 import struct, sys
 pid = int(sys.argv[1]); f = open(f'/proc/{pid}/mem', 'rb', buffering=0)
 def rd(a, fmt='<I'):

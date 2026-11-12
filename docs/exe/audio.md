@@ -1356,8 +1356,10 @@ nothing to stop it; it writes nothing started here, nor a put-back voice's draws
 are, and counted `PARK_FILE_SOUND_WRITER_LIVE_VOICES` at a save where the park holds a script voice started here; the
 original writes the live voices, `0x0051c350`). With no sound device nothing is put back, so nothing is let go; there the
 writer leaves out each held chain a script's sound record named at the load and no written script names
-(`ParkFileWriter.WithoutUnnamedChains`, Q655), which is what a park with sound lets go: a sold Loudspeaker's chain, the
-Staff Room's after its `KILLOBJ 1`. A held chain no record named at the load stays, as a park with sound keeps it under no
+(`ParkFileWriter.WithoutUnnamedChains`, Q655), which is what a park with sound lets go of the chains it put back: a sold
+Loudspeaker's chain, the Staff Room's after its `KILLOBJ 1`. A named chain a park with sound could not put back (a
+`PARK_FILE_SOUND_VOICE_*` gap; no file on hand is known to hold one a script names) it keeps after its script
+ends, and this drops it. A held chain no record named at the load stays, as a park with sound keeps it under no
 script: the stock park's gates' 177, which their `EVENT` starts and keeps no record of (no script record of
 `Easymode.TPWI` names `0x012e0055`), and the screams'. **Not the original's:** its soundless save writes no voice list at
 all (FileFormats `saves.md`, "Sound"), so its next load with sound has no gates' chain either; here the rest of the list is

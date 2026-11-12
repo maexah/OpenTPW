@@ -145,10 +145,8 @@ public class RideAnimationsTests
 	/// carries one morph track and nothing else whatever: no rotation, no position, no UV, no visibility.
 	///
 	/// <para>
-	/// That settles a scope question rather than being a curiosity. Posing applies rotation, morph, UV and
-	/// visibility and deliberately does <b>not</b> apply position, because a position key is parent-local
-	/// exactly as a rotation key is and <see cref="LobbyModel"/> composes no per-mesh node tree to put one
-	/// back into. The camera carries no position track at all, so that gap provably cannot reach it.
+	/// That settles which road poses it. A clip with position, route or scale tracks is posed over the node
+	/// tree by <see cref="NodePoser"/>; the camera's carries none, so it is posed mesh by mesh.
 	/// </para>
 	///
 	/// <para>
@@ -172,7 +170,7 @@ public class RideAnimationsTests
 		Assert.AreEqual( 1, main.MorphTracks.Count, $"one mesh morphs - it carries {carried}" );
 		Assert.AreEqual( 0, main.RotationTracks.Count, $"and nothing turns - it carries {carried}" );
 		Assert.AreEqual( 0, main.PositionTracks.Count,
-			$"and nothing slides, so the position tracks LobbyModel does not pose are none of its business - {carried}" );
+			$"and nothing slides: it carries no position track, so it is posed by the mesh rotator, not NodePoser - {carried}" );
 
 		var model = new ModelFile( new System.IO.MemoryStream(
 			data.ReadAllBytes( "levels/jungle/features/camera/camera.md2" ) ) );

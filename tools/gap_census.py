@@ -15,13 +15,16 @@ and reads the names its argument can take:
 - an interpolated message (`$"{Name}: COAST op out of 1..8"`): its first word in capitals of three or more
   (`COAST`) is the name; a message with no such word (`$"guest state {s}"`) is DYNAMIC: its names are known only when
   the game runs, and the debug console's `unimplemented` lists them;
-- no string at all (`Report( gap )`): INDIRECT. Its names are the name-shaped strings (capitals, digits and `_`,
+- no string at all (`Report( gap )`), or a string joined to something by `+` (`"PREFIX_" + kind`): INDIRECT. Its names are the name-shaped strings (capitals, digits and `_`,
   holding a `_`) of the same file that no direct call uses, listed under the site to be checked by hand.
 A name is held when docs/QUEUE.md has it as a whole word, or when one item writes it short as its tail in a code span
 (`_PLAIN`) and writes in full another name with the same stem (`PARK_FILE_SOUND_VOICE_ONE_SHOT`). A MESSAGE's word held
 says only that the queue names the instruction, not that an item owns that message's case: the held line ends "(word)".
 Each line also gives the Q-numbers cited within twenty lines above the call ("near", "(open)" for an open item) and a
 "dead by CONTENT" or "dead by CODE" written there, to help find the item a name belongs to.
+Strings are read as C# 11 writes them: plain, verbatim, interpolated (a character literal in a hole too) and raw
+(opened and closed by three quotes or more, a `$` or `$$` before it). A string or character literal that does not close before the file ends is a form
+this does not read: the file is named and the census exits 2, rather than count nothing after it.
 Python 3.8 or newer, nothing to install; run it from anywhere in the repository."""
 import os, re, sys
 
@@ -65,16 +68,18 @@ def mask(text):
             i = j
         elif c == '"' or (c in "$@" and i + 1 < n and text[i + 1] in '"$@'):
             j = skip_string(text, i)
+            if not text[i:j].endswith('"'):
+                raise Unread(text.count("\n", 0, i) + 1)
             out.append(text[i:j])
             code.append(blank(text[i:j]))
             i = j
         elif c == "'":
-            j = i + 1
-            while j < n and text[j] != "'":
-                j += 2 if text[j] == "\\" else 1
-            out.append(text[i:j + 1])
-            code.append(blank(text[i:j + 1]))
-            i = j + 1
+            j = skip_char(text, i)
+            if not text[i:j].endswith("'"):
+                raise Unread(text.count("\n", 0, i) + 1)
+            out.append(text[i:j])
+            code.append(blank(text[i:j]))
+            i = j
         else:
             out.append(c)
             code.append(c)
@@ -82,16 +87,49 @@ def mask(text):
     return "".join(out), "".join(code)
 
 
+class Unread(Exception):
+    """A string or character literal that opens at this line and does not close: a form the census does not read."""
+
+
+def skip_char(text, i):
+    """The index just past the character literal that opens at i ('a', '\\'', '"')."""
+    j, n = i + 1, len(text)
+    while j < n and text[j] not in "'\n":
+        j += 2 if text[j] == "\\" else 1
+    return min(j + 1, n) if j < n and text[j] == "'" else j
+
+
+def quotes_at(text, j):
+    """How many double quotes run from j."""
+    k = j
+    while k < len(text) and text[k] == '"':
+        k += 1
+    return k - j
+
+
 def skip_string(text, i):
-    """The index just past the string literal that starts at i (plain, verbatim @"", interpolated $"" or $@"")."""
+    """The index just past the string literal that starts at i (plain, verbatim @"", interpolated $"" or $@"", or raw:
+    three quotes or more, closed by as many, its holes opened by as many braces as it has dollars)."""
     j = i
     prefix = ""
     while text[j] in "$@":
         prefix += text[j]
         j += 1
     verbatim, interp = "@" in prefix, "$" in prefix
-    j += 1  # the opening quote
     n = len(text)
+    run = quotes_at(text, j)
+    if run >= 3:
+        j += run
+        braces = "{" * prefix.count("$")
+        while j < n:
+            if text.startswith('"' * run, j):
+                return j + run
+            if interp and text.startswith(braces, j):
+                j = skip_hole(text, j)
+            else:
+                j += 1
+        return n
+    j += 1  # the opening quote
     while j < n:
         c = text[j]
         if not verbatim and c == "\\":
@@ -117,6 +155,9 @@ def skip_hole(text, i):
         if c == '"' or (c in "$@" and j + 1 < n and text[j + 1] in '"$@'):
             j = skip_string(text, j)
             continue
+        if c == "'":
+            j = skip_char(text, j)
+            continue
         if c == "{":
             depth += 1
         elif c == "}":
@@ -136,8 +177,21 @@ def literals(arg):
             j = skip_string(arg, i)
             body = arg[i:j]
             start = body.index('"')
-            prefix, inner = body[:start], body[start + 1:-1]
-            if "$" in prefix:
+            run = quotes_at(body, start)
+            run = run if run >= 3 else 1
+            prefix, inner = body[:start], body[start + run:-run]
+            braces = "{" * prefix.count("$")
+            if "$" in prefix and run >= 3:
+                out, k = [], 0
+                while k < len(inner):
+                    if inner.startswith(braces, k):
+                        k = skip_hole(inner, k)
+                        out.append("*")
+                    else:
+                        out.append(inner[k])
+                        k += 1
+                found.append(("interp", "".join(out)))
+            elif "$" in prefix:
                 out, k = [], 0
                 while k < len(inner):
                     if inner.startswith("{{", k):
@@ -158,6 +212,24 @@ def literals(arg):
     return found
 
 
+def strip_literals(arg):
+    """The argument with every string literal made one `"` and every character literal a space, so what joins them can
+    be read."""
+    out, i, n = [], 0, len(arg)
+    while i < n:
+        c = arg[i]
+        if c == '"' or (c in "$@" and i + 1 < n and arg[i + 1] in '"$@'):
+            out.append('"')
+            i = skip_string(arg, i)
+        elif c == "'":
+            out.append(" ")
+            i = skip_char(arg, i)
+        else:
+            out.append(c)
+            i += 1
+    return "".join(out)
+
+
 def argument(text, open_paren):
     """The text between the parenthesis at open_paren and the one that closes it."""
     depth, j, n = 0, open_paren, len(text)
@@ -165,6 +237,9 @@ def argument(text, open_paren):
         c = text[j]
         if c == '"' or (c in "$@" and j + 1 < n and text[j + 1] in '"$@'):
             j = skip_string(text, j)
+            continue
+        if c == "'":
+            j = skip_char(text, j)
             continue
         if c == "(":
             depth += 1
@@ -180,7 +255,7 @@ def sites(path, rel):
     """Each report call in one file as a dict: file, line, kind (NAME, PATTERN, MESSAGE, DYNAMIC, INDIRECT), names, arg."""
     with open(path, encoding="utf-8", errors="replace") as f:
         raw = f.read()
-    text, code = mask(raw)
+    text, code = mask(raw)  # raises Unread
     raw_lines = raw.split("\n")
     found = []
     for m in re.finditer(re.escape(CALL) + r"\s*\(", code):
@@ -202,8 +277,9 @@ def sites(path, rel):
                     kinds.add("MESSAGE")
                 else:
                     kinds.add("DYNAMIC")
-        if not lits:
+        if not lits or re.search(r'"\s*\+|\+\s*"', strip_literals(arg)):
             kinds.add("INDIRECT")
+            names = []
         kind = "INDIRECT" if "INDIRECT" in kinds else "DYNAMIC" if "DYNAMIC" in kinds and not names else \
             "MESSAGE" if "MESSAGE" in kinds else "PATTERN" if "PATTERN" in kinds else "NAME"
         window = "\n".join(raw_lines[max(0, line - 1 - NEAR):line + 2])
@@ -225,7 +301,10 @@ def census(repo):
                 continue
             path = os.path.join(root, name)
             rel = os.path.relpath(path, repo).replace(os.sep, "/")
-            found = sites(path, rel)
+            try:
+                found = sites(path, rel)
+            except Unread as unread:
+                raise Unread(rel, unread.args[0])
             direct = {n for s in found for n in s["names"]}
             for s in found:
                 if s["kind"] == "INDIRECT":
@@ -287,7 +366,13 @@ def main(argv):
     missing_sites = set()
     missing_names = set()
     kinds = {}
-    for s in census(REPO):
+    try:
+        found = census(REPO)
+    except Unread as unread:
+        print(f"{unread.args[0]}: a string or character literal opened at line {unread.args[1]} does not close: a form this "
+              f"script does not read, so nothing after it would be counted. Teach skip_string or skip_char to read it.")
+        return 2
+    for s in found:
         kinds[s["kind"]] = kinds.get(s["kind"], 0) + 1
         where = f"{s['file']}:{s['line']}"
         if s["kind"] == "DYNAMIC":

@@ -162,7 +162,7 @@ public class PeepWalkTests
 	/// One guest's walk in full, so the numbers are pinned somewhere rather than only being bounded.
 	/// </summary>
 	[TestMethod]
-	public void ThingFortyTwoWalksFourCellsAndTakesThirtyTwoTicksOverIt()
+	public void ThingFortyTwoWalksFourCellsAndTakesThirtyTwoStepsOverIt()
 	{
 		var world = World();
 		var guest = ParkPeople.PeepsIn( world ).Single( peep => peep.ThingId == 42 );
@@ -192,7 +192,7 @@ public class PeepWalkTests
 
 	/// <summary>
 	/// <b>The walk reads the speed afresh every step</b>, as the steering step reads the mover's own: thing 42's four
-	/// cells, walked at 4000 after the route is planned, where their saved 7864 takes 32 ticks, take 61
+	/// cells, walked at 4000 after the route is planned, where their saved 7864 takes 32 steps, take 61
 	/// (<see cref="Peep.Pace"/> writes the speed each sweep; a route is planned far less often).
 	/// </summary>
 	[TestMethod]
@@ -210,7 +210,7 @@ public class PeepWalkTests
 		var (verdict, ticks) = WalkOut( walk );
 
 		Assert.AreEqual( WalkVerdict.Arrived, verdict );
-		Assert.AreEqual( 61, ticks, "about four cells at 4000 a tick, less the arrival's radius" );
+		Assert.AreEqual( 61, ticks, "about four cells at 4000 a step, less the arrival's radius" );
 	}
 
 	/// <summary>

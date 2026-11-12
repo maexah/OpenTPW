@@ -154,7 +154,7 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   sampler, the sprites carrying `0x1000000` and the eye's further term are decoded and measured in Q825 (`park-engine.md`, "The three words Q822 left unread": the
   particle's offset is nought, the bit is the head sprites' alone and ours already stands them absolutely, the eye's term is nought in first person; the
   puffs themselves are Q900). The markers' corners at a flagged cell are read in the original's own mesh and equal ours (Q838), and a person's drawn height at a flagged cell is read in the original
-  and equals ours (Q839: 279 points of 31 flagged cells (20 ground, 11 holes) on the stock park's two ridges and the cells by them, a guest held at each). A balloon at a flagged cell and ours' own person drawn on one in a frame beside the original's are done as Q948 (the balloon takes the walker's sampler; ours' `pin` puts a guest there). The feet's pixel row against the projected ground point and a balloon's drawn height above its holder in both games' frames at one camera: **measured as Q1106** (the feet stand 6.0 and 6.1 of the original's pixels below the projected point; the balloon's picture stands where the original's does about its anchor, within a row, measured at a settled camera as Q1108; ours' camera aimed at height 0 over raised ground where the original lifts its aim with its eye: done as Q1107). Nothing else is left of (4).
+  and equals ours (Q839: 279 points of 31 flagged cells (20 ground, 11 holes) on the stock park's two ridges and the cells by them, a guest held at each). A balloon at a flagged cell and ours' own person drawn on one in a frame beside the original's are done as Q948 (the balloon takes the walker's sampler; ours' `pin` puts a guest there). The feet's pixel row against the projected ground point and a balloon's drawn height above its holder in both games' frames at one camera: **measured as Q1106** (the feet stand 6.0 and 6.1 of the original's pixels below the projected point, ours' 6.1 at a frozen eye, about 5.6 settled; at a settled camera on Q1107's binary 386.1 of 768 against 387; the balloon's picture stands where the original's does about its anchor, within a row, measured at a settled camera as Q1108; ours' camera aimed at height 0 over raised ground where the original lifts its aim with its eye: done as Q1107). Nothing else is left of (4).
   - **Note (fork watch 2026-10-31, verify-world M8, verify-other M1, M4):** the shared wrap bits: `0x00575ea1` and `0x00575eb3` set `0x10000` and `0x20000` from the slot's `0x10` and `0x20`; the reuse in `0x00575c60` ORs both when the slot has either; `0x00590fa0` clears `0x4000` only; the object dies
     when its last holder goes (`0x00575f00`, `0x00575ad0`), so the bits accumulate only while one model holds it; the reader
     `0x00590fb0` tests both together and answers only when `[0x008bd524] == 1`. Whether this explains Q968's seams is not
@@ -1022,6 +1022,9 @@ filed the items that cite it.
   (`0x004da7fa`). `StaffBehaviour.ArriveAtTheRide` tests state 1 and the call only, sends a state 2 ride's mechanic
   back to his decide and counts nothing; its summary gives the two tests as the original's. Build the third, or
   count it. Confirm: a ride put to state 2 with a mechanic sent to it, his state read in both games.
+  - **Note (Q243's census, moved here by the run 22 review):** the search half of the same job is counted as
+    `MECHANIC_UPGRADE_JOB` (`StaffBehaviour.cs`; `staff-wandering.md`, `ride-operation.md`); the search and the arrival are
+    one feature.
 
 - [ ] **Q273. A node's direction is normalised in another order and width than the original's.** From the week-end
   audit (stage 4; read twice from the listing). `FUN_00556b90` sums (x*x + y*y) + z*z, keeps the root as a float
@@ -2701,8 +2704,8 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   finds its global"). `FUN_004017a0` stops a file at the first line it refuses - a key its table does not name, a
   bounded value out of range, a negative in a type-5 key - but which balance key is which type, and its bounds, are
   not decoded. Read every balance family's table record by record (the `PeepInfo` object's at `0x0073fc70` and the
-  rest), as Q178b read the item schema at `0x00744b30`. Every shipped balance file holds negatives
-  (`WeatherEffects.QualityForSnowLow -1`, `RegionFX[n].Hunger`, `ThemeEngine.ProceduralTexturingXOffset`,
+  rest), as Q178b read the item schema at `0x00744b30`. Ten of the eleven shipped balance files hold
+  negatives (the jungle's `Easy_Standard.sam` none; `WeatherEffects.QualityForSnowLow -1`, `RegionFX[n].Hunger`, `ThemeEngine.ProceduralTexturingXOffset`,
   `LightNormal.Y`, `WaterStartPos.Y`); if one is type 5 the original drops the rest of that file. Then build the stop
   in `ParkBalance.Layer` (the deviation is said there) and count it. Confirm: a test per shipped balance file naming
   the line it stops at, or none, and the keys a loaded jungle park loses.
@@ -2796,9 +2799,9 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   Instant Action player's pointer on a grey arrow, no help row; a screenshot.
 
 - [ ] **Q240. The postcard. Decode first.** From Q139. The gadget's postcard button is counted
-  (`POSTCARD_BUTTON`), Ctrl+P under the full-screen view is counted (`FULL_SCREEN_VIEW_POSTCARD`), and Ctrl+P over
-  the park (the shortcuts' row 15) and in first person (`FUN_00488a00`, action 15) is read by nothing: count those
-  two first. All four reach `FUN_004a9380`: sound `0x95`, the game paused, the interface hidden, a screen chosen by
+  (`POSTCARD_BUTTON`), Ctrl+P under the full-screen view is counted (`FULL_SCREEN_VIEW_POSTCARD`), Ctrl+P over the
+  park (the shortcuts' row 15) is counted (`POSTCARD_SHORTCUT`, `ParkFrontEnd.cs`), and Ctrl+P in first person
+  (`FUN_00488a00`, action 15) is read by nothing: count that first. All four reach `FUN_004a9380`: sound `0x95`, the game paused, the interface hidden, a screen chosen by
   `DAT_007cc150 = 3`, and a picture written out with `Postcard.wad`, `postcard.jpg` and an HTML template
   (`park-engine.md`). Decode the screen and what is written, to `docs/exe/`; the build is the next session.
   - **Note (fork watch 2026-10-16, `verify-ui-hud.md` M2 and M5):** the address check, inside the send handler
@@ -3177,6 +3180,10 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   prize; the pacing reads `DaysAfterCompletedChallenge` and `DaysAfterDeclinedChallenge`; nothing raises the declined
   count, so `DeclinesToForfeit` is never reached (`0x004d2b60`, `0x004d2fb0`, `0x004d1a00`, `0x004d3140`,
   `0x004d1ae0`, `0x004d2ec0`). Neither screen is built.
+  - **Note (Q243's census, moved here by the run 22 review):** the counted names this item owns: `LOANS_SCREEN`
+    (`ParkCategoryScreens.cs`; `hud.md`) and the challenges' posts `GATE_FEE_CHALLENGE_POST`, `COST_OF_GOODS_CHALLENGE_POST`
+    (`ParkState.cs`; `ride-operation.md`), `CHARGE_CHALLENGE_POST` (`ParkRideOperation.cs`) and
+    `RESEARCH_FINISHED_TO_THE_CHALLENGES` (`ParkResearch.cs`; `park-engine.md`).
   - **Note (fork watch 2026-10-16, `verify-world.md` L13, `verify-ui-hud.md` M1):** a shop's sale feeds the challenges
     by its `ShopType` 1 to 6 (`0x004e18e4`: types 5, ingredient, 8, ingredient, 7, 6) and `SpecialIngredient` 1 to 4
     (`0x004e18fc`: types 2, 1, 3, 4), posted by `0x004d27a0`; `0x004ca160` is the mean over toilets of 100 less a
@@ -3294,28 +3301,26 @@ Back to the advisor in a park; saving a fresh park is Q783, in section A. Also l
   `guests` census at the crossing, then find what the walk asks of the crosswalk cells there.
   - **Note (play test 2026-10-31):** still seen in a short look at Halloween World; not the priority. Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
 
-- [ ] **Q1190. Counted, not built, and owned by no item: the interface (23 names, from Q243).** Filed by Q243's census,
+- [ ] **Q1190. Counted, not built, and owned by no item: the interface (21 names, from Q243).** Filed by Q243's census,
   2026-11-12: `python3 tools/gap_census.py` found each name below counted by `Unimplemented.Report` and named by no other item
   here. A session takes one name or a few: read the site and the `docs/exe/` page given, classify the path (`AGENTS.md`
   rule 3; only a site's own "dead by" words were read, given below, and the rest are not classified), then build it or
   file it as its own item and take the name out of this list. The census drops a name once an item names it. Each name:
   the file of each call, then the `docs/exe/` pages that name it.
-  - `BOOT_SPLASH` (`Game.cs`; `boot.md`, `ui.md`)
-  - `BOOT_LEGAL_SCREEN` (`Game.cs`; `boot.md`, `ui.md`)
-  - `INTRO_MOVIE_BULLFROG` (`Game.cs`; `boot.md`)
-  - `INTRO_MOVIE_PARK` (`Game.cs`; `boot.md`)
+  - `BOOT_SPLASH` (`Game.cs`; `boot.md`, `ui.md`); cut by the lobby plan (section G), counted so the census names it: not to build
+  - `BOOT_LEGAL_SCREEN` (`Game.cs`; `boot.md`, `ui.md`); cut by the lobby plan (section G), counted so the census names it: not to build
+  - `INTRO_MOVIE_BULLFROG` (`Game.cs`; `boot.md`); cut by the lobby plan (section G), counted so the census names it: not to build
+  - `INTRO_MOVIE_PARK` (`Game.cs`; `boot.md`); cut by the lobby plan (section G), counted so the census names it: not to build
   - `*_*_READ_BARE` (`Localization.cs`)
   - `LIST_HEADING_SORT_NOT_BUILT` (`UiList.cs`; `hud.md`)
   - `LIST_SCROLLBAR_NOT_BUILT` (`UiList.cs`; `hud.md`)
   - `LIST_CLICK_MISS_SELECTION_NOT_UNDER_POINTER` (`UiList.cs`; `hud.md`)
   - `LIST_ROW_ACTIVATED_UNANSWERED` (`UiList.cs`; `hud.md`)
   - `LIST_RIGHT_CLICK_FIRST_ROW_NOT_SELECTED` (`UiList.cs`; `hud.md`)
-  - `ALL_STAFF_SCREEN` (`ParkCategoryScreens.cs`); dead by CODE at its site
-  - `ALL_VISITORS_SCREEN` (`ParkCategoryScreens.cs`); dead by CODE at its site
-  - `LOANS_SCREEN` (`ParkCategoryScreens.cs`; `hud.md`)
-  - `UNKNOWN_CATEGORY_SCREEN` (`ParkCategoryScreens.cs`); dead by CODE at its site
+  - `ALL_STAFF_SCREEN` (`ParkCategoryScreens.cs`); dead by CODE at its site: the work is removing the unreachable arm (`AGENTS.md` rule 3), not building it
+  - `ALL_VISITORS_SCREEN` (`ParkCategoryScreens.cs`); dead by CODE at its site: the work is removing the unreachable arm (`AGENTS.md` rule 3), not building it
+  - `UNKNOWN_CATEGORY_SCREEN` (`ParkCategoryScreens.cs`); dead by CODE at its site: the work is removing the unreachable arm (`AGENTS.md` rule 3), not building it
   - `OBJECT_WINDOW_HIGHER_PRIORITY_STATUS` (`ParkClosedStatus.cs`; `ride-window-door.md`)
-  - `POSTCARD_SHORTCUT` (`ParkFrontEnd.cs`; `hud.md`)
   - `TAG_BAR_BUTTON` (`ParkGadget.cs`; `hud.md`, `advisor-park.md`)
   - `STAFF_PORTRAIT_ACTOR` (`ParkHireScreen.cs`)
   - `RIDE_EXCITEMENT_BAR` (`ParkObjectWindow.cs`; `park-engine.md`)
@@ -3323,7 +3328,7 @@ Back to the advisor in a park; saving a fresh park is Q783, in section A. Also l
   - `STAFF_LIST_ADVISOR_LINE` (`ParkStaffScreen.cs`; `hud.md`)
   - `VISITORS_LIST_ADVISOR_LINE` (`ParkVisitorsScreen.cs`; `hud.md`)
   - `TEXTURE_WRAP_SHARED` (`LobbyModel.cs`; `render-states.md`)
-- [ ] **Q1191. Counted, not built, and owned by no item: guests' turns and events (38 names, from Q243).** Filed by Q243's census,
+- [ ] **Q1191. Counted, not built, and owned by no item: guests' turns and events (37 names, from Q243).** Filed by Q243's census,
   2026-11-12: `python3 tools/gap_census.py` found each name below counted by `Unimplemented.Report` and named by no other item
   here. A session takes one name or a few: read the site and the `docs/exe/` page given, classify the path (`AGENTS.md`
   rule 3; only a site's own "dead by" words were read, given below, and the rest are not classified), then build it or
@@ -3342,7 +3347,6 @@ Back to the advisor in a park; saving a fresh park is Q783, in section A. Also l
   - `SETTLE_UP_TOILET_EVENT` (`ParkRideOperation.cs`; `ride-operation.md`)
   - `SETTLE_UP_TOILET_ILLNESS_EVENT` (`ParkRideOperation.cs`; `ride-operation.md`)
   - `OPEN_GUARD_COASTER_TRACK_RECORD` (`ParkRideOperation.cs`; `ride-operation.md`)
-  - `CHARGE_CHALLENGE_POST` (`ParkRideOperation.cs`)
   - `RIDE_EXCITEMENT_COASTER_TRACK` (`ParkRideScore.cs`; `ride-operation.md`)
   - `RIDE_EXCITEMENT_UPGRADE_TIER` (`ParkRideScore.cs`; `ride-operation.md`)
   - `GOING_TO_RIDE_STUCK_EVENT` (`PeepBehaviour.cs`; `ride-operation.md`)
@@ -3367,7 +3371,7 @@ Back to the advisor in a park; saving a fresh park is Q783, in section A. Also l
   - `DOOR_PRICE_ANALYSER_SAMPLE` (`PeepPriceOpinion.cs`; `ride-operation.md`)
   - `NEEDS_THOUGHT_4_SOUND` (`Thoughts.cs`; `ride-operation.md`)
   - `NEEDS_THOUGHT_LITTER_SHARE` (`Thoughts.cs`; `ride-operation.md`)
-- [ ] **Q1192. Counted, not built, and owned by no item: staff, strikes, research and the advisor's and challenges' posts (18 names, from Q243).** Filed by Q243's census,
+- [ ] **Q1192. Counted, not built, and owned by no item: staff, strikes, research and the advisor's posts (14 names, from Q243).** Filed by Q243's census,
   2026-11-12: `python3 tools/gap_census.py` found each name below counted by `Unimplemented.Report` and named by no other item
   here. A session takes one name or a few: read the site and the `docs/exe/` page given, classify the path (`AGENTS.md`
   rule 3; only a site's own "dead by" words were read, given below, and the rest are not classified), then build it or
@@ -3376,19 +3380,15 @@ Back to the advisor in a park; saving a fresh park is Q783, in section A. Also l
   - `PARK_ADVISOR_SAVED_SLOT_NOT_BUILT` (`ParkAdvisorMessages.cs`; `advisor-park.md`)
   - `TAG_ROW_NOT_LISTED` (`ParkTags.cs`; `advisor-park.md`)
   - `TAG_TEXT_KIND` (`ParkTags.cs`; `saves.md`, `advisor-park.md`)
-  - `RESEARCH_FINISHED_TO_THE_CHALLENGES` (`ParkResearch.cs`; `park-engine.md`)
   - `SAVED_STAFF_CANDIDATE_OF_NO_KIND` (`ParkStaffPool.cs`)
   - `SAVED_STAFF_CANDIDATE_ON_POINTER` (`ParkStaffPool.cs`)
   - `ROLLED_STAFF_COSTUME` (`ParkStaffPool.cs`; `park-engine.md`)
-  - `GATE_FEE_CHALLENGE_POST` (`ParkState.cs`; `hud.md`, `ride-operation.md`)
-  - `COST_OF_GOODS_CHALLENGE_POST` (`ParkState.cs`; `ride-operation.md`)
   - `ADVISOR_PARK_ENDED_IN_THE_RED` (`ParkState.cs`; `ride-operation.md`)
   - `STRIKE_CALLED_OFF_TO_THE_ADVISOR` (`ParkStrikes.cs`; `ride-operation.md`)
   - `STRIKE_WARNING_TO_THE_ADVISOR` (`ParkStrikes.cs`; `ride-operation.md`)
   - `STRIKE_TO_THE_ADVISOR` (`ParkStrikes.cs`; `ride-operation.md`)
   - `STRIKE_HANDYMEN_CELL_RATIO` (`ParkStrikes.cs`; `ride-operation.md`)
   - `HANDYMAN_LITTER_SEARCH` (`StaffBehaviour.cs`; `staff-wandering.md`, `ride-operation.md`, `advisor-park.md`)
-  - `MECHANIC_UPGRADE_JOB` (`StaffBehaviour.cs`; `staff-wandering.md`, `ride-operation.md`)
   - `HANDYMAN_TOILET_AIM_LEFT_ON_A_LATER_TOILET` (`StaffBehaviour.cs`; `ride-operation.md`)
   - `STAFF_TRAINING_NO_POINT_COST` (`ParkPeople.cs`; `ride-operation.md`)
 - [ ] **Q1193. Counted, not built, and owned by no item: paths, queues, building, markers and hoardings (30 names, from Q243).** Filed by Q243's census,

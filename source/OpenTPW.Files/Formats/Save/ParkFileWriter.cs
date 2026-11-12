@@ -560,7 +560,7 @@ public static class ParkFileWriter
 			body = ParkVoices.Without( body, letGo );
 
 		// With no sound device nothing was put back, so nothing was let go: each held chain a script named at the load and
-		// none written names goes, as a park with sound lets it go.
+		// none written names goes, as a park with sound lets go of the chains it put back.
 		if ( running.VoicesNotPutBack )
 			body = WithoutUnnamedChains( loaded.ScriptStates.SoundHandles, body );
 
@@ -574,8 +574,9 @@ public static class ParkFileWriter
 	/// <summary>
 	/// <paramref name="body"/> less each held chain of its voice list that a sound record of the loaded file's scripts named
 	/// (<paramref name="namedAtLoad"/>) and no sound record of its own scripts names: what a park that ran with no sound
-	/// device writes, where nothing was put back and so nothing let go. It is what a park with sound lets go: a chain whose
-	/// record took it and then stopped it, by its <c>KILLOBJ</c> or its script's end (a Loudspeaker sold, the Staff Room
+	/// device writes, where nothing was put back and so nothing let go. It is what a park with sound lets go of the chains it put
+	/// back (a named chain it could not put back, a <c>PARK_FILE_SOUND_VOICE_*</c> gap, it keeps after its script ends, and this
+	/// drops it): a chain whose record took it and then stopped it, by its <c>KILLOBJ</c> or its script's end (a Loudspeaker sold, the Staff Room
 	/// emptied), which would otherwise come back at a load with sound under a handle nothing names. The body as it is where
 	/// its scripts did not read.
 	///

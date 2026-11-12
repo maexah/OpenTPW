@@ -49,6 +49,8 @@ namespace OpenTPW;
 /// </summary>
 public sealed class ParkBalance
 {
+	// Deviation: case-blind, where the original's key search (FUN_00401280) is case-sensitive; no shipped key is
+	// spelled two ways (BalanceRowCountTests), so both read the same keys.
 	private readonly Dictionary<string, string> _values = new( StringComparer.OrdinalIgnoreCase );
 
 	/// <summary>How many keys the stack came to, for the log.</summary>
@@ -126,8 +128,9 @@ public sealed class ParkBalance
 	/// <b>Deviation, not yet decided:</b> the original's parser (<c>FUN_004017a0</c>) stops at the first line it
 	/// refuses - a key its table does not name, a bounded value out of range, a negative in a type-5 key - and no
 	/// later line of that file is read. This reads every line, because which balance key is which type, and its
-	/// bounds, are not decoded (Q1204). Every shipped balance file holds negatives (the jungle's
-	/// <c>WeatherEffects.QualityForSnowLow -1</c> among them), so the rule may decide where some of these files end.
+	/// bounds, are not decoded (Q1204). Ten of the eleven shipped balance files hold negatives (the jungle's
+	/// <c>WeatherEffects.QualityForSnowLow -1</c> among them; the jungle's <c>Easy_Standard.sam</c> holds none), so the
+	/// rule may decide where some of these files end.
 	/// </remarks>
 	private void Layer( string path )
 	{
