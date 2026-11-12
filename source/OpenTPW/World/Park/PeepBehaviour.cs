@@ -751,16 +751,22 @@ public sealed class PeepBehaviour
 			// Heading for the exit, having decided not to stay - FUN_00500a50. They walk to the cell the arm
 			// that sent them here chose, and on arriving go on to pick a cell outside.
 			//
-			// <b>The change-of-mind arm is counted, not built.</b> The original turns a guest back to Deciding
-			// - "Make up your mind!", +0x188 = 0, state 6 - when mExitLevel (+0x1bc) is positive AND the
-			// happiness byte (+0x19c) is non-zero AND the park is open AND FUN_004fa990 agrees
-			// (0x00500a53..0x00500a84).
+			// <b>They change their mind first</b> (0x00500a53..0x00500a84): mExitLevel (+0x1bc) positive, the
+			// happiness byte (+0x19c) not nought, the park open and FUN_004fa990 agreeing put them back to
+			// Deciding with no walk this turn. The original's "Make up your mind!" is a debug print, kept as the
+			// log line; its +0x188 = 0 is the walking mode, already 0 for every walk here (ParkPeople.WalkingMode).
 			//
 			// Getting stuck prints "I'm stuck in the park, even though it's closed!!" and puts them back to
 			// Deciding, whose leave test sends them off again if it still holds.
 			case PeepState.HeadingForExit:
 				if ( WouldChangeTheirMind( peep ) )
-					Unimplemented.Report( "HEADING_FOR_EXIT_CHANGE_OF_MIND" );
+				{
+					Log.Info( $"Person {peep.ThingId}: Make up your mind!, exit level {peep.ExitLevel}, tick {tick}" );
+
+					peep.SetState( PeepState.Deciding, tick, _random );
+
+					break;
+				}
 
 				switch ( Walked( peep, walk, playing ) )
 				{

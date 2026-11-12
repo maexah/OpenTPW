@@ -577,16 +577,6 @@ filed the items that cite it.
   guest already stands at; `ParkOpeningWait` untouched. Seen in Q157: `7x ENTERING_GATE_GUARD` after `step 2`, which was not predicted as a
   number and is the seven guests then in `Entering` (things 32, 33, 34, 36, 37, 40, 41 in `q157/run-final2/run.log`), one turn each. Confirm: the entry-price door shut by a real click with a guest in `Entering`
   (`q157/confirm.py` has the click), `peeps` on that guest before and after, predicted first; the count leaves the census.
-- [ ] **Q862. A leaver's change of mind (`HEADING_FOR_EXIT_CHANGE_OF_MIND`).** From Q157, which counts it. `FUN_00500a50`'s first test
-  (`0x00500a53`..`0x00500a84`: exit level above nought, happiness byte not nought, the park open, `FUN_004fa990`) puts the guest back in
-  state 6 with `+0x188` = 0 (the "Make up your mind!" line goes to a debug print). A running game reaches it:
-  the only stores of nought to `+0x1bc` in `0x004fe000`..`0x00500fff` are the gate's two arms (`0x004ff9af`, `0x004ffaa3`; `Judge`), and
-  the leaving arm of the deciding turn (`PeepBehaviour.Leave`, `0x004fee87`..`0x004fef13`) and the guard's throw-out (`0x004febf6`) store
-  nothing to it. So shut the park with the entry-price door (exit level above nought, the reason logged "the park shut"), and open it again while
-  that guest walks out: `WouldChangeTheirMind` holds and the name is counted (`q157/run-final/console.log` has 13 "leaving, the park shut",
-  4 with a positive exit level). Confirm: pause, shut the door, step until a guest with a positive exit level is `HeadingForExit`, reopen, and
-  predict the count before stepping; build it, then the same sequence shows the guest back in `Deciding`. `ParkReachedArmsCountTests`
-  holds the sequence as a test (`AGuestWhoSetOffWhenTheParkShutIsCountedWhenItReopens`).
 - [ ] **Q863. The route improver's diagonal pass (`CELL_REROUTE_DIAGONAL_PASS`).** From Q157, which counts it where a no-splice scan
   leaves a one-cell diagonal step. `FUN_005108a0` from `0x00510a1e` goes over the route's steps and breaks a one-cell diagonal in two
   when a shut edge of the corner decides it (`0x00510b15`..`0x00511020`, the inserted corner at `0x00511040`, and no more than 251 waypoints:

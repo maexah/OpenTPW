@@ -12145,6 +12145,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q862. A leaver's change of mind (`HEADING_FOR_EXIT_CHANGE_OF_MIND`).** From Q157, which counts it. `FUN_00500a50`'s first test
+  (`0x00500a53`..`0x00500a84`: exit level above nought, happiness byte not nought, the park open, `FUN_004fa990`) puts the guest back in
+  state 6 with `+0x188` = 0 (the "Make up your mind!" line goes to a debug print). A running game reaches it:
+  the only stores of nought to `+0x1bc` in `0x004fe000`..`0x00500fff` are the gate's two arms (`0x004ff9af`, `0x004ffaa3`; `Judge`), and
+  the leaving arm of the deciding turn (`PeepBehaviour.Leave`, `0x004fee87`..`0x004fef13`) and the guard's throw-out (`0x004febf6`) store
+  nothing to it. So shut the park with the entry-price door (exit level above nought, the reason logged "the park shut"), and open it again while
+  that guest walks out: `WouldChangeTheirMind` holds and the name is counted (`q157/run-final/console.log` has 13 "leaving, the park shut",
+  4 with a positive exit level). Confirm: pause, shut the door, step until a guest with a positive exit level is `HeadingForExit`, reopen, and
+  predict the count before stepping; build it, then the same sequence shows the guest back in `Deciding`. `ParkReachedArmsCountTests`
+  holds the sequence as a test (`AGuestWhoSetOffWhenTheParkShutIsCountedWhenItReopens`).
 
 ## B. Docs and comments
 
