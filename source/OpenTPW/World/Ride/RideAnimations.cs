@@ -491,11 +491,13 @@ public sealed class RideAnimations
 		if ( (channel.Flags & AnimTimeControl.LoopFlag) != 0 )
 		{
 			// A loop is expressed as starting the same clip again rather than as rewinding it, which is
-			// what carries the overshoot across the join. Not the original's: its restart in view passes 0x1 alone
-			// (0x00473840..0x00473848), so it puts back and hides as a start does; this passes 0x8 (Q661).
+			// what carries the overshoot across the join. The restart is a start of the same role and entry with 0x1
+			// (0x00473840..0x00473848), so it puts the clip back over itself and hides its list again as a start does.
+			// Deviation: the engine adds 0x8 there off the screen (FUN_004735d0's per-frame argument); every model is
+			// posed every frame here, so it binds in view's way, as a promotion does.
 			// The replay starts at the queued speed unless that is nought, then at the channel's own (0x0047380a..0x00473823).
 			StartOn( channel, channel.AnimID, channel.SubAnim,
-				AnimTimeControl.LoopFlag | AnimTimeControl.KeepShownFlag, channel.DeferredSpeed == 0f ? channel.Speed : channel.DeferredSpeed, now );
+				AnimTimeControl.LoopFlag, channel.DeferredSpeed == 0f ? channel.Speed : channel.DeferredSpeed, now );
 
 			return;
 		}

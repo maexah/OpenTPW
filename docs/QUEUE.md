@@ -1876,15 +1876,6 @@ filed the items that cite it.
   slot bit `0x10000` (for instance `0x004721b7`, `test [eax+4], 0x10000`) in Ghidra to settle whether an unclaimed
   record is freed or hidden; if it is, build the claim (pair each type 25 cell's `mTileData` with the record at its
   shifted cell and angle, count an anchor with no match) or keep the deviation said at the site.
-- [ ] **Q661. Rest at a loop's restart in view (from Q622).** The original restores at a loop's restart in view:
-  `0x00473840`..`0x00473848` call `FUN_00472f60` with the same role and entry and flags `1` (`| 8` only off-screen),
-  which reaches `FUN_00472310` with the outgoing clip the incoming one: it clears `0x10` on every tracked and listed
-  node and re-hides the hide list. Here `RideAnimations.End` restarts a loop with `0x8`, so `PoseChannel` (which since
-  Q658 puts back and hides at every start it sees, by the start's flags) shows and hides nothing there. No Lost Kingdom placed thing loops a clip whose visibility track starts after
-  frame 0 (the only such clips are three vehicles' `m3`, `coconutc` and `mamfounte`), so nothing differs on screen
-  there. Build it where the loop is known, and carry the start's `0x4`/`0x8` with it (Q658's seam). Confirm: a
-  looped clip with a visibility track after frame 0 in both games, or a read of the original's node words at the
-  restart.
 - [ ] **Q682. A loaded park's things drawn as their saved node words hide them (from Q658).** A loaded thing is drawn
   as its construction clip leaves it (`ParkObjects`, the as-built pose: the visibility tracks at the build's end), and
   its channels are restarted with `0x8` (`ParkRides.Resume`), so no hide list is applied and the file's node words'

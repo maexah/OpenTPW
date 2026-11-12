@@ -1092,8 +1092,8 @@ public sealed class LobbyModel : IChannelPosed
 	/// <remarks>
 	/// The caller, <see cref="RideAnimations.PoseChannel"/>, rests at a start it has not seen, by the start's flags; a
 	/// queued clip's promotion, which the engine binds with <c>0x8</c> added off the screen (<c>0x00473874</c>), is bound
-	/// here as in view, and a loop's restart, which the engine binds in view (<c>0x00473848</c>), shows and hides nothing
-	/// here (Q661).
+	/// here as in view, and so is a loop's restart (<c>0x00473840</c>..<c>0x00473848</c>), which puts the clip back over
+	/// itself: what its tracks hid is shown again until their keys come round.
 	/// </remarks>
 	public void Rest( AnimationFile outgoing, AnimationFile? incoming = null )
 	{
