@@ -995,8 +995,9 @@ public class Level
 			return null;
 		}
 
-		// The cells go out as the file's records: litter dropped or claimed since the load is not written (Q1288).
-		if ( state.LitterDiffersFrom( loaded ) )
+		// Litter dropped since the load is written with the people, its sprite and its cell's block; with no people to write
+		// it with, or any other change to a cell's litter (none arises: nothing sweeps it), the file's is kept and counted.
+		if ( state.LitterDiffersFrom( loaded, droppedWritten: people != null ) )
 			Unimplemented.Report( "SAVE_PARK_RUNNING_LITTER" );
 
 		var point = ParkOrbitCameraMode.PointOfInterest;
@@ -1212,7 +1213,9 @@ public class Level
 			state.RecentlyResearched.Written, ids, ParkAudio.Current?.FileVoicesLetGo,
 			ParkAudio.Current?.FileVoicesNotPutBack == true,
 			state.AdvisorMessages?.WrittenKept( subject => state.TryObject( subject, out var about ) ? about.CatalogueId : 0 ),
-			state.WorldState );
+			state.WorldState,
+			people != null ? state.DroppedLitter( loaded, people.LitterSetByte ) : null );
+
 
 		// The sound module goes out as the loaded file's, less the voices put back from it and let go since: the original
 		// writes the manager's live voices (Sound_SaveModule, 0x0051c350), so what was started here, and each put-back
@@ -1372,7 +1375,7 @@ public class Level
 
 			Log.Info( $"Save: {report.Kept} people kept, {report.Made} made, {report.Gone} gone; " +
 				$"{report.LiveSprites} sprites in {report.SpriteSlots} slots, {report.Balloons} of them balloons and " +
-				$"{report.Bubbles} bubbles, {report.LetGo} balloons let go, {report.Heads} riders' heads; {report.CellsHeaded} cells headed anew" );
+				$"{report.Bubbles} bubbles, {report.LetGo} balloons let go, {report.Heads} riders' heads, {report.Litter} litter dropped; {report.CellsHeaded} cells headed anew" );
 		}
 
 		return path;

@@ -1491,6 +1491,9 @@ public sealed class PeepBehaviour
 	/// A guest's litter on the ground: kind 1 + r % 5 on a fresh draw (<c>[0x0070048c]</c>, 6, less one) on the cell
 	/// they stand on (<see cref="ParkState.DropLitter"/>), and their litter nought, whether the cell took it or
 	/// already held some (<c>0x004fee0e</c>..<c>0x004fee51</c>, <c>0x004fff8c</c>..<c>0x004fffca</c>).
+	/// <b>A deviation:</b> the kind is drawn from this behaviour's own generator, not the park's, so the drop's reseed of the
+	/// park's generator with the cell id (<see cref="ParkState.DropLitter"/>) does not decide the next drop's kind, as it does
+	/// in the original.
 	/// </summary>
 	private void DropLitter( Peep peep, int x, int y, int tick )
 	{

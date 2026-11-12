@@ -1815,9 +1815,7 @@ Ghidra on the lane. Litter 90 or more: the chain walked for the nearest `HoldsLi
 to its `mEntryPos` asked of each nearer one, the routed bin to `MajorDest` and state 9, the turn ended; none, kind
 1 + r % 5 on the guest's cell on a fresh draw, litter nought, and on to (d). State 9 walks; arrived with a bin named, the
 bin's script `VAR_TRIGGER` = 1 (the original's variable 0, by name) and litter nought; arrived with none or given up, the
-drop; then state 6. **Not built (Q1288):** the litter's sprite and its place (the cell-id reseed and two draws), so nothing is
-drawn and the park's generator is not reseeded, counted at each drop as `LITTER_SPRITE_AND_RESEED`; a park file written after
-a drop does not carry it (the writer writes the cells' records, not the running litter), counted as `SAVE_PARK_RUNNING_LITTER`. The happy jump and the vomit are still counted and do not end the turn, so the litter
+drop; then state 6. The litter's sprite, its place and its file record are Q1288's (below). The happy jump and the vomit are still counted and do not end the turn, so the litter
 arm runs on turns the original would end at (a) or (b). A bin with `mEntryPos` nought is counted (`LITTER_BIN_WITHOUT_ENTRY`)
 and passed over; Lost Kingdom's one bin has one. Off-screen on the shipped park (`consolerun.py`, cloud lane c42, output not
 kept): a guest made at (46,31) at litter 90 set off for bin 17 on sweep 882 and put it in on 904, `VAR_TRIGGER` read 1 seven
@@ -3385,6 +3383,23 @@ and (47,26), kind 7, in 15 files each), instances by kind 7 61, 2 3, 5 3,
 3 2, 1 1, 4 1 and 8 1, none of kind 6; on all 72 the handle names a saved sprite of kind 11, bank 0, flags `0x80000`, its
 program word the record of the cell's kind plus 7, and its place the reseed's two draws to the unit; the second handle is
 nought on 71 and set on the one cell of kind 8 (`q780/orig/O1/Q780after.TPWS`, (47,23)).
+
+**Q1288: a cell's litter drawn, placed and written** (`ParkState.DropLitter`, `LitterPlace`; `ParkLitter`,
+`ParkGuestSprites.WriteLitter`; `ParkWorld.PutPeople`'s litter; cloud lane c96, no Ghidra, no original, from this section).
+A drop reseeds the park's own generator (`ParkState.RandomSeed`) with the cell id and draws twice, so the sprite stands at
+(10x + 1 + r1 % 9, 10y + 1 + r2 % 9) and every later draw of that generator follows from the cell; the kind a guest drops is
+still drawn from the deciding turn's own generator, so the reseed does not decide the next drop's kind (said at
+`PeepBehaviour.DropLitter`). Each littered cell with a sprite is drawn as one flat quad of `SPR_LI`'s set for its kind (the
+set's one picture: set 6 holds picture 7, set 7 picture 6), by the corners above, at the land under the anchor plus 0.6 (0.25
+in first person), with the people's shader and alpha test, both faces, depth tested and not written, before the people,
+never pulled and never picked. A loaded cell's sprite is the file's at its first handle; a littered cell whose handle names
+no sprite is not drawn, with one warning for the load. **Not read here**, so taken as the decoder gives it: whether `v0` is
+the bank's top row. `SAVE_PARK_RUNNING_LITTER` now counts only a save with no people to write the drop with, or a change
+nothing makes yet (litter taken away or claimed: nothing sweeps it). The file side is `saves.md`, "OpenTPW's writer, a cell's
+litter". Off-screen (`consolerun.py`, lane c96, output not kept): a guest admitted at (47,22) at litter 90 logged
+`Litter kind 1 on (47,22): sprite at (476,221), mRandomSeed reseeded with cell 2864 to 0x6e02790d`, another dropped kind 5
+on (45,21) at (457,212), and the park saved after them read `OK` on both cells in `littercheck.py`. **Not photographed**
+(Q1504).
 
 **The bin errand, `FUN_004fff20`** (state 9's turn, `FUN_005019f0` its one caller, `0x00501a9f`; read whole, Q899). The walk
 tick `FUN_004fa2a0` first: any answer but 0 and 2 returns, still walking. Arrived (0) with a bin in `MajorDest` (`+0x1dc`): that

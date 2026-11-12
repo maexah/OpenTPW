@@ -950,7 +950,7 @@ public sealed partial class ParkWorld : IParkInitialState
 		byte StatusFlags = 0, int TimeMarkedForLitterCollection = 0, ushort Occupant = 0,
 		ushort NearbyEffects = 0, ushort ParentId = 0, short OverlapCounter = 0, byte TrackNeighbours = 0,
 		int MeshInstance = 0, byte TrackDirection = 0, int TrackTileSet = 0, int TrackTileIndex = 0, int TrackTileAngle = 0,
-		short TrackOverlapCounter = 0 )
+		short TrackOverlapCounter = 0, int LitterSprite = 0, int LitterParticle = 0 )
 	{
 		/// <summary>
 		/// Whether anything has been dropped here. <b>Nought on every cell of the park the game ships</b>,
@@ -1353,14 +1353,20 @@ public sealed partial class ParkWorld : IParkInitialState
 	/// <b>The same name really is announced for two consecutive dwords</b>, and the arithmetic is what says
 	/// so rather than the reading: 4 + 2 + 4 + 4 + 2 + 1 + 4 + 2 comes to exactly 23, and 29 + 23 is
 	/// exactly the 52 the walk already measured cell by cell. Written once, everything after it would
-	/// shift by four and the record would close four bytes short. The two script handles are stepped over
-	/// rather than read - they are heap handles, stale in a saved file the way the sprite table's are -
-	/// but their bytes are accounted for instead of quietly dropped.
+	/// shift by four and the record would close four bytes short. The first handle is the litter's sprite, a
+	/// slot of the sprite table, and the second a stink bomb's particle (<c>docs/exe/ride-operation.md</c>,
+	/// "A cell's litter"; <see cref="MapCell.LitterSprite"/>, <see cref="MapCell.LitterParticle"/>).
 	/// </para>
 	/// </summary>
 	private const int CellLitter = 29;
 
 	private const int CellLitterCollector = 33;
+
+	/// <summary>The first <c>mLitterScript</c>: the slot of the litter's sprite (<c>[cell + 0x28]</c>), nought with none.</summary>
+	private const int CellLitterSprite = 35;
+
+	/// <summary>The second <c>mLitterScript</c>: a stink bomb's particle handle (<c>[cell + 0x38]</c>), nought on every other litter.</summary>
+	private const int CellLitterParticle = 39;
 
 	private const int CellPylonIndex = 43;
 
@@ -2173,6 +2179,8 @@ public sealed partial class ParkWorld : IParkInitialState
 			// and stops, which is why these are read from `at` and never from `track`.
 			Litter: ReadInt32At( at + CellLitter ),
 			LitterCollector: (ushort)ReadUInt16At( at + CellLitterCollector ),
+			LitterSprite: ReadInt32At( at + CellLitterSprite ),
+			LitterParticle: ReadInt32At( at + CellLitterParticle ),
 			PylonIndex: (ushort)ReadUInt16At( at + CellPylonIndex ),
 			StatusFlags: _data[at + CellStatusFlags],
 			TimeMarkedForLitterCollection: ReadInt32At( at + CellTimeMarkedForLitterCollection ),

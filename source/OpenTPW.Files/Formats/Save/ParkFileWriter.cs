@@ -88,7 +88,9 @@ public static class ParkFileWriter
 	/// file and let go since, which are left out; <see cref="VoicesNotPutBack"/> says the park ran with no sound device, so
 	/// none was put back, and each held chain a script named at the load and none written names is left out
 	/// (<see cref="WithoutUnnamedChains"/>). <see cref="WorldState"/> is <c>mWorldState</c>, 4 for a park that has ended; the
-	/// file's where it is null.
+	/// file's where it is null. <see cref="Litter"/> is the litter dropped since the load, written with the
+	/// people (<see cref="ParkWorld.PutPeople(byte[], IReadOnlyList{ParkWorld.WrittenPerson}, ParkWorld.ObjectEdits?, IReadOnlyList{ParkWorld.WrittenSprite}?, ParkWorld.HeadEdits?, ParkWorld.ThingIds?, out ParkWorld.PeopleWritten, uint?, IReadOnlyList{ParkWorld.WrittenLitter}?)"/>);
+	/// none where it is null or the people are not written.
 	/// </summary>
 	public readonly record struct Running( int GameTick, bool ParkClosed, int VisitorsToDate, int Balance,
 		ParkCameraModule.View Camera, IReadOnlyDictionary<int, ParkWorld.MapCell>? Cells = null,
@@ -108,7 +110,7 @@ public static class ParkFileWriter
 		ParkWorld.WeatherState? Weather = null, ParkWorld.WrittenLab? Lab = null,
 		IReadOnlyList<ParkWorld.ResearchedRing>? RecentlyResearched = null, ParkWorld.ThingIds? Ids = null,
 		IReadOnlySet<int>? VoicesLetGo = null, bool VoicesNotPutBack = false, ParkWorld.AdvisorSlot? AdvisorKept = null,
-		int? WorldState = null );
+		int? WorldState = null, IReadOnlyList<ParkWorld.WrittenLitter>? Litter = null );
 
 	/// <summary>
 	/// The file's objects, scripts and models as the running park has them (<c>docs/exe/saves.md</c>, "OpenTPW's
@@ -556,7 +558,7 @@ public static class ParkFileWriter
 		if ( running.People is { } written )
 		{
 			// A sprite made here is due one interval after the clock the file is written with, the file's own where the things are not given.
-			body = loaded.PutPeople( body, written, edits, running.LetGo, heads, running.Ids, out var report, running.Things?.Clock );
+			body = loaded.PutPeople( body, written, edits, running.LetGo, heads, running.Ids, out var report, running.Things?.Clock, running.Litter );
 			people = report;
 		}
 

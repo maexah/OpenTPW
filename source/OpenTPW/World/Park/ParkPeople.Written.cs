@@ -189,6 +189,9 @@ public sealed partial class ParkPeople
 	/// The frames a direction of a bank's set - the byte the original keeps in a sprite's <c>+0xbc</c>
 	/// (<c>FUN_00540c60</c>) - or null when the bank is not to hand.
 	/// </summary>
+	/// <summary>A litter sprite's <c>+0xbc</c>: the frames a direction of its kind's set of <c>SPR_LI</c>, bank 0 of kind 11.</summary>
+	internal int? LitterSetByte( int kind ) => SetByteOf( ParkWorld.LitterSpriteKind, 0, ParkWorld.LitterSlot( kind ) );
+
 	private int? SetByteOf( int kind, int bank, int set )
 		=> BankAt( kind, bank ) is { } file && set >= 0 && set < file.Sets.Length ? file.Sets[set].FramesPerDirection : null;
 

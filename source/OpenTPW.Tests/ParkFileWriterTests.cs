@@ -527,8 +527,8 @@ public class ParkFileWriterTests
 	}
 
 	/// <summary>
-	/// The running litter is not written (Q1288): a save is counted <c>SAVE_PARK_RUNNING_LITTER</c> once a drop has made
-	/// a cell's litter differ from the file's, and not before.
+	/// A drop is written with the people (<c>ParkLitterTests</c>); a save with no people to write it with is counted
+	/// <c>SAVE_PARK_RUNNING_LITTER</c> once a drop has made a cell's litter differ from the file's, and not before.
 	/// </summary>
 	[TestMethod]
 	public void ASaveAfterADropCountsTheRunningLitter()

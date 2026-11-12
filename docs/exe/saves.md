@@ -1313,7 +1313,8 @@ in the copied body, where it lies.
 
 - **Written of a cell:** the map record's `mDirection`, `mFlags`, `mNeighbours`, `mOverlapCounter`, `mParentID`,
   `mTileData` and `mType`, and the track record's flags, neighbours, parent and type. **Left as the file's:**
-  `mMeshInstance`, `mHoardingNeighbours`, the litter block, `mWho` and the track's segment. The effects part and
+  `mMeshInstance`, `mHoardingNeighbours`, the litter block (a drop's is the people stage's, "OpenTPW's writer, a cell's
+  litter"), `mWho` and the track's segment. The effects part and
   its bit of the status byte are the last stage's ("OpenTPW's writer, the region effects"). A file whose cell has no map record, or track fields to write and no track record, is refused:
   the original writes none such.
 - **`mWho` is not written here.** The chain is the cell's head and the things' two links together (above): the
@@ -2406,6 +2407,32 @@ control's bananas are empty; the head in the control's right banana at six secon
 boarded itself at 3.4 s. A pale speck at the tip of the control's right banana is in both its frames and was not
 identified. **Seen in the first run only** (`run1/C-off.TPWS`, the build before two small simplifications): the
 file saved after the riders got off; the gate's run did not catch the ride empty in its 200 seconds.
+
+### OpenTPW's writer, a cell's litter
+
+Q1288, cloud lane c96 (no Ghidra, no original). The decode is `ride-operation.md`, "A cell's litter"; the 72 littered cells of
+the original's files to hand are its measure (Q899, `littercheck.py`).
+
+**What is written.** `Level.WritePark` hands the writer each cell the running park has littered since the load
+(`ParkState.DroppedLitter`: dropped here, still there, clean in the file) with its kind, its sprite's place and the frames a
+direction of its `SPR_LI` set (`ParkPeople.LitterSetByte`), and `ParkWorld.PutPeople` writes each after every other sprite:
+a record made as the constructor makes one (`FUN_004758f0`, on the lowest free slot), written as one whose program has run its
+first turn, so kind 11, bank 0, set (`+0xb4`) the kind's slot, frame 0, alpha 255, place (x, 0, y), `+0x0c` the kind's record
+(1382 + 10 × slot), `+0x08` that plus 7 (resting on the jump), flags `0x80000`, state 2 and shown, its stack empty; then the
+cell's litter block: `mLitter` the kind, `mLitterCollector` nought, the first `mLitterScript` the sprite's slot, the second
+nought. A cell the file already holds litter on, or with no map record, is refused. **Deviations:** the slot is the lowest free
+at the save, where the original's is the lowest at the drop; state 2, shown and alpha 255 are what a run program and the
+constructor leave on other sprites (the heads', above), not compared on a litter sprite of the original's; `mTimeMarkedForLitterCollection`
+is left as the file's (nought on a clean cell). With no people to write (the people stage not run) the drop is not written and
+is counted, `SAVE_PARK_RUNNING_LITTER`.
+
+**Read back.** The reader takes both handles (`ParkWorld.MapCell.LitterSprite`, `LitterParticle`); a park state made from the
+file draws each littered cell at the sprite its handle names and does not write it again as a drop
+(`ParkLitterTests.ADropIsWrittenWithItsSpriteAndReadBack`). **Measured** off-screen (lane c96, output not kept): a fresh
+Lost Kingdom park with two drops, (47,22) kind 1 and (45,21) kind 5, saved as `LITTER.TPWS`; the log's `2 litter dropped` and
+`littercheck.py` on the file: `(45,21) kind 5 h 20/0 sprite kind 11 bank 0 word 1429 ... place (457.000, 0.000, 212.000) want
+(457, 0, 212) OK`, `(47,22) kind 1 h 21/0 ... word 1389 ... place (476.000, 0.000, 221.000) want (476, 0, 221) OK`. **Not run:**
+the file loaded in this game's Load Park list or in the original.
 
 ### OpenTPW's writer, a made object's flags and corner
 
