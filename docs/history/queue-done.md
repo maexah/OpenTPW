@@ -12145,6 +12145,12 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q281. A member of staff who reaches the picket keeps the facing their walk ended on, and turns on the spot
+  from there.** The original's state setter writes nought to the facing as state 5 is entered (FUN_005054d0 case
+  5, 0x00505582, beside the speed and animation 0x13 that Staff.SetActivity already takes from it), so a striker's
+  turns start from 0; a test that walks a member to the picket and reads PeepWalk.Heading would show it. From the
+  week-end audit (stage 6, the second reading of commit `0db41100`; read from the code, not reproduced in the
+  game). `OpenTPW/World/Park/StaffBehaviour.cs`, line 432.
 
 ## B. Docs and comments
 
