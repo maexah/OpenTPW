@@ -1384,10 +1384,6 @@ filed the items that cite it.
 - [ ] **Q462. The advisor's turn comes before the sweep's tail.** From the week-end audit (D11, `VERIFY-8b.md` Q318 1).
   The original walks every thing (his turn inside the walk), then `0x004d7b20` (`0x00516695`): arrivals, staff pool,
   calendar. Ours runs the arrivals and the pool before his `Tick`, so row 0x11 can be said a poll round early or late.
-- [ ] **Q464. A written corner cell's made vehicles run newest first.** From the week-end audit (D13, `VERIFY-2b.md`
-  Q342 1). With ferry and seaplane both made, `ParkWorld.People.cs` writes cell (0,0)'s chain oldest first; the
-  original's file (`q257x/orig/fixed-by-the-original.TPWS`) and our running list run newest first. No effect on reading
-  back was found.
 - [ ] **Q1170. A purchase's advisor post, `0xc9` or `0xce`: decode which, then build.** From Q465, which counts it
   (`BUY_SCREEN_PURCHASE_ADVISOR_POST` in `ParkBuyScreen.Chose`, once a click that puts the item in the hand). The
   original posts `0xc9` where the item's `+0x4c` is nought and `FUN_004824d0( 0x80, 0 )` answers nought, else `0xce`

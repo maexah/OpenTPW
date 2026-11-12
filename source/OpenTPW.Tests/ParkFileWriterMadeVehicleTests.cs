@@ -278,6 +278,114 @@ public class ParkFileWriterMadeVehicleTests
 	}
 
 	/// <summary>
+	/// <b>With the seaplane and the ferry both made, the corner cell's chain runs newest first</b>
+	/// (<c>docs/exe/saves.md</c>, "Q342"): the original's own file (<c>q257x/orig/fixed-by-the-original.TPWS</c>,
+	/// seaplane thing 44 made before ferry 32) heads cell (0,0) with the ferry, then the seaplane, then the bus, and the
+	/// running list does the same. The ferry here is made after the seaplane on a lower id (a departed guest's), so a
+	/// writer that went by id, or oldest first, writes the seaplane first. Read back, the park's own chain on that cell,
+	/// its object list and both vehicles' slots are the running park's.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> the made objects on a cell written oldest first; written by id, the higher first.
+	/// </remarks>
+	[TestMethod]
+	public void WithBothVehiclesMadeTheCornerCellsChainRunsNewestFirst()
+	{
+		var guest = 0;
+		var (people, rides, seaplane) = SeaplaneThenFerry( running =>
+		{
+			guest = running.Peeps.First( peep => !PeepBehaviour.HeldByAThing( peep ) ).ThingId;
+			Assert.IsTrue( running.Depart( guest ) );
+			running.State.FreeDeletedThings();
+		} );
+		var ferry = people.VehicleThings[2];
+		var state = people.State;
+
+		Assert.AreEqual( guest, ferry, "the ferry, made second, takes the departed guest's id" );
+		Assert.IsTrue( ferry < seaplane, $"the newer on the lower id: ferry {ferry}, seaplane {seaplane}" );
+
+		var running = RunningChain( state, 0, 0 );
+
+		CollectionAssert.AreEqual( new[] { ferry, seaplane, Bus }, running.Take( 3 ).ToArray(), "the running list: newest first" );
+
+		Unimplemented.Forget();
+		Assert.IsNotNull( Level.WritePark( shipped, state, Theme, "BothMade", people, null, rides, catalogue ) );
+
+		var written = Read( File.ReadAllBytes( Path.Combine( Jungle, "BothMade.TPWS" ) ), out _ );
+
+		Assert.IsNull( written.Problem );
+		CollectionAssert.AreEqual( new[] { ferry, seaplane, Bus }, written.ChainAt( 0, 0 ).Take( 3 ).ToArray(), "the file: the ferry, the seaplane, the bus" );
+		CollectionAssert.AreEqual( running, written.ChainAt( 0, 0 ).ToArray(), "the whole chain as the running park holds it" );
+		Assert.AreEqual( (Bus, seaplane, ferry), (written.ArrivalVehicleForSmallCrowd, written.ArrivalVehicleForMediumCrowd, written.ArrivalVehicleForLargeCrowd) );
+		Assert.AreEqual( ferry, written.FirstObject, "the object list headed by the newest too" );
+
+		// Read back: the park's own chain on the corner cell is the file's, and the vehicles are the same things.
+		TestRun.DeleteEvery<ParkPeople>();
+
+		var again = new ParkPeople( written, new ParkBalance( Theme, easyMode: true ), () => ParkRides.GateIsOpen, new ParkState( written ), catalogue );
+
+		CollectionAssert.AreEqual( running, RunningChain( again.State, 0, 0 ), "read back, the corner cell's chain is the running park's" );
+		Assert.AreEqual( (Bus, seaplane, ferry), (again.VehicleThings[0], again.VehicleThings[1], again.VehicleThings[2]) );
+		CollectionAssert.AreEqual( state.ObjectsInChainOrder().Select( thing => thing.ThingId ).ToArray(),
+			again.State.ObjectsInChainOrder().Select( thing => thing.ThingId ).ToArray(), "and the object list" );
+	}
+
+	/// <summary>The things on a running cell from its head, as <see cref="ParkState.NextOnCell"/> links them.</summary>
+	private static int[] RunningChain( ParkState state, int x, int y )
+	{
+		var chain = new List<int>();
+
+		for ( int who = state.CellAt( x, y ).Occupant; who != 0 && chain.Count <= ParkState.LastThingId; who = state.NextOnCell( who ) )
+			chain.Add( who );
+
+		return [.. chain];
+	}
+
+	/// <summary>
+	/// The shipped park with the seaplane summoned and made for a load of forty, then let go as spent, then
+	/// <paramref name="between"/>, then a load of sixty-one: the ferry summoned and made after it.
+	/// </summary>
+	private (ParkPeople People, ParkRides Rides, int Seaplane) SeaplaneThenFerry( Action<ParkPeople> between )
+	{
+		typeof( Players ).GetProperty( nameof( Players.Current ) )!.SetValue( Players.Roster, new Player( 0, "Test", new PlayerFile { InstantAction = true } ) );
+
+		var state = new ParkState( shipped );
+		var rides = new ParkRides( Theme, shipped, catalogue, data );
+
+		made.Add( rides );
+		StandVehicles();
+
+		var people = new ParkPeople( shipped, new ParkBalance( Theme, easyMode: true ), () => ParkRides.GateIsOpen, state, catalogue,
+			thing => rides.Scheduler.Find( rides.ScriptFor( thing ) ), random: new Random( 5 ), behaviourRandom: new Random( 5 ),
+			rideRandom: new Random( 5 ), staffRandom: new Random( 5 ) );
+
+		Time.Paused = false;
+		Time.StepFrames = 0;
+		GameClock.Rebase();
+		Time.Update( 0f );
+		GameClock.Update( paused: false, GameClock.ParkCatchUp );
+
+		Assert.AreEqual( 2, people.ForceArrival( 40 ), "forty come by the second vehicle" );
+		Sweep( people );
+		Assert.AreEqual( 2, people.CurrentVehicle, "the seaplane summoned" );
+
+		var seaplane = people.VehicleThings[1];
+
+		Assert.AreNotEqual( 0, seaplane, "and made" );
+
+		// Spent, as its script's state 6 leaves it: no vehicle current, so the next summons asks for one.
+		typeof( ParkPeople ).GetField( "_arrivalVehicle", BindingFlags.NonPublic | BindingFlags.Instance )!.SetValue( people, 0 );
+
+		between( people );
+		Assert.AreEqual( 3, people.ForceArrival( 61 ), "sixty-one come by the third vehicle" );
+		Sweep( people );
+		Assert.AreEqual( 3, people.CurrentVehicle, "the ferry summoned" );
+		Assert.AreNotEqual( 0, people.VehicleThings[2], "and made" );
+
+		return (people, rides, seaplane);
+	}
+
+	/// <summary>
 	/// <b>A vehicle's model record is a fixed item's</b> (<c>FUN_004dd500</c>): flags <c>0x361</c>, on cell (48,17)
 	/// and one cell square whatever its object's cell and its item's footprint, as the bus's, the seaplane's and
 	/// the ferry's records are in the original's own files; a thing bought keeps its own cell, footprint and

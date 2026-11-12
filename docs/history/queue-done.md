@@ -12145,6 +12145,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q464. A written corner cell's made vehicles run newest first.** From the week-end audit (D13, `VERIFY-2b.md`
+  Q342 1). With ferry and seaplane both made, `ParkWorld.People.cs` writes cell (0,0)'s chain oldest first; the
+  original's file (`q257x/orig/fixed-by-the-original.TPWS`) and our running list run newest first. No effect on reading
+  back was found. **Done (2026-11-12): nothing to build on `main` at `ad31ffc`.** The writer already writes the made
+  objects on a cell newest first by the park's stamps (`PutPeople`'s `madeObjectIds`), so the audit's finding does not
+  hold on this tree. `WithBothVehiclesMadeTheCornerCellsChainRunsNewestFirst` now pins it: the seaplane made, then the
+  ferry on a departed guest's lower id; the file's (0,0) chain is ferry, seaplane, bus, then the rest as the running
+  list holds it, and read back the park's own chain, object list and slots are the same. A read back does not change.
+  Two put-backs (oldest first; by id alone) each fail it. Two off-screen runs wrote ferry, seaplane, then the bus or
+  the lights first, down to thing 1.
 
 ## B. Docs and comments
 
