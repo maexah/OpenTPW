@@ -2325,9 +2325,12 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   A model's texture clamps unless its frame wraps (Q363). `ParkPaths` and `ParkGround` bind an array, which
   `Material.Set` samples as Wrap whatever the flag; `Texture.SamplerFor`'s Mirror is used only for a texture bound
   alone; the sea keeps its wrap.
-- [ ] **Q18. The advisor draws in front of the dimmed screen.** `Level.Render` draws the HUD, then
-  the overlay pass with the advisor. Pausing does not hide him either; only the options screen's quiet stop takes him off (`ui.md`, "Pausing him"). Draw the
-  dimmer over him, or hide him while such a window is open. Confirm: screenshot with the buy screen open.
+- [ ] **Q1460. Photograph the advisor under the game menu's dimmer.** From Q18, built in a cloud lane with no display.
+  Confirm in the running game, beside the original: the park with a line playing (`speech 5`), then the game menu opened
+  over him (Escape, or the console's `menu`): he is held mid-gesture under the half-black LOLIGHT dimmer and the menu's
+  items are over him (the original draws him over the dimmer: the deviation is Alexah's, `ui.md`, "Pausing him"); and the
+  buy screen open with him talking, where he stays on top (no dimmer). `windows` gives the census
+  (`overlays under a dimmer N frames (last GameMenu)`).
 - [ ] **Q19. VSync and a frame limiter.** `Renderer.CreateGraphicsDevice` hard-codes VSync on. `Display.cs` already
   carries each mode's refresh rate. Add an Options row: VSync mode, and a frame limit from 30 up to
   Unlimited, default the monitor's refresh rate on first launch. Confirm: screenshot the options row;

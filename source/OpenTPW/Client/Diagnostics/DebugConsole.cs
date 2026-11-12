@@ -624,6 +624,7 @@ public static class DebugConsole
 						+ (shown.Covered ? " - under the full-screen view" : "")
 						+ (UI.RootPanel.Hidden ? " - interface hidden (F2)" : "")
 						+ $"; left on {UI.ParkCategoryScreens.LeftOn( UI.ParkCategoryScreens.Building )},{UI.ParkCategoryScreens.LeftOn( UI.ParkCategoryScreens.Information )},{UI.ParkCategoryScreens.LeftOn( UI.ParkCategoryScreens.Finance )}"
+						+ $"; {Level.OverlayCensus()}"
 					: "windows: no window stack" );
 				break;
 
