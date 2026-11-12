@@ -105,9 +105,44 @@ public class ParkResearcherResearchTests
 		Assert.AreEqual( 697, new Staff( saved.ThingId, saved.Model, saved.Staff.Value, saved.Navigator ).TimeStartedResearching );
 
 		// +503 is another field for every other kind: the mechanic's count down, the handyman's litter cell, the
-		// entertainer's own stamp, the guard's perp.
-		foreach ( var other in world.People.Where( person => person.Staff != null && person.ThingId != Researcher ) )
-			Assert.AreEqual( 0, other.Staff!.Value.TimeStartedResearching, $"thing {other.ThingId}, model {other.Model}" );
+		// entertainer's own stamp, the guard's perp. The shipped park holds nought there for all four, so a copy of it
+		// with those two bytes set in each of their records is read: none of them reads a researcher's stamp.
+		var body = Body();
+		var others = world.People.Where( person => person.Staff != null && person.ThingId != Researcher ).ToArray();
+
+		CollectionAssert.AreEquivalent( new[] { 4, 5, 6, 7 }, others.Select( person => person.Model ).ToArray(),
+			"a mechanic, a handyman, an entertainer and a guard" );
+
+		foreach ( var other in others )
+		{
+			var record = world.RecordOf( other.ThingId )!;
+			var at = body.AsSpan().IndexOf( record );
+
+			Assert.IsTrue( at >= 0 && body.AsSpan( at + 1 ).IndexOf( record ) < 0, $"thing {other.ThingId}'s record is in the body once" );
+			Assert.AreEqual( 0, BitConverter.ToUInt16( body, at + 503 ), $"thing {other.ThingId}: nought at +503 as shipped" );
+			BitConverter.TryWriteBytes( body.AsSpan( at + 503, 2 ), (ushort)0x0283 );
+		}
+
+		var patched = new ParkWorld( body );
+
+		Assert.IsNull( patched.Problem );
+		Assert.AreEqual( 697, patched.People.Single( person => person.ThingId == Researcher ).Staff!.Value.TimeStartedResearching );
+
+		foreach ( var other in others )
+		{
+			var read = patched.People.Single( person => person.ThingId == other.ThingId );
+
+			Assert.AreEqual( 0x0283, BitConverter.ToUInt16( patched.RecordOf( other.ThingId )!, 503 ), $"thing {other.ThingId}: the patch is in its record" );
+			Assert.AreEqual( 0, read.Staff!.Value.TimeStartedResearching, $"thing {other.ThingId}, model {other.Model}" );
+			Assert.AreEqual( 0, new Staff( read.ThingId, read.Model, read.Staff.Value, read.Navigator ).TimeStartedResearching );
+		}
+	}
+
+	/// <summary>The shipped park's body as <see cref="SaveReader"/> hands it over, a copy this test may change.</summary>
+	private byte[] Body()
+	{
+		using var stream = new MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
+		return new SaveReader( stream ).ReadFile();
 	}
 
 	/// <summary>

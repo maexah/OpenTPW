@@ -12131,6 +12131,50 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   non-null where the entities step starts), or confirm it in a running game off-screen: the log's particle line before the
   catalogue's effects line, with the swap put back and the order seen to flip.
 - [x] **Q1036. The lobby bolt's brightness over its life. Decode first.** Folded into Q1044 (filed by the Sentinel the same hour from VERIFY-13, which decoded the envelope). From Q1034 and the Sentinel's second reading of Q152's fork review. OpenTPW dims the bolt over its whole life (`Lightning.OnUpdate`: opacity = life^2 x stutter, measured exact in Q1034: the lift in the frame is 78, 32, 13, 4.6 and 2.5 grey levels at 0.1, 0.2, 0.35, 0.4 and 0.45 s of a 0.5 s bolt, so it is out of sight by about 0.4 s), where the original is suspected to hold its bolt at 192 to 255 grey in saw-teeth for the whole 500 ms and cut at the end (the colour pulse `0x0057ee30` in Q1035; a second reading, neither decoded nor run). Decode the pulse's value over a bolt's life for the lobby's arguments (lifetime 500, argument 8), run the original's lobby bolt under Proton (`record.sh`, the island pinned) and write the figures in `docs/exe/weather.md`, "The bolt"; build the envelope only after that, in `Lightning.OnUpdate` and the `Flash` that lifts the lobby's sun and sky (`LobbyWeather`), and read it back with `q1034/confirm2.py` (`stepsweep`). Q1034 changed nothing in `Lightning.cs`.
+- [x] **Q286. Seven tests cannot fail for what their names say.** From the week-end audit (stage 6, the second
+  reading of each commit). Each passes with the bug it is named for put back; strengthen each and prove it with
+  `mutate.py`. One bullet a test.
+  - ASavedStampIsKept reads a stamp of nought from the shipped park and then checks only that the Staff
+    constructor copies a value handed to it, so the entertainer's read of mTimeStartedEntertaining at record +503
+    can be moved and the suite stays green. It should write a park with a performing entertainer whose stamp is
+    not nought and read it back, as ParkMechanicRepairTests does for the mechanic's +503, the layout being
+    FileFormats saves.md's entertainer row (mTimeStartedEntertaining 4, mNext 2).
+    (`OpenTPW.Tests/ParkEntertainerPerformanceTests.cs`, line 263; commit `63660f76`)
+  - No test reaches a whole purchase, so the one line that stamps a bought toilet's, camera's or fireworks' region
+    effect (`ParkBuilding.Build`, the `StampEffects` call after `AddObject`) can be deleted with the suite green;
+    `ParkRegionEffectsTests.Bought` calls `StampEffects` itself. A test should buy a Security Camera through
+    `ParkBuilding.Build`'s own path with objects that place, and read security 20 on its cell, which is what
+    `0x004db458` does and what q257e's mutation run showed only the game run catches.
+    (`OpenTPW.Tests/ParkRegionEffectsTests.cs`, line 143; commit `8b70a8d8`)
+  - TheSavedStampIsReadAndKept asserts that no other kind of staff reads a researcher's stamp, but the shipped
+    save holds nought at +503 for all four other members, so the assertion passes with the model guard in
+    ParkWorld.ReadStaff removed (mutation m38 and m38b of q134/mutations.txt survived). It should read a record
+    built with a non-zero +503 for a mechanic, a handyman, an entertainer and a guard (bytes patched in a copy of
+    Easymode.TPWI, or a park written by ParkWorld.People's writer with an entertainer's stamp set) and assert
+    nought, which m38 would then fail. (`OpenTPW.Tests/ParkResearcherResearchTests.cs`, line 109; commit
+    `50516f7c`)
+  - No test holds the range a bumper ride's engine voice is started with: taking `range: rides.RangeOf( effect, 0
+    )` off `ParkCarSounds.Play` fails nothing (`q265/mut-run1.out`, m21 survives), and only the game run
+    `q265/engine.py` showed it. A test should stand a track ride's script far enough to start the engine voice and
+    read its range as the variation's own, 100 for the Hot Pot's (`docs/exe/audio.md`, "Measured here,
+    2026-10-10"). (`OpenTPW/World/Park/ParkCarSounds.cs`, line 92; commit `a069af13`)
+  - `TheBootsSoundIsPlayedAtItsVariationsVolume` asserts `UiSounds.BootVolume` alone, and `UiSounds.Boot`, which
+    hands that volume to `SoundCategory.Play` for effect 210, is called by no test, so a `Boot` that plays at
+    volume 1 or plays the click's effect passes the suite. `Boot` answers nothing and plays only once sound is up
+    (`Audio.Ready`), so it wants a seam first and then a test through it (the voice played: its clip and its
+    volume of nought), which is known by putting `1f` in the `Play` call at
+    `UiSounds.cs:73` and seeing the suite stay green. (`OpenTPW.Tests/ParkCountedPathsTests.cs`, line 205; commit
+    `da9443ff`)
+  - The test `ARideBoughtFacingAPathKeepsItsLinkToItsQueue` builds its purchase by hand and calls
+    `ParkBuilding.LayEnds` itself, so no test fails when `Build` stops calling `LayEnds` (`ParkBuilding.cs:164`)
+    or calls it before `Stamp`. A test should drive `Build` (or `Buy`/`PlaceCarried` on a level) for a Crazy Ape
+    on (41,22) and read cell (42,22) links `0x01` and a queue of one cell; putting the bug back at line 164 shows
+    the gap. (`OpenTPW.Tests/ParkFileWriterBoughtAndSoldTests.cs`, line 647; commit `2dec6b66`)
+  - The test `AThingsVoiceIsSoundedAtTheMiddleOfItsCells` checks `ParkObjects.BoxMiddle` alone, so putting the
+    scream back at the thing's corner in `TrySoundPlace`, or not keeping the footprint in `Place`, fails no test
+    (q266/mutations.py m08 to m10 fail none). A test should stand a thing in a `ParkObjects` and read
+    `TrySoundPlace` for it, the Belly Bounce at (51,23) answering (525, 250), so the wiring is held by the suite
+    and not by one game run. (`OpenTPW.Tests/ParkFootprintTests.cs`, line 141; commit `9ec9a7a9`)
 
 ## B. Docs and comments
 

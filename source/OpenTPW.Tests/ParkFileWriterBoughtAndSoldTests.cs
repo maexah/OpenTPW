@@ -759,6 +759,42 @@ public class ParkFileWriterBoughtAndSoldTests
 		Assert.AreEqual( (MapStep.CellId( 42, 21 ), 1), ((int)bought[0].BackOfQueue, bought[0].QueueSizeInCells) );
 	}
 
+	/// <summary>
+	/// The same purchase through <see cref="ParkBuilding.Build"/>'s own path, its model stood by a stand-in: the build lays the
+	/// ends after its stamp, so the entrance at (42,22) keeps its link <c>0x01</c> to the queue cell before it and the queue
+	/// is one cell long. <see cref="ARideBoughtFacingAPathKeepsItsLinkToItsQueue"/> calls <c>LayEnds</c> itself.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> <c>Build</c> not calling <c>LayEnds</c>, or calling it before the stamp, fails here.</remarks>
+	[TestMethod]
+	public void ARideBoughtThroughTheBuildFacingAPathKeepsItsLinkToItsQueue()
+	{
+		var state = new ParkState( shipped );
+
+		ParkBuilding.StandThing = _ => true;
+
+		try
+		{
+			var built = ParkBuilding.Build( state, shipped, catalogue, null, null, CrazyApe, 41, 22, 0 );
+
+			Assert.AreNotEqual( 0, built.ThingId, built.Answer );
+			Assert.AreEqual( (42, 21), built.QueueNode );
+
+			var entrance = state.Record( 42, 22 );
+
+			Assert.AreEqual( (CellEdge.RideEnd, 0x01), (entrance.Type, (int)entrance.Neighbours), "the entrance, linked to its queue" );
+			Assert.AreEqual( ParkRideChoice.QueueCellType, state.Record( 42, 21 ).Type );
+
+			state.WrittenObjects( shipped, id => true, out var bought, out _ );
+
+			Assert.AreEqual( built.ThingId, bought[0].ThingId );
+			Assert.AreEqual( (MapStep.CellId( 42, 21 ), 1), ((int)bought[0].BackOfQueue, bought[0].QueueSizeInCells), "a queue of one cell" );
+		}
+		finally
+		{
+			ParkBuilding.StandThing = null;
+		}
+	}
+
 	/// <summary>A bought thing's queue is read off the map, whatever its record holds.</summary>
 	[TestMethod]
 	public void ABoughtThingsQueueIsMeasured()
