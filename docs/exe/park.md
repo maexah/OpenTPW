@@ -771,7 +771,7 @@ Instant Action or placed in `Easymode.TPWI`; bounce slots are in four (`Bouncy` 
 only the Belly Bounce, at word 60, so its riders' sine would run at `0.8 + 0.005 × 60` = 1.1 (Q511 builds the lift with its term); `WALKON` is
 in 37 scripts (ten of Lost Kingdom's: `incagod`, `Lookout`, `Totem`, `tvsim`, `balloon`, `giftshop`, `steak`, `Hyenas`, `Junspray`, `Squark`),
 every one of the stock park's at word 50, the divisor 1, so the placer's read is reached only once the player sets another speed; `TOUR` is in
-the jungle and hallow `TourRide`; `TRIGANIMSPEED` is in each theme's `Gates`; `TRIGWAITANIM_CH` is in none. **Not read yet**: the `TOUR`
+one script a theme (jungle and hallow `TourRide`, fantasy `twetours`, space `scitour`); `TRIGANIMSPEED` is in each theme's `Gates`; `TRIGWAITANIM_CH` is in none. **Not read yet**: the `TOUR`
 record, and what the walk placer does with its divisor (`0x0055823e`..`0x0055824a`; Q1608). Run off-screen (`q155-b16/run3/`), the shipped Belly Bounce reads word 60, its screams start at
 `parameter 40` (`speed 60`, level 20) where the constant 50 gave 35, its `WAIT 500` arms for 454 ms, and a bought Hot Pot's performance follows
 the word written (60 to 80 and back); the original's memory was not read for any of them.

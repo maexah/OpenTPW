@@ -424,7 +424,7 @@ public class ParkListScreenRewriteTests
 	/// <b>Each tab's second column is the customers of the last thirty finished days, a number, and the rides'
 	/// excitement, state of repair and remaining life and the sideshows' excitement are bars</b>, each
 	/// <c>((value &amp; 0xff) &lt;&lt; 10) / 100</c> of 1024, as the fill <c>FUN_00493cd0</c> and the rewrite
-	/// <c>FUN_004955e0</c> hand them; the shops' and sideshows' satisfaction bars are left unfilled and counted.
+	/// <c>FUN_004955e0</c> hand them; the shops' and sideshows' satisfaction is a bar too, unmasked (<c>SatisfactionBar</c>).
 	/// </summary>
 	/// <remarks>
 	/// <b>Mutations:</b> the customers not written, or today's taken in, or more than thirty days; a bar's low byte not

@@ -14545,7 +14545,7 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   staff-costs figure photographed.
   **TICKED 2026-11-12 on tests and the census, the photograph short (Q1616).** Main already had both halves when this
   was taken up: `ShowMoney` is gone, `Update` only takes the list's posted pick, and `ShowAccount( wage )` puts the
-  wage on the staff costs and takes it off the balance; which commit did it is lost to the squashed history. Added
+  wage on the staff costs and takes it off the balance; Q385 did it (`8e740044`, 2026-10-15) and left this item open. Added
   `AHighlightedCandidatesWagePreviewStandsFrameOnFrameAndComesOffTheBalance` (the pointer on the second row, five frames,
   then back to the first); it fails with each of four bugs put back (the update lettering nought, the wage not off
   the balance, the wage onto it, the previews added up). Off-screen, the stock park's cleaners' second row (Rajan

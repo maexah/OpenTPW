@@ -542,7 +542,7 @@ filed the items that cite it.
     word 50 in the stock park, so it is reached once the player sets another speed.
   - **The coaster's cap and run** (`FUN_0043c3d0`): Q155 keeps the node's setting and counts a change (`COAST_RIDE_SPEED`); the cap `+0x34` and the run it
     redoes wait for a coaster that is simulated. Not read: whether the coasters module's load puts a saved `+0x30` back (a loaded coaster here starts at 60).
-  - **`TOUR`'s `+0x50`** (`0x005517c0`, `FUN_0055d9b0`, speed / 10): `TOUR` is unbuilt and counted (`TourRide`, jungle and hallow).
+  - **`TOUR`'s `+0x50`** (`0x005517c0`, `FUN_0055d9b0`, speed / 10): `TOUR` is unbuilt and counted (one script a theme: jungle and hallow `TourRide`, fantasy `twetours`, space `scitour`).
   - **`TRIGANIMSPEED` and `+0xe4`** (`0x00552f6e`): in every theme's `Gates`, the stock park's thing 11 among them; unbuilt and counted.
   - **The upgrade completion's speed push** (`0x004dfabc`, `RIDE_UPGRADE_COMPLETION`), unless its own item builds it.
   - `TRIGWAITANIM_CH`'s deadline (`0x00553682`) is in no shipped script (Q155's sweep): dead by CONTENT, nothing to build.
@@ -1259,8 +1259,8 @@ filed the items that cite it.
 - [ ] **Q1612. The all-items satisfaction bar past its ends, photographed.** Split from Q457 (built in a cloud lane with no
   display and no original). `ParkItemsScreen.SatisfactionBar` hands the bar `(value << 10) / 100` unmasked and
   `UiStatBar.Units` holds it to 0..0x400, so a satisfaction of -1 is an empty bar and 256 a full one (the masked rule drew
-  them full and empty). Confirm on a desk: `parkfile.py`'s `ring_set` writes a shop's thirty satisfaction days to -51 and
-  another's to 206 (fifty plus the mean: -1 and 256), and both games load the file, the all-items screen (`screen 5` in
+  them full and empty). Confirm on a desk: `parkfile.py`'s `ring_set` writes every filled satisfaction day of one shop to -51 and
+  of another to 206 (fifty plus the mean: -1 and 256), and both games load the file, the all-items screen (`screen 5` in
   ours, the key `a` in the original) on the shops' tab: the log's `Items list: tab 1, row N ...` ends `-10` and `2621`,
   and each bar is photographed beside the original's.
 - [ ] **Q460. Zlib textures round the chroma terms twice.** From the week-end audit (D9, `VERIFY-13b.md` Q355 1). The

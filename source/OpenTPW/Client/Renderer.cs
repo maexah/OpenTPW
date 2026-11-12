@@ -400,6 +400,29 @@ public partial class Renderer
 	}
 
 	/// <summary>
+	/// The device's options: the clip space's y running up the screen and depth 0 to 1, which the shaders, the interface's
+	/// pixel-to-clip-space arithmetic and the culled pipelines' kept winding (<see cref="Material.Keeps"/>) are written against.
+	/// </summary>
+	internal static GraphicsDeviceOptions DeviceOptions( bool vsync ) => new()
+	{
+		// Vulkan's clip space has Y running down the screen where OpenGL's and Metal's run up it. This
+		// asks for the upward direction - NeoVeldrid gets it by giving the viewport a negative height -
+		// which is what the shaders, and the pixel-to-clip-space arithmetic the interface does, are
+		// written against.
+		PreferStandardClipSpaceYDirection = true,
+
+		// Vulkan is natively 0-to-1 in depth, which is what System.Numerics builds - see
+		// Camera.CalcViewProjMatrix. Only OpenGL would need converting, and OpenGL is not offered.
+		PreferDepthRangeZeroToOne = true,
+
+		SwapchainDepthFormat = null,
+		SwapchainSrgbFormat = false,
+		// opentpw.cfg's "vsync" line (Q19), on unless it says off.
+		SyncToVerticalBlank = vsync,
+		HasMainSwapchain = true
+	};
+
+	/// <summary>
 	/// Builds the device the game draws with. Vulkan, on all three platforms.
 	///
 	/// <para>
@@ -430,24 +453,7 @@ public partial class Renderer
 			Log.Info( $"Graphics card: Config.tcf says Secondary, but {GpuSelector.Count} card{(GpuSelector.Count == 1 ? " is" : "s are")} listed, so the Video Card is Primary" );
 		}
 
-		var options = new GraphicsDeviceOptions()
-		{
-			// Vulkan's clip space has Y running down the screen where OpenGL's and Metal's run up it. This
-			// asks for the upward direction - NeoVeldrid gets it by giving the viewport a negative height -
-			// which is what the shaders, and the pixel-to-clip-space arithmetic the interface does, are
-			// written against.
-			PreferStandardClipSpaceYDirection = true,
-
-			// Vulkan is natively 0-to-1 in depth, which is what System.Numerics builds - see
-			// Camera.CalcViewProjMatrix. Only OpenGL would need converting, and OpenGL is not offered.
-			PreferDepthRangeZeroToOne = true,
-
-			SwapchainDepthFormat = null,
-			SwapchainSrgbFormat = false,
-			// opentpw.cfg's "vsync" line (Q19), on unless it says off.
-			SyncToVerticalBlank = GameOptions.Current.VSync,
-			HasMainSwapchain = true
-		};
+		var options = DeviceOptions( GameOptions.Current.VSync );
 
 		// Built by hand rather than through NeoVeldridStartup.CreateGraphicsDevice, so that the options above
 		// are the ones actually used. It is the same swapchain NeoVeldridStartup would build, and

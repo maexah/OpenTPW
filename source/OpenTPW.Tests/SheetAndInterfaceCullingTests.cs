@@ -16,7 +16,7 @@ namespace OpenTPW.Tests;
 /// </summary>
 /// <remarks><b>Mutations:</b> <c>DisableCulling</c> put back on a sheet's or the interface's flags, or taken off the
 /// weather's; a cell's, a marker square's or the sea's triangles wound the other way; a wall laid one way only; the
-/// interface's matrix with its y scale turned over.</remarks>
+/// interface's matrix with its y scale turned over; the device's clip space left with Vulkan's y, running down.</remarks>
 [TestClass]
 public class SheetAndInterfaceCullingTests
 {
@@ -46,6 +46,24 @@ public class SheetAndInterfaceCullingTests
 			Assert.Inconclusive( "no source tree beside the tests" );
 
 		StringAssert.Contains( File.ReadAllText( source ), "\"content/shaders/test.shader\", ParkGround.DrawFlags )", "the paths take the ground's flags" );
+	}
+
+	/// <summary>
+	/// <b>The device's clip space runs y up the screen</b>, the axes <see cref="Material.Keeps"/> winds in: with Vulkan's own y,
+	/// running down, every face the GPU is handed would turn the other way round and the culled sheets and interface would be
+	/// dropped from every eye.
+	/// </summary>
+	[TestMethod]
+	public void TheDeviceAsksForTheClipSpaceTheKeptWindingIsWrittenIn()
+	{
+		foreach ( var vsync in new[] { true, false } )
+		{
+			var options = Renderer.DeviceOptions( vsync );
+
+			Assert.IsTrue( options.PreferStandardClipSpaceYDirection, "the clip space's y runs up the screen" );
+			Assert.IsTrue( options.PreferDepthRangeZeroToOne, "depth runs 0 to 1, as System.Numerics builds it" );
+			Assert.AreEqual( vsync, options.SyncToVerticalBlank );
+		}
 	}
 
 	/// <summary>
