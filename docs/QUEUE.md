@@ -1030,9 +1030,10 @@ filed the items that cite it.
 
 - [ ] **Q1292. A mechanic arriving at a ride that waits for an upgrade does the upgrade's work (from Q272).** Q272 gave
   `StaffBehaviour.ArriveAtTheRide` the arrival's third test (`FUN_004da740`, `0x004da7ca`) and counts it,
-  `MECHANIC_UPGRADE_ARRIVAL`, sending him to his decide, because what state `0xd` counts down for an upgrade is not
-  decoded: `ride-operation.md`, "State `0xd`", says only "the tier's figure times the same" (`FUN_004da370`). Decode
-  that figure in Ghidra (which tier field, at which address), then put him to work for it and let `FUN_004df8f0`'s
+  `MECHANIC_UPGRADE_ARRIVAL`, sending him to his decide. What state `0xd` counts down for an upgrade is read (`ride-operation.md`, "State `0xd`"):
+  the descriptor's dword at `+0x1fc + 0x40 x` the ride's byte `+0x50` (`0x004da409`), times `WorkDuration`, not divided
+  by 100. Name that descriptor field (0x3c into tier l + 1's record if the records start at `Upgrades[0].CostOfResearch`,
+  `+0x180`) and read it in `ItemDescriptionFile`, then put him to work for it and let `FUN_004df8f0`'s
   upgrade arm finish it (`RIDE_UPGRADE_COMPLETION`); the search's own `MECHANIC_UPGRADE_JOB` belongs with it. Nothing
   here puts a ride in state 2 (the Buy Upgrades order is not built, and the stock park is Instant Action), so the path
   is reached only by a file that holds one. Confirm: a ride put to state 2 with a mechanic on his way, his

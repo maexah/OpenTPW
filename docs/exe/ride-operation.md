@@ -243,11 +243,11 @@ hurry speed, where the handyman's walk to a toilet takes one.
 cleared and he decides ("UNUSUAL INCIDENT"). Then a step of the walk (`FUN_004fa2a0`), with no tiring: arrived,
 a ride broken down, waiting for an upgrade or calling goes to state `0xd`, and any other sends him to his
 decide with the ride still named; a walk that fails clears `+0x218` and decides. Unlike the handyman's arrival,
-his own cell is not held against the entry. OpenTPW's `ArriveAtTheRide` asks all three, the upgrade first: a ride waiting for an upgrade is counted, `MECHANIC_UPGRADE_ARRIVAL`, and sends him to his decide, since the upgrade's count in state `0xd` is not decoded (Q272; the search passes such a ride over, `MECHANIC_UPGRADE_JOB`, so only a mechanic loaded on his way to one arrives at it).
+his own cell is not held against the entry. OpenTPW's `ArriveAtTheRide` asks all three, the upgrade first: a ride waiting for an upgrade is counted, `MECHANIC_UPGRADE_ARRIVAL`, and sends him to his decide, since the upgrade's work in state `0xd` is not built (its count is read, below; only which `.sam` key fills its descriptor field is not; Q272; the search passes such a ride over, `MECHANIC_UPGRADE_JOB`, so only a mechanic loaded on his way to one arrives at it).
 
 **State `0xd`.** The setter queues animation `0x12` and sets `+0x214` (`mDurationOfRepair`): for a repair
 `(100 - the State of repair's byte) x MechanicConstsPerGrade.WorkDuration / 100` in whole sweeps
-(`0x004da42a`; 80, 60, 40, 30, 20 by grade, `0x0078542c`), for an upgrade the tier's figure times the same.
+(`0x004da42a`; 80, 60, 40, 30, 20 by grade, `0x0078542c`), for an upgrade the dword at descriptor `+0x1fc + 0x40 x` the ride's byte `+0x50` (`0x004da409`; the item by `FUN_004dd4e0`), times the same `WorkDuration` (`0x004da410`), not divided by 100 (`0x004da3e8`..`0x004da418`). Which `.sam` key fills that dword is not read: 0x3c into tier l + 1's record if the records start at `Upgrades[0].CostOfResearch`, `+0x180`.
 `FUN_004da830`, a turn: a turn of work (`FUN_00506760`); the count down one while it is not nought; at nought,
 on a ride of state 1, `VAR_BREAKSTAT` is written nought (`FUN_004e03f0`) and the turn ends there while
 `VAR_BROKEN` still reads above nought (`FUN_004e0410`, "Ride has finished fix anim" when it does not); then

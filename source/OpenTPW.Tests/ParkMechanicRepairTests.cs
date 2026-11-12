@@ -508,6 +508,8 @@ public class ParkMechanicRepairTests
 		Assert.AreNotEqual( StaffActivity.Repairing, member.Activity, "no repair's count is started for an upgrade" );
 		Assert.AreEqual( 0, member.DurationOfRepair );
 		Assert.AreEqual( rideState, Thing( state, Ride ).State, "the ride is left as it was" );
+		Assert.AreEqual( StaffActivity.Walking, member.Activity, "the decide ran" );
+		Assert.AreEqual( 0, member.ObjectToRepair, "written by that decide's search" );
 	}
 
 	/// <summary>

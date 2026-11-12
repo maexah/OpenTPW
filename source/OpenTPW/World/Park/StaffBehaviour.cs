@@ -949,8 +949,9 @@ public sealed class StaffBehaviour
 	/// <remarks>
 	/// <b>Not built, counted.</b> The arrival's third test, a ride waiting for an upgrade (state 2,
 	/// <c>FUN_004e03e0</c>, <c>0x004da7ca</c>), puts him to work in the original (<c>FUN_004da370</c> with
-	/// <c>0xd</c>, <c>0x004da7fa</c>) for a count of the upgrade tier's own that is not decoded
-	/// (<c>docs/exe/ride-operation.md</c>, "State <c>0xd</c>"). Here it is counted,
+	/// <c>0xd</c>, <c>0x004da7fa</c>) for the descriptor's dword at <c>+0x1fc + 0x40 x</c> the ride's level times
+	/// <c>WorkDuration</c> (<c>0x004da409</c>), whose <c>.sam</c> key is not read (<c>docs/exe/ride-operation.md</c>,
+	/// "State <c>0xd</c>"). Here it is counted,
 	/// <c>MECHANIC_UPGRADE_ARRIVAL</c>, and he is sent back to his decide.
 	/// </remarks>
 	private void ArriveAtTheRide( Staff staff, PeepWalk walk, ParkWorld.CatalogueObject ride, int tick )

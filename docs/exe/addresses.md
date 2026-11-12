@@ -395,6 +395,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004d8ba0` | FUN_004d8b40: | OpenTPW/World/Park/CellSearch.cs  |
 | `0x004d8be7` | FUN_004d8b40: the sum, to here | OpenTPW/World/Park/CellSearch.cs  |
 | `0x004d8c67` | `FUN_004d8c60` returns without writing when the back cell is nought | OpenTPW.Tests/ParkStrandedTests.cs OpenTPW/World/Park/ParkState.cs  |
+| `0x004da409` | `FUN_004da370`, state 0xd for an upgrade: the descriptor's dword at `+0x1fc + 0x40 x` the ride's byte `+0x50`, times `WorkDuration` (0x004da410) | OpenTPW/World/Park/StaffBehaviour.cs  |
 | `0x004db169` | Object constructor FUN_004db090: mTotalCosts +0x184 zeroed | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x004db389` | FUN_004db090: mQualityOfGoods +0x18c = 50 | OpenTPW.Tests/ParkBankTests.cs OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x004db3ad` | Object constructor FUN_004db090: mPricePerUse +0x194 copied unclamped from UsageInfo.InitPricePerUse (+0xe4) | OpenTPW.Files/Formats/ItemDescriptionFile.cs OpenTPW.Tests/ParkStartingSettingsTests.cs OpenTPW/World/Park/ParkBuilding.cs  |
