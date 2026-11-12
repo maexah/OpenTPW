@@ -364,11 +364,12 @@ public sealed class ParkParticles
 			var handle = ((ushort)count << 16) | (ushort)slot;
 			var linked = Int32( Live, at + LinkedAt );
 
-			// The effect it links is started with it, where it follows by the linked effect's own velocity.
+			// The effect it links is started with it, where it follows by the linked effect's own velocity, and
+			// always by the plain start, aimed or not (Particles_Spawn, 0x00521cf2): no direction, its own draws.
 			if ( linked >= 0 && Live[at + LinkedIsEffectorAt] == 0 )
 			{
 				var follows = Int16( Live, at + LinkedFollowsAt ) != 0;
-				var its = spawn;
+				var its = spawn with { Direction = null };
 
 				if ( follows && linked < TemplateSlots )
 				{

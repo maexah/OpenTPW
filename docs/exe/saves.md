@@ -3579,7 +3579,9 @@ keeps: no shipped particle's aim changes at rest. Not compared with the original
 
 **What OpenTPW writes.** `RideScript.WrittenEmitters` asks for a type 2 record's emitter with the direction of
 its node (`ParkParticles.Spawn.Direction`), and `Edit.Start` then makes no draw and writes the three words.
-`ParkParticles.Aim` reads them; the console's `emitters` prints each emitter's.
+`ParkParticles.Aim` reads them; the console's `emitters` prints each emitter's. An aimed effect that links another starts the linked one with the plain start, unaimed and with its own three draws
+of the generator, as `Particles_SpawnFull` starts its linked emitter with `Particles_Spawn` (`0x00521cf2`; Q283, taken
+from the item's text, not checked in Ghidra): of the library's effects only 51 links one that does not follow (54).
 
 **A node that rides a clip** is written, place and aim, where the thing's players last posed it, as the sweep leaves
 it (Q555, `RideNodes.Follow`); the Spray's node 2 rides one and moves under none of its clips but the build clip (its

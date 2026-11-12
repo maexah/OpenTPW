@@ -13414,3 +13414,10 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `ParkItemHeights.OnGateRow`, shared with the pick's march), nothing where the gate is no placed object; the
   stock park's gate is a placed object (model word 3) whose model takes mode 4, counted. Measured off-screen with
   the new console `scene X Y`; the original's side is Q1320.
+- [x] **Q283. `ParkParticles.Edit.Start` passes a directed start's `Direction` on to the linked effect when the
+  link does not follow (`its = spawn`, then `Start( its with { Template = linked } )`).** So the linked emitter is
+  written aimed and with no draw of the generator. `Particles_SpawnFull` starts its linked emitter with the plain
+  `Particles_Spawn` (`0x00521cf2`), so the linked start must carry no direction; a test starting effect 51 (links
+  54, not following) with a direction and holding emitter 54's +0x38 to the template's (0, 31, 0) and the seed
+  three draws on would show it From the week-end audit (stage 6, the second reading of commit `d490bc90`; read
+  from the code, not reproduced in the game). `OpenTPW.Files/Formats/Save/ParkParticles.cs`, line 376.
