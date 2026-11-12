@@ -367,7 +367,7 @@ internal sealed class ParkStaffWindow : UiWindow, IObjectWindowSteps
 	/// PICK UP's enabled state (<c>FUN_00505bd0</c>, at the show and on every frame, <c>0x1e</c>): not while going on
 	/// strike, on strike, carried, repairing or in state <c>0x12</c>, and otherwise only on a cell whose type is
 	/// nothing, path, 3, 9 or 10 (<c>FUN_004fa990</c> on the cell the member stands in, <see cref="PeepBehaviour.OnACountingCell(ParkState, FixedVector)"/>,
-	/// so off the map, not at all).
+	/// so a position off the map reads the cell its bytes pack to, and one past the map's last record, none).
 	/// </summary>
 	internal static bool CanBePickedUp( Staff member, ParkState? state )
 	{

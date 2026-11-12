@@ -13959,3 +13959,13 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `would bring the run to 40 ... nothing anchored, the path tool stays out`, `0 pending, 0 clicks`; at 40 `anchored at
   (11,12)`, the balance still 40; a path at balance 0 anchored. Q1047's binary (`run3-control`) anchored at 39. The
   original's click on a balance of 30 is Q1126 (lane B runs no original).
+- [x] **Q1333. A position off the map reads another row's cell in the original (`COUNTING_CELL_OFF_MAP`).** From Q1332.
+  `FUN_004fa990` packs the thing's bytes `+5` and `+7` as they are (`0x004fa994`..`0x004fa9b6`), so a person at x 128
+  or more would read a cell of the next row; `PeepBehaviour.OnACountingCell` counts nobody there and counts the arm.
+  Dead by content in the stock Lost Kingdom park (none in a 90 s off-screen run, Q1332): measure whether anything
+  placed reaches it (the bus stop's approach is on the map) before building the wrapped read.
+  - **Done (2026-11-12, lane c90):** measured first: every person in `Easymode.TPWI` (its 13 guests and 18 people, the
+    file's own bytes and the navigator) and every arrival cell is on the map (`CountingCellTests`), and a 150 s
+    off-screen run logged no wrapped read and counted no `COUNTING_CELL_OFF_MAP`: dead by content. Built:
+    `PeepBehaviour.CountingRecord` packs the low byte of each whole part, `y * 128 + x`, so x 128 to 255 or below
+    nought reads the next row's cell; a pack past the last record stays counted (Q1480).

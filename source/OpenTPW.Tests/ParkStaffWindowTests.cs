@@ -497,10 +497,18 @@ public class ParkStaffWindowTests
 
 		state.SetRecord( x, y, cell with { Type = 1 } );
 
-		// Off the map the record reads as type 0, which an inline test of the type would count; the one rule does not.
+		// Off the map the bytes pack to another row's cell, as the original's 0x004fa990 reads them: x 128 reads (0, y + 1).
+		// Past the map's last record nothing is read, and PICK UP is off.
 		var standing = member.Navigator.Position;
+		var wrapped = state.Record( 0, y + 1 );
 		member.Navigator.Position = FixedVector.AtCell( ParkWorld.MapSize, y );
-		Assert.IsFalse( ParkStaffWindow.CanBePickedUp( member, state ), "off the map" );
+		state.SetRecord( 0, y + 1, wrapped with { Type = 4 } );
+		Assert.IsFalse( ParkStaffWindow.CanBePickedUp( member, state ), "off the map, the next row's cell a fence" );
+		state.SetRecord( 0, y + 1, wrapped with { Type = 1 } );
+		Assert.IsTrue( ParkStaffWindow.CanBePickedUp( member, state ), "off the map, the next row's cell a path" );
+		state.SetRecord( 0, y + 1, wrapped );
+		member.Navigator.Position = FixedVector.AtCell( x, ParkWorld.MapSize );
+		Assert.IsFalse( ParkStaffWindow.CanBePickedUp( member, state ), "past the map's last record" );
 		member.Navigator.Position = standing;
 
 		foreach ( var (activity, can) in new[] { (StaffActivity.Idle, true), (StaffActivity.GoingOnStrike, false), (StaffActivity.OnStrike, false),

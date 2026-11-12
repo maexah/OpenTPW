@@ -357,25 +357,38 @@ public class ParkGateTests
 	}
 
 	/// <summary>
-	/// Pins the census's stated departure for a position off the 128 x 128 map: docs/exe/park-gate.md says "for
-	/// malformed off-map managed positions, the census returns false as a safety guard" (the original's byte lookup
-	/// has no such guard). A cell off the map has no record, and no record reads as type 0, which is a counted type,
-	/// so only the guard keeps the count at 0: one guest on a type 1 cell is 1, and the same guest one cell past
-	/// each of the four edges is 0.
+	/// The census reads a position off the 128 x 128 map as the original's byte pack does (Q1333,
+	/// <see cref="PeepBehaviour.CountingRecord"/>): x -1 on row 5 is the cell (127, 6) and x 128 is (0, 6), so each
+	/// counts by that cell's type; y -1 and y 128 pack past the map's last record and count nobody.
 	/// </summary>
+	/// <remarks><b>Mutations:</b> every position off the map counting nobody (the old guard); the same row's cell.</remarks>
 	[TestMethod]
-	public void CensusDoesNotCountAGuestWhosePositionIsOffTheMap()
+	public void CensusReadsAPositionOffTheMapByTheOriginalsBytePack()
 	{
 		var (people, state, _) = Park( empty: false );
 		OutsideGuests( people, state );
 		var subject = people.Peeps[0];
 		subject.Navigator.Position = FixedVector.AtCell( 1, 1 );
 		Assert.AreEqual( 1, people.GateGuestCensus, "on the type 1 cell the guest is counted" );
-		foreach ( var (x, y) in new[] { (-1, 5), (5, -1), (128, 5), (5, 128) } )
+
+		void Type( int x, int y, int type ) => state.SetRecord( x, y, state.Record( x, y ) with { Type = type } );
+		int At( int x, int y )
 		{
 			subject.Navigator.Position = FixedVector.AtCell( x, y );
-			Assert.AreEqual( 0, people.GateGuestCensus, $"cell ({x}, {y}) is off the map" );
+			return people.GateGuestCensus;
 		}
+
+		Type( 127, 5, 4 );
+		Type( 0, 5, 4 );
+		Type( 127, 6, 1 );
+		Type( 0, 6, 4 );
+		Assert.AreEqual( (1, 0), (At( -1, 5 ), At( 128, 5 )), "(127, 6) a path, (0, 6) a footprint" );
+
+		Type( 127, 6, 4 );
+		Type( 0, 6, 1 );
+		Assert.AreEqual( (0, 1), (At( -1, 5 ), At( 128, 5 )), "(127, 6) a footprint, (0, 6) a path" );
+
+		Assert.AreEqual( (0, 0), (At( 5, -1 ), At( 5, 128 )), "past the map's last record" );
 	}
 
 	/// <summary>

@@ -289,27 +289,6 @@ public class ParkBalloonTests
 		Assert.AreEqual( 1, people.GateGuestCensus, "the census counts the one on the path" );
 	}
 
-	/// <summary>
-	/// <b>A position off the map counts nobody</b>, and is counted as the gap <c>COUNTING_CELL_OFF_MAP</c>: the cell
-	/// record off the map reads as type 0, which would count.
-	/// </summary>
-	[TestMethod]
-	[DoNotParallelize]
-	public void APositionOffTheMapCountsNobody()
-	{
-		static int OffMap() => Unimplemented.Summary.FirstOrDefault( entry => entry.What == "COUNTING_CELL_OFF_MAP" ).Times;
-		var world = Park();
-		var people = new ParkPeople( world );
-		var peep = people.Guests.Values.First();
-		var before = OffMap();
-
-		peep.Navigator.Position = FixedVector.AtCell( ParkWorld.MapSize, 5 );
-		Assert.IsFalse( people.OnACountingCell( peep ), "x one past the map" );
-		peep.Navigator.Position = new FixedVector( -1, 5 << 16 );
-		Assert.IsFalse( people.OnACountingCell( peep ), "x just below nought" );
-		Assert.AreEqual( before + 2, OffMap() );
-	}
-
 	/// <summary><b>Entering the leaving state lets go of the balloon</b> (case <c>0x11</c>), its life kept.</summary>
 	[TestMethod]
 	public void EnteringTheLeavingStateLetsGo()

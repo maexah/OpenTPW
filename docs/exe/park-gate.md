@@ -52,8 +52,14 @@ position, not automatically counted because they are riding.
 (the cell list they are linked into is not read); the gate's census, the staff outside, the change of mind, the needs
 turn, a new guest's first state and the staff window's PICK UP (`ParkStaffWindow.CanBePickedUp`, the call at
 `0x00505bf8`, through its static form) all ask it. The needs turn's region effects read the same position bytes
-(`0x00501691`, `0x0050169d`; `ParkPeople.CellEffects`). A position off the map counts nobody there and is counted as
-`COUNTING_CELL_OFF_MAP` (Q1333), where the original's byte pack would read another row's cell.
+(`0x00501691`, `0x0050169d`; `ParkPeople.CellEffects`). A position off the map reads the cell its two bytes pack to, as the
+original's does (Q1333, `PeepBehaviour.CountingRecord`): x 128 to 255, or a whole part below nought (its low byte),
+reads a cell of the next row; a pack past the map's last record (a y byte of 128 or more) counts nobody here and is
+counted as `COUNTING_CELL_OFF_MAP`, since what the original reads past its cell array is not known. That the bytes are
+read unsigned is the item's reading of `0x004fa994`..`0x004fa9b6` (Q1332), not re-read in Ghidra by Q1333. Dead by
+content in the stock Lost Kingdom park: every person in `Easymode.TPWI` and every arrival cell is on the map
+(`CountingCellTests`), and a 150 s off-screen run of it (Q1333, its output not kept) logged no wrapped read (the
+line `Counting cell: a position off the map at ...`) and counted no `COUNTING_CELL_OFF_MAP`.
 
 ## The later close check
 
@@ -154,9 +160,9 @@ outside block the retry too. Primary Q89b artifacts: `thing-init-ins.txt`, `thin
 A fresh closed gate starts with command 0 and its closed base pose. A successfully resumed
 gate keeps its saved command, program counter, variables and animations, including a pending
 opening in a closed park. A missing or invalid saved script falls back to initializing the gate command from the park flag.
-Command 2 is never substituted for normal closure. For malformed off-map managed positions,
-the census returns false as a safety guard; the decoded native byte-coordinate lookup has
-no equivalent bounds guard. The existing omission of world-state-4 sweep suppression is not
+Command 2 is never substituted for normal closure. A position off the map is read by the
+original's byte pack (Q1333, "Which people count as inside" above); only a pack past the map's last
+record counts nobody, counted as `COUNTING_CELL_OFF_MAP`. The existing omission of world-state-4 sweep suppression is not
 changed here; the retry follows every supported world sweep.
 
 **Running game, predicted before reading.** Both completed runs used the entry-price screen's
