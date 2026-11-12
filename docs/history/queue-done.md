@@ -13985,3 +13985,14 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   - **Note (fork watch 2026-10-18, `verify-other-a.md` lead 3):** `DUCKINGLEVEL` is proven: global `0x00785914`, the table's
     seventh key (`docs/exe/audio.md`, "The fade, the SoundInfo settings and the reverb"), used as a percentage, the
     group level times 38 / 100 (`0x0051bdf9`). The "inferred, not proven" above is settled; read it from `sound.sam`.
+- [x] **Q213. The status box's lettering is smaller than the original's.** Seen 2026-10-04 with the two side by side
+  (Q208): the original's "LINE NOT CONNECTED" fills the striped box in two lines of large type, OpenTPW's is small.
+  Decode the font and size `FUN_004ade40` draws with. Confirm: the box photographed beside the original's.
+  - **Note (fork watch 2026-11-12, verify-ui-hud.md H3):** `FUN_004ade40` sets no font or colour. The label is made once by the window's
+    vtable slot `+0x10` (ride `0x004ad720`, shop `0x004afaa0`, sideshow `0x004b0ed0`): a text control on the base's `+0x1c` (the
+    ride build passes `0x3e25`), aligned (1, 1), font slot 8 (`0x00485a70( 8 )`, the list headings' slot), colour (0, 0, 0, 255),
+    then hidden. Ours letters `0x3e25` in font 6, white (`ParkObjectWindow.cs`, said at the site): build it so, then the photograph.
+  - **Done 2026-11-12 (cloud lane c95, by census only):** `0x3e25` is made in font 8, black, and `ShowTheDoor` sets its
+    text only (the per-status recolour and the broken-ride red are gone). Off-screen, the stock park's Belly Bounce
+    (thing 13) closed by its door: `control 3e25` read `reads 'CLOSED' ... lettered font 8 in (0, 0, 0) without the edge`.
+    The photograph beside the original's is Q1500.

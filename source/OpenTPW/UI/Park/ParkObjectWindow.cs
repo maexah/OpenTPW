@@ -234,8 +234,8 @@ internal sealed class ParkObjectWindow : UiWindow, IStatusBox, IObjectWindowStep
 			RightClicked = GoToThing
 		} );
 
-		// FUN_004ad720 starts the status box hidden; ShowTheDoor supplies the current warning. The original letters it in
-		// font slot 8, black, centred (0x00485a70( 8 )); font 6 and white here are a deviation (docs/QUEUE.md Q213).
+		// FUN_004ad720 makes the status box once: hidden, aligned (1, 1), font slot 8 (0x00485a70( 8 )), black. ShowTheDoor
+		// supplies the current warning; FUN_004ade40 sets its text only, never its font or colour (docs/exe/ride-window-door.md).
 		_broken = _preview.Add( new UiControl
 		{
 			Id = 0x3e25,
@@ -243,8 +243,8 @@ internal sealed class ParkObjectWindow : UiWindow, IStatusBox, IObjectWindowStep
 			Rect = new UiRect( 300, 275, 828, 462 ),
 			Mesh = UiMesh.Get( "f_chev" ),
 			TextRect = new UiRect( 328, 304, 799, 435 ),
-			Font = 6,
-			TextColour = UiColour.White,
+			Font = 8,
+			TextColour = UiColour.Black,
 
 			// ITS RECT IS WIDER THAN ITS PARENT'S - 300..828 against 348..762 - so UiControl.Anchor does
 			// not treat it as sitting inside the panel and it would pin itself to the left third while
@@ -1051,7 +1051,6 @@ internal sealed class ParkObjectWindow : UiWindow, IStatusBox, IObjectWindowStep
 		_broken.Visible = status != 0 || broken;
 		_broken.Text = broken ? Localization.Text( 366 ) : status == 0 ? null
 			: Localization.Text( status switch { 22 => 388, 23 => 389, _ => 365 } );
-		_broken.TextColour = broken ? new UiColour( 255, 50, 30 ) : ParkClosedStatus.Colour( status );
 	}
 
 	/// <summary>Whether the ride being shown has broken down - <c>VAR_BROKEN</c> on its own script.</summary>

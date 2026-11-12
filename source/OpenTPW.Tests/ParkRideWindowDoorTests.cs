@@ -84,7 +84,8 @@ public class ParkRideWindowDoorTests
 		Assert.AreEqual( 12, Door.HelpText );
 		Assert.IsTrue( Status.Visible );
 		Assert.AreEqual( Localization.Text( 365 ), Status.Text );
-		Assert.AreEqual( new UiColour( 128, 128, 128 ), Status.TextColour );
+		// FUN_004ade40 sets the label's text only: it keeps the black and font slot 8 FUN_004ad720 gave it, whatever the status.
+		Assert.AreEqual( (UiColour.Black, 8), (Status.TextColour, Status.Font) );
 		Assert.IsTrue( state.Objects.Where( r => r.ThingId != 13 ).All( r => r.CanLoad == 1 ) );
 		ClickDoor();
 		Assert.AreEqual( 1, Ride.CanLoad );
@@ -103,7 +104,7 @@ public class ParkRideWindowDoorTests
 		Assert.IsTrue( Door.IsDown );
 		Assert.IsFalse( Door.Enabled );
 		Assert.AreEqual( Localization.Text( 389 ), Status.Text );
-		Assert.AreEqual( new UiColour( 255, 150, 30 ), Status.TextColour );
+		Assert.AreEqual( (UiColour.Black, 8), (Status.TextColour, Status.Font) );
 		ClickDoor();
 		Assert.AreEqual( 0, Ride.CanLoad, "disabled release cannot reopen" );
 		state.SetRecord( 49, 22, back );

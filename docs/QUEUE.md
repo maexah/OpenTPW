@@ -675,13 +675,22 @@ filed the items that cite it.
   is reported every frame a window is open (9,631 in one run; `QUEUE_VERDICT_CORNER_RULE`, the other, is built since,
   Q538): report on a change. Status 24 seen in the original (Q1104, `q1104/orig/b-2-window.png`): an open bought TV Sim whose exit's
   path stub joins nothing shows EXIT NOT CONNECTED over its preview; ours showed nothing for the same file (`q1104/run2/window-open.png`). Confirm: each status photographed beside the original's.
-- [ ] **Q213. The status box's lettering is smaller than the original's.** Seen 2026-10-04 with the two side by side
-  (Q208): the original's "LINE NOT CONNECTED" fills the striped box in two lines of large type, OpenTPW's is small.
-  Decode the font and size `FUN_004ade40` draws with. Confirm: the box photographed beside the original's.
-  - **Note (fork watch 2026-11-12, verify-ui-hud.md H3):** `FUN_004ade40` sets no font or colour. The label is made once by the window's
-    vtable slot `+0x10` (ride `0x004ad720`, shop `0x004afaa0`, sideshow `0x004b0ed0`): a text control on the base's `+0x1c` (the
-    ride build passes `0x3e25`), aligned (1, 1), font slot 8 (`0x00485a70( 8 )`, the list headings' slot), colour (0, 0, 0, 255),
-    then hidden. Ours letters `0x3e25` in font 6, white (`ParkObjectWindow.cs`, said at the site): build it so, then the photograph.
+- [ ] **Q1500. The ride window's status box photographed beside the original's (from Q213).** Q213 letters `0x3e25` in
+  font slot 8, black, from the fork watch's decode (verify-ui-hud.md H3), confirmed by the `control` census only in a
+  cloud container with no display or original. Left, on the desk: a ride whose queue is cut off (status 22 or 23,
+  "LINE NOT CONNECTED"), its window photographed in both games. The original's fills the striped box in two lines; ours
+  sets no wrap (`TextWraps` false, as the shop's box), so if ours stays on one line, decode how the original breaks it
+  (the text control's own wrap, or a break in UITEXT 388/389) and build that. Confirm: the two photographs side by side.
+- [ ] **Q1501. The shop window's status box recolours per status; the ride window's does not (from Q213).** The fork
+  watch (verify-ui-hud.md H3) says the shop's label is made by `0x004afaa0` black in font 8, as the ride's, and that the
+  ride's fill `FUN_004ade40` never sets its colour. `ParkShopWindow.Refresh` still sets `_status.TextColour` from
+  `ParkClosedStatus.Colour` (grey for CLOSED). Read the shop's own fill in Ghidra: if it sets no colour, drop the
+  recolour as Q213 did; if it does, say so in `docs/exe/ride-window-door.md`. Confirm: a closed shop's window, census
+  and photograph.
+- [ ] **Q1502. Q1111 and Q452 stand twice across the queue (found by Q213).** On `main` at `a27a188` both are unticked in
+  `docs/QUEUE.md` and ticked, with their Done notes, in `docs/history/queue-done.md`, so `tools/maintainer/queue-sweep.py`
+  refuses every commit that stages the queue ("Q-numbers would not resolve once each"). Q213's commit was swept by hand
+  around it. Take the two unticked copies out of `QUEUE.md` (or say which is right), then run the sweep once to see it pass.
 - [ ] **Q214. A fresh Full Simulation park's four gaps.** Found by the 2026-10-04 review (`u1-startup-1` to `-4`).
   `ParkStaffPool.Roll` gives every candidate costume 0 where `FUN_00507600` stores `FUN_00541f70( kind )` at record
   `+9`, so every hired entertainer and mechanic wears bank 0 (`guests`: `bank 0+0` on all five kinds). The land
