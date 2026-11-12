@@ -2452,12 +2452,12 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   - **Note (Q630):** measured on Lost Kingdom, `windows` answers none 0.5 s after Enter, and no frame of the flight
     shows a front-end control (`q630/run4`): check whether anything of the front end still shows before building.
 
-- [ ] **Q295. An object window's preview starts from the angle the last one left.** From Q291. The first angle is
-  `fmod( [0x007afd50], 6.2831855 )` (`0x00468e2f`; `park-engine.md`, the object window's preview): the record is
-  static and its angle nought in the image, so only the first panel of a run starts from nought. The preview here
-  starts every one from nought and counts it (`OBJECT_PREVIEW_START_ANGLE`, `ParkObjectPreview`). Build: keep the
-  last panel's angle for the session and start the next from it. Confirm: two ride windows opened one after the
-  other in both games, the second's first frame photographed, and the angle in the log.
+- [ ] **Q1464. Photograph Q295's second preview beside the original's.** From Q295, built in a cloud container with no
+  display and no original. Open two ride windows one after the other in both games (ours: the stock jungle park,
+  `buy 1104 44 25 180`, `openthing 13`, a few seconds, `openthing 43`), photograph the second window's first frame in
+  each, and set beside it the log's `starts at angle` (ours) and `[0x007afd50]` (the original's, `fmod` of it at
+  `0x00468e2f`). Predict from the log before looking: the second model is turned by that angle, not square to the
+  panel. Also check the double at `0x006fe7d8` is 6.2831855 as `docs/exe/park-engine.md` writes it (Ghidra).
 
 ## D. Alexah's list: decode first, then build (two sessions each)
 

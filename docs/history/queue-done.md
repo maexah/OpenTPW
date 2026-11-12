@@ -12284,6 +12284,14 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   Research"). The message box is built; both sites only count (`RESEARCH_BUTTON`, `RESEARCH_SHORTCUT`). Build the two
   boxes at both; the research screen behind them stays counted (blocked: `docs/PLAYER-GAPS.md`). Confirm: R and the
   button in Lost Kingdom, the box photographed beside the original's.
+- [x] **Q295. An object window's preview starts from the angle the last one left.** From Q291. The first angle is
+  `fmod( [0x007afd50], 6.2831855 )` (`0x00468e2f`; `park-engine.md`, the object window's preview): the record is
+  static and its angle nought in the image, so only the first panel of a run starts from nought. The preview here
+  starts every one from nought and counts it (`OBJECT_PREVIEW_START_ANGLE`, `ParkObjectPreview`). Build: keep the
+  last panel's angle for the session and start the next from it. Confirm: two ride windows opened one after the
+  other in both games, the second's first frame photographed, and the angle in the log.
+  Done (c86, 2026-11-12): `ParkObjectPreview.LastAngle` keeps the session's angle and `StartAngle` wraps it by fmod;
+  the log line `Object preview: thing N starts at angle A, the last panel left L` reads it. The photographs: Q1464.
 
 ## D. Alexah's list: decode first, then build (two sessions each)
 

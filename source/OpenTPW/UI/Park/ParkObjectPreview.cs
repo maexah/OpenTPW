@@ -112,8 +112,8 @@ internal readonly record struct ParkPreviewFit( float Scale, float HalfX, float 
 /// <remarks>
 /// <b>It is never the instance standing in the park</b>, so a closed or broken ride previews running.
 /// <para>
-/// Three things here are OpenTPW's own, each said where it is: the light, the clock the turn and the clip
-/// run on, and the angle the turn starts from.
+/// Two things here are OpenTPW's own, each said where it is: the light, and the clock the turn and the clip
+/// run on.
 /// </para>
 /// </remarks>
 internal sealed class ParkObjectPreview
@@ -147,8 +147,29 @@ internal sealed class ParkObjectPreview
 	/// <summary>Whether the item's own name board was carried onto it.</summary>
 	public bool CarriesSign { get; }
 
-	/// <summary>How far round it has turned, in radians.</summary>
-	public float Angle { get; private set; }
+	/// <summary>The two pi the first angle is wrapped by (the double at <c>0x006fe7d8</c>).</summary>
+	public const double TwoPi = 6.2831855;
+
+	/// <summary>
+	/// The angle the last preview of the session left: the original's record at <c>0x007afd08</c> is static, so its
+	/// angle (<c>+0x48</c>, <c>0x007afd50</c>) outlives every panel, nought only before the first of a run.
+	/// </summary>
+	public static float LastAngle { get; internal set; }
+
+	/// <summary>The angle a new preview starts from, the last one's wrapped to two pi: <c>fmod( [0x007afd50], 6.2831855 )</c> (<c>0x00468e2f</c>).</summary>
+	public static float StartAngle( float last ) => (float)(last % TwoPi);
+
+	/// <summary>The angle the next preview starts from: the session's last, wrapped.</summary>
+	public static float NextStartAngle => StartAngle( LastAngle );
+
+	/// <summary>How far round it has turned, in radians. Every change is kept as <see cref="LastAngle"/>, as the record keeps it.</summary>
+	public float Angle
+	{
+		get => _angle;
+		private set => _angle = LastAngle = value;
+	}
+
+	private float _angle;
 
 	private ParkObjectPreview( int thingId, string modelPath, bool isPModel, bool carriesSign, LobbyModel model,
 		RideAnimations animations, ItemHeightMapFile heights )
@@ -169,9 +190,12 @@ internal sealed class ParkObjectPreview
 
 		StartRunning( _animations );
 
-		// The original's first angle is the one the last panel left, wrapped to two pi (0x00468e2f;
-		// docs/exe/park-engine.md, the object window's preview); this one starts from nought.
-		Unimplemented.Report( "OBJECT_PREVIEW_START_ANGLE" );
+		// The first angle is the one the last panel left, wrapped to two pi (0x00468e2f;
+		// docs/exe/park-engine.md, the object window's preview).
+		var last = LastAngle;
+		Angle = NextStartAngle;
+
+		Log.Info( $"Object preview: thing {thingId} starts at angle {Angle:F4}, the last panel left {last:F4}" );
 	}
 
 	/// <summary>

@@ -4497,8 +4497,8 @@ window `+0x4c`.. -0.66015625, 0.25, 0.404296875, 0.5390625 (the panel (348,162).
 **OpenTPW builds it** (`ParkObjectPreview`, `ParkPreviewFit`): a fresh `LobbyModel` of `P<stem>.MD2`, or of the
 item's own model posed as built, wearing the name board where both models name both halves, its first M clip looped,
 fitted and placed by the arithmetic above. Differences, each said at its site: the light is OpenTPW's own; the turn
-and the clip run on the frame clock, so the console's `pause` holds them; the first angle is nought
-(`OBJECT_PREVIEW_START_ANGLE`). The ride's and the shop's windows draw it (`ParkObjectWindow`, `ParkShopWindow`); the
+and the clip run on the frame clock, so the console's `pause` holds them. The first angle is the original's: the last
+panel's, wrapped to two pi, kept for the session (`ParkObjectPreview.LastAngle`, Q295). The ride's and the shop's windows draw it (`ParkObjectWindow`, `ParkShopWindow`); the
 buy screen's panel (Q158) takes the same path when it is built. The buy screen also paints a small picture of the item's footprint
 at its panel's lower left, which the windows do not: the next section.
 

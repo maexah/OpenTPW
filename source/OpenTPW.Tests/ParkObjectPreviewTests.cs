@@ -179,6 +179,39 @@ public class ParkObjectPreviewTests
 	public void TheTurnIsFourTenThousandthsOfARadianAMillisecond()
 		=> Assert.AreEqual( 0.0004f, ParkPreviewFit.RadiansPerMillisecond );
 
+	/// <summary>
+	/// A preview starts from the angle the last one left, wrapped by the C library's fmod to two pi (0x00468e2f): a
+	/// start from nought, no wrap, or a wrap to the nearest turn (which takes 5 to -1.28) each gets one of these wrong.
+	/// </summary>
+	[TestMethod]
+	public void APreviewStartsFromTheLastOnesAngleWrappedToTwoPi()
+	{
+		Assert.AreEqual( 5f, ParkObjectPreview.StartAngle( 5f ), 1e-5f );
+		Assert.AreEqual( 3.1954f, ParkObjectPreview.StartAngle( 3.1954f ), 1e-5f );
+		Assert.AreEqual( 0.7168145f, ParkObjectPreview.StartAngle( 7f ), 1e-5f );
+		Assert.AreEqual( 1.1504440f, ParkObjectPreview.StartAngle( 20f ), 1e-5f );
+	}
+
+	/// <summary>The session keeps the last panel's angle, and the next panel starts from it, not from nought.</summary>
+	[TestMethod]
+	public void TheNextPreviewStartsFromTheSessionsLastAngle()
+	{
+		var before = ParkObjectPreview.LastAngle;
+
+		try
+		{
+			ParkObjectPreview.LastAngle = 7f;
+			Assert.AreEqual( 0.7168145f, ParkObjectPreview.NextStartAngle, 1e-5f );
+
+			ParkObjectPreview.LastAngle = 2.5f;
+			Assert.AreEqual( 2.5f, ParkObjectPreview.NextStartAngle, 1e-5f );
+		}
+		finally
+		{
+			ParkObjectPreview.LastAngle = before;
+		}
+	}
+
 	private static ParkItemCatalogue.Item Item( string directory, string stem )
 		=> new( 1, stem, directory, stem, 1, 1, null );
 
