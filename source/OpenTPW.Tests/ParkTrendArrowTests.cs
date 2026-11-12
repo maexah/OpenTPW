@@ -200,7 +200,7 @@ public class ParkTrendArrowTests
 	private const int Nought = 29;
 	private const int FiveHundred = 85;
 
-	private static ParkWorld Stock()
+	internal static ParkWorld Stock()
 	{
 		Log ??= new();
 		FileSystem = GameData.Required();
@@ -212,7 +212,7 @@ public class ParkTrendArrowTests
 	}
 
 	/// <summary>A gadget built on its own level of <paramref name="world"/> and <paramref name="state"/>, on the interface's own 2048 x 1536 unless <paramref name="size"/> says.</summary>
-	private static void WithAGadget( ParkWorld world, ParkState state, System.Action<UI.ParkGadget> check, Point2? size = null )
+	internal static void WithAGadget( ParkWorld world, ParkState state, System.Action<UI.ParkGadget> check, Point2? size = null )
 	{
 		var (screen, level) = (Screen.Size, Level.Current);
 
@@ -230,7 +230,7 @@ public class ParkTrendArrowTests
 	}
 
 	/// <summary>A level of its own for the gadget to read: the park's file and its running state.</summary>
-	private static Level RunningLevel( ParkWorld world, ParkState state )
+	internal static Level RunningLevel( ParkWorld world, ParkState state )
 	{
 		var level = (Level)RuntimeHelpers.GetUninitializedObject( typeof( Level ) );
 
@@ -242,11 +242,11 @@ public class ParkTrendArrowTests
 		return level;
 	}
 
-	private static UI.UiControl Find( UI.UiControl control, int id )
+	internal static UI.UiControl Find( UI.UiControl control, int id )
 		=> control.Id == id ? control : control.Children.Select( child => Find( child, id ) ).FirstOrDefault( found => found != null )!;
 
 	/// <summary>A window stack with no windows, made without its constructor.</summary>
-	private static UI.WindowStack AStack()
+	internal static UI.WindowStack AStack()
 	{
 		var stack = (UI.WindowStack)RuntimeHelpers.GetUninitializedObject( typeof( UI.WindowStack ) );
 

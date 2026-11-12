@@ -1111,7 +1111,6 @@ filed the items that cite it.
   starts on animation 0, which its remarks give as a deviation no shipped bank reaches. Dead by content today:
   build it as the original's or leave the count, on Alexah's word.
 
-
 - [ ] **Q1316. The handyman loaded walking to litter or sweeping: his walk off photographed, and the job itself (from Q1154).**
   Q1154 made one loaded in state 8 or 9 fall to idle (`StaffBehaviour.Step`'s default arm, counted as
   `HANDYMAN_LITTER_STATE_8` and `_9`, a deviation said at the site) and confirmed it by census only, off-screen in a cloud
@@ -1549,14 +1548,14 @@ filed the items that cite it.
   read) is not decoded; ours draws them unfogged and counts `FIRST_PERSON_FOG_WEATHER` (`WeatherSprites.OnRender`).
   Decode the weather's draw, then fog `weather.shader` the same way or take the count out. Confirm by rain in first
   person in both games with the band held at 20 to 40 (`memhold.py` there, the console's `fog 20 40` here).
-- [ ] **Q525. The money's lettering: the entry fee's "$ " and a cash below nought.** From Q524 (`q524/side-by-side.png`):
-  the original's entry-price spinner letters the fee "$ 28" where ours letters "28" (`ParkEntryPriceScreen.Show`), and
-  its park cash at the top left letters a balance under nought "-$ 796" in red where ours letters "$ -1188" in the
-  usual colours (`orig/a-fee.png` beside `run2/3-reloaded-fee.png`). Seen, not decoded: read the spinner's text
-  (`hud.md` names the money skin `FUN_00490250`, "$ 75" and "-$ 11750" on the training screen) and the cash display's
-  draw, then letter both as the original does. Confirm by the two frames at one fee and one balance under nought.
-  - **Note (play test 2026-10-21, note 25):** the ticket price box shows "20", not "$20". The original letters UITEXT
-    `0x1c1` "$ " (`hud.md:3294`; QUEUE:1436).
+- [ ] **Q1664. The entry fee's "$ 28" and a balance under nought photographed beside the original's (Q525's split piece).**
+  Since Q525 the entry price's spinner letters the fee by UITEXT `0x1c1` (`ParkItemsScreen.Money`), and the gadget's balance
+  under nought has lettered its size beside `i_dollar`'s "-$" part since Q674; tests and an off-screen census pin both
+  (`ParkMoneyLetteringTests`; the census `Entry price: opened, fee $ 26`, `control 2f` reading '796', `control 32` frame 1).
+  Not photographed: Q525 ran in a cloud container with no display to look at and no original. On the desk, load
+  `q524/orig/Q524ORIG-by-the-original.TPWS` (fee 28, balance -796), open the entry price (the Money button) and photograph
+  ours beside `q524/orig/a-fee.png`: the spinner's "$ 28" in the same place and size, and the top left's "-$" and "796".
+  Ours letters the 796 white where the original's is red: that is Q403's, not this item's.
 - [ ] **Q527. The gadget's date: the original letters it month.day.year with full stops.** From Q526
   (`q526/side-by-side.png`): on 10 January 2002 the original's gadget reads "1.10.2002" (`orig/a-2-loaded-gadget.png`,
   the poll's day word 10 at that moment), where ours letters .NET's short date, "1/6/2002" on 6 January

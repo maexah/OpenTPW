@@ -218,7 +218,7 @@ advances added (`+0xac`..`+0xb4`, "How a list's cells are aligned"), its pixels 
 toward nought, plus the control's left. So the arrow follows the number's end, not the stream's `(728,109)-(831,211)`.
 The same call puts `0x30`'s right edge at the lettering's right edge. It also sets `0x32`, the `i_dollar` icon, to frame 1
 while the balance is below nought (`0x004a0c23`). Its nodes, in file order, are `i_dollar` and `dollarsignneg`, drawn as
-"-$" (Q674, `q674/orig/O-hold-500-money.png`: -500 lettered "500"). The balance's colour in the same call is Q403's.
+"-$" (Q674, `q674/orig/O-hold-500-money.png`: -500 lettered "500"). The balance's colour in the same call is Q403's. OpenTPW letters every band white and counts the others as `GADGET_BALANCE_COLOUR` (Q525), by Q403's reading of the bands, `(balance + 999) / 1000` held to 0..5, the white one over 4000 (that rule is Q403's, not checked by Q525). So the original's "-$ 796" is this icon's part 1 and "796", not UITEXT `0x1c2`: Q524's frame of ours lettering "$ -1188" (`q524/run2/3-reloaded-fee.png`) was taken before Q674 built the icon's part.
 
 **Measured at two widths** (Q674, `q674/orig/run.sh`, the balance held by `thingpoke.py`): the original runs at 800 x 600
 (its `Resolution.sam`), scaled to the 1024 x 768 capture, so the balance's font is the 600 set's `CASHBIG` at 2.56 units a
@@ -515,10 +515,10 @@ and sideshows in each other's places while looking correct.
 spinner: they resolve to `b_staffcost`, `b_loans` and `b_finance`, and `FUN_00498c60` sends them to
 `FUN_004b2750`, `FUN_0049fb30` and `FUN_0049ac60` — this category's other three screens. The loans button `0x4f3ac`
 is **disabled in game type 2**, Instant Action (`0x00499008`..`0x00499030`), as the staff costs screen's is; OpenTPW
-disables it there too and logs `Entry price: opened, fee N closed 0|1 loans on|off` (Q456). The spinner
+disables it there too and logs `Entry price: opened, fee $ N closed 0|1 loans on|off` (Q456; the fee as the spinner letters it, Q525). The spinner
 is `0x4f3ae`, control **type 12**, whose `op 0x0f` child is `b_minus` (left) and `op 0x0e` child is
 `b_plus` (right); `FUN_0066a5c4(&0,&10000)` gives it a range of **0–10000** and `FUN_0066a68d(&1)` a
-step of **1**. `0x4f3b0` is the black "Ticket Price" label (UITEXT 160), and `0x4f3b1` is `b_door`,
+step of **1**. **Its lettering is a money cell's** ("A money cell", below): UITEXT `0x1c1` "$ " and the fee, "$ 28" in the original's frame (`q524/orig/a-fee.png`), which OpenTPW letters by `ParkItemsScreen.Money` (Q525). Which skin the builder hands the spinner was not read in Ghidra: it is taken from that frame and from the training budgets' spinners, which wear `FUN_00490250`; the fee is held to 0..10000, so `0x1c2` is not reached from here. `0x4f3b0` is the black "Ticket Price" label (UITEXT 160), and `0x4f3b1` is `b_door`,
 the park open/closed switch — `FUN_00519ef0( down != 1, 0 )` (`0x00498d33`), whose first argument is the OPEN
 flag, so **down is closed**; the builder sets the switch down for a closed park (`Button_SetDown`, `0x00498fd9`),
 once, when the screen is built. What the door does to the rides: `ride-operation.md`, "The closed ride". The fee is held in a global as the spinner moves (message `0x800`) and written on

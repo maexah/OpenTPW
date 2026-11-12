@@ -1758,6 +1758,12 @@ internal sealed class ParkGadget : UiWindow
 		var balance = park.Balance;
 
 		_balance.Text = $"{Unsigned( balance )}";
+
+		// The balance's colour is one of six by its band (the same call, table 0x00752e30; Q403): red at nought and below,
+		// white over 4000. Ours letters every band white, so a balance below the white band counts the gap.
+		if ( BalanceBand( balance ) < WhiteBand )
+			Unimplemented.Report( "GADGET_BALANCE_COLOUR" );
+
 		_trend.Rect = TrendPlace( _trend.Rect, LetteringEnd( _balance.Rect.Left, UiFonts.Get( BalanceFont )?.Measure( _balance.Text ) ?? 0,
 			UiFonts.SetScreenHeight ) );
 
@@ -1769,6 +1775,12 @@ internal sealed class ParkGadget : UiWindow
 
 		(_trend.Frame, _dollar.Frame, _moneyLogged) = (trend, sign, true);
 	}
+
+	/// <summary>The last of the balance's six colour bands, white, the one ours letters every band in (Q403).</summary>
+	internal const int WhiteBand = 5;
+
+	/// <summary>The balance's colour band, <c>(balance + 999) / 1000</c> held to 0..5 (Q403's reading of table <c>0x00752e30</c>).</summary>
+	internal static int BalanceBand( int balance ) => Math.Clamp( unchecked(balance + 999) / 1000, 0, WhiteBand );
 
 	/// <summary>The balance as lettered: its magnitude, <c>(x ^ s) - s</c> with <c>s</c> its sign, so the least int stays itself.</summary>
 	internal static int Unsigned( int balance )

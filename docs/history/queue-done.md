@@ -12145,6 +12145,21 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q525. The money's lettering: the entry fee's "$ " and a cash below nought.** From Q524 (`q524/side-by-side.png`):
+  the original's entry-price spinner letters the fee "$ 28" where ours letters "28" (`ParkEntryPriceScreen.Show`), and
+  its park cash at the top left letters a balance under nought "-$ 796" in red where ours letters "$ -1188" in the
+  usual colours (`orig/a-fee.png` beside `run2/3-reloaded-fee.png`). Seen, not decoded: read the spinner's text
+  (`hud.md` names the money skin `FUN_00490250`, "$ 75" and "-$ 11750" on the training screen) and the cash display's
+  draw, then letter both as the original does. Confirm by the two frames at one fee and one balance under nought.
+  - **Note (play test 2026-10-21, note 25):** the ticket price box shows "20", not "$20". The original letters UITEXT
+    `0x1c1` "$ " (`hud.md:3294`; QUEUE:1436).
+  **Done 2026-11-12** (cloud lane c128): the spinner letters the fee as a money cell, UITEXT `0x1c1` and the figure
+  (`ParkEntryPriceScreen.Show` by `ParkItemsScreen.Money`): "$ 25" on the stock park, "$ 26" after its plus, off-screen. The
+  cash under nought needed no letters: since Q674 the gadget letters "796" beside `i_dollar`'s part 1, `dollarsignneg` ("-$"),
+  as `Gadget_ShowMoney` does (`hud.md`, "The place"); Q524's "$ -1188" was ours before Q674. Lettering `0x1c2` there would draw
+  "-$" twice. The balance's colour is counted, `GADGET_BALANCE_COLOUR`, at 4000 and under (Q403's bands; Q403 builds it).
+  Tests: `ParkMoneyLetteringTests`. The photograph beside the original's is Q1664. The spinner's skin was not read in Ghidra
+  (none in the lane): taken from the original's frame and the training spinners' `FUN_00490250`.
 
 ## B. Docs and comments
 

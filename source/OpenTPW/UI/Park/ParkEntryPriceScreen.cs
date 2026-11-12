@@ -100,6 +100,7 @@ internal sealed class ParkEntryPriceScreen : UiWindow
 			Mesh = UiMesh.Get( "f_varibox" )
 		} );
 
+		// The spinner's lettering: a money cell's, as the training budgets' spinners wear (Show).
 		_fee = spinner.Add( new UiControl
 		{
 			Rect = new UiRect( 873, 477, 1106, 521 ),
@@ -215,7 +216,8 @@ internal sealed class ParkEntryPriceScreen : UiWindow
 			return;
 		}
 
-		_fee.Text = $"{state.AdmissionFee}";
+		// Lettered as a money cell (FUN_00490250): UITEXT 0x1c1 "$ " and the fee, "$ 28" as the original's frame (Q525).
+		_fee.Text = ParkItemsScreen.Money( state.AdmissionFee );
 		_door.IsDown = state.ParkIsClosed;
 	}
 
