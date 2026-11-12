@@ -161,11 +161,11 @@ public class ParkBuyGoldenTicketTests
 		SetBalance( -1000 );
 
 		var build = typeof( ParkBuilding ).GetMethods( BindingFlags.NonPublic | BindingFlags.Static )
-			.Single( method => method.Name == "Build" && method.GetParameters().Length == 10 );
+			.Single( method => method.Name == "Build" && method.GetParameters().Length == 11 );
 
 		string Answer( int x, int y )
 		{
-			var built = build.Invoke( null, [state, TestRun.CurrentLevel.Park, catalogue, null, null, 1170, x, y, 0, 0] )!;
+			var built = build.Invoke( null, [state, TestRun.CurrentLevel.Park, catalogue, null, null, 1170, x, y, 0, 0, false] )!;
 			return (string)built.GetType().GetProperty( "Answer" )!.GetValue( built )!;
 		}
 
@@ -178,6 +178,77 @@ public class ParkBuyGoldenTicketTests
 
 		Assert.IsFalse( mystery.Contains( "and the park has" ), mystery );
 		Assert.AreEqual( (2, 0), (file.TicketsSpent, state.Balance + 1000), "nothing paid where nothing was built" );
+	}
+
+	/// <summary>
+	/// <b>A moved ticket ride meets the money test</b> (Q732): the move tool's put-down prices the ride in full
+	/// (<c>0x0052398b</c>) and the cell test refuses it above the bank (<c>0x00535905</c>..<c>0x0053592b</c>), with no
+	/// golden-ticket exemption; only the carry's preview has one (<c>0x005235e6</c>). Jurassic Tours, stood unbought (no
+	/// tickets left, so its put-down bought nothing), is picked up with the bank far below its 3000: the click at a free cell
+	/// is refused for money and the ride stays in the hand, marked moved. At that same cell the bank at 3000 passes and 2999
+	/// is refused; the same ride carried from the buy list instead passes at 2999.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the move not marking the hand (or <c>Build</c> not told), which skips the test as a carry
+	/// does; the money test made strict (<c>&lt;=</c>), which refuses 3000; the exemption dropped for the carry as well.</remarks>
+	[TestMethod]
+	public void AMovedTicketRideIsRefusedWhereTheBankIsBelowItsPrice()
+	{
+		var file = TwoLeft();
+		var (catalogue, _, _) = ParkFootprintPictureTests.BuyScreen();
+		var state = Level.Current!.ParkState!;
+		var park = Level.Current.Park!;
+		Assert.IsTrue( catalogue.TryGet( 1170, out var item ) );
+		Assert.AreEqual( (3000, 1), (item.BuildPrice, item.GoldenTicketCost), "Jurassic Tours: $ 3000, or one ticket" );
+
+		SetBalance( 100000 );
+
+		(int X, int Y) Free() => Enumerable.Range( 0, 128 * 128 ).Select( at => (X: at % 128, Y: at / 128) )
+			.First( at => ParkBuilding.PlacementRefusal( state, item, at.X, at.Y, 0 ) == null );
+
+		ParkBuilding.StandThing = _ => true;
+
+		try
+		{
+			// No ticket left: the put-down stands it free and unbought (Object_Construct, 0x004db4a6).
+			file.TicketsSpent = 4;
+			var stood = Free();
+			var built = ParkBuilding.Build( state, park, catalogue, null, null, 1170, stood.X, stood.Y, 0 );
+
+			Assert.AreNotEqual( 0, built.ThingId, built.Answer );
+			Assert.AreEqual( "", string.Join( ' ', file.RideIds ), "still a ticket ride" );
+
+			var to = Free();
+			file.TicketsSpent = 2;
+			SetBalance( -10000 );
+
+			var reply = ParkBuilding.Move( state, park, catalogue, null, null, built.ThingId, to.X, to.Y, 0 );
+
+			StringAssert.Contains( reply, "costs 3000 and the park has", reply );
+			Assert.AreEqual( (1170, true), (ParkBuilding.Carrying, ParkBuilding.CarryingMoved), "still in the hand, moved" );
+			Assert.IsFalse( state.TryObject( built.ThingId, out _ ), "sold where it stood" );
+			Assert.IsTrue( ParkBuilding.CarriedUnaffordable(), "the cash cursor's test agrees" );
+			var squares = ParkBuilding.CarrySquares( state, item, to.X, to.Y, 0, 0, moved: true );
+			Assert.IsTrue( squares.Count > 0 && squares.All( square => square.Marker == ParkPathBuilding.MarkerRed ), "the squares red" );
+			Assert.IsFalse( ParkBuilding.CarrySquares( state, item, to.X, to.Y, 0 ).Any( square => square.Marker == ParkPathBuilding.MarkerRed ),
+				"and not red for a carry" );
+
+			SetBalance( 3000 );
+			Assert.IsNull( ParkBuilding.PlacementRefusal( state, item, to.X, to.Y, 0, 0, moved: true ), "equal passes" );
+
+			SetBalance( 2999 );
+			StringAssert.Contains( ParkBuilding.PlacementRefusal( state, item, to.X, to.Y, 0, 0, moved: true ),
+				"costs 3000 and the park has 2999" );
+
+			// The buy list's carry of the same ride, at the same cell and bank: no money test.
+			Assert.IsNull( ParkBuilding.PlacementRefusal( state, item, to.X, to.Y, 0 ), "a carry is not refused for money" );
+			Assert.IsTrue( ParkBuilding.Carry( 1170, out var held ) is { } carried && held, "carried from the buy list" );
+			Assert.AreEqual( (1170, false), (ParkBuilding.Carrying, ParkBuilding.CarryingMoved), "a carry, not a move" );
+			Assert.IsFalse( ParkBuilding.CarriedUnaffordable() );
+		}
+		finally
+		{
+			ParkBuilding.StandThing = null;
+		}
 	}
 
 	/// <summary>
@@ -205,12 +276,12 @@ public class ParkBuyGoldenTicketTests
 		Assert.AreEqual( (2, ""), (file.TicketsSpent, string.Join( ' ', file.RideIds )), "carried, not yet bought" );
 
 		var build = typeof( ParkBuilding ).GetMethods( BindingFlags.NonPublic | BindingFlags.Static )
-			.Single( method => method.Name == "Build" && method.GetParameters().Length == 10 );
+			.Single( method => method.Name == "Build" && method.GetParameters().Length == 11 );
 		var objects = new ParkObjects( "jungle", null, null );
 
 		string Answer( int x, int y )
 		{
-			var built = build.Invoke( null, [state, TestRun.CurrentLevel.Park, catalogue, objects, null, 1170, x, y, 0, 0] )!;
+			var built = build.Invoke( null, [state, TestRun.CurrentLevel.Park, catalogue, objects, null, 1170, x, y, 0, 0, false] )!;
 			return (string)built.GetType().GetProperty( "Answer" )!.GetValue( built )!;
 		}
 
@@ -244,11 +315,11 @@ public class ParkBuyGoldenTicketTests
 		file.RideIds.Add( 1170 );
 
 		var build = typeof( ParkBuilding ).GetMethods( BindingFlags.NonPublic | BindingFlags.Static )
-			.Single( method => method.Name == "Build" && method.GetParameters().Length == 10 );
+			.Single( method => method.Name == "Build" && method.GetParameters().Length == 11 );
 
 		string Answer( int x, int y )
 		{
-			var built = build.Invoke( null, [state, TestRun.CurrentLevel.Park, catalogue, null, null, 1170, x, y, 0, 0] )!;
+			var built = build.Invoke( null, [state, TestRun.CurrentLevel.Park, catalogue, null, null, 1170, x, y, 0, 0, false] )!;
 			return (string)built.GetType().GetProperty( "Answer" )!.GetValue( built )!;
 		}
 

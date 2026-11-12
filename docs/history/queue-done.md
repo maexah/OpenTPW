@@ -12145,6 +12145,19 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q732. A moved ticket ride meets the money test.** From the run 7 review (Q709 4, VERIFY-11). In the original the
+  move tool's put-down (`0x00523940..0x005239fc`) prices the item in full (`0x52398b call 0x52fb90( [item+0x1b8] )`) and
+  the shared cell test (`0x00535905..0x0053592b`) refuses it above the bank; only the carry pass (`0x005235e6..0x00523613`)
+  exempts an unbought ticket ride. Built: the hand marks a move (`ParkBuilding.CarryingMoved`, set by `PickUp` alone, so
+  the buy list's carry and a Ctrl+click's other of a thing, both mode 4, keep the exemption); `PlaceCarried` passes it to
+  `Build`, and `PlacementRefusal`, `CarrySquares` and `CarriedUnaffordable` hand it to the money test. The test seam the
+  item asked for is the existing `ParkBuilding.StandThing`: `AMovedTicketRideIsRefusedWhereTheBankIsBelowItsPrice` stands
+  Jurassic Tours unbought through `Build`, moves it with the bank below 3000 (refused, still in the hand, marked moved,
+  squares red), checks 3000 passes and 2999 refuses at that cell, and that a buy-list carry of it is not refused; four
+  bugs put back by hand each failed it. Off-screen run (fresh Full Simulation player, no tickets): `move 13 40 70` at
+  -10000 answered "costs 3000 and the park has -7000 - sound 0xaf"; `put 40 70` at 100000 built it. Not read: which of
+  `0x816d50`/`0x81b604` the move's click honours (taken as the carry's). Not observed in the original (no original in the
+  lane). **Done 2026-11-12** (cloud lane c34, `alexah/1013-moved-ticket-ride-money-test`).
 
 ## B. Docs and comments
 
