@@ -3419,9 +3419,9 @@ state machine.
 - [ ] **Q79. Robustness (plan item 12, the rest).** Atomic save writes exist (`BaseFileSystem.WriteAllBytes`) and
   input is dropped while unfocused (Q42). Open: top-level error containment (nothing catches a failure of the run loop; a failed start is `StartFailure`, Q978),
   and easing the render rate and music while the window is unfocused.
-- [ ] **Q80. Two tests the lobby audit asked for (plan item 13, the rest).** A save round trip against a real
-  game-written file (it wants a sitting with the original to make one), and `LobbyScript` over the four shipped island
-  scripts. Sound categories are covered by `SoundCategoryTests`.
+- [ ] **Q1212. A save round trip against a real game-written file (the rest of Q80, plan item 13).** From Q80, split in
+  cloud lane c23. A park file the original wrote, read by ours and written back, compared with the original's bytes
+  where ours claims to keep them; it wants a sitting with the original to make the file.
 - [ ] **Q721. Each lobby island and gate turned by its ISLAND heading.** From the upstream look, 2026-10-19
   (`verify-sound-ui.md` L2). The island constructor `0x005dfa60` stores `island[+0x14]` = the ISLAND line's heading field
   x pi / 180, hands that radian value twice to `FUN_005d8380` (the isle's model instance `[island+4]`, then the gate's

@@ -12990,3 +12990,11 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   child in nine to twenty-five in a script chain's runs, `q612/run5/run.log`). Give `ParkScreams.Chain` the same empty-pass
   rule, with a test that fails when the pass is skipped, and confirm in a run by the first child's variation after a due
   millisecond.
+- [x] **Q80. Two tests the lobby audit asked for (plan item 13, the rest) - first piece: `LobbyScript` over the four
+  shipped island scripts.** `LobbyScriptIslandsTests` reads `jungle.txt`, `fantasy.txt`, `hallow.txt` and `space.txt`
+  through the game's file system and checks every field `LobbyScript.Read` keeps: the ISLAND line's slot, name, heading
+  and camera height, SKYCOLOUR, RAINY, LIGHTNING (and its strikes a second) and each FLYINGMESH line (folder with its
+  quotes stripped, model, count, box, speed), and that the four files hold the four slots. The four files differ in every
+  ISLAND field the reader takes, so a field read from the wrong column fails; four bugs put back by hand (heading from
+  the seventh field, name from the gate field, quotes kept, SKYCOLOUR green and blue swapped) each failed it. Sound
+  categories are covered by `SoundCategoryTests`. Done as Q80 in cloud lane c23; the save round trip is Q1212.
