@@ -1318,6 +1318,12 @@ filed the items that cite it.
 - [ ] **Q457. The satisfaction bar is masked to a byte.** From the week-end audit (D6, `VERIFY-16a.md` Q367/Q368).
   `ParkItemsScreen` runs satisfaction through `Bar()`'s `& 0xff`; the original does not (`0x00494031`, `0x00494199`,
   `0x00495888`, `0x00495959`) and the setter clamps 0..0x400 (`0x0066d885`). A test with -1 and 256.
+- [ ] **Q1372. The staff screen's two meters on screen, beside the original's (the split piece of Q458).** For a desk
+  lane with a display. Q458 (cloud lane c63, `alexah/1042-staff-meter-average`) built the original's averaging and
+  confirmed it by tests and log lines only (`Staff list: all-staff meter 909 from [92, 89, 89, 87, 87]`, `kind meter 890`
+  on `park jungle`, `screen 4`); no frame was taken. Photograph both meters (`0x32c`, `0x32d`) on the jungle park at
+  909 of 1024, the all-staff one, beside the original's on the same park, and on `q369/skill.TPWS` the original's 892
+  (`hud.md`, "What the two meters average"). Rule 6: predict each fill's length before looking.
 - [ ] **Q460. Zlib textures round the chroma terms twice.** From the week-end audit (D9, `VERIFY-13b.md` Q355 1). The
   original stores the Cb and Cr terms as float32 at 1.5 x 2^23 (`0x00594f5e`, `0x00594f87`), integers before Y is added;
   `Held` rounds once: 933 of 986 files differ by 1. Green's rounding (the FPU mode) needs a breakpoint at `0x00594f72`.
