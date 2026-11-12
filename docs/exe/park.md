@@ -1462,8 +1462,8 @@ A list node comes from `DAT_00877b8c`: `+0` peep, `+4` handle, `+8` seat node (-
 | 5 | none | Answers the object's `+0x2c`, `mIsTrackRideValid`. |
 | 6 | `FUN_00544a10` | Unless closed: state 0, the boarding list onto the leaving list's tail; bumper cars timed 0 and set `0x20`. "Close ride". |
 | 7 | `FUN_00544840` | Types -1, -2, -3, -6, -11 and -14: state 1, whatever it was. The karts and water, only from 0 (1 or 2, and the start buoy). Then the performance. "Open ride". |
-| 8 | `FUN_00544c80` / `FUN_00544e50` | Non-zero: `+0x54` = 2, smoke (effect 2, its handle at the car's `+0x2c`) at the emitter node of each car flagged `0x4000` that has none, Hot Pot cars anim `0xc`. Zero: `+0x54` = 0, and only from 2 "Ride Fixed", smoke killed, anim 5. `saves.md`, "OpenTPW's writer, a smoking car". |
-| 9 | `FUN_00544c00` / `FUN_00544e50` | Non-zero: `+0x54` = 1, "Ride worn out". Zero: as 8's. |
+| 8 | `FUN_00544c80` / `FUN_00544e50` | Non-zero: `+0x54` = 2; then, only for a ride of BumperType -1 or -3 to -14, smoke (effect 2, its handle at the car's `+0x2c`) at the emitter node of each car in use that is the ride's, is flagged `0x4000`, has an emitter node (`+0x24` not -1) and no smoke yet (`+0x2c` -1), and a Hot Pot's car anim `0xc` (`saves.md`, "What a break does", read whole). Zero: `+0x54` = 0, and only from 2 "Ride Fixed", each of the ride's cars with a handle has its smoke killed and `+0x2c` set to -1, anim 5; whether the fix has a type gate of its own is not read (Q1562). `saves.md`, "OpenTPW's writer, a smoking car". |
+| 9 | `FUN_00544c00` / `FUN_00544e50` | Non-zero: `+0x54` = 1, "Ride worn out"; any gate of `FUN_00544c00`'s is not read (Q1562). Zero: as 8's. |
 | 10 | `FUN_00544b50` | Removes every car (their riders to the leaving list), then closes. |
 | 11 | `FUN_005452a0` | Answers `+0x5c`. |
 | 12 | `FUN_00549b80` | Not closed: the first car of the ride with no riders takes the whole boarding list, is timed and seated; 1 or 0. It does not skip a car still unloading, and retargeting it clears `0x20`. With no car empty the list stays for the next `BUMP 12` or `4`. |

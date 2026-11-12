@@ -162,7 +162,11 @@ the 31 category files (`lib/sfxmap.py`, each file walked to its last byte): 100 
 `cat_kids` 71 to 90, and two of fantasy's ride variations), 90 in 80, 60 to 85 in 51 (the staff's are 60, 70, 75, 85, 90 and one 100), 10 to 50 in 13,
 150 and 170 in four of the global rides', 1500 in one (the global ambient's thunder, 32, which the game sounds
 from a bolt's top), 0.1 in 29 and nought in the 645 speech variations. All but two of the last 674 belong to effects flagged
-`0x200`, whose voices are given no mapping at all. `FUN_006bc410` hands the same number to the mixer as the
+`0x200`, whose voices are given no mapping at all. **Re-measured 2026-11-12** (Q221 (8), `lib/sfxmap.py` over the 31 files of
+the disc's `Data`): 1,595 variations; the five speech files hold 645 (global 641, one in each theme's), every one at nought, none at 100; the effect flag words met are
+`0x0`, `0x1`, `0x4`, `0x6`, `0x8`, `0x16`, `0x200`, `0x201`, `0x204`, `0x206`, `0x208`, `0x404`, `0x406` and `0x606`, so bits `0x1`,
+`0x2`, `0x4`, `0x8`, `0x10`, `0x200` and `0x400`. FileFormats `sound-categories.md`'s "bits 1, 2 and 4" and "645 speech variations
+holding 100" are to be put right there (Q1562). `FUN_006bc410` hands the same number to the mixer as the
 mapping's far end, so every placed voice is turned down by the law of the next section over its own variation's
 range. **Held in the running original** (Q265, `original/mixer.py` over 150 s of the shipped park with the view on
 the Belly Bounce, `q265/orig/a-load.log`; predicted first, 2 of 2): the ride's scream channels read a mapping of

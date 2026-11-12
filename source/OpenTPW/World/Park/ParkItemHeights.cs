@@ -182,19 +182,35 @@ internal static class ParkItemHeights
 	}
 
 	/// <summary>
-	/// How high a <c>.hmp</c> says its thing stands over a cell, above the thing's base: the cell's middle carried back
-	/// into the item's own unturned space from <paramref name="origin"/> (its root's place) by its quarter turn
-	/// <paramref name="angle"/>, the original's <c>0x00452bb0</c>..<c>0x00452c1d</c>, which does the same with the cell's
-	/// corner for each quarter turn. Null outside the file's cells.
+	/// How high a <c>.hmp</c> says its thing stands over a cell, above the thing's base: the file's cell under
+	/// <see cref="LocalCell"/>, floored. Null outside the file's cells.
 	/// </summary>
+	/// <remarks>
+	/// The original truncates a corner's offset (<c>0x00452bb0</c>..<c>0x00452c1d</c>) where this floors the middle's. The two
+	/// differ only below nought, and no cell a Lost Kingdom thing covers comes there: each middle lands half a cell inside
+	/// its file's cell at every quarter turn (<c>ItemHeightMapTests.EveryCoveredCellsMiddleLandsInsideItsFileCell</c>).
+	/// Which corner the original takes at each turn is not read here (Q1561).
+	/// </remarks>
 	internal static float? AboveBase( ItemHeightMapFile file, System.Numerics.Vector3 origin, int angle, HeightfieldFile field,
 		int x, int y )
+	{
+		var (column, row) = LocalCell( origin, angle, field, x, y );
+
+		return file.HeightOver( (int)MathF.Floor( column ), (int)MathF.Floor( row ) );
+	}
+
+	/// <summary>
+	/// The cell's middle carried back into the item's own unturned space from <paramref name="origin"/> (its root's place)
+	/// by its quarter turn <paramref name="angle"/>, in the file's cells: the original's <c>0x00452bb0</c>..<c>0x00452c1d</c>,
+	/// which does the same with the cell's corner for each quarter turn.
+	/// </summary>
+	internal static (float Column, float Row) LocalCell( System.Numerics.Vector3 origin, int angle, HeightfieldFile field, int x, int y )
 	{
 		var middle = new System.Numerics.Vector3( (x + 0.5f) * field.CellSizeX, (y + 0.5f) * field.CellSizeY, 0f );
 		var local = System.Numerics.Vector3.Transform( middle - (origin with { Z = 0f }),
 			System.Numerics.Quaternion.Inverse( ParkObjects.Turn( angle ) ) );
 
-		return file.HeightOver( (int)MathF.Floor( local.X / field.CellSizeX ), (int)MathF.Floor( local.Y / field.CellSizeY ) );
+		return (local.X / field.CellSizeX, local.Y / field.CellSizeY);
 	}
 
 	/// <summary>

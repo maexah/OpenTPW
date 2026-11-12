@@ -4626,7 +4626,10 @@ four filter fields, as **byte** offsets:
 name it; not re-read in Ghidra): a ride's upgrade is never a buy row, however researched. Only Full Simulation reaches it: Instant
 Action's catalogue holds no add-on. Run off-screen (a fresh Full Simulation player on `Easymode.TPWI` with records for 1500 and
 1501 added, researched, and DinoKarts marked researched): the rides tab lists DinoKarts and not the Dino Karts Jump (750) or
-Tunnel (900), where the build without the test listed both. Not run beside the original. The `+0x508` test is still Q221 (2).
+Tunnel (900), where the build without the test listed both. Not run beside the original. **The `+0x508` skip is not built: dead
+by content** (Q221 (2), 2026-11-12, `ParkResearchTests.EveryLostKingdomItemABuyListReachesHasAModelThatReads`): every Lost Kingdom item
+of either catalogue with `Info.WhichUIType` under 4 has a `<directory>/<stem>.MD2` our reader reads whole, 120 entries; that the original's
+loader fails on exactly what ours cannot read is not checked in Ghidra.
 
 `desc+0x10` is not a static "is this listed" flag - it is the **researched** flag, and at a park load it is the
 **save's**, not the item file's (Q201). The record array is `CControlManager`'s, 150 records of 0x20 bytes looked up by

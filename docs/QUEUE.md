@@ -734,35 +734,19 @@ filed the items that cite it.
   across all 2,129 `.md2`, compare the stored normals with the computed ones, then read and use the stored ones. The
   FileFormats models page gets the count. Confirm: one ride and one shop photographed beside the original's under
   Proton, the same sun.
-- [ ] **Q221. Eight leftovers from the effort audit, each dead by content today.** Found by the 2026-10-04 effort
-  audit, each read in the listing. (1) `ParkScriptStates` reads the tick and next handle with `header > dword * 4`; it
-  should be `>= (dword + 1) * 4`. (2) `ParkBuyScreen.Listed` applies two of the original's four filters: add the
-  upgrade (`+0x284`) and model-failed (`+0x508`) tests or count them (`FUN_004aaf70`); the upgrade test is reached
-  since Q349 (Alexah's Full Simulation saves), so it is Q452. (3) `ParkAudio.ScreamEffectFor`
-  silences a negative band; `FUN_00551130` plays `0x48` for one. (4) `RideScript.NextRandom` answers 0 for every
-  bound + 1 at or below nought; only -1 divides by nought (`0x00553994`). (5) `ParkItemHeights.Over` floors the
-  cell's middle where `0x00452bb0` truncates corner offsets: measure it on raised ground. (6) The original rolls a
-  rider's head sprite to its node (`FUN_0044b510`, `0x0044ba04`); `DrawHead` does not, and it is counted (`RIDER_HEAD_ROLL`): build
-  it. (7) `Peep.Pace` works at 24 bits and `ShopCostOfGoods` at 53 under one control word: settle which, the pinned
-  18 may be 19 (the shop window's amount slider now sets an amount off the steps of 50, Q31). (8) Two docs lines not yet re-measured: `park.md`'s selector table rows 8 and 9 leave out the
-  `0x4000` and type gates of `FUN_00544c80` and `FUN_00544e50`; FileFormats `sound-categories.md` says the masks use
-  bits 1, 2 and 4 beside 645 speech variations holding 100.
-  - **Piece taken (2026-11-12, lane c2):** (1), (3) and (4) are Q1147, done; (2), (5), (6), (7) and (8) stay here.
-  - **Note on (7) (fork watch 2026-10-18, `verify-world-a.md` H2; `park-engine.md`, "Which rounding is live is not
-    settled"):** the cause of the 24-bit reading is not settled, and our own 53-bit reading stands beside it: a breakpoint
-    at `0x0059e17b` in the running original read the control word `0x27f` on ticks 970 and 1125
-    (`advisor-park.md`, "The product is a double of the float key"), while the game-clock accumulator is added at 24 bits
-    (measured). DirectDraw's cooperative level is set with `0x851` (`0x00563914`) and `0x808` (`0x00563b92`), both with
-    FPUSETUP and neither with FPUPRESERVE; the renderer's own 24-bit switch is `0x00591220` (a failed frame leaves it in
-    force, `0x00577433`). Which one a given calculation sees is still to be read, in the original, at that calculation.
-  - **Note on (7) (fork watch 2026-10-31, verify-world H2; `park-engine.md`, "Which rounding is live is not settled"):** the
-    likely cause is now read. DX6.1's D3DIM (`0x56664f77`..`0x56664f9e`, in the disc's `Redist/DIRECTX/`) sets the control word to
-    `0x7f` on a DP2 HAL device (class 2); Proton's ddraw and wined3d set nothing. The clock add runs inside the renderer's
-    24-bit window (`0x00576fa7` to `0x00577310`) on any platform, so under Proton it is added at 24 bits (if the `0x100` view flag is set in a park frame) while a park tick reads `0x27f`: our two measurements, no failed frame needed. Prediction for the run: `original/brk.sh` on `0x004033c8`
-    reads `0x7f` through `0x0057ff79` and `0x27f` through `0x0054f47f` (not run; whether the `0x100` view flag is set in a
-    park frame is not read). Unproven: that the machine "the original" means ran class 2; the fork's "and any later runtime"; whether a HAL
-    driver writes the word. **Alexah's call:** every `0x27f` we measured is a Proton fact, so the pinned 53-bit choices
-    (`ride-operation.md` shop cost, `park-engine.md` conform) are faithful to Proton, not to DX6.1 on a DP2 driver. **Alexah (2026-11-02):** keep matching Proton's 53-bit; no code change.
+- [ ] **Q1560. A rider's head rolled to its node (Q221 (6)). Decode first.** `FUN_0044b510` writes local 9 (`+0xa8`), the
+  roll from `FUN_0046f200` times 1/2π (`0x0044ba04`..`0x0044ba2f`, `ride-operation.md`, "What the head is"); `DrawHead`
+  draws no roll and counts `RIDER_HEAD_ROLL` as a boat is stood. Decode `FUN_0046f200` in Ghidra, then roll the head quad
+  by it. Confirm: a bumper boat's riders photographed beside the original's at the same camera.
+- [ ] **Q1561. Which corner `0x00452bb0` takes at each quarter turn (Q221 (5)).** `ParkItemHeights.LocalCell` carries the
+  cell's middle back and floors it; the original carries a corner and truncates. Over every cell a Lost Kingdom `.hmp`
+  thing covers they agree only if each turn's corner lands at the low edge of the file's cell. Read the four arms in
+  Ghidra; then measure a lift over a thing turned 90 and 270 on raised ground in the original under Proton.
+- [ ] **Q1562. Q221 (8)'s remainder: two gates unread and a FileFormats page.** `FUN_00544e50` (the fix) and
+  `FUN_00544c00` (worn out): read whether each has a type or flag gate (`park.md`'s selector rows 8 and 9 say "not read").
+  FileFormats `sound-categories.md`: put right "bits 1, 2 and 4" and "645 speech variations holding 100" with
+  `audio.md`'s re-measure of 2026-11-12 (the flag bits met are `0x1`, `0x2`, `0x4`, `0x8`, `0x10`, `0x200`, `0x400`; the
+  645 speech variations are all at range nought); that repository is not writable from a cloud lane.
 - [ ] **Q222. The original's guests come up empty-handed, and ours do not. Measure first.** Found by Q107's
   comparison with the original (`ride-operation.md`, "Q107"). The same stock Lost Kingdom park left alone for 240 s:
   the original's chooser named nothing 112 times and a thing 72 times (Jungle Spray 27, Drinks Shop 18, Belly Bounce

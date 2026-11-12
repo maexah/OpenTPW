@@ -393,6 +393,11 @@ internal sealed class ParkBuyScreen : UiWindow
 	/// <c>+0x284</c>, nought, <c>0x004aaffc</c>: the Dino Karts Jump and Tunnel are bought from their ride's window), and
 	/// <b>only a researched item</b> (<c>0x004ab023</c>), the park's flag - see <see cref="ParkResearch"/>.
 	/// </summary>
+	/// <remarks>
+	/// The original's fourth skip, an item whose model failed to load (the descriptor's <c>+0x508</c>), is not built:
+	/// dead by content, as every Lost Kingdom item a list reaches has a model that reads
+	/// (<c>ParkResearchTests.EveryLostKingdomItemABuyListReachesHasAModelThatReads</c>).
+	/// </remarks>
 	internal static IEnumerable<ParkItemCatalogue.Item> Listed( ParkItemCatalogue catalogue, ParkResearch research, int tab )
 		=> catalogue.All.Where( item => item.UiType == tab && item.AddOnUpgradesId == 0 && research.IsResearched( item.Id ) );
 

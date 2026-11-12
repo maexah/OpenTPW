@@ -3158,7 +3158,9 @@ nought. `FUN_00452ae0` finds the thing on the cell in two steps. First it reads 
 reads the cell's thing id (`FUN_00527e80`), which must be an object (type byte 3). From that object it reads the
 `.hmp` at `+0xcc` and the root node's matrix (model `+0x78`; translation `+0x40`, `+0x44`, `+0x48`). It carries the
 cell's corner back into the object's unturned space by its rotation at model `+0x10`, a quarter turn at a time
-(`0x00452bb0`..`0x00452c1d`). It answers the `.hmp`'s cell-grid byte × 1/2.55 plus the root's world height (the height the model maker gave it,
+(`0x00452bb0`..`0x00452c1d`; OpenTPW floors the cell's middle where this truncates a corner's offset, the same cell for every cell a Lost
+Kingdom thing covers at every quarter turn, `ItemHeightMapTests.EveryCoveredCellsMiddleLandsInsideItsFileCell`, Q221 (5); which corner
+each turn takes is not read, Q1561). It answers the `.hmp`'s cell-grid byte × 1/2.55 plus the root's world height (the height the model maker gave it,
 "Where a placed object's model stands"). With no
 object, it answers the ground height at the cell's corner (`FUN_004527f0`). **The wave branch of `FUN_0053ddd0` then
 adds the ground height at each corner again**, so on raised ground the ground counts twice: once in the object's base
