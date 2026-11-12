@@ -151,4 +151,20 @@ public class ParkRideWindowDoorTests
 		list.Replace( index, new UiList.Row( 13, "open", 0 ) );
 		Assert.IsTrue( slots[index].All( cell => cell.TextColour == UiColour.White ) );
 	}
+
+	/// <summary>
+	/// <b>The ride window's title is lettered as <c>UI_SetTitle</c> letters it</b> (Q548; <c>FUN_0048d290</c>'s call at
+	/// <c>0x004ae937</c>): the Belly Bounce's name in font 5, (234, 239, 102), with the edge, centred in the stream's rect
+	/// (746, 74)-(1219, 153) widened by half its width, 236 (cut down from 236.5, as the visitors screen's 803 to 1276
+	/// measured 567 to 1512 in the original), either side: (510, 74)-(1455, 153).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> white; without the edge; the stream's rect; the half rounded up (509 to 1456); the whole width.</remarks>
+	[TestMethod]
+	public void TheRideWindowsTitleIsLetteredAsUiSetTitle()
+	{
+		var title = Find( window.Root, 0x3e28 );
+
+		Assert.AreEqual( ("Belly Bounce", 5, new UiColour( 234, 239, 102 ), true, new UiRect( 510, 74, 1455, 153 )),
+			(title.Text, title.Font, title.TextColour, title.TextShadow, title.Rect) );
+	}
 }

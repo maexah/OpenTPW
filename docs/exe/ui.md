@@ -402,7 +402,7 @@ the darker copy, the hire screen reading "Cash  $ 88112" (`q644/orig/a-1-buy.png
 install's `american` table, where ours reads the English "Hire Cleaners").
 
 **The 32 calls** (`grep 'call   0x485d20' lib/testme.objdump`, each call's pushed id and UITEXT row read before it): the
-object windows' shared title `FUN_0048d290` (`0x0048d2c5`, the id its eight callers hand it; the ride window's `0x3e28` is pushed at `0x004ae930` and called at `0x004ae937` in `FUN_004ae8e0`, slot 0 of vtable `0x006ffbe8` on the ride window's object `0x7cc218`, white here: Q548); all-visitors `0x1e498` on message `0x15` (`0x004933b9`, row `0x70`); all-items
+object windows' shared title `FUN_0048d290` (`0x0048d2c5`, the id its eight callers hand it; the ride window's `0x3e28` is pushed at `0x004ae930` and called at `0x004ae937` in `FUN_004ae8e0`, slot 0 of vtable `0x006ffbe8` on the ride window's object `0x7cc218`, lettered so here: Q548); all-visitors `0x1e498` on message `0x15` (`0x004933b9`, row `0x70`); all-items
 `0x12c4be`, from its opener `0x00495aa0` (`0x00495bc3`, the one call, reached for all four rows `0x4e` to `0x51` through the jump
 table at `0x495c08`; it sets the look, since `UI_SetTitle` styles only on the first call) and from each tab's click in its
 callback `0x00495290` (`0x004953d7` to `0x0049547e`, each with its own row); all-staff `0x328` on message `0x15` (`0x00495f22`, row `0x64`); the entry price's heading `0x4f3af`
@@ -416,7 +416,8 @@ each title yellow with its darker copy, its control's rect and skin rect the str
 "text"), 0.037 to 0.041 of the widened rect yellow and none white. OpenTPW letters the three so (Q676,
 `ParkVisitorsScreen`, `ParkItemsScreen`, `ParkStaffScreen`). Ids with no control here are screens not built. The entry
 price's heading is `UI_SetTitle`'s too, and is empty and white here until it carries the park's name (Q158); the ride
-window's title is `UI_SetTitle`'s too and is white here (Q548).
+window's title `0x3e28` is `UI_SetTitle`'s too, and OpenTPW letters it so, in the stream's (746, 74)-(1219, 153) widened to
+(510, 74)-(1455, 153) (Q548, `ParkObjectWindow`; not yet photographed beside the original's, Q1440).
 
 **OpenTPW letters both screens larger** (Q644, a deviation at Alexah's word, 2026-10-25, `UiFonts.ParkScreenLettering`):
 the same `.bf4` fonts drawn 1.2 times the original's size where each control's box holds it, as large as it holds

@@ -1708,12 +1708,12 @@ filed the items that cite it.
   ride's and the shop's windows (and the staff member's and the visitor's, if the same proc serves them: read first), and
   confirm in either game: the stock park with a second Drinks Shop bought, Down in the shop's window, the title and the
   `shopwindow` census naming the other shop.
-- [ ] **Q548. The ride window's title is white; `UI_SetTitle` letters it yellow.** From Q31: the shop's window takes
-  `UI_SetTitle`'s font 5 in (234, 239, 102) with its shadow over the widened rect (`hud.md`, "The shop's window"), as the
-  visitor's and the staff member's do; `ParkObjectWindow` letters the ride's title white in the stream's own rect. The
-  original letters it through `FUN_0048d290` (`push 0x3e28` at `0x004ae930`, `call` at `0x004ae937`, in `FUN_004ae8e0`, slot 0
-  of vtable `0x006ffbe8` on the ride window's object `0x7cc218`; `0x48d290` calls `UI_SetTitle` at `0x0048d2c5`); letter
-  `ParkObjectWindow`'s `0x3e28` so, then photograph the Belly Bounce's window beside the original's.
+- [ ] **Q1440. Photograph the Belly Bounce's window beside the original's (Q548's title).** From Q548: the ride window's
+  title `0x3e28` is now lettered as `UI_SetTitle` letters it (font 5, (234, 239, 102), the edge, (510, 74)-(1455, 153)),
+  built and read back by the console's `control 3e28` in a cloud lane with no display to look at and no original. Open the
+  stock park's Belly Bounce (thing 13) in both games at 800 x 600 (`openthing 13` here; the original's route is Q634's,
+  `q693/orig/run.sh`), photograph the two windows side by side, and check the title's colour, its darker copy and where
+  it is centred; `uitree.py PID 0x007c24c8` gives the original's `0x3e28` rect and skin rect to set beside (510, 74, 1455, 153).
 - [ ] **Q549. The researcher tires about 80 sweeps sooner here and rests longer.** From Q701: stock Easymode, left
   alone, our researcher (thing 30) set off for the Staff Room on tick 2210 and 2199 in two runs and ended the rest on
   2553 and 2578, skipping 17 and 19 hand-outs; the original's last hand-out before its rest was on 2280 and it gave the

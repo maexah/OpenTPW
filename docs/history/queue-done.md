@@ -12145,6 +12145,20 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q548. The ride window's title is white; `UI_SetTitle` letters it yellow.** From Q31: the shop's window takes
+  `UI_SetTitle`'s font 5 in (234, 239, 102) with its shadow over the widened rect (`hud.md`, "The shop's window"), as the
+  visitor's and the staff member's do; `ParkObjectWindow` letters the ride's title white in the stream's own rect. The
+  original letters it through `FUN_0048d290` (`push 0x3e28` at `0x004ae930`, `call` at `0x004ae937`, in `FUN_004ae8e0`, slot 0
+  of vtable `0x006ffbe8` on the ride window's object `0x7cc218`; `0x48d290` calls `UI_SetTitle` at `0x0048d2c5`); letter
+  `ParkObjectWindow`'s `0x3e28` so, then photograph the Belly Bounce's window beside the original's.
+  Built: `ParkObjectWindow`'s `0x3e28` takes font 5 in (234, 239, 102) with its shadow, centred in the stream's
+  (746, 74)-(1219, 153) widened by 236 either side, (510, 74)-(1455, 153) (the half cut down, as the visitors screen's
+  473-wide rect measured 567 to 1512 in the original, Q676). `TheRideWindowsTitleIsLetteredAsUiSetTitle` (needing the game)
+  passes; five bugs put back by hand (white, no edge, the stream's rect, the half rounded up, the whole width) each failed
+  it. Off-screen run (`lib/consolerun.py`, `park jungle`, `openthing 13`, `control 3e28`, 1280 x 720): "reads 'Belly
+  Bounce' lettered font 5 in (234, 239, 102) with the edge", size (443,37), 945 x 720 / 1536 as predicted. The photograph
+  beside the original's is Q1440 (no display or original in the lane). **Done 2026-11-12** (cloud lane c80,
+  `alexah/1059-ride-window-title`).
 
 ## B. Docs and comments
 
