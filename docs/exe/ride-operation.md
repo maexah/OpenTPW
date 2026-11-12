@@ -2134,8 +2134,26 @@ and a price cell in font 7) and `0x004ae140` fills it.
   (`0x0048cf70`); a dearer one is `0x00486ae0`, `cat_ui` `0x1D` (Q402). The balance is `FUN_006ad810` on `FUN_005195d0`'s thing.
   Message `0x14` closes the list; `0x100` with -2 closes it.
 
-Lost Kingdom's stock park is Instant Action, so none of this is reached there; it is a Full Simulation window
-(`docs/QUEUE.md` Q512). Our tab is counted (`ParkObjectWindow.cs`, `RIDE_WINDOW_UPGRADES`).
+Lost Kingdom's stock park is Instant Action, so none of this is reached there; it is a Full Simulation window.
+
+**Built** (`docs/QUEUE.md` Q512, 2026-11-12, from this decode alone: no Ghidra, no original). `ParkUpgradeList.For` makes
+the rows and `ParkUpgradeList.Choose` judges a choice; `UI.ParkUpgradesWindow` (opened by the ride window's `0x3e35`, over it)
+letters them: an add-on by its item's name (`ParkObjectNames.NameOf`, `0x00412fb0`), UITEXT 29 and 30 with the level + 2 as
+parameter 0, the message split into a row a line at its own line breaks (UITEXT 27 has one), each price through the buy
+list's price text. An add-on within the balance goes into the hand for the ride (`ParkBuilding.CarryFor`, which also asks
+the item's own build price, as every carry does) and closes the ride window and the list; a dearer one plays `cat_ui` `0x1D`.
+**Counted, not built:** the level's order (`RIDE_UPGRADE_ORDER`) and the cancel (`RIDE_UPGRADE_CANCEL`), `FUN_004e0050( 1 )`
+and `( 0 )`, whose whole body is not read here (the state table above names state 2, the hoardings' 8 and "Cancelling
+request for upgrade"); a level dearer than the balance closes the list with nothing done. **Not read:** stream
+`0x00755750`'s rectangles and meshes (ours takes the message box's frame, `w_dialog`), the price cell's skin, the
+separator at `0x007558f0`, and whether the list pauses or is modal (ours does neither). The console's `upgrades <thing>`
+prints the rows as the window's log line does. Measured in this game (a cloud lane, `consoledrive.py`, the stock park
+loaded by a Full Simulation player): the Belly Bounce at level 0 reads `Level -1 'Upgrade to level 2' 400`, at level 1
+with `mState` 2 written into the file `Cancel -12999 'Cancel level 3 upgrade' 0`, at level 2 `Message -7890 'This ride is
+fully upgraded'`; a placed Dino Karts with the file's research reads UITEXT 26 in two rows; a real click on the level
+row counts `RIDE_UPGRADE_ORDER` and closes the list with the ride window still open. Lost Kingdom's Dino Karts with both
+add-ons and its first tier researched lists the Jump at 750, the Tunnel at 900 and level 2 at 1500 (`ParkUpgradeListTests`),
+the three rows and prices Q1041 read in the original's list.
 
 Instant Action catalogues only items with an `Easy_` file (`0x00413ac4`): all four bought cases have one; Chac Atak
 and Gorilla Thrilla do not. The saved rows were measured read-only in Alexah's played jungle saves (`q172save`, and a

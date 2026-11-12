@@ -1221,7 +1221,7 @@ filed the items that cite it.
   (`FUN_004ac270` at `0x004ac7f6`: a mystery row short of tickets, a row dearer than the balance), when a Ctrl+click
   Clone is dearer than the balance (`FUN_004879d0`, the call at `0x00487b56`), and from `FUN_004af480` (`0x004af5d6`, a control of
   window stream `0x00755750` not identified). The buy screen's refusal, both arms, is built (Q709, `ParkBuyScreen.Chose`,
-  `RefusedSound`), not yet caught by the disk driver; `FUN_004af480` is not built; the Clone's refusal is built (Q672, `Level.ClickWorldAt`,
+  `RefusedSound`), not yet caught by the disk driver; `FUN_004af480`'s, a dearer add-on row, is built (Q512, `UI.ParkUpgradesWindow`, the same `RefusedSound`; no run reached it); the Clone's refusal is built (Q672, `Level.ClickWorldAt`,
   the same `RefusedSound`), its sound asked for ("a voice", `q672/run5`), not caught by the disk driver either.
   Confirm: the sound caught by the disk driver on a refused row.
   - **Note (fork watch 2026-10-16, `verify-audio-fx.md` A3):** the list rows' click sound is built (`UiSounds`,
@@ -1432,18 +1432,24 @@ filed the items that cite it.
   beside the original (`record.sh`); a screenshot of each.
   - **Note (play test 2026-10-31):** Belly Bounce riders stand still and never jump (`RIDER_BOUNCE` reached). Q22, an older copy of this item, is folded into it (Alexah, 2026-10-31); its notes on the posed node and Q585 are in its finished entry. Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
   - **Note (Q1005, 2026-11-04; run 21 review):** the sale's put-off sounds at the lifted height too: one rider's `+0x8c` ran 8.49 to 24.0 over 200 frames (six peaks 23.99 to 24.00, troughs 8.49 to 10.73: the node's own y as the floor; `q1005/orig/l-brk.log`, `riderheight.sh`), on top of a moving node (x 522.33 to 522.84, z 248.13 to 248.81), and a sale handed (522, 19, 248) and (522, 10, 248); ours' `ParkPeople.SeatOn` takes the placed node (10.3, 9.5, 11.9 for ever), so the lift is wanted in `SeatOn` as well as in the draw. Q1006, the same question, is folded in here.
-- [ ] **Q512. The ride window's Buy Upgrades list.** From the fork watch, 2026-10-18 (`verify-world-b.md` L1,
-  `verify-ui-hud.md` U3). The ride window's upgrades button (`RIDE_WINDOW_UPGRADES`, counted) opens the original's list
-  (stream `0x00755750`; `FUN_004ae560`, rows `FUN_004ae140`, choice `FUN_004ae430` and `FUN_004af480`): the add-on rows
-  (types whose `+0x284` is the ride's type and whose control has `+0x10`), then one row for the next level, UITEXT 29 with
-  the price `CostOfUpgrade[level+1]`, or UITEXT 30 "cancel" while an upgrade waits (state 2), else UITEXT 26 or 28; nothing in
-  Instant Action (UITEXT 27). A level row is ordered only when its cost is strictly below the balance, with no error cue; an
-  add-on row at most the balance builds a tool-4 carry shell and closes the window, and a dearer one plays `cat_ui` `0x1D`
-  (`docs/exe/ride-operation.md`, "The ride window's Buy Upgrades list"). Full Simulation only: Lost Kingdom's stock park is
-  Instant Action. Neighbours: Q272 (a mechanic and a waiting upgrade), Q452 (Buy Rides lists a researched upgrade), Q402 (the
-  sound). Confirm in Full Simulation: a ride at level 0 and at level 2, the list's rows and prices, an order and its cancel,
-  beside the original; a screenshot of each.
-  - **Note (play test 2026-10-31):** the upgrade screen is missed (`RIDE_WINDOW_UPGRADES` reached). The log also says `Could not load texture 'ui/textures/b_callmechg.wct'` and `'b_upgradeg.wct'` (the greyed buttons, lines 327-328); check whether those exist in the game's data. Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
+- [ ] **Q1516. The Buy Upgrades list's layout, beside the original (from Q512).** Ours (`UI.ParkUpgradesWindow`) takes the
+  message box's frame (`w_dialog`) and lays the title, the list and the close button inside it, a deviation said at the
+  site: stream `0x00755750`'s rectangles and meshes (title `0x1f4e`, list `0x1f4d`, the `-2` close) were not read
+  (`lib/uistream.py 755750` needs `testme.exe`). Read them and the price cell's skin, the separator at `0x007558f0` that
+  splits the message into rows (ours splits at the text's own line breaks), and whether the list pauses or shuts the park
+  out (ours does neither); then lay it as the stream does. Confirm in Full Simulation, both games: the Belly Bounce's list at
+  level 0 (`Upgrade to level 2`, 400), the Dino Karts' with its two add-ons researched (Q1041's file: Jump 750, Tunnel 900,
+  level 2 1500), a click on an add-on within the balance (the hand holds it, the ride window gone) and one dearer (the sound),
+  a photograph of each beside the original's. `lib/upgradesrun.py` drives ours off-screen; an add-on row needs a park file
+  whose research records hold the add-ons researched.
+- [ ] **Q1517. A ride's upgrade ordered and cancelled from the Buy Upgrades list (from Q512).** The list's level row and
+  its cancel row call `FUN_004e0050( 1 )` and `( 0 )` (`0x004af480`), whose bodies are not read through: the state table
+  (`ride-operation.md`, "Where an object's state comes from") names state 2 set only by `( 1 )`, after `"Object %d: wants
+  maintenance"`, and only with the item's bit `0x04`; `( 0 )`'s `"Cancelling request for upgrade"` and the "open a ride"
+  tail; hoarding kind 8 (`0x004e0098`). Ours counts both (`RIDE_UPGRADE_ORDER`, `RIDE_UPGRADE_CANCEL`) and closes the list.
+  Read the function in Ghidra (what closes, what is charged and when, what the advisor or the mechanic search is told),
+  then build it; Q1292 is the mechanic's work that follows. Confirm: the Belly Bounce ordered and cancelled in Full
+  Simulation in both games, its `mState`, `mCanLoad` and the hoarding read after each.
 - [ ] **Q513. The window a click on an add-on opens.** **Answered by Q1000 (2026-11-04): there is none to open.** In the original a click on a Lost Kingdom
   add-on's body cell does nothing (the hover gives its cell no category, `AddOn.UpgradesId` non-zero and `AddOn.UpgradeType` 1) and a click on its track
   cell arms the track tool; the world click hands `Thing_OpenWindow` no type-1 add-on (a type-2 one opens `[0x007cc3e0]`'s window, `0x004b6ae0`, and

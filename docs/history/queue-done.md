@@ -14189,3 +14189,25 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   Q607 (the file's id of a sold object), Q594 (the track drawn), `SALE_TRACK_TEARDOWN`. Confirm: `pylons` before and after a
   sale and a move, with a frame of the empty spot, against the original selling the same coaster; a test that fails with the
   teardown put back.
+- [x] **Q512. The ride window's Buy Upgrades list.** From the fork watch, 2026-10-18 (`verify-world-b.md` L1,
+  `verify-ui-hud.md` U3). The ride window's upgrades button (`RIDE_WINDOW_UPGRADES`, counted) opens the original's list
+  (stream `0x00755750`; `FUN_004ae560`, rows `FUN_004ae140`, choice `FUN_004ae430` and `FUN_004af480`): the add-on rows
+  (types whose `+0x284` is the ride's type and whose control has `+0x10`), then one row for the next level, UITEXT 29 with
+  the price `CostOfUpgrade[level+1]`, or UITEXT 30 "cancel" while an upgrade waits (state 2), else UITEXT 26 or 28; nothing in
+  Instant Action (UITEXT 27). A level row is ordered only when its cost is strictly below the balance, with no error cue; an
+  add-on row at most the balance builds a tool-4 carry shell and closes the window, and a dearer one plays `cat_ui` `0x1D`
+  (`docs/exe/ride-operation.md`, "The ride window's Buy Upgrades list"). Full Simulation only: Lost Kingdom's stock park is
+  Instant Action. Neighbours: Q272 (a mechanic and a waiting upgrade), Q452 (Buy Rides lists a researched upgrade), Q402 (the
+  sound). Confirm in Full Simulation: a ride at level 0 and at level 2, the list's rows and prices, an order and its cancel,
+  beside the original; a screenshot of each.
+  - **Note (play test 2026-10-31):** the upgrade screen is missed (`RIDE_WINDOW_UPGRADES` reached). The log also says `Could not load texture 'ui/textures/b_callmechg.wct'` and `'b_upgradeg.wct'` (the greyed buttons, lines 327-328); check whether those exist in the game's data. Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
+  **Done 2026-11-12** (cloud lane c98; no Ghidra, no original, no photograph): `ParkUpgradeList` makes the rows and judges a
+  choice as the decode says, `UI.ParkUpgradesWindow` shows them over the ride window from its `0x3e35`, and the console's
+  `upgrades <thing>` prints them (`ride-operation.md`, "The ride window's Buy Upgrades list", **Built**). An add-on within the
+  balance goes into the hand for the ride (`ParkBuilding.CarryFor`) and closes the ride window; a dearer one plays `cat_ui`
+  `0x1D`. The order and the cancel are counted (`RIDE_UPGRADE_ORDER`, `RIDE_UPGRADE_CANCEL`): Q1517. `ParkUpgradeListTests`
+  (seven; Lost Kingdom's Dino Karts lists the Jump at 750, the Tunnel at 900 and level 2 at 1500, as Q1041 read the
+  original's). Off-screen (`lib/upgradesrun.py`): the Belly Bounce's level row, cancel row and level-2 message, a real click
+  on the level row counted and the list closed. Not reached in a run: an add-on row (the stock file has no research record
+  of the add-ons). The layout is not the stream's and nothing was photographed: Q1516. The greyed-button textures of the
+  play test's note were not looked at.

@@ -1368,8 +1368,8 @@ public static class ParkBuilding
 	public static bool CarryingMoved { get; private set; }
 
 	/// <summary>
-	/// Takes a track add-on into the hand for a ride, as the ride window's Buy Upgrades choice does (<c>FUN_004af480</c>, Q512,
-	/// which is not built: the console's <c>carry &lt;item&gt; &lt;thing&gt;</c> stands in for its row). A thing that is itself
+	/// Takes a track add-on into the hand for a ride, as the ride window's Buy Upgrades choice does (<c>FUN_004af480</c>;
+	/// <c>UI.ParkUpgradesWindow</c>, and the console's <c>carry &lt;item&gt; &lt;thing&gt;</c>). A thing that is itself
 	/// an add-on names the ride in its <c>+0x30</c> (<c>FUN_005276d0</c>, <c>0x005277b3</c>..<c>0x00527831</c>).
 	/// </summary>
 	public static string CarryFor( int catalogueId, int thingId )
