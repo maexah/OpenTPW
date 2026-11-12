@@ -60,9 +60,6 @@ public sealed partial class ParkAudio : Entity
 	/// <summary>The parameter the rain's level is set under (<c>FUN_0051e830</c>'s 8); each of 33's four variations names it on its volume.</summary>
 	public const int RainParameter = 8;
 
-	/// <summary>A deviation: <c>Sound_StopFading</c> (<c>0x0051c300</c>) is a x0.6 volume step every 100 ms (a worker thread, not the service pass) above sound detail 30 and a cut below (<c>audio.md</c>, "The fade"; Q509), not a 0.06 s ramp.</summary>
-	private const float RainFadeSeconds = 0.06f;
-
 	/// <summary>
 	/// How loud, and it is a correction rather than a preference.
 	///
@@ -202,9 +199,6 @@ public sealed partial class ParkAudio : Entity
 	/// <summary>How many cells each way from the pointer's the crowd is counted over (<c>FUN_004c8d30</c>'s third argument).</summary>
 	public const int CrowdVoiceReach = 4;
 
-	/// <summary>A deviation: <c>Sound_StopFading</c> (<c>0x0051c300</c>) is a x0.6 volume step every 100 ms (a worker thread, not the service pass) above sound detail 30 and a cut below (<c>audio.md</c>, "The fade"; Q509), not a 0.06 s ramp.</summary>
-	private const float CrowdVoiceFadeSeconds = 0.06f;
-
 	/// <summary>
 	/// What the park loop hands the crowd's voice (<c>0x0054f875</c>..<c>0x0054f8b9</c>): the guests counted round the
 	/// pointer's cell, held to a hundred, and nought while the world's state is <see cref="SilentWorldState"/>.
@@ -290,7 +284,7 @@ public sealed partial class ParkAudio : Entity
 			if ( !CrowdVoiceHeld )
 				return;
 
-			_crowd?.FadeOut( CrowdVoiceFadeSeconds );
+			_crowd?.StopFading();
 			_crowd = null;
 			CrowdVoiceHeld = false;
 
@@ -638,7 +632,7 @@ public sealed partial class ParkAudio : Entity
 
 		if ( level == 0 )
 		{
-			LetGo( RainBed, RainFadeSeconds );
+			LetGo( RainBed, null );
 			return;
 		}
 
@@ -687,14 +681,19 @@ public sealed partial class ParkAudio : Entity
 	}
 
 	/// <summary>The weather thing's own rain voice faded and let go: a turn to snow, or the drops at nought (<c>FUN_005131f0</c>, modes 1 and 2).</summary>
-	internal void StopOwnRain() => LetGo( RainOwn, RainFadeSeconds );
+	internal void StopOwnRain() => LetGo( RainOwn, null );
 
-	private static void LetGo( RainVoice rain, float seconds )
+	/// <summary>A rain voice let go: faded over <paramref name="seconds"/>, or by <c>Sound_StopFading</c> (<see cref="Voice.StopFading"/>) when null.</summary>
+	private static void LetGo( RainVoice rain, float? seconds )
 	{
 		if ( !rain.Held )
 			return;
 
-		rain.Voice?.FadeOut( seconds );
+		if ( seconds is { } fade )
+			rain.Voice?.FadeOut( fade );
+		else
+			rain.Voice?.StopFading();
+
 		rain.Voice = null;
 		rain.Held = false;
 		rain.Variation = -1;
@@ -1412,8 +1411,8 @@ public sealed partial class ParkAudio : Entity
 	/// <summary>Both of the rain's voices faded and let go: the drops at nought, or the weather gone.</summary>
 	internal void StopRain()
 	{
-		LetGo( RainBed, RainFadeSeconds );
-		LetGo( RainOwn, RainFadeSeconds );
+		LetGo( RainBed, null );
+		LetGo( RainOwn, null );
 	}
 
 	/// <summary>The park is ending: what it has playing fades, and its effect is let go.</summary>

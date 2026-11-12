@@ -133,7 +133,7 @@ internal sealed class GameOptions
 
 	public int MovieVolume { get; set; } = SoundDefaults.Movie;
 
-	/// <summary>+0x30: out of 100, measured against sound.sam's SoundInfo thresholds. Nothing reads it yet.</summary>
+	/// <summary>+0x30: out of 100, measured against sound.sam's SoundInfo thresholds. The tick hands it on (<see cref="ApplySoundDetail"/>).</summary>
 	public int AudioQuality { get; set; } = SoundDefaults.Quality;
 
 	/// <summary>+0x34: whether the advisor speaks (Advisor_SayResponse, 0x00599050, says nothing without it).</summary>
@@ -247,7 +247,17 @@ internal sealed class GameOptions
 		Audio.SetBusVolume( AudioBus.Effects, Gain( EffectsOn, EffectsVolume, SoundDefaults.Effects ) );
 		Audio.SetBusVolume( AudioBus.Music, Gain( MusicOn, MusicVolume, SoundDefaults.Music ) );
 		Audio.SetBusVolume( AudioBus.Speech, Gain( SpeechOn, SpeechVolume, SoundDefaults.Speech ) );
+
+		Audio.SetGroupLevel( AudioBus.Effects, EffectsOn ? EffectsVolume / 100f : 0f );
+		Audio.SetGroupLevel( AudioBus.Music, MusicOn ? MusicVolume / 100f : 0f );
+		Audio.SetGroupLevel( AudioBus.Speech, SpeechOn ? SpeechVolume / 100f : 0f );
 	}
+
+	/// <summary>
+	/// Hands the audio quality on as the sound detail, measured against <c>SoundInfo.FADETOGGLE</c> - the options' tick,
+	/// <c>0x00423850</c>. Only the fade's switch is built from it (<see cref="Audio.SetSoundDetail"/>).
+	/// </summary>
+	public void ApplySoundDetail() => Audio.SetSoundDetail( AudioQuality, SoundDefaults.FadeToggle );
 
 	private static float Gain( bool on, int volume, int byDefault ) => on ? volume / (float)Math.Max( byDefault, 1 ) : 0f;
 
@@ -262,6 +272,7 @@ internal sealed class GameOptions
 		public static readonly int Movie = Read( "DefaultVolume.MOVIE", 100 );
 		public static readonly int Quality = Read( "SoundInfo.DEFAULTQUALITY", 50 );
 		public static readonly bool On = Read( "SoundInfo.SOUNDON", 1 ) != 0;
+		public static readonly int FadeToggle = Read( "SoundInfo.FADETOGGLE", 30 );
 
 		private static SettingsFile? Load()
 		{

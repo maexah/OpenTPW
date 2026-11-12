@@ -319,6 +319,7 @@ internal sealed class OptionsScreen : UiWindow
 	internal void Keep( Action<DisplayMode, VideoMode>? apply )
 	{
 		Options.ApplySound();
+		Options.ApplySoundDetail();
 		var kept = KeptSize( Options.DisplayMode, Options.FullScreenSize, Chosen() );
 
 		if ( kept != Options.FullScreenSize )

@@ -102,6 +102,84 @@ public static class Audio
 	}
 
 	/// <summary>
+	/// Each group's level as the original's sound library holds it, out of 1 - the options' percent over 100, or 0 for a
+	/// group switched off - by <see cref="AudioBus"/>. The mixer does not play by these (<see cref="BusVolumes"/> does that);
+	/// a fade step folds them in (<see cref="Voice.StepFade"/>). 1 until the options are first applied.
+	/// </summary>
+	private static readonly float[] GroupLevels = [1f, 1f, 1f];
+
+	/// <summary>Sets a group's level as the original's library holds it (<see cref="GroupLevels"/>), from <see cref="GameOptions.ApplySound"/>.</summary>
+	public static void SetGroupLevel( AudioBus bus, float level )
+	{
+		lock ( Lock )
+			GroupLevels[(int)bus] = MathF.Max( level, 0f );
+	}
+
+	/// <summary>
+	/// Whether <see cref="Voice.StopFading"/> fades rather than stops: the library's fade bit <c>0x400</c>, set while sound
+	/// detail is above <c>SoundInfo.FADETOGGLE</c>. On until a detail is first applied, as the stock detail 50 is above the
+	/// shipped 30.
+	/// </summary>
+	internal static bool FadesOn { get; private set; } = true;
+
+	/// <summary>
+	/// The sound detail, as the options' tick hands it on (<c>0x00423850</c> -> <c>0x0051b920</c>): above
+	/// <paramref name="fadeToggle"/> a fade steps, at it or below a fade is a stop, and turning fading off stops every
+	/// voice that is stepping (<c>0x006b6240</c>; <c>docs/exe/audio.md</c>, "The fade").
+	/// </summary>
+	public static void SetSoundDetail( int detail, int fadeToggle )
+	{
+		lock ( Lock )
+		{
+			FadesOn = detail > fadeToggle;
+
+			if ( !FadesOn )
+			{
+				foreach ( var voice in Voices )
+					voice.CutFade();
+			}
+		}
+	}
+
+	/// <summary>
+	/// One step of <c>Sound_StopFading</c>'s fade on a voice's own level out of 100, under <paramref name="product"/>, the
+	/// product of its group's gains: <c>trunc( 60 x round( own x product ) / 100 )</c>, the round half to even as
+	/// <c>fistp</c> rounds (<c>0x006bb860</c>, <c>0x006c5709</c>..<c>0x006c5742</c>; <c>docs/exe/audio.md</c>, "The fade").
+	/// </summary>
+	internal static int FadeStep( int own, double product )
+		=> (int)(60L * (long)Math.Round( own * product, MidpointRounding.ToEven ) / 100);
+
+	/// <summary>The fade worker's sleep after a scan that stepped a voice, in frames: 100 ms (<c>0x006b6260</c>).</summary>
+	internal const double FadeStepFrames = SampleRate * 0.1;
+
+	/// <summary>The fade worker's sleep after a scan that stepped nothing, in frames: 250 ms.</summary>
+	internal const double FadeIdleFrames = SampleRate * 0.25;
+
+	/// <summary>Frames of output until the fade worker next scans. It starts with the device and scans at once.</summary>
+	private static double _fadeWait;
+
+	/// <summary>
+	/// Where in a buffer of <paramref name="frames"/> the fade worker wakes, or -1 if it sleeps through it, moving
+	/// <paramref name="wait"/> on by the buffer. The original's worker (<c>0x006b9e30</c> -> <c>0x006ba080</c> ->
+	/// <c>0x006b6260</c>) scans first and sleeps after, 100 ms if it stepped a voice and 250 ms if not, so a fade's first step
+	/// can wait up to 250 ms. Here it runs on the device's clock rather than a thread, at most once a buffer; a buffer longer
+	/// than 100 ms would carry the rest of its wakes to the next one.
+	/// </summary>
+	internal static int NextFadeWake( ref double wait, int frames, bool stepping )
+	{
+		var wakeAt = -1;
+
+		if ( wait < frames )
+		{
+			wakeAt = Math.Max( 0, (int)wait );
+			wait = Math.Max( wait, 0 ) + (stepping ? FadeStepFrames : FadeIdleFrames);
+		}
+
+		wait -= frames;
+		return wakeAt;
+	}
+
+	/// <summary>
 	/// Every voice sounding, which only <see cref="Play"/> adds to. Internal so that the debug console can list it,
 	/// and a test, which has no device to close, can take back the voices it played.
 	/// </summary>
@@ -550,11 +628,19 @@ public static class Audio
 				duckStep = 0f;
 			}
 
+			var stepping = false;
+
+			foreach ( var voice in Voices )
+				stepping |= voice.Stepping;
+
+			var fadeWakeAt = NextFadeWake( ref _fadeWait, frames, stepping );
+
 			for ( int i = Voices.Count - 1; i >= 0; --i )
 			{
 				var voice = Voices[i];
 
-				if ( !voice.MixInto( output, frames, bufferStart, master * BusVolumes[(int)voice.Bus], duck, duckStep ) )
+				if ( !voice.MixInto( output, frames, bufferStart, master * BusVolumes[(int)voice.Bus], duck, duckStep,
+					fadeWakeAt, GroupLevels[(int)voice.Bus] ) )
 					Voices.RemoveAt( i );
 			}
 		}

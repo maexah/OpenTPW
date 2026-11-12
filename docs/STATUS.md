@@ -42,10 +42,16 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the maintainer's pre-commit hook: grep it by Q-number.
 
-- **Q654 (the screams' chain on a due millisecond):** in a cloud container (no Ghidra, no original, no display; the run's output was not kept), the stock jungle park off-screen (`lib/consolerun.py`: `park jungle`, `camera 525 250 90 0`, 240 s): of 272 scream children three fell on their due millisecond, each logged `its newest child pruned on the millisecond it was due` and followed on the next frame by a child `made from an empty list` on variation 2 (parameter 40's zone), while all 36 first children took variation 1. Not checked: the original's timing of that pass (taken from `docs/exe/audio.md`, not run), anything heard, Windows and macOS. Filed: Q1178 (a stop on the empty pass still cuts the pruned child).
+- **Q509 (Sound_StopFading's x0.6 steps and the stop at detail 30 or below):** in a cloud container (no Ghidra, no original, no display, no sound
+  heard; the run's output was not kept), the stock jungle park off-screen (`lib/consolerun.py`: `park jungle`, `speech 5`, 2 s, `quieten`, `voices`
+  every 0.04 s): the advisor's `sp_005.mp2` read `fading 0.5200`, then 0.3067, 0.1333, 0.0533, 0.0133 and was gone (own 52 at the speech group's 0.75:
+  23, 10, 4, 1, 0 of 75); after `sounddetail 30` the same line read `stopped` at the quieten. The 100 ms and 250 ms spacing is by unit test only (the
+  census has no clock). Not checked: anything heard, the original beside it (Q1232), the rain, crowd, bumper-car and `FADEOBJ` fades in a run (unit
+  tests and the same call only), Windows and macOS. Filed: Q1232.
 
 ## Numbers (take counts fresh; these go stale within a day)
 
+- Linux, 2026-11-12, Q509 (cloud lane c28, run as user `tester` on a copy of the tree; six tests added, one needing the game, one changed; after review fixes group B): with the game, 5336 passed, 1 failed, 2 skipped (the macOS and Windows folder tests) of 5339; with no game named, 2298 passed, 1 failed, 3040 skipped. The failure both times is `AnExceptionBeforeTheMainLoopIsLoggedAndEndsTheRunWithExit1`, which this container fails for want of libEGL; not re-gated on the maintainer's machine.
 - Linux, 2026-11-12, review fixes group B (`capped.sh`; two tests added, one needing the game; after Q654): with the game, 5331 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5333; with no game named, 2294 passed, 0 failed, 3039 skipped.
 - Linux, 2026-11-12, Q654 (`capped.sh`; one test added and one changed, needing the game; after Q718; built in a cloud container, re-gated here): with the game, 5329 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5331; with no game named, 2293 passed, 0 failed, 3038 skipped.
 - Linux, 2026-11-12, Q718 (`capped.sh`; one test added, needing the game; after Q465; built in a cloud container, re-gated here): with the game, 5328 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5330; with no game named, 2293 passed, 0 failed, 3037 skipped.

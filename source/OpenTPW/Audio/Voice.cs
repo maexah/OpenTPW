@@ -24,6 +24,12 @@ public sealed class Voice
 	/// <summary>Whether reaching <see cref="_targetVolume"/> should end the voice.</summary>
 	private bool _stopWhenFaded;
 
+	/// <summary>
+	/// Its own level out of 100 while <see cref="StopFading"/>'s steps take it down, or -1 while it is not stepping: the
+	/// original's fade bit <c>0x400</c> and the channel's <c>+0x18</c> (<c>docs/exe/audio.md</c>, "The fade").
+	/// </summary>
+	private int _fadeOwn = -1;
+
 	private volatile bool _stopped;
 
 	/// <summary>
@@ -91,7 +97,10 @@ public sealed class Voice
 	internal float DistanceGain { get; private set; } = 1f;
 
 	/// <summary>Whether it has been told to end: stopped, or fading out to stop.</summary>
-	internal bool Ending => _stopped || _stopWhenFaded;
+	internal bool Ending => _stopped || _stopWhenFaded || _fadeOwn >= 0;
+
+	/// <summary>Whether the fade worker steps it: <see cref="StopFading"/> is taking it down and it has not yet stopped.</summary>
+	internal bool Stepping => _fadeOwn >= 0 && !_stopped;
 
 	/// <summary>Whether it is being held - between <see cref="Pause"/> and <see cref="Resume"/>.</summary>
 	internal bool IsHeld => _paused;
@@ -197,6 +206,72 @@ public sealed class Voice
 	}
 
 	/// <summary>
+	/// The original's <c>Sound_StopFading</c> (<c>0x0051c300</c>): above sound detail <c>SoundInfo.FADETOGGLE</c> the voice is
+	/// flagged for the fade worker, which takes it down a x0.6 step at a time (<see cref="StepFade"/>, <see cref="Audio.FadeStep"/>);
+	/// at that detail or below it is the hard stop, <see cref="Stop"/> (<c>0x006b8930</c>; <c>docs/exe/audio.md</c>, "The fade").
+	/// Its own level starts as its volume out of 100, rounded.
+	/// </summary>
+	public void StopFading()
+	{
+		lock ( Audio.Lock )
+		{
+			if ( !Audio.FadesOn )
+			{
+				_stopped = true;
+				return;
+			}
+
+			if ( _stopped || _fadeOwn >= 0 )
+				return;
+
+			_fadeOwn = (int)MathF.Round( _volume.Clamp( 0f, 1f ) * 100f );
+			_targetVolume = _volume;
+			_volumeRate = 0f;
+			_stopWhenFaded = false;
+		}
+	}
+
+	/// <summary>
+	/// One of the fade worker's steps on this voice (slot <c>+0x2c</c>, <c>0x006bcb80</c>): its own level becomes
+	/// <see cref="Audio.FadeStep"/> of it under <paramref name="product"/>, the product of its group's gains at that moment,
+	/// and at 0 it stops (<c>0x006bcc6e</c>). Says whether it is still going. The caller holds <see cref="Audio.Lock"/>.
+	///
+	/// <para>
+	/// The original's device plays the stepped level with the group gains already folded in, where this mixer still
+	/// multiplies by the group (its bus and the duck), so the volume kept here is the level over the product: what is
+	/// heard is the original's sequence, 75, 45, 20, 9, 4, 1 of a hundred at the effects' 0.75.
+	/// </para>
+	/// </summary>
+	internal bool StepFade( double product )
+	{
+		if ( _stopped )
+			return false;
+
+		if ( _fadeOwn < 0 )
+			return true;
+
+		_fadeOwn = Audio.FadeStep( _fadeOwn, product );
+
+		// The original stops it on the next service pass, 31 ms on; at a level of 0 there is nothing left to hear of that.
+		if ( _fadeOwn == 0 )
+		{
+			_stopped = true;
+			return false;
+		}
+
+		_volume = (float)(_fadeOwn / (100.0 * product));
+		_targetVolume = _volume;
+		return true;
+	}
+
+	/// <summary>Sound detail has fallen to <c>SoundInfo.FADETOGGLE</c> or below: a stepping voice stops (<c>0x006b6240</c>).</summary>
+	internal void CutFade()
+	{
+		if ( _fadeOwn >= 0 )
+			_stopped = true;
+	}
+
+	/// <summary>
 	/// Holds it where it has got to, still playing as far as anything asking is concerned, until
 	/// <see cref="Resume"/>. It fades out over <see cref="PauseFadeSeconds"/> before it holds, so the
 	/// few milliseconds of that fade are the only part heard of what came after the pause. A fade or a
@@ -254,6 +329,7 @@ public sealed class Voice
 			_targetVolume = volume;
 			_volumeRate = seconds <= 0f ? 0f : MathF.Abs( volume - _volume ) / seconds;
 			_stopWhenFaded = false;
+			_fadeOwn = -1;
 
 			// The mixer only steps a volume that has a rate, so a snap is made here.
 			if ( seconds <= 0f )
@@ -312,7 +388,10 @@ public sealed class Voice
 	/// moved on since the voice before it. Speech ignores it.
 	/// </param>
 	/// <param name="bufferStart">Which frame of the device's output this buffer starts at.</param>
-	internal unsafe bool MixInto( float* output, int frames, long bufferStart, float master, float duck, float duckStep )
+	/// <param name="fadeWakeAt">The frame of this buffer the fade worker wakes on, or -1 (<see cref="Audio.NextFadeWake"/>).</param>
+	/// <param name="group">Its group's level as the original's library holds it (<see cref="Audio.SetGroupLevel"/>), which a fade step folds in with the duck.</param>
+	internal unsafe bool MixInto( float* output, int frames, long bufferStart, float master, float duck, float duckStep,
+		int fadeWakeAt, float group )
 	{
 		if ( _stopped )
 			return false;
@@ -342,6 +421,9 @@ public sealed class Voice
 
 		for ( int i = 0; i < frames; ++i )
 		{
+			if ( i == fadeWakeAt && _fadeOwn >= 0 && !StepFade( (double)group * duck ) )
+				return false;
+
 			if ( _volumeRate > 0f )
 			{
 				if ( _volume < _targetVolume )

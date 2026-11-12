@@ -12145,6 +12145,28 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q509. Sound_StopFading: the original's fade law, and FADEOBJ as a cut at low detail.** From the fork watch,
+  2026-10-18 (`verify-other-a.md` H1, `verify-audio-fx.md` F1; `docs/exe/audio.md`, "The fade, the SoundInfo settings
+  and the reverb"). The original's `Sound_StopFading` (`0x0051c300`) and `FADEOBJ`'s sound arm are a **x0.6 volume step
+  per fade step** (the 60 is a percentage kept, not milliseconds; a worker thread makes the steps, 100 ms apart, not
+  the service pass) while sound detail is above
+  `SoundInfo.FADETOGGLE` (30, `sound.sam`; stock detail is `DEFAULTQUALITY` 50, and 25 at boot on low graphics detail,
+  `0x0054de17`), and a **hard stop** (the same as `KILLOBJ` / `Sound_Stop`) at 30 or below. At 0, or with no channel, the
+  voice is stopped on the next service pass. OpenTPW stands a flat 0.06 s ramp in for both, said at the site in
+  `Advisor.QuietenSeconds`, `ParkAudio`'s rain and crowd fades, `ParkCarSounds` and `FADEOBJ`'s (`ParkAudio.ScriptFadeSeconds`, Q553). Build: (1) the fade as a geometric
+  decay on the voice's volume, one step every 100 ms (250 ms before the first when nothing was fading), each step
+  `own = trunc( 60 x round( own x group product ) / 100 )` with the group gains folded in at each step, ending in a stop
+  at 0 (the rate is read, not to be measured: `audio.md`, "The fade", fork watch 2026-10-19, `verify-other-b.md` H1); (2) `FADEOBJ` and `Sound_StopFading` as a cut when sound detail is
+  30 or below, the detail being the options' sound quality slider (`0x00423850`), so the options screen's slider must
+  reach it; (3) the stop-all at a level's end (`0x0051bcb0`, handed 90, `Level.StopAllSeconds`): trace whether the 90 is
+  the same kind of percentage before changing it. Confirm: the advisor quietened (options screen) and the bumper cars'
+  unload with a capture of the mix at detail 50 and at 30, beside the original at the same detail; predict the decay
+  per pass first. Predicted per step: at group product 1.0 the volume runs 100, 60, 36, 21, 12, 7, 4, 2, 1, 0 (nine steps, about 0.9 s
+  after the first step's wait of up to 250 ms); at the effects' measured 0.75 the device gets 75, 45, 20, 9, 4, 1, 0
+  (six steps, about 0.6 s). (Fork watch 2026-10-19, `verify-other-b.md` H1; `audio.md` holds the chain.)
+  **Split (Q1232, cloud lane c28, 2026-11-12):** (1) and (2) are done and ticked as Q509, by unit tests and an off-screen run of the advisor quietened
+  (`Voice.StopFading`, `Audio.FadeStep`, `Audio.NextFadeWake`, `GameOptions.ApplySoundDetail`; `audio.md`, "The fade"). (3), the boot detail and the
+  capture beside the original are Q1232.
 
 ## B. Docs and comments
 

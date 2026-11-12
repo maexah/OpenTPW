@@ -48,6 +48,27 @@ public class OptionsKeepTests
 	/// <b>Mutations:</b> the <c>KeptSize</c> call taken out of <c>Keep</c>: the size stays nought and is saved so; the <c>ScreenResolution</c> line taken out: Config.tcf keeps 1;
 	/// the <c>ApplyDisplay</c> call taken out of <c>Keep</c>, or moved above the <c>KeptSize</c> block: nothing, or the size of nothing, reaches <c>apply</c>.
 	/// </remarks>
+	/// <summary>The tick hands the audio quality slider's value on as the sound detail (<c>0x00423850</c>): at 30 or below a fade is a stop (Q509).</summary>
+	/// <remarks><b>Mutations:</b> the <c>ApplySoundDetail</c> call taken out of <c>Keep</c> leaves fading on.</remarks>
+	[TestMethod]
+	public void TheTickHandsTheAudioQualityOnAsTheSoundDetail()
+	{
+		GameOptions.Current = new GameOptions { AudioQuality = 20 };
+
+		try
+		{
+			var stack = new UI.WindowStack();
+			UI.OptionsScreen.Open( stack, () => { } );
+			stack.Windows.OfType<UI.OptionsScreen>().Single().Keep( null );
+
+			Assert.IsFalse( Audio.FadesOn, "a quality of 20 is at or below sound.sam's FADETOGGLE 30" );
+		}
+		finally
+		{
+			Audio.SetSoundDetail( 50, 30 );
+		}
+	}
+
 	[TestMethod]
 	public void TheTickKeepsAFirstRunsFullScreenAtTheModeTheSliderShows()
 	{

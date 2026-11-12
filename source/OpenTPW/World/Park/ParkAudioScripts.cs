@@ -43,9 +43,6 @@ public sealed partial class ParkAudio
 		set => _scriptRandom = value;
 	}
 
-	/// <summary>The fade <c>FADEOBJ</c> stops a sound with: this project's 0.06 s, where the original steps x0.6 (Q509).</summary>
-	private const float ScriptFadeSeconds = 0.06f;
-
 	/// <summary>The three categories a script plays in that nothing else in a park loads.</summary>
 	private void LoadScriptCategories( string root )
 	{
@@ -447,7 +444,7 @@ public sealed partial class ParkAudio
 
 	/// <summary>
 	/// A script sound stopped: <c>Sound_Stop</c> for a <c>KILLOBJ</c> and a script's end, <c>Sound_StopFading</c> for a
-	/// <c>FADEOBJ</c> (<paramref name="fade"/>), which fades here over <see cref="ScriptFadeSeconds"/>. A chain's newest
+	/// <c>FADEOBJ</c> (<paramref name="fade"/>, <see cref="Voice.StopFading"/>). A chain's newest
 	/// child is cut either way: the chain has no channel to fade, and its stop cuts the children (<c>0x006bcc71</c>,
 	/// <c>0x006bd9b0</c>); an older child plays out.
 	/// </summary>
@@ -461,7 +458,7 @@ public sealed partial class ParkAudio
 		sound.Stopped = true;
 
 		if ( fade && !sound.Chain )
-			sound.Voice?.FadeOut( ScriptFadeSeconds );
+			sound.Voice?.StopFading();
 		else
 			sound.Voice?.Stop();
 
