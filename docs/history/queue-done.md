@@ -14535,3 +14535,19 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   scheduler) and `AnimTriggerSpeedCountTests.CoastsPushCountsOnlyAWordOtherThanTheCoastersSetting` (rows 50, 60, 75, was 50 and 60 under the old rule);
   four bugs put back by hand each failed them. The bounce riders' sine is Q511's (its lift carries the term; only the Belly Bounce, word 60, reaches it in
   the stock park). Left, with the rest of this item, in Q1608.
+- [x] **Q287. ParkHireScreen.Selected previews a highlighted candidate's wage with ShowMoney( person.Wage ), and
+  Update() calls ShowMoney() with no wage on every frame (WindowStack.OnUpdate).** So the staff-costs preview is
+  overwritten a frame later and the player never sees it. ShowMoney also never takes the previewed wage off the
+  balance cell, which its own parameter remark says the original does (message 0x401); known by reading lines
+  351-417 and WindowStack.cs:330, not run, and no test covers the cell From the week-end audit (stage 6, a sweep
+  of the source settled by a verifier; read from the code, not seen in the game).
+  `OpenTPW/UI/Park/ParkHireScreen.cs`, line 417. Confirm: a candidate highlighted on the hire screen, the
+  staff-costs figure photographed.
+  **TICKED 2026-11-12 on tests and the census, the photograph short (Q1616).** Main already had both halves when this
+  was taken up: `ShowMoney` is gone, `Update` only takes the list's posted pick, and `ShowAccount( wage )` puts the
+  wage on the staff costs and takes it off the balance; which commit did it is lost to the squashed history. Added
+  `AHighlightedCandidatesWagePreviewStandsFrameOnFrameAndComesOffTheBalance` (the pointer on the second row, five frames,
+  then back to the first); it fails with each of four bugs put back (the update lettering nought, the wage not off
+  the balance, the wage onto it, the previews added up). Off-screen, the stock park's cleaners' second row (Rajan
+  Tande, 45) under a real pointer read `$ 45` and `-$ 11720` and still did some 20 s later; back on the first, `$ 63`
+  and `-$ 11738`.

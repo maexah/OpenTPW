@@ -1067,14 +1067,11 @@ filed the items that cite it.
   search (`FUN_004c8ed0`) passes over a claimed cell, since falling to idle in state 8 leaves the cell's
   `LitterCollector` naming him.
 
-- [ ] **Q287. ParkHireScreen.Selected previews a highlighted candidate's wage with ShowMoney( person.Wage ), and
-  Update() calls ShowMoney() with no wage on every frame (WindowStack.OnUpdate).** So the staff-costs preview is
-  overwritten a frame later and the player never sees it. ShowMoney also never takes the previewed wage off the
-  balance cell, which its own parameter remark says the original does (message 0x401); known by reading lines
-  351-417 and WindowStack.cs:330, not run, and no test covers the cell From the week-end audit (stage 6, a sweep
-  of the source settled by a verifier; read from the code, not seen in the game).
-  `OpenTPW/UI/Park/ParkHireScreen.cs`, line 417. Confirm: a candidate highlighted on the hire screen, the
-  staff-costs figure photographed.
+- [ ] **Q1616. The hire screen's wage preview photographed beside the original's (from Q287).** A desk lane: the stock
+  jungle park, the hire screen on the cleaners' tab, the pointer resting on the second row (Rajan Tande, 45, in
+  OpenTPW's pool of that run) for a few seconds; photograph the staff costs (`0x248c`) and balance (`0x2487`) figures
+  and read them beside the original's at the same pick (`$ 45`, `-$ 11720` predicted for this game; the original's
+  `tpwmem.py read 7ca2f0:i 7ca2fc:i 7ca2f8:i 7ca300:i` and its drawn figures). Q287's cloud lane could not photograph.
 
 - [ ] **Q289. Two members only tests call, which a built path needs.** From the week-end audit (stage 6, the
   dead-code census). Neither is dead by code: placed content reaches the path each belongs to, and the path is
