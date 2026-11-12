@@ -12145,6 +12145,19 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q210. Hoardings: the original's terrain rectangle and its base-vertex gate.** Found by the 2026-10-04 review
+  (`u6-hoardings-1`, `-2`, `-4`; `docs/exe/ride-hoardings.md`). `ParkRideHoarding.Ground` samples `x0 + gx` where the
+  original samples `x0 + trunc( gx * (w - 1) / w + 0.1 )` inside the model's inclusive rectangle (`+0xc0`, `+0xc4`,
+  `FUN_00467030` `0x004670c1`, `FUN_00454190`); counted `HOARDING_TERRAIN_RECTANGLE`. `ParkObjects` gates on
+  `Nodes.Count > 1` and reads `Meshes[0]` where the original counts base vertices (`FUN_00469a80`, `0x0046a838`) and
+  reads the mesh with the most (`0x0046a82c`). Port both, and write the test's expected value from the executable's
+  formula, not from the code. Confirm: a ride bought on sloping ground, closed, photographed with `hoardings`; then
+  the same panels beside the original's under Proton (their height, which rises first, where the sign sits).
+  - **Done (2026-11-12, cloud lane c100):** `ParkRideHoarding.Ground` samples the inclusive rectangle and `ParkObjects.HoardingFor`
+    gates on the base vertices `ProceduralBase.FloorMesh` counts and reads the mesh with the most; `HOARDING_TERRAIN_RECTANGLE` is gone.
+    Tests: `TerrainEndpointsSampleTheOriginalsInclusiveRectangle`, `TheGroundIsReadATenthOfACellOn`, the two gate tests in
+    `ParkHoardingWiringTests`. Off-screen, a Bounce bought on the slope at (57,50) read all 24 endpoints as predicted from the
+    console's `ground` heights. Not photographed and not run beside the original: Q1524. The turned arms: Q1525.
 
 ## B. Docs and comments
 

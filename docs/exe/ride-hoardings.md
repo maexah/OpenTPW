@@ -11,7 +11,7 @@ texture choice, vertices and UVs; they do not replace the ride model or fade its
 | `0x00744be4`, `0x00744c20` | `Shape`, `Hoarding` | Item schema type 11 blocks with parser modes 1 and 2. The existing file syntax is documented in FileFormats `sam.md`, “Info.Shape is a block, not a value”. | Fresh schema bytes; schema/base accessors `00412c90`/`005b0d60` and `00401030` slot walk |
 | `0x00414163`–`0x00414175` | — | The item loader passes descriptor `+0x18` and `+0x1c` as shape and hoarding to `FUN_004629d0`. Its other model-loading arm does the same at `0x004141c7`. | Raw call arguments; schema |
 | `0x00462d88`–`0x00462dac` | — | Builds hoardings only when loader flag `0x8` is set and the hoarding argument is non-null; passes the current theme string, model definition and hoarding block to `FUN_00452e70`. | Raw instructions |
-| `FUN_00452e70` | — | Requires the word at `[model+8]+0xc` to exceed one: the count of base vertices `FUN_00469a80` finds (ground level, on a cell corner, on the `Info.Shape` outline), written at `0x0046a838`, not the md2 node count. Generates panels from the parsed block's edge bits `1/4/0x10/0x40`, sorts their angle keys through `FUN_00470630`, and creates a mesh named `Hoardings`. Each panel has four vertices and four triangles (opposite-facing pairs). | Raw generation and index writes, `0x00453283`–`0x0045403c`; Q91b repaired the private decompiler stack probe and checked the raw operations |
+| `FUN_00452e70` | — | Requires the word at `[model+8]+0xc` to exceed one: the count of base vertices `FUN_00469a80` finds (ground level, on a cell corner, on the `Info.Shape` outline), written at `0x0046a838`, not the md2 node count (OpenTPW gates on that count, `ProceduralBase.FloorMesh`; Q210). Generates panels from the parsed block's edge bits `1/4/0x10/0x40`, sorts their angle keys through `FUN_00470630`, and creates a mesh named `Hoardings`. Each panel has four vertices and four triangles (opposite-facing pairs). | Raw generation and index writes, `0x00453283`–`0x0045403c`; Q91b repaired the private decompiler stack probe and checked the raw operations |
 | Model `+0xb0` | — | Hoarding definition: panel count, two grid dimensions, endpoint-pair array; published at `0x00454012`–`0x00454039` (`+0xb0` at `0x00454028`, `+0xb4` at `0x00454033`). Null disables close/open effects. | Generator tail; consumers `00454190`, `004543c0` |
 | Model `+0xb4` | — | Generated hoarding mesh, cloned per model instance by `FUN_004557c0` → `FUN_00455690`. It owns mutable vertex/UV/material-instance data. | Construction and clone calls |
 | Model `+0xb8`, `+0xbc` | — | Float progress and signed progress rate. Close/open preserve current progress, allowing reversal. | `00454550`, `004547c0`, `004548f0` |
@@ -112,9 +112,11 @@ no new shipped-file layout or corpus-count claim is made.
 The private project's `0x0067b110` stack-probe call received Ghidra's `alloca_probe` fixup, recovering
 `FUN_00452e70`'s large local frame. Raw instructions were also checked. No original project was edited.
 The source is the mesh at `[model+8]+0x2c`, set at `0x0046a82c` to the one `FUN_00469a80` found with the most base
-vertices; its positions are used in file order, transformed by its matrix. OpenTPW gates on `Nodes.Count > 1` and
-reads `Meshes[0]` instead, which is the same mesh in every shipped outline: in all 129, mesh 0 is the only mesh with a base
-vertex as `ProceduralBase.BaseVertices` counts them (the original's count on Lost Kingdom's 41 floors, `ProceduralBaseTests`), so it has the most (`EveryShippedHoardingHasACompleteBaseAndPreservesItsEdgeCount`; `QUEUE.md` Q210), and retains
+vertices; its positions are used in file order, transformed by its matrix. OpenTPW does the same (`ParkObjects.HoardingFor`,
+Q210): the gate is more than one base vertex as `ProceduralBase.FloorMesh` counts them, the mesh the one with the most. In all
+129 shipped outlines that is mesh 0, the only mesh with a base vertex, with 4 or more (`EveryShippedHoardingHasACompleteBaseAndPreservesItsEdgeCount`), so the
+gate refuses none of them; `ParkHoardingWiringTests` holds a model with one base vertex or none refused and a floor moved to another
+mesh still read. The panels retain
 that order before its ordinary render-vertex reorder. The shipped corpus has 129 outlines in 274 item
 archives, all with at least four finite first-mesh source vertices. Each first mesh's local and world
 matrix agrees in this corpus. The generated panel count equals the number of selected outline edges.
@@ -133,9 +135,12 @@ stable, matching `FUN_00470630`'s left-first equality branch. This order drives 
 `FUN_00454050` maps unadjusted grid endpoints into the rotated terrain rectangle, adds `0.1` before
 integer truncation, then `FUN_00454190` uses half the height difference from the model's origin.
 The rectangle is inclusive: model `+0xc0` is the first cell and `+0xc4` the last, `x0 + w - 1` and `y0 + d - 1`
-(`FUN_00467030`, `0x004670c1`..`0x004670f3`), so the original samples `x0 + trunc( gx * (w - 1) / w + 0.1 )`.
-OpenTPW samples `x0 + gx`, and its test (`TerrainEndpointsSampleOpenTPWsLargerRectangleNotTheOriginals`) builds the same value, not the original's: equal on flat ground, different on a slope, and
-counted `HOARDING_TERRAIN_RECTANGLE` (`QUEUE.md` Q210). Corner corrections affect X/Y placement, not the terrain probe.
+(`FUN_00467030`, `0x004670c1`..`0x004670f3`), so the original samples `x0 + trunc( gx * (w - 1) / w + 0.1 )`: the last grid
+line reads the last cell's near vertex, never the one past it. OpenTPW does the same (`ParkRideHoarding.Ground`, Q210;
+`TerrainEndpointsSampleTheOriginalsInclusiveRectangle`, `TheGroundIsReadATenthOfACellOn`). At a quarter turn it carries the
+endpoint between the turned rectangle's first and last cells the same way; that reading of `FUN_00454050`'s turned arms is not
+checked against the disassembly (`QUEUE.md` Q1525). The outline's size is the footprint's in all 129 shipped outlines, so the
+rectangle is taken from the outline's turned corners. Corner corrections affect X/Y placement, not the terrain probe.
 
 Explicit deviations and limits:
 
@@ -177,5 +182,6 @@ The source is restored and the tests pass again (`mutation-summary.log`, `mutati
 
 
 Not confirmed on screen: non-Closed warning textures, a nonzero saved hoarding restored in the game,
-and slope/quarter-turn edge cases. Those state/geometry paths are tested. Equality to the original's
+and slope/quarter-turn edge cases (Q210 read a sloped Bounce's endpoint heights off-screen from the log, not a picture; the
+photograph beside the original's is `QUEUE.md` Q1524). Those state/geometry paths are tested. Equality to the original's
 x87 output at every near-tie is unproven. Q92 implements the ride-window door; its separate evidence is in `ride-window-door.md`.

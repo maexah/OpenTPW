@@ -10,7 +10,7 @@ namespace OpenTPW.Tests;
 /// <summary>
 /// The hoarding a placed ride is given, tested where the park raises it (Q1029, from Q211): <see cref="ParkObjects.HoardingFor"/>'s
 /// gate on the model and its restore of the park file's saved progress, <see cref="ParkRideHoarding.Fill"/>'s vertices, the
-/// panels' order from <see cref="RideHoardingGeometry.Build"/>, and the ground <see cref="ParkRideHoarding.Ground(HeightfieldFile, System.Numerics.Vector2, Vector3, System.Numerics.Quaternion)"/>
+/// panels' order from <see cref="RideHoardingGeometry.Build"/>, and the ground <see cref="ParkRideHoarding.Ground(HeightfieldFile, System.Numerics.Vector2, System.Numerics.Vector2, Vector3, System.Numerics.Quaternion)"/>
 /// samples (<c>docs/exe/ride-hoardings.md</c>). The helpers' own tests are <see cref="RideHoardingTests"/>.
 /// </summary>
 [TestClass]
@@ -59,43 +59,91 @@ public class ParkHoardingWiringTests
 		return states;
 	}
 
-	/// <summary>The shipped Bounce's model passes the gate: 12 panels, and the park keeps the progress it hands back.</summary>
+	/// <summary>The shipped Bounce's model passes the gate (base vertices, more than one): 12 panels, and the park keeps the progress it hands back.</summary>
 	[TestMethod]
-	public void AModelWithManyNodesAndAMeshIsGivenItsHoarding()
+	public void AModelWithBaseVerticesIsGivenItsHoarding()
 	{
 		var state = new ParkState( false, 0 );
 		var model = BounceModel();
-		Assert.IsTrue( model.Nodes.Count > 1, "the shipped model has more than the one node the gate refuses" );
+		ProceduralBase.FloorMesh( model, bounce.Shape, ProceduralBase.ParkGrid, out var bases );
+		Assert.IsTrue( bases > 1, "the shipped model has more than the one base vertex the gate refuses" );
 
 		var objects = new ParkObjects( "jungle", null, null );
-		var hoarding = objects.HoardingFor( state, Placed(), bounce.Hoarding, model );
+		var hoarding = objects.HoardingFor( state, Placed(), bounce.Hoarding, bounce.Shape, model );
 
 		Assert.IsNotNull( hoarding );
 		Assert.AreEqual( 12, hoarding.Value.Panels.Length );
 		Assert.AreSame( hoarding.Value.Progress, state.HoardingFor( 13 ), "the park keeps the progress the ride's doors drive" );
 	}
 
-	/// <summary>The gate is the node count (more than one) and a mesh; either missing, or no outline, raises nothing and binds nothing.</summary>
+	/// <summary>
+	/// The gate is the count of base vertices <c>FUN_00469a80</c> finds (more than one, <c>0x0046a838</c>), not the node count:
+	/// with none, or one, nothing is raised or bound though the model keeps every node; no outline raises nothing either.
+	/// </summary>
 	[TestMethod]
-	public void AModelOfOneNodeOrNoMeshOrAnItemWithNoOutlineIsGivenNone()
+	public void AModelWithOneBaseVertexOrNoneOrAnItemWithNoOutlineIsGivenNone()
 	{
 		var objects = new ParkObjects( "jungle", null, null );
+		var grid = ProceduralBase.ParkGrid;
+		var bases = ProceduralBase.BaseVertices( BounceModel(), bounce.Shape, grid ).Single( b => b.Mesh == 0 ).Vertices;
+		Assert.IsTrue( bases.Length > 2, $"the shipped Bounce's floor has {bases.Length} base vertices" );
 
-		var oneNode = BounceModel();
-		oneNode.Nodes.RemoveRange( 1, oneNode.Nodes.Count - 1 );
-		var noNodes = BounceModel();
-		noNodes.Nodes.Clear();
-		var noMesh = BounceModel();
-		noMesh.Meshes.Clear();
+		var none = Lifted( BounceModel(), _ => true );
+		var one = Lifted( BounceModel(), i => i != bases[0] );
 
-		foreach ( var (why, model, outline) in new[] { ("one node", oneNode, bounce.Hoarding), ("no node", noNodes, bounce.Hoarding),
-			("no mesh", noMesh, bounce.Hoarding), ("no outline", BounceModel(), null) } )
+		foreach ( var (why, model, outline, count) in new[] { ("no base vertex", none, bounce.Hoarding, 0), ("one base vertex", one, bounce.Hoarding, 1),
+			("no outline", BounceModel(), null, bases.Length) } )
 		{
+			ProceduralBase.FloorMesh( model, bounce.Shape, grid, out var counted );
+			Assert.AreEqual( count, counted, $"{why}: the base vertices counted" );
+			Assert.IsTrue( model.Nodes.Count > 1, $"{why}: every node is kept, so the node count cannot refuse it" );
 			var state = new ParkState( false, 0 );
 
-			Assert.IsNull( objects.HoardingFor( state, Placed(), outline, model ), why );
+			Assert.IsNull( objects.HoardingFor( state, Placed(), outline, bounce.Shape, model ), why );
 			Assert.IsNull( state.HoardingFor( 13 ), $"{why}: nothing is bound for the ride" );
 		}
+	}
+
+	/// <summary>
+	/// The panels are laid from the mesh with the most base vertices (<c>0x0046a82c</c>), wherever it stands among the meshes:
+	/// the Bounce's floor moved to another walked node is still the one the panels are laid from, where the first mesh would lay others.
+	/// </summary>
+	[TestMethod]
+	public void ThePanelsAreLaidFromTheMeshWithTheMostBaseVertices()
+	{
+		var grid = ProceduralBase.ParkGrid;
+		var model = BounceModel();
+
+		// Another mesh the walk takes, its vertices swapped with the floor's, so the floor's vertices now stand at that node.
+		var swapped = Enumerable.Range( 1, model.Meshes.Count - 1 ).Select( k =>
+		{
+			var m = BounceModel();
+			(m.Meshes[0].SourceVertices, m.Meshes[k].SourceVertices) = (m.Meshes[k].SourceVertices, m.Meshes[0].SourceVertices);
+			return (k, m);
+		} ).First( c => ProceduralBase.FloorMesh( c.m, bounce.Shape, grid, out _ ) == c.k );
+		RideHoardingGeometry.Panel[] Laid( ModelFile.Mesh mesh ) => mesh.SourceVertices.Length < 2 ? []
+			: RideHoardingGeometry.Build( bounce.Hoarding!, mesh.SourceVertices.Select( v => V3.Transform( v.GetSystemVector3(), mesh.WorldTransform ) ).ToArray() );
+		var expected = Laid( swapped.m.Meshes[swapped.k] );
+		var first = Laid( swapped.m.Meshes[0] );
+
+		var hoarding = objects().HoardingFor( new ParkState( false, 0 ), Placed(), bounce.Hoarding, bounce.Shape, swapped.m );
+
+		Assert.IsNotNull( hoarding, $"the floor at mesh {swapped.k}" );
+		Assert.AreEqual( 12, hoarding.Value.Panels.Length );
+		CollectionAssert.AreEqual( expected.Select( p => p.A ).ToArray(), hoarding.Value.Panels.Select( p => p.A ).ToArray(), "the floor's own endpoints, through its node's matrix" );
+		Assert.IsFalse( first.Length == expected.Length && first.Select( p => p.A ).SequenceEqual( expected.Select( p => p.A ) ),
+			"the first mesh would lay other endpoints" );
+
+		ParkObjects objects() => new( "jungle", null, null );
+	}
+
+	/// <summary>The model with every vertex of its first mesh that <paramref name="lift"/> picks raised off the ground (the model's Y).</summary>
+	private static ModelFile Lifted( ModelFile model, Func<int, bool> lift )
+	{
+		var vertices = model.Meshes[0].SourceVertices;
+		for ( var i = 0; i < vertices.Length; ++i )
+			if ( lift( i ) ) vertices[i] = new OpenTPW.Vector3( vertices[i].X, vertices[i].Y + 5f, vertices[i].Z );
+		return model;
 	}
 
 	/// <summary>The park file's saved progress for the ride's own slot and item is laid over the fresh hoarding (<c>docs/exe/ride-hoardings.md</c>).</summary>
@@ -106,7 +154,7 @@ public class ParkHoardingWiringTests
 		var objects = new ParkObjects( "jungle", null, null );
 		objects.TakeSavedThings( Saved( bounce.Id, 0x45, 0.6f ) );
 
-		var progress = objects.HoardingFor( state, Placed( meshInstance: 1 ), bounce.Hoarding, BounceModel() )!.Value.Progress;
+		var progress = objects.HoardingFor( state, Placed( meshInstance: 1 ), bounce.Hoarding, bounce.Shape, BounceModel() )!.Value.Progress;
 
 		Assert.IsTrue( progress.Active );
 		Assert.AreEqual( 3, progress.Texture );
@@ -124,7 +172,7 @@ public class ParkHoardingWiringTests
 			var objects = new ParkObjects( "jungle", null, null );
 			objects.TakeSavedThings( Saved( item, 0x45, 0.6f ) );
 
-			var progress = objects.HoardingFor( state, Placed( meshInstance ), bounce.Hoarding, BounceModel() )!.Value.Progress;
+			var progress = objects.HoardingFor( state, Placed( meshInstance ), bounce.Hoarding, bounce.Shape, BounceModel() )!.Value.Progress;
 
 			Assert.IsFalse( progress.Active, why );
 			Assert.AreEqual( 0f, progress.Progress, why );
@@ -203,44 +251,25 @@ public class ParkHoardingWiringTests
 	}
 
 	/// <summary>
-	/// The ground a panel's end stands on is read 0.1 of a cell on (<c>FUN_00454050</c>): a point 0.95 of the way across a cell
-	/// reads the next cell's height. The cell is the one where both neighbours differ most, so the bias cannot be told from none on flat ground.
+	/// The ground a panel's end stands on is read 0.1 of a cell on (<c>FUN_00454050</c>), inside the inclusive rectangle: on an
+	/// outline 11 cells across, grid line 1 carries to 10/11 of a cell, which the tenth takes to the next vertex and a plain cut
+	/// leaves on the first. The ground is a slope whose every vertex differs, so the vertex read is the one asked for.
 	/// </summary>
 	[TestMethod]
 	public void TheGroundIsReadATenthOfACellOn()
 	{
 		using var input = data.OpenRead( "levels/jungle/terrain/base.md2" );
 		var field = new HeightfieldFile( input );
+		for ( var y = 0; y <= field.CellsY; ++y )
+		for ( var x = 0; x <= field.CellsX; ++x )
+			field.Heights[y * (field.CellsX + 1) + x] = x * 3 + y * 1000;
 
-		// The cell where the heights to the right and below differ most from its own.
-		var (xs, ys) = (0, 0);
-		var best = 0f;
+		var origin = new V3( 40 * field.CellSizeX, 50 * field.CellSizeY, 7f );
+		var size = new System.Numerics.Vector2( 11, 11 );
+		var turn = System.Numerics.Quaternion.Identity;
 
-		for ( var y = 0; y < field.CellsY - 1; ++y )
-		for ( var x = 0; x < field.CellsX - 1; ++x )
-		{
-			var step = Math.Min( Math.Abs( field.HeightAt( x + 1, y ) - field.HeightAt( x, y ) ),
-				Math.Abs( field.HeightAt( x, y + 1 ) - field.HeightAt( x, y ) ) );
-
-			if ( step > best )
-				(xs, ys, best) = (x, y, step);
-		}
-
-		Assert.IsTrue( best > 1f, $"the jungle's heightfield is not flat everywhere (the largest step is {best})" );
-
-		var origin = new V3( (xs + 0.95f) * field.CellSizeX, (ys + 0.95f) * field.CellSizeY, 3f );
-		var ground = ParkRideHoarding.Ground( field, new( 0, 0 ), (OpenTPW.Vector3)origin, System.Numerics.Quaternion.Identity );
-
-		Assert.AreEqual( (field.HeightAt( xs + 1, ys + 1 ) - 3f) * 0.5f, ground, 0.0001f, "both axes read the next cell" );
-
-		var acrossOnly = new V3( (xs + 0.95f) * field.CellSizeX, ys * field.CellSizeY + 1f, 3f );
-		var across = ParkRideHoarding.Ground( field, new( 0, 0 ), (OpenTPW.Vector3)acrossOnly, System.Numerics.Quaternion.Identity );
-
-		Assert.AreEqual( (field.HeightAt( xs + 1, ys ) - 3f) * 0.5f, across, 0.0001f, "x alone reads the next cell" );
-
-		var downOnly = new V3( xs * field.CellSizeX + 1f, (ys + 0.95f) * field.CellSizeY, 3f );
-		var down = ParkRideHoarding.Ground( field, new( 0, 0 ), (OpenTPW.Vector3)downOnly, System.Numerics.Quaternion.Identity );
-
-		Assert.AreEqual( (field.HeightAt( xs, ys + 1 ) - 3f) * 0.5f, down, 0.0001f, "y alone reads the next cell" );
+		Assert.AreEqual( (field.HeightAt( 41, 50 ) - 7f) * 0.5f, ParkRideHoarding.Ground( field, new( 1, 0 ), size, (OpenTPW.Vector3)origin, turn ), 0.0001f, "x: 40 + 10/11 + 0.1 is 41" );
+		Assert.AreEqual( (field.HeightAt( 40, 51 ) - 7f) * 0.5f, ParkRideHoarding.Ground( field, new( 0, 1 ), size, (OpenTPW.Vector3)origin, turn ), 0.0001f, "y: 50 + 10/11 + 0.1 is 51" );
+		Assert.AreEqual( (field.HeightAt( 50, 60 ) - 7f) * 0.5f, ParkRideHoarding.Ground( field, new( 11, 11 ), size, (OpenTPW.Vector3)origin, turn ), 0.0001f, "the last grid line reads the last cell, 40 + 11 - 1" );
 	}
 }

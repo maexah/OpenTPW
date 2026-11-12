@@ -419,17 +419,17 @@ public sealed class ParkObjects : Entity
 	/// <summary>
 	/// The hoarding a placed ride's model is given: its panels, and the progress the park keeps for it, set to the saved
 	/// record's when the file has one for this slot and this item. Null where the item has no outline, or the model fails the
-	/// original's gate. The original gates on the base vertices FUN_00469a80 counts (0x0046a838) and reads the mesh with the
-	/// most of them (0x0046a82c). The node count and the first mesh stand in for both: the same mesh in
-	/// every shipped outline. docs/exe/ride-hoardings.md.
+	/// original's gate: more than one base vertex as FUN_00469a80 counts them (0x0046a838, <see cref="ProceduralBase.FloorMesh"/>),
+	/// the panels laid from the mesh with the most of them (0x0046a82c). docs/exe/ride-hoardings.md.
 	/// </summary>
 	internal (RideHoardingGeometry.Panel[] Panels, RideHoardingState Progress)? HoardingFor( ParkState state,
-		ParkWorld.CatalogueObject placed, ItemHoarding? outline, ModelFile source )
+		ParkWorld.CatalogueObject placed, ItemHoarding? outline, ItemShape? shape, ModelFile source )
 	{
-		if ( outline == null || source.Nodes.Count <= 1 || source.Meshes.Count == 0 )
+		if ( outline == null || ProceduralBase.FloorMesh( source, shape, ProceduralBase.ParkGrid, out var bases ) is not { } floor
+			|| bases <= 1 )
 			return null;
 
-		var mesh = source.Meshes[0];
+		var mesh = source.Meshes[floor];
 		var vertices = mesh.SourceVertices.Select( v => System.Numerics.Vector3.Transform( v.GetSystemVector3(), mesh.WorldTransform ) ).ToArray();
 		var panels = RideHoardingGeometry.Build( outline, vertices );
 
@@ -518,8 +518,9 @@ public sealed class ParkObjects : Entity
 				() => ProceduralConform.Measure( model.Source, item.Shape, origin.GetSystemVector3(), turn,
 					ParkGround.Current?.Heightfield ) );
 
-			if ( ParkState.Current is { } state && HoardingFor( state, placed, item.Hoarding, model.Source ) is { } hoarding )
-				_hoardings[placed.ThingId] = new ParkRideHoarding( ThemeName, placed.ThingId, hoarding.Panels, hoarding.Progress, origin, turn );
+			if ( ParkState.Current is { } state && HoardingFor( state, placed, item.Hoarding, item.Shape, model.Source ) is { } hoarding )
+				_hoardings[placed.ThingId] = new ParkRideHoarding( ThemeName, placed.ThingId, hoarding.Panels,
+					new( item.Hoarding!.Width, item.Hoarding.Depth ), hoarding.Progress, origin, turn );
 
 			// Where it actually ended up, against where the save says it belongs. The two are worked out
 			// from completely separate things - this from the item's own footprint carried through its
