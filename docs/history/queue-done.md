@@ -12971,3 +12971,14 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
 - [x] **Q465. A purchase's advisor post is not counted.** From the week-end audit (`VERIFY-10a.md` Q328 3). Every
   purchase reaches the original's 0xc9 or 0xce post (`0x004ac67e`..`0x004ac7d9`); ours neither builds nor counts it
   (`ParkBuyScreen.Chose`). The line is filed under Q420; add the `Unimplemented.Report` (rule 4).
+- [x] **Q718. A first-person right click let go inside one frame reaches the park after first person is left.** From the
+  run 4 review (Q499 2, latent). `Hud.Update` (`Level.cs`) runs the window stack before `WorldClick`: the stack's release
+  step calls `ViewRightClick` (`ParkViewfinder.RightClickAnswer`), which leaves first person, and `WorldClick`'s press
+  step then reads `RightPressTaken( false )`, arms, and its release runs `QuickRightClick`. The original posts the park
+  the press first, in first person, and takes none of it. Harmless today (entering first person lets go of the hand and
+  `LetGo` answers null); it bites if anything the quick click does is ever not a no-op in first person. Fix: record at
+  the stack's press step whether `ViewRightClick` answered, in a static of its own, and read that in `RightPressTaken`.
+  Said at the site (`Level.WorldClick`, "Latent").
+  Done in Q718: the stack records, press by press, whether the view answered (`WindowStack.RightViewAnswered`), and
+  `Level.WorldClick` hands it to `RightPressTaken` for the same press; a frame of two clicks takes the first as the
+  viewfinder's and gives the second to the park.

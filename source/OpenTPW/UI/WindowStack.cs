@@ -150,6 +150,18 @@ internal sealed class WindowStack : Panel
 	internal static bool RightPointerTaken { get; private set; }
 
 	/// <summary>
+	/// Whether the scene's own view answered this frame's right press number <paramref name="press"/>, counted from
+	/// nought (<see cref="ViewRightClick"/>), as the stack asked it at that press. The park reads it for the same press,
+	/// since a click let go inside one frame has its answer run at the stack's release, before the park sees the press:
+	/// a first-person click has left first person by then, and the press was still the viewfinder's (<c>Level.RightPressTaken</c>).
+	/// Written and read in the same frame, as <see cref="RightPointerTaken"/> is.
+	/// </summary>
+	internal static bool RightViewAnswered( int press )
+		=> press >= 0 && press < _rightViewAnswers.Count && _rightViewAnswers[press];
+
+	private static readonly List<bool> _rightViewAnswers = [];
+
+	/// <summary>
 	/// The row the scene's own view posted this frame (<c>FUN_004924b0</c>), with its parameters' values, or null where it
 	/// posted nothing. The scene sets it each frame before the stack updates; only the park's hover posts. Taken only
 	/// while the pointer is on the view, after the row a control left behind, and cleared as it is taken.
@@ -434,6 +446,7 @@ internal sealed class WindowStack : Panel
 		WheelTaken = false;
 		PointerTaken = false;
 		RightPointerTaken = false;
+		_rightViewAnswers.Clear();
 
 		foreach ( var window in _windows.ToArray() )
 			window.Update();
@@ -697,6 +710,8 @@ internal sealed class WindowStack : Panel
 		if ( down && !_rightWasDown )
 		{
 			var answer = Covered ? CoverRightClick?.Invoke() : RightPointerTaken ? null : ViewRightClick?.Invoke();
+
+			_rightViewAnswers.Add( !Covered && answer != null );
 
 			var now = Time.WallMilliseconds;
 

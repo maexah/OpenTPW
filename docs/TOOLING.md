@@ -563,7 +563,12 @@ Each was found by trial in the item named, and cost a run to find.
   stops the frame once the park has had its buttons and tick (`DebugConsole.StallFrame`, the end of `Level.Update`); send
   it 50 ms after an XTEST press and the release 300 ms later (`q533/confirm.py`). In the original, `kill -STOP` the
   game's pid, the release, then `kill -CONT` (`q533/orig/run.sh`): where the stop falls in its frame is not chosen, so
-  count rounds (3 of 5 put away). **A refused click in the original** (Q439,
+  count rounds (3 of 5 put away). **A first-person click let go inside one frame, off-screen with no harness folder** (Q718, a cloud
+  lane: Xvfb, `xdotool`, the console on stdin): `control 27` and `control 63` only print where the button is (`middle (x,y)`,
+  window pixels); click each middle for real, the window's origin added, about 2 s apart, then put the pointer on the view;
+  `pointer` then ends `a right press here is the interface's` (the console's `camcorder` toggles first person, so it is no
+  reading of it). `stall 800`, and 0.15 s on one `xdotool mousedown 3 mouseup 3`: the log's `Right click: out of first
+  person`, then `right release: armed=0 held=1 ms` (`armed=1` is the park arming that press). **A refused click in the original** (Q439,
   `q439/orig/run.sh` with `AIMB=1`): `camto.py %PID% 48,18`, then `outside.py` for the nearest band of outside cells and
   `cellfind.py` for each corner, read straight before its click. Its sound under the music scored 0.32 only: switch the music off first (`q439/PREDICTION.txt`). With it off
   (Q442, `q442/orig/run.sh`): `setcam.py PID 435,165 110 0 off` draws (43,16)'s middle at the frame's middle (512,384),

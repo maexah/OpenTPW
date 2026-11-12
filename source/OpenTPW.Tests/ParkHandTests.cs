@@ -523,6 +523,51 @@ public class ParkHandTests
 	}
 
 	/// <summary>
+	/// <b>A first-person right click let go inside one frame is the viewfinder's alone</b>: the stack's release leaves first
+	/// person before the level's frame reads the press, and the press is still not the park's, as the original's park is
+	/// posted it first, in first person, and takes none of it. Entering first person in the game lets go of the hand; here
+	/// first person is put up with the hand full, so a quick click the park took would empty it. A frame of two clicks
+	/// shows the record is per press: the first leaves first person, the second lands on the park and lets go.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> the level's frame not reading <see cref="UI.WindowStack.RightViewAnswered"/> (the bug put back)
+	/// empties the hand on the one click; one record for the whole frame keeps the hand full on the two.
+	/// </remarks>
+	[TestMethod]
+	public void AFirstPersonRightClickInsideOneFrameLeavesItAndLetsNothingGo()
+	{
+		var (_, item) = MoveTheBellyBounceIntoTheHand();
+		var level = ALevel();
+		var stack = new UI.WindowStack();
+		var (looksAt, yaw) = (ParkOrbitCameraMode.PointOfInterest, ParkOrbitCameraMode.Yaw);
+		var worldClick = typeof( Level ).GetMethod( "WorldClick", BindingFlags.Instance | BindingFlags.NonPublic )!;
+
+		try
+		{
+			_ = new UI.ParkFrontEnd( stack, Theme );
+			GameOptions.Current.RmbCancel = true;
+			InFirstPerson( true );
+
+			QuickRightClickInsideOneFrame( stack, level, new Vector2( 1024, 700 ), 140f );
+			Assert.IsFalse( ParkCamcorderCameraMode.Active, "the click leaves first person" );
+			Assert.AreEqual( item, ParkBuilding.Carrying, "and the park takes none of it: the hand is still full" );
+
+			InFirstPerson( true );
+			Time.PinWall( 150000 );
+			Input.Mouse = new() { RightWentDown = true, RightPresses = 2, Position = new Vector2( 1024, 700 ) };
+			stack.Update();
+			worldClick.Invoke( level, [] );
+			Assert.IsFalse( ParkCamcorderCameraMode.Active, "two clicks in one frame: the first leaves first person" );
+			Assert.AreEqual( 0, ParkBuilding.Carrying, "and the second is the park's and lets go" );
+		}
+		finally
+		{
+			ParkOrbitCameraMode.PointOfInterest = looksAt;
+			ParkOrbitCameraMode.Yaw = yaw;
+		}
+	}
+
+	/// <summary>
 	/// <b>In first person no left press is the park's</b>: entering it hides the park's own layer (<c>0x004a2ac0</c>), and
 	/// the viewfinder's layer hands a press to the camera table alone (<c>FUN_00488a00</c>). The same press on a path in
 	/// the orbit view picks up the path tool, so the park is shown able to take it.

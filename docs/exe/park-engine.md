@@ -3840,7 +3840,10 @@ steps (`Level.WorldClick`), is the tick's clock test. The console's `stall <ms>`
 sent meanwhile let go 5 of 5 (`q533/run3`).
 `WindowStack.TakesRightPress`: a control under the pointer, a modal window, or a park screen's root
 (`UiWindow.ParkScreen`, `WindowStack.OnParkScreen`) takes it, and `Level.RightPressTaken` adds first person (and gives
-the park every press while F2 hides the HUD). A left press reads the same three (`WindowStack.PointerTaken`). No park
+the park every press while F2 hides the HUD) and a press the viewfinder answered (`WindowStack.RightViewAnswered`, kept
+press by press): a first-person click let go inside one frame has left first person by its release, which the stack
+runs before the park reads the press, and that press is still not the park's, as the original's park is posted it first,
+in first person (Q718). A left press reads the same three (`WindowStack.PointerTaken`). No park
 screen is modal, so the gadget answers beside one. The gadget's body takes a press inside its outline,
 and its arm, handle and aerial take theirs (`hud.md`, "The arm and the aerial as built"). A right click on a list row and a click on an object window's
 preview move the camera and close the window ("The camera goes to a thing"). `Level.LeftPressTaken` keeps a left press off the park in first person too (Q116): the

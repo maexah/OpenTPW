@@ -1649,14 +1649,6 @@ filed the items that cite it.
   and out of first person packs the guest atlas again (about 0.45 s by the load figure, not measured). Measure a camcorder switch with and without the cut (`graphics faithful` in a private game
   folder's `save/opentpw.cfg`); if it is felt, make `CutLevels` cheaper (a 256-entry table, one row loop a level). Said at
   `Texture.LevelsFor` and in `docs/exe/textures.md`, "What the cut costs".
-- [ ] **Q718. A first-person right click let go inside one frame reaches the park after first person is left.** From the
-  run 4 review (Q499 2, latent). `Hud.Update` (`Level.cs`) runs the window stack before `WorldClick`: the stack's release
-  step calls `ViewRightClick` (`ParkViewfinder.RightClickAnswer`), which leaves first person, and `WorldClick`'s press
-  step then reads `RightPressTaken( false )`, arms, and its release runs `QuickRightClick`. The original posts the park
-  the press first, in first person, and takes none of it. Harmless today (entering first person lets go of the hand and
-  `LetGo` answers null); it bites if anything the quick click does is ever not a no-op in first person. Fix: record at
-  the stack's press step whether `ViewRightClick` answered, in a static of its own, and read that in `RightPressTaken`.
-  Said at the site (`Level.WorldClick`, "Latent").
 - [ ] **Q535. An empty-hand path click takes the latch from its own pass.** From the run 5 review (Q532 1). Between
   the press and the release the original runs mode-1 hover passes over the clicked cell, so an empty-hand click on
   ground whose one cell is unaffordable leaves `DAT_00816d50` 1 (the money arm, `0x00535931`); ours arms (which clears
