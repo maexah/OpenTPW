@@ -677,7 +677,7 @@ public class ParkFootprintSplitTests
 		var ground = GroundOf( field, 8 );
 		var objects = new ParkObjects( "jungle", null, null );
 		var build = typeof( ParkBuilding ).GetMethods( BindingFlags.NonPublic | BindingFlags.Static )
-			.Single( method => method.Name == "Build" && method.GetParameters().Length == 10 );
+			.Single( method => method.Name == "Build" && method.GetParameters().Length == 11 );
 
 		ParkWorld.CatalogueObject? stood = null;
 
@@ -688,7 +688,7 @@ public class ParkFootprintSplitTests
 		{
 			string Answer( int x, int y )
 			{
-				var built = build.Invoke( null, [state, Level.Current!.Park, catalogue, objects, null, Rock, x, y, 0, 0] )!;
+				var built = build.Invoke( null, [state, Level.Current!.Park, catalogue, objects, null, Rock, x, y, 0, 0, false] )!;
 				return (string)built.GetType().GetProperty( "Answer" )!.GetValue( built )!;
 			}
 

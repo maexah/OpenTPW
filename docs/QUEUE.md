@@ -1776,21 +1776,6 @@ filed the items that cite it.
   `PLAYER_SWEAR_FILTER_AFTER_SHORT_READ` and keeps the flag. Then confirm gms.dat offset 0x13 after a park save equals
   the original's on the same folder, a disc copy (0) and an installed one (1, after Q733's overlay), with a byte read as 0
   among them.
-- [ ] **Q732. A moved ticket ride meets the money test.** From the run 7 review (Q709 4, VERIFY-11). In the original the
-  move tool's put-down (`0x00523940..0x005239fc`) has no ticket exemption: `0x52398b call 0x52fb90( [item+0x1b8] )` sets
-  the run price to the full price, then the shared cell test (`0x528a70` -> `0x532fc0(0x204,0,0)` -> `0x535670(4,0)`,
-  `0x00535905..0x0053592b`) refuses where the price is non-zero and above the bank (latch `0x816d50`, `0x816d5c`). Only
-  the carry pass (`0x005235e6..0x00523613`) sets the price to nought for an unbought ticket ride. `ParkBuilding.Build`
-  skips the money test for a mystery ride on every put-down and cannot tell a move from a carry. Correction: keep the
-  skip to a carry from the buy list (a flag from `PickUp`/`Hold`, the move tool). Not read: which of
-  `0x816d50`/`0x81b604` the move put-down's click honours (assumed the carry's, as ours already does for a cash ride's
-  move). Reach: only a park holding a ticket ride the current player has not bought (a park file from another profile,
-  the console's `buy`); dead by CONTENT in normal play. Confirm: in the original, move an unbought ticket ride with the
-  bank under its `+0x1b8`. (Said at the site: the comment in `ParkBuilding.Build`.) Test seam gap:
-  `ParkBuilding.Build`'s call of `PayFor` after a ride stands cannot be reached in a unit test, because
-  `ParkObjects.Place` needs a graphics device (a null reference inside `LobbyModel`, caught as "would not load"); the
-  test pins the click, the failed put-down and `PayFor`, and `Build`'s own call is covered by the game run only. A seam
-  (an injectable stand-the-ride step) in `ParkBuilding` would close it.
 - [ ] **Q733. `tools/play-the-original/tpw-setup.sh` builds a disc copy, not an installation.** From the run 7 review
   (VERIFY-11, Q709 3's new lead). `tpw-setup.sh:158` does `cp -r "$DISC"/. "$DEST"/` and nothing of the installer's
   overlay: `USEnglish/Setup/bffl.fls` ("LFFB", 726 records of 29 bytes from offset 13, then a 564-entry string table)

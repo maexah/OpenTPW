@@ -3481,7 +3481,8 @@ put-down is a purchase that keeps the old thing's facing.**
 
 **OpenTPW** (`ParkBuilding.PickUp`, one body for the window and the console): the sale, then the item into
 the hand at the thing's angle, with no affordability test; `Move` is that and one put-down, which a
-refused cell leaves in the hand. **A deviation, declared at the site**: the hand stays empty unless the
+refused cell leaves in the hand. The hand marks the move (`CarryingMoved`), so its put-down meets the money test with no
+golden-ticket exception (Q732; `hud.md`, "Spending golden tickets"). **A deviation, declared at the site**: the hand stays empty unless the
 sale went through, where the original would carry a thing that still stands. A refused put-down plays `0xaf`
 (`ParkBuildMode.RefusedSound`, Q442), the one call the path, queue and patrol tools share. **Counted, not built**: the
 markers drawn while carrying. Letting a move

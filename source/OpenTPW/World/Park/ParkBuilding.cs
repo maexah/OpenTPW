@@ -72,8 +72,10 @@ public static class ParkBuilding
 	/// </summary>
 	/// <param name="addOnFor">For a track add-on, the thing id of the ride it is put down on, the builder's object
 	/// (<c>[0x008186ac]</c>); nought names none, and then every track cell of it refuses.</param>
+	/// <param name="moved">Whether this is the move tool's put-down (<see cref="CarryingMoved"/>), whose money test has no
+	/// golden-ticket exemption.</param>
 	internal static Built Build( ParkState state, IParkInitialState park, ParkItemCatalogue catalogue, ParkObjects? objects,
-		ParkRides? rides, int catalogueId, int cellX, int cellY, int angle, int addOnFor = 0 )
+		ParkRides? rides, int catalogueId, int cellX, int cellY, int angle, int addOnFor = 0, bool moved = false )
 	{
 		if ( !catalogue.TryGet( catalogueId, out var item ) )
 			return new( $"buy: this theme has no item {catalogueId}" );
@@ -83,7 +85,7 @@ public static class ParkBuilding
 		if ( item.UiType is < 0 or > ItemDescriptionFile.Feature )
 			return new( $"buy: '{item.Name}' is UI type {item.UiType}, which no buy tab lists" );
 
-		if ( PlacementRefusal( state, item, cellX, cellY, angle, addOnFor ) is { } refused )
+		if ( PlacementRefusal( state, item, cellX, cellY, angle, addOnFor, moved ) is { } refused )
 			return new( refused, Refused: true );
 
 		// The cells the placer marks are the picture's, swept from the cell the model stands on (ParkObjects.CoveredCells; a track
@@ -219,8 +221,9 @@ public static class ParkBuilding
 	/// </summary>
 	/// <param name="addOnFor">For a track add-on, the ride it is for (<see cref="Build"/>'s); its cells are then judged by
 	/// <see cref="ParkTrackAddOn.Refusal"/>.</param>
+	/// <param name="moved">Whether the thing is the move tool's (<see cref="CarryingMoved"/>).</param>
 	internal static string? PlacementRefusal( ParkState state, ParkItemCatalogue.Item item, int cellX, int cellY, int angle,
-		int addOnFor = 0 )
+		int addOnFor = 0, bool moved = false )
 	{
 		if ( ParkTrackAddOn.Is( item ) )
 		{
@@ -236,10 +239,9 @@ public static class ParkBuilding
 		// the placement mode - and, for a move, which has no such click, in the put-down's own preview,
 		// where a price above the balance turns the cell red (FUN_00535670). A mystery ride's preview sets the run's
 		// price to nought and skips the test (BuildTool_PreviewPass, 0x005235e6..0x00523613): it is never refused for money.
-		// NOT MATCHED for a move: Build cannot tell a move from a carry, so the skip also covers the move tool's put-down,
-		// where the original prices the ride in full (0x0052398b, FUN_00535670) and refuses it above the balance; only a park
-		// holding a ticket ride its player has not bought reaches it (docs/exe/hud.md, "Spending golden tickets").
-		if ( Unaffordable( state, item ) )
+		// The move tool's put-down has no such skip: it prices the ride in full (0x0052398b) and the cell test refuses it
+		// above the balance (FUN_00535670), so a moved ticket ride meets the money test (docs/exe/hud.md, "Spending golden tickets").
+		if ( Unaffordable( state, item, moved ) )
 			return $"buy: '{item.Name}' costs {item.BuildPrice} and the park has {state.Balance}";
 
 		if ( EndRefusal( state, item, cellX, cellY, angle ) is { } blocked )
@@ -715,7 +717,7 @@ public static class ParkBuilding
 		if ( !sold.Done )
 			return new( $"pick up: {sold.Answer}" );
 
-		Hold( placed.CatalogueId, placed.Angle );
+		Hold( placed.CatalogueId, placed.Angle, moved: true );
 
 		return new( $"pick up: {sold.Answer} - {HandState()}", Holding: true );
 	}
@@ -1317,6 +1319,16 @@ public static class ParkBuilding
 	public static int CarryingFor { get; private set; }
 
 	/// <summary>
+	/// Whether what is in the hand is the move tool's (<c>0x3b</c>, <see cref="PickUp(int)"/>) rather than the carry's
+	/// (mode 4: a buy row, a Ctrl+click's other of a thing). The move's put-down prices the item in full and meets the
+	/// money test with no golden-ticket exemption (<c>0x00523940</c>..<c>0x005239fc</c>, <c>0x0052398b</c>); the carry's skips it
+	/// for a ticket ride not yet bought (<c>0x005235e6</c>..<c>0x00523613</c>). docs/exe/hud.md, "Spending golden tickets".
+	/// </summary>
+	/// <remarks>Which refusal latch the move's click honours (<c>0x816d50</c> or <c>0x81b604</c>) was not read; it is taken to
+	/// be the carry's, as a cash item's move already is.</remarks>
+	public static bool CarryingMoved { get; private set; }
+
+	/// <summary>
 	/// Takes a track add-on into the hand for a ride, as the ride window's Buy Upgrades choice does (<c>FUN_004af480</c>, Q512,
 	/// which is not built: the console's <c>carry &lt;item&gt; &lt;thing&gt;</c> stands in for its row). A thing that is itself
 	/// an add-on names the ride in its <c>+0x30</c> (<c>FUN_005276d0</c>, <c>0x005277b3</c>..<c>0x00527831</c>).
@@ -1421,8 +1433,8 @@ public static class ParkBuilding
 		return $"carry another: holding '{item.Name}' ({placed.CatalogueId}) at {item.BuildPrice}, turned {placed.Angle} as thing {thingId}";
 	}
 
-	/// <summary>Puts an item in the hand, facing a way.</summary>
-	private static void Hold( int catalogueId, int angle )
+	/// <summary>Puts an item in the hand, facing a way: the move tool's where <paramref name="moved"/>, the carry's otherwise.</summary>
+	private static void Hold( int catalogueId, int angle, bool moved = false )
 	{
 		// Taking something into the hand installs the place mode over whatever was current - there is one
 		// mode in the original - so a tool is put away and anything else in the hand let go of first.
@@ -1432,6 +1444,7 @@ public static class ParkBuilding
 		Carrying = catalogueId;
 		CarryingAngle = angle;
 		CarryingFor = 0;
+		CarryingMoved = moved;
 
 		// The install of mode 4 (and of the move tool) runs a pass first, which clears the refusal latch a followed
 		// member's patrol edges read (DAT_00816d50, FUN_0046d5a0, 0x0046d5e8). The place mode's later passes set it
@@ -1461,7 +1474,7 @@ public static class ParkBuilding
 
 		var (cellX, cellY) = CarriedAnchorUnder( state, item, pointerX, pointerY, out _ );
 
-		return CarrySquares( state, item, cellX, cellY, CarryingAngle, CarryingFor );
+		return CarrySquares( state, item, cellX, cellY, CarryingAngle, CarryingFor, CarryingMoved );
 	}
 
 	/// <summary>
@@ -1497,11 +1510,12 @@ public static class ParkBuilding
 	/// <summary>Whether the thing in the hand costs more than the park has - <see cref="PlacementRefusal"/>'s money test.</summary>
 	internal static bool CarriedUnaffordable()
 		=> Carrying != 0 && Level.Current is { ParkState: { } state, Catalogue: { } catalogue }
-			&& catalogue.TryGet( Carrying, out var item ) && Unaffordable( state, item );
+			&& catalogue.TryGet( Carrying, out var item ) && Unaffordable( state, item, CarryingMoved );
 
-	/// <summary>The money test of <see cref="PlacementRefusal"/>: a mystery ride is never refused for it.</summary>
-	private static bool Unaffordable( ParkState state, ParkItemCatalogue.Item item )
-		=> !GoldenTickets.IsMystery( item ) && state.Balance < item.BuildPrice;
+	/// <summary>The money test of <see cref="PlacementRefusal"/>: a mystery ride is not refused for it, except at the move
+	/// tool's put-down (<paramref name="moved"/>, <see cref="CarryingMoved"/>).</summary>
+	private static bool Unaffordable( ParkState state, ParkItemCatalogue.Item item, bool moved )
+		=> (moved || !GoldenTickets.IsMystery( item )) && state.Balance < item.BuildPrice;
 
 	/// <summary>
 	/// The cell <see cref="Build"/> anchors a thing at when a click puts it down with the pointer on (x, y). <b>The
@@ -1554,7 +1568,7 @@ public static class ParkBuilding
 		// The preview judged the add-on for the hand's own ride ([0x00818698], 0x0053599c) and any red square latched
 		// [0x00816d48] (0x00527944), so a refused click builds nothing (0x00524a63) and the hand keeps its ride: PlaceCarried
 		// refuses it below. Only past that gate does the put-down take the track's owner as the builder's object (0x00524c3d).
-		if ( PlacementRefusal( state, item, cellX, cellY, CarryingAngle, CarryingFor ) == null )
+		if ( PlacementRefusal( state, item, cellX, cellY, CarryingAngle, CarryingFor, CarryingMoved ) == null )
 		{
 			if ( ParkTrackAddOn.RideUnder( state, preview.X, preview.Y ) is { } ride )
 				CarryingFor = ride.ThingId;
@@ -1588,8 +1602,9 @@ public static class ParkBuilding
 	/// </summary>
 	/// <remarks>A track add-on's squares stand on the cells its model covers (<see cref="ParkTrackAddOn.Cells"/>), judged for the
 	/// ride <paramref name="addOnFor"/>.</remarks>
+	/// <param name="moved">Whether the thing is the move tool's (<see cref="CarryingMoved"/>).</param>
 	internal static List<CarrySquare> CarrySquares( ParkState state, ParkItemCatalogue.Item item, int cellX, int cellY, int angle,
-		int addOnFor = 0 )
+		int addOnFor = 0, bool moved = false )
 	{
 		if ( item.Shape is not { } shape )
 			return [];
@@ -1676,7 +1691,7 @@ public static class ParkBuilding
 		if ( item.TrackType is 1 or 2 && !addOn )
 			Unimplemented.Report( "CARRY_PREVIEW_TRACK_START" );
 
-		if ( refused || PlacementRefusal( state, item, cellX, cellY, angle, addOnFor ) != null )
+		if ( refused || PlacementRefusal( state, item, cellX, cellY, angle, addOnFor, moved ) != null )
 			return squares.Select( square => square with { Marker = ParkPathBuilding.MarkerRed, Turn = 0 } ).ToList();
 
 		return squares;
@@ -1733,7 +1748,8 @@ public static class ParkBuilding
 		if ( Carrying == 0 )
 			return "put: the hand is empty - `carry <item>` first, or click a row on the buy screen";
 
-		var built = Build( state, park, catalogue, objects, rides, Carrying, cellX, cellY, angle ?? CarryingAngle, CarryingFor );
+		var built = Build( state, park, catalogue, objects, rides, Carrying, cellX, cellY, angle ?? CarryingAngle, CarryingFor,
+			CarryingMoved );
 
 		// A click on a red cell plays sound 0xaf and leaves the hand as it is, so the next click tries again.
 		if ( built.Refused )
@@ -1798,7 +1814,8 @@ public static class ParkBuilding
 			? $"'{item.Name}' ({Carrying}) at {item.BuildPrice}"
 			: $"item {Carrying}";
 
-		return $"hand: holding {name}, turned {CarryingAngle}" + (CarryingFor != 0 ? $", for ride thing {CarryingFor}" : "");
+		return $"hand: holding {name}, turned {CarryingAngle}" + (CarryingFor != 0 ? $", for ride thing {CarryingFor}" : "")
+			+ (CarryingMoved ? ", moved" : "");
 	}
 
 	/// <summary>
