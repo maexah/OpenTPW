@@ -4001,6 +4001,12 @@ current vehicle (`ParkPeople.WrittenArrival`, `ParkWorld.PutArrival`). `VEHICLE_
 `SAVE_PARK_ARRIVAL_VEHICLE`, a vehicle whose thing the writer leaves out, its slot and the current vehicle then
 written nought.
 
+**Both made (Q464).** With the seaplane and the ferry both made, the corner cell's chain is written newest first by
+the park's stamps (`ParkState.MadeAt`), not by id: ferry, seaplane, bus, lights, gates and on down to thing 1, as the
+original's `q257x` file holds it and as the running list (`ParkState.EnterCell`) holds it. Read back, the park's own
+chain on (0,0) is the same. `WithBothVehiclesMadeTheCornerCellsChainRunsNewestFirst` makes the ferry second on a
+lower id, so a writer that went by id fails it.
+
 **Predicted first** (`q342/PREDICTION.txt`). Round 1 held but for one line my own script misread; reading its
 file beside the original's then found what no prediction named, the model record written as a bought thing's
 (`0x32f`, cell (0,0), no tables), and after that mend one bit more (the shared flags read 3, the original's 1).

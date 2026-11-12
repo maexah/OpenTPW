@@ -13358,3 +13358,13 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   rule's block whole). 85 lines cannot hold 130 one-line rules; the item's own "one line of why" was kept over that
   figure. 67 citations by number across the repo (40 distinct rules) were listed before the cut and each finds its
   rule on the new page; dropping rule 91 by hand made the check name it.
+- [x] **Q464. A written corner cell's made vehicles run newest first.** From the week-end audit (D13, `VERIFY-2b.md`
+  Q342 1). With ferry and seaplane both made, `ParkWorld.People.cs` writes cell (0,0)'s chain oldest first; the
+  original's file (`q257x/orig/fixed-by-the-original.TPWS`) and our running list run newest first. No effect on reading
+  back was found. **Done (2026-11-12): nothing to build on `main` at `ad31ffc`.** The writer already writes the made
+  objects on a cell newest first by the park's stamps (`PutPeople`'s `madeObjectIds`), so the audit's finding does not
+  hold on this tree. `WithBothVehiclesMadeTheCornerCellsChainRunsNewestFirst` now pins it: the seaplane made, then the
+  ferry on a departed guest's lower id; the file's (0,0) chain is ferry, seaplane, bus, then the rest as the running
+  list holds it, and read back the park's own chain, object list and slots are the same. A read back does not change.
+  Two put-backs (oldest first; by id alone) each fail it. Two off-screen runs wrote ferry, seaplane, then the bus or
+  the lights first, down to thing 1.
