@@ -609,8 +609,21 @@ through its script 20 s after the load. The advisor's record for `0x46` read (0,
 was guessed at 1190 to 1215 for the first run and missed, and reasoned at 1159 to 1205 for the second
 (`q318/PREDICTION.txt`). The run of 2026-10-11 read 1201 and 1201.
 
-**OpenTPW** (`ParkPeople.Sweep`): the messages' turn is the sweep's last call, after the guests', the staff's,
-the arrivals', the staff pool's, the rides' and the gate's retry. `q318/confirm.py`, the stock park's Belly Bounce
+**The sweep's tail comes after him** (Q462). Once the walk is done, `FUN_00516380` frees the deleted things' ids
+(`0x00516654`..`0x00516685`) and calls `FUN_004d7b20` (`0x00516695`): the arrival manager (`0x004d7b29`), the staff
+pool (`0x004d7b30`), the calendar (`0x004d7b3b`) and the golden tickets (`0x004d7b60`). So his poll reads the pool
+and the arrivals as the last sweep's tail left them: a candidate who times out, or one the top-up makes, on the tick
+of his row's turn is counted as the pool stood before it, and a guest the bus drops on that tick is not yet in.
+
+**OpenTPW** (`ParkPeople.Sweep`): the messages' turn comes after the guests', the staff's, the rides' and the gate's
+retry; then the free list, the arrivals with the vehicle, and the staff pool; the calendar and the tickets are
+`ParkLoop`'s, after the sweep. The test (`ParkAdvisorBeforeTailTests`) leaves the shipped park's pool one researcher, whose
+time runs out on the tick row 17 is polled: posted with `candidates=1`, where the pool's turn first answers `no-score`
+with `candidates=0`. Off-screen (Q462, `lib/consolerun.py`; the key 1, the pool's three researchers expired and the
+clock set so row 17's poll fell on 1083): `poll message=17 ... tick=1083 result=no-score ... candidates=0`, then
+`Staff pool: topped up on mGameTick 1083`; main's build before it, the top-up first and `result=post ... candidates=1`.
+Not run in the original; the order is the decode's. **Still parted**: the gate's retry (`0x0051643b`, after the walk)
+runs before his turn here (Q1312). `q318/confirm.py`, the stock park's Belly Bounce
 broken 25 s in, predicted first (`q318/PREDICTION.txt`; the first round's `pending` counts were Q306's, wrong since
 Q314, and were predicted again before the second run): the log read `mechanic 26 found ride 13 ... on mGameTick
 885`, `post message=70 subject=13 score=110 threshold=25 tick=885 result=queued pending=2` and `attempt=1
@@ -624,6 +637,7 @@ read 886 three times). Main's build, off-screen, found and posted on 894 and sai
 | A message posted between sweeps (the door's, a tag's opening) | said at the next tick's advisor turn | the same, at that sweep's end |
 | The poll's row | asked on his turn, after every other thing's | the same; the two built rows score by the park's age alone |
 | Things 2 and 1 | after him, with no turn of their own | not things here |
+| The arrivals and the staff pool | after him, in the sweep's tail | the same (Q462) |
 
 Not run in the game: a ride's own post (the wear's `0x42`, the break's `0x44` and `0x45`; the tests hold the
 wear's on its tick), and whether `0x45`'s 31 sweeps after the line before it moved. Not listened to in either game.

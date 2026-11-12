@@ -13396,3 +13396,10 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   - **Done 2026-11-12 (cloud lane c47):** `ParkState.RemeasureQueue` measures, then takes the counter, then writes the
     back cell's block; it logs the original's "queue is now N cells long" with the back and the stamp, and the console's
     `cell` reply prints the cell's block stamp. In this game only: the original's side is Q1308.
+- [x] **Q462. The advisor's turn comes before the sweep's tail.** From the week-end audit (D11, `VERIFY-8b.md` Q318 1).
+  The original walks every thing (his turn inside the walk), then `0x004d7b20` (`0x00516695`): arrivals, staff pool,
+  calendar. Ours runs the arrivals and the pool before his `Tick`, so row 0x11 can be said a poll round early or late.
+  **Done 2026-11-12** (cloud lane c48, `alexah/1027-advisor-before-sweep-tail`; off-screen, `consolerun.py`; no original,
+  no Ghidra here): `ParkPeople.Sweep` runs the arrivals, the vehicle and the staff pool after the advisor's `Tick` and the
+  free list; `ParkAdvisorBeforeTailTests` holds row 17 both ways on the shipped pool, and the off-screen run logged the
+  poll on 1083 (`candidates=0`) before the pool's top-up, main's build the other way. The gate's retry is Q1312.
