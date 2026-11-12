@@ -1762,17 +1762,16 @@ filed the items that cite it.
   Spray riders, set beside ours' (`walkriders` reads both); (b) a hidden rider (action 1 or 4: the Totem, the TV Sim) in a
   park ours saved: guests admitted and sent to a bought TV Sim (`buy 1104 44 25 180`, queue (43,27) to (43,28)) turned
   for the exit before boarding (`HEADING_FOR_EXIT_CHANGE_OF_MIND` counted 274 times), so none was saved hidden.
-- [ ] **Q737. A placed voice out of range releases its output, and a loop comes back with a fresh one.** From the fork
-  watch 2026-10-21 (verify-audio-ui L1). OpenTPW plays a placed voice on unheard when it is out of range
-  (`audio.md:265`, a recorded gap with no queue line and no `Unimplemented.Report`). The original gives the channel up:
-  the range failure sets `0x800` and stops the output (`0x006bca10` -> `0x006bca70`), `0x006bbe40` clears the handle
-  (`+0x24`) and the playing bit `0x1` (the terminal `0x10` only without `0x40`, `0x800`, `0x4000`), and the output-end
-  callback runs `0x006bb7c0` -> `0x006c6260` -> `0x006c8e50`. A looped placed voice (flags `0x6`), in range again, is
-  built a fresh output at the sample's start (`0x006bd800` -> `0x006bc410` -> `0x006b9ab0` with handle 0; measured
-  Q565). Reach: Lost Kingdom's looped placed voices (the Round Fountain, `audio.md:1108`). Build it for the placed
-  voices that are no script's and no ride's scream (those are already the original's, Q557, Q563-Q565), and count what
-  is unbuilt with `Unimplemented.Report`. Confirm: the fountain's loop caught by the disk driver as the camera leaves
-  its range and returns, beside the original's (does the sample restart from its start).
+- [ ] **Q1416. The other placed voices out of range: given up as the original's.** From Q737 (lane c74). Every placed
+  voice of no script and no ride's scream but the land's looped two still plays on unheard out of range, counted each
+  time one leaves range while sounding: `PLACED_VOICE_OUT_OF_RANGE_THUNDER`, `_SINGLE_SCREAM`, `_PUT_OFF`, `_YAWN`,
+  `_CHARGE` and `_STAFF` (unlooped one-shots: out of range a channel given up, in range again before the drop restarted
+  from the top unless refused late, `audio.md`, "A script's one-shot"), `_FOLLOWING` (the gulls and the sea, the plain
+  class: cut, nothing drawn away, the held sample afresh on the return, "A voice out of range makes nothing next") and
+  `_BUMPER_ENGINE` (flags `0x6`, its class's out-of-range path not read). The stock park off-screen counted 60 staff, 11
+  following and 5 charge departures in about 50 s. Build each on the script voices' own rules (`ParkAudio.InRange`,
+  `LateStart`), decode the engine's class first. Confirm: the census's counts gone, and the gulls' gap with the camera
+  past their rectangle beside the original's (`voices.py`: `0x800`, no channel).
 - [ ] **Q739. The pause overlay, and plain P in a park.** From the fork watch 2026-10-24 (`verify-world-other.md` L2,
   M2; `verify-audio-ui.md` L1). Plain P in a park reaches nothing and counts nothing (`ParkFrontEnd.ShortcutRow` has no
   plain-P row; `InputButton.Pause` is read only by `InputBindingTests`): a rule 4 gap; first count it. Then build the

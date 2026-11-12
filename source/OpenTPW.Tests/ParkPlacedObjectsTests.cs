@@ -301,10 +301,14 @@ public class ParkPlacedObjectsTests
 		ready.SetValue( null, true );
 
 		ParkAudio? park = null;
+		var heardFrom = Listener.GetValue( null );
 
 		try
 		{
 			park = new ParkAudio( "jungle" );
+
+			// Between the two, within 97 of each over the ground: both in range, so both are given an output at once.
+			Audio.SetListener( new Vector3( 520f, 588f, 30f ), Vector3.Right );
 
 			Assert.AreEqual( 2, ParkPlacedObjects.StartSounds( "jungle", park.StartPlaced ) );
 			Assert.AreEqual( 2, Times( "SCAPE_OMP_SOUND_TYPE_1" ) );
@@ -314,7 +318,7 @@ public class ParkPlacedObjectsTests
 			Assert.AreEqual( (8, 100), (fall.Sound.Effect, fall.Volume) );
 			Assert.AreEqual( (7, 50), (river.Sound.Effect, river.Volume) );
 
-			foreach ( var (sound, volume, voice) in park.Placed )
+			foreach ( var (sound, volume, voice) in park.Placed.Select( placed => (placed.Sound, placed.Volume, placed.Voice) ) )
 			{
 				Assert.IsNotNull( voice );
 				Assert.IsTrue( voice!.Loop );
@@ -349,8 +353,145 @@ public class ParkPlacedObjectsTests
 			lock ( Audio.Lock )
 				Audio.Voices.RemoveAll( voice => !before.Contains( voice ) );
 
+			Listener.SetValue( null, heardFrom );
 			ready.SetValue( null, false );
 		}
+	}
+
+	/// <summary>The engine's listener, put back after a test that moves it.</summary>
+	private static readonly System.Reflection.FieldInfo Listener =
+		typeof( Audio ).GetField( "_listener", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static )!;
+
+	/// <summary>Runs <paramref name="play"/> with a device stood in and the jungle's park audio up, and takes away what it made.</summary>
+	private void WithTheJunglesAudio( Action<ParkAudio> play )
+	{
+		FileSystem = GameData.Required();
+
+		var ready = typeof( Audio ).GetProperty( nameof( Audio.Ready ) )!;
+		System.Collections.Generic.List<Voice> before;
+
+		lock ( Audio.Lock )
+			before = [.. Audio.Voices];
+
+		var heardFrom = Listener.GetValue( null );
+		ParkAudio? park = null;
+
+		ready.SetValue( null, true );
+
+		try
+		{
+			park = new ParkAudio( "jungle" );
+			play( park );
+		}
+		finally
+		{
+			park?.Delete();
+			Entity.ApplyDeletions();
+
+			lock ( Audio.Lock )
+				Audio.Voices.RemoveAll( voice => !before.Contains( voice ) );
+
+			Listener.SetValue( null, heardFrom );
+			Audio.HoldPlaced( false );
+			ready.SetValue( null, false );
+		}
+	}
+
+	private static void HearFrom( float x, float y, float height = 30f ) => Audio.SetListener( new Vector3( x, y, height ), Vector3.Right );
+
+	/// <summary>
+	/// <b>A placed looped voice out of range gives its output up, and in range again is given a fresh one</b>
+	/// (<c>0x006bca10</c> -> <c>0x006bca70</c>, <c>0x006bbe40</c>; <c>OneShot_Tick</c> <c>0x006bd800</c> -> <c>0x006bc410</c>):
+	/// the fall at (530, 513), range 97, set up with the listener at the world's corner has no output; in range it is given
+	/// one; 98 off over the ground it is stopped and let go; 90 off over the ground and 500 up it is in range, the height
+	/// left out; exactly 97 off is in range; and each return is a new output from the sample's start, not the old one resumed.
+	/// </summary>
+	[TestMethod]
+	public void APlacedLoopOutOfRangeReleasesItsOutputAndComesBackWithAFreshOne()
+	{
+		WithTheJunglesAudio( park =>
+		{
+			HearFrom( 0f, 0f );
+			Assert.AreEqual( 2, ParkPlacedObjects.StartSounds( "jungle", park.StartPlaced ) );
+
+			var fall = park.Placed[0];
+
+			Assert.AreEqual( 8, fall.Sound.Effect );
+			Assert.AreEqual( (true, 0, (Voice?)null), (fall.Away, fall.Outputs, fall.Voice), "set up away: no output" );
+
+			HearFrom( 540f, 513f );
+			park.ServePlaced( fall, Audio.Listener.Position );
+
+			var first = fall.Voice!;
+
+			Assert.AreEqual( (false, 1, 0), (fall.Away, fall.Outputs, fall.Released), "in range: its first output" );
+			Assert.IsTrue( first.Playing && first.Loop );
+			Assert.AreEqual( "watfall.mp2", first.Name, true );
+
+			park.ServePlaced( fall, Audio.Listener.Position );
+			Assert.AreSame( first, fall.Voice, "in range and sounding: the same output plays on" );
+
+			HearFrom( 530f + 90f, 513f, 500f );
+			park.ServePlaced( fall, Audio.Listener.Position );
+			Assert.AreSame( first, fall.Voice, "90 off over the ground and 500 up: in range, the height left out" );
+
+			HearFrom( 530f + 98f, 513f );
+			park.ServePlaced( fall, Audio.Listener.Position );
+			Assert.AreEqual( (true, (Voice?)null, 1), (fall.Away, fall.Voice, fall.Released), "98 off: away, its output given up" );
+			Assert.IsFalse( first.Playing, "the output is stopped, not left to play on unheard" );
+
+			park.ServePlaced( fall, Audio.Listener.Position );
+			Assert.AreEqual( (1, 1), (fall.Outputs, fall.Released), "away: nothing more" );
+
+			HearFrom( 530f, 513f - 97f );
+			park.ServePlaced( fall, Audio.Listener.Position );
+
+			var second = fall.Voice!;
+
+			Assert.AreEqual( (false, 2), (fall.Away, fall.Outputs), "exactly the range off: in range again, a second output" );
+			Assert.AreNotSame( first, second, "a fresh output, not the old one resumed" );
+			Assert.IsTrue( second.Playing && second.Loop );
+			Assert.AreEqual( first.Name, second.Name, "on the sample its set-up drew" );
+			Assert.AreEqual( first.Volume, second.Volume, 1e-6f );
+		} );
+	}
+
+	/// <summary>
+	/// The frame's pass serves every one of the land's looped sounds, and the placed voices of no script whose leaving range
+	/// is not built are counted each time one leaves while sounding, not once a frame and not while in range: a yawn at the
+	/// fall is counted once as the listener leaves, not again while it stays away, and again after it comes back and goes.
+	/// </summary>
+	[TestMethod]
+	public void TheParksPassServesTheLoopsAndCountsTheVoicesThatPlayOn()
+	{
+		WithTheJunglesAudio( park =>
+		{
+			HearFrom( 540f, 513f );
+			ParkPlacedObjects.StartSounds( "jungle", park.StartPlaced );
+
+			var fall = park.Placed[0];
+
+			Assert.IsTrue( park.Yawn( new Vector3( 530f, 513f, 0f ) ) );
+
+			const string Gap = "PLACED_VOICE_OUT_OF_RANGE_YAWN";
+
+			park.Update();
+			Assert.AreEqual( 0, Times( Gap ), "in range: nothing counted" );
+
+			HearFrom( 2000f, 2000f );
+			park.Update();
+			park.Update();
+			Assert.AreEqual( 1, Times( Gap ), "left range while sounding: counted once" );
+			Assert.AreEqual( (true, (Voice?)null), (fall.Away, fall.Voice), "the frame's pass gave the fall's output up" );
+
+			HearFrom( 540f, 513f );
+			park.Update();
+			Assert.AreEqual( 2, fall.Outputs, "and gave it a fresh one on the return" );
+
+			HearFrom( 2000f, 2000f );
+			park.Update();
+			Assert.AreEqual( 2, Times( Gap ), "left again: counted again" );
+		} );
 	}
 
 	[TestMethod]

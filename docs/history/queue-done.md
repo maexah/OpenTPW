@@ -13660,3 +13660,18 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   and the crowd's voice from 5 near the stop; the block put back once after the frame, and before the step's sweep, each
   fail it. Off-screen (`consolerun.py`, `stall 1000`): "tick 2336's music block" logged before the sweeps of 2344 and
   2352 in a frame of 2332 to 2365. Cloud lane c69; no Ghidra, no original.
+- [x] **Q737. A placed voice out of range releases its output, and a loop comes back with a fresh one.** From the fork
+  watch 2026-10-21 (verify-audio-ui L1). OpenTPW plays a placed voice on unheard when it is out of range
+  (`audio.md:265`, a recorded gap with no queue line and no `Unimplemented.Report`). The original gives the channel up:
+  the range failure sets `0x800` and stops the output (`0x006bca10` -> `0x006bca70`), `0x006bbe40` clears the handle
+  (`+0x24`) and the playing bit `0x1` (the terminal `0x10` only without `0x40`, `0x800`, `0x4000`), and the output-end
+  callback runs `0x006bb7c0` -> `0x006c6260` -> `0x006c8e50`. A looped placed voice (flags `0x6`), in range again, is
+  built a fresh output at the sample's start (`0x006bd800` -> `0x006bc410` -> `0x006b9ab0` with handle 0; measured
+  Q565). Reach: Lost Kingdom's looped placed voices (the Round Fountain, `audio.md:1108`). Build it for the placed
+  voices that are no script's and no ride's scream (those are already the original's, Q557, Q563-Q565), and count what
+  is unbuilt with `Unimplemented.Report`. Confirm: the fountain's loop caught by the disk driver as the camera leaves
+  its range and returns, beside the original's (does the sample restart from its start).
+  - **Done (lane c74, 2026-11-12):** the land's own looped sounds (the fall's 8 and the river's 7, voice flags `0x6`)
+    give their output up out of range and come back with a fresh one at the sample's start (`ParkAudio.ServePlaced`;
+    `park.md`, "The land's own sounds", "Out of range and back"); the rest is Q1416. Not checked: the original's restart
+    caught by the disk driver (no original in the cloud container).
