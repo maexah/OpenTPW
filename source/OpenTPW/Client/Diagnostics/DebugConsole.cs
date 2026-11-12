@@ -1782,6 +1782,18 @@ public static class DebugConsole
 							$"tested {(ParkGuestSprites.Current?.Pulled == true ? ParkGuestSprites.PulledDepth( circle.Depth ) : circle.Depth):F2}" );
 					}
 
+					// A balloon's own line: where its anchor, the picture's origin, lands, and the picture about it.
+					foreach ( var balloon in ParkGuestSprites.Current?.BalloonsDrawn ?? [] )
+					{
+						if ( who != 0 && balloon.Thing != who )
+							continue;
+
+						var place = System.Numerics.Vector4.Transform( new System.Numerics.Vector4( balloon.Origin.X, balloon.Origin.Y, balloon.Origin.Z, 1f ), Camera.ViewMatrix * Camera.ProjMatrix );
+						Reply( $"circle: balloon of thing {balloon.Thing} anchor ({balloon.Origin.X:F3},{balloon.Origin.Y:F3},{balloon.Origin.Z:F4}) " +
+							$"origin pixel ({(place.X / place.W + 1f) * Screen.Width / 2f:F1},{(1f - place.Y / place.W) * Screen.Height / 2f:F1}) " +
+							$"depth {place.W:F2} size {balloon.Width}x{balloon.Height} origin {balloon.OriginX},{balloon.OriginY} of {Screen.Width:F0}x{Screen.Height:F0}" );
+					}
+
 					if ( listed == 0 )
 						Reply( who != 0 ? $"circle: thing {who} not drawn" : "circle: nobody drawn" );
 

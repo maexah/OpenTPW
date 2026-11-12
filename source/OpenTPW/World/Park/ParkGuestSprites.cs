@@ -801,6 +801,12 @@ public sealed class ParkGuestSprites : ModelEntity
 
 	private readonly List<SpritePick.Drawn> _drawn = [];
 
+	/// <summary>Every balloon's picture the last frame drew, under its holder's thing (0 for one let go), for the
+	/// console's <c>circle</c>: not pickable, so kept apart from <see cref="Drawn"/>.</summary>
+	internal IReadOnlyList<SpritePick.Drawn> BalloonsDrawn => _balloonsDrawn;
+
+	private readonly List<SpritePick.Drawn> _balloonsDrawn = [];
+
 	/// <summary>The light a frame's shadows are cast by where the sprites stand in no level: a test's.</summary>
 	internal Vector3? ShadowLight { get; set; }
 
@@ -816,6 +822,7 @@ public sealed class ParkGuestSprites : ModelEntity
 	protected override void OnRenderTranslucent()
 	{
 		_drawn.Clear();
+		_balloonsDrawn.Clear();
 		Pulled = PullsBodies;
 
 		if ( TranslucentModel == null || _atlas == null )
@@ -1213,11 +1220,11 @@ public sealed class ParkGuestSprites : ModelEntity
 			if ( people.WalkFor( peep.ThingId ) is { } walk && cellX > 0f && cellY > 0f )
 				(_bobPhase, _bobCount) = PlaceHeld( peep, held, walk.Previous, walk.Position, alpha, cellX, cellY, _bobPhase, _bobCount, Time.Delta );
 
-			used = DrawBalloon( used, held, bank, field );
+			used = DrawBalloon( used, peep.ThingId, held, bank, field );
 		}
 
 		foreach ( var letGo in people.Bursting )
-			used = DrawBalloon( used, letGo, bank, field );
+			used = DrawBalloon( used, 0, letGo, bank, field );
 
 		return used;
 	}
@@ -1244,7 +1251,7 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// <c>+0x8c</c>), at its own alpha, and only once its script has shown a frame. It faces nowhere: a balloon set has
 	/// no directions, so the frame is the picture.
 	/// </summary>
-	private int DrawBalloon( int used, Balloon balloon, Loaded bank, HeightfieldFile? field )
+	private int DrawBalloon( int used, int holder, Balloon balloon, Loaded bank, HeightfieldFile? field )
 	{
 		var sprite = balloon.Sprite;
 
@@ -1258,9 +1265,11 @@ public sealed class ParkGuestSprites : ModelEntity
 			return used;
 
 		var ground = StandsOn( field, balloon.X, balloon.Y );
+		var anchor = new Vector3( balloon.X, balloon.Y, ground + balloon.Height );
+		var picture = bank.Pictures[index];
 
-		WriteQuad( used, new Vector3( balloon.X, balloon.Y, ground + balloon.Height ), bank.Pictures[index], false,
-			sprite.Alpha );
+		WriteQuad( used, anchor, picture, false, sprite.Alpha );
+		_balloonsDrawn.Add( new SpritePick.Drawn( holder, anchor, picture.Width, picture.Height, picture.OriginX, picture.OriginY, false ) );
 
 		return used + 1;
 	}
