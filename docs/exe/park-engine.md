@@ -629,8 +629,8 @@ each floor 4 listed and 4 on a corner (160 conformed vertices), `mc_bridge` hidd
 
 **A sold coaster's pylons** (Q951, 2026-11-12, decoded in a private copy of the Ghidra project and the disassembly; no run of the
 original was made for it). **A sale destroys the coaster and every pylon on it, and a coaster put down has its station's two and no track.** The demolisher's
-`Thing_Delete` (`0x0050b780`) queues the object, and the thing sweep (`FUN_00516380`, every eighth 31 ms tick) runs its destructor
-`FUN_004dd0a0`, which ends in `FUN_0050b980`. For a placed object (model byte 3) that calls `Instance_Destroy` (`0x00463c80`, the log's
+`Thing_Delete` (`0x0050b780`) runs the object destructor `FUN_004dd0a0` at once (`0x0050b866`), which ends in `FUN_0050b980`
+(`0x004dd2ed`); only the thing's record waits for the sweep (its id queued at `0x0050b8fd`). For an object (kind byte `+2` = 3) that calls `Instance_Destroy` (`0x00463c80`, the log's
 "Cannot find a ride to destroy") on the object's instance (`+0x20`), and it calls `Coaster_Destroy` (`0x00436fa0`) before it frees the
 instance. `Coaster_Destroy` looks on `[0x00790fe0]` for the coaster whose `+0x10` is that instance (any other object has none), destroys
 the instances its `+0x128` records hold, frees the list at `+0x38` (`FUN_0043eac0`) and the cells (`Coaster_FreeCells`, `0x0043eaf0`),
@@ -646,7 +646,7 @@ calls `Coaster_Create` (`0x004368f0`, at `0x00463897`), which, not loading, make
 
 **OpenTPW** (Q951): the sale takes the coaster's pylons down (`ParkBuilding`'s `Demolish`, `ParkCoasterPylons.TakeDown`), and a
 coaster's purchase, a move's put-down included, stands its station's two (`ParkCoasterPylons.StandBought`, set up from the item's own
-files by `ParkCoasterHeights.SetUpType`). A deviation in time: ours go at once, the original's at the next eighth tick. The track is not
+files by `ParkCoasterHeights.SetUpType`); both go at once, as the original's do. The track is not
 drawn (Q594); when it is, it goes and comes the same way.
 
 **OpenTPW builds the conform and the drape** (Q808, `ProceduralConform`): `LobbyModel`'s `stand` hook moves the drawn vertices of the

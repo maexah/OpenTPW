@@ -171,6 +171,9 @@ internal sealed class ParkObjectWindow : UiWindow, IStatusBox, IObjectWindowStep
 	/// <summary>The ride's door, <c>b_door</c> (<c>0x3e38</c>): down while the ride is closed.</summary>
 	private readonly UiButton? _door;
 
+	/// <summary>The Buy Upgrades list this window opened, the original's <c>+0x24</c> (written at <c>0x004ae5a7</c>).</summary>
+	private ParkUpgradesWindow? _upgrades;
+
 	/// <summary>Show the track, <c>b_track</c> (<c>0x3e2a</c>): shown only for a ride that runs on a track (<see cref="ShowsTheTrack"/>).</summary>
 	private readonly UiButton? _track;
 
@@ -1182,9 +1185,14 @@ internal sealed class ParkObjectWindow : UiWindow, IStatusBox, IObjectWindowStep
 				Stack.Close( this );
 				return;
 
-			// FUN_004af600 opens the Buy Upgrades list at 0x004af8ec (FUN_004ae560), over this window.
+			// FUN_004af600 opens the Buy Upgrades list at 0x004af8ec (FUN_004ae560), over this window: none while this
+			// window's list still stands (0x004ae579).
 			case 0x3e35:
-				Stack.Open( new ParkUpgradesWindow( Stack, ThingId, this ) );
+				if ( _upgrades != null && Stack.Windows.Contains( _upgrades ) )
+					return;
+
+				_upgrades = new ParkUpgradesWindow( Stack, ThingId, this );
+				Stack.Open( _upgrades );
 				return;
 
 			// FUN_004af600 -> FUN_0048ccf0 uses the switch's new down state, with no handler guard.

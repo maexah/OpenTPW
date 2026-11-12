@@ -133,7 +133,7 @@ internal sealed class ParkHireScreen : UiWindow
 		} );
 
 		// The portrait: the frame is the screen's own art, and the picked candidate's figure stands in it, made again only
-		// when the role or costume changes (ParkHireFigure, FUN_0049ba00).
+		// when the role or costume changes (ParkHireFigure, FUN_0049ba00); its size is not decoded, so it is not drawn (Q1513).
 		_figure = Root.Add( new ParkHireFigure( FileSystemOrNull, Level.Current?.ThemeName ?? "jungle", Level.Current?.SpriteBanks )
 		{
 			Id = 0x2484,
@@ -455,7 +455,7 @@ internal sealed class ParkHireScreen : UiWindow
 
 			_skill.Units = SkillUnits( person.Grade );
 			ShowAccount( person.Wage );
-			_figure.Show( person );
+			_figure.Show( person, GameClock.Ticks );
 			Log.Info( $"Hire screen: candidate {person.Id} grade {person.Grade}, skill bar {SkillUnits( person.Grade )} of 1024, {Account()}" );
 
 			return;

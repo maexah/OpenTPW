@@ -3495,19 +3495,25 @@ Draw flag `0x40000` takes sector 0 with no camera term (`0x005421cc`, `park-engi
 past a five-way walk's last, drawn as 3 reflected. It stands on the portrait's rect: x = (left + (right − left) / 2 − `0x3f8`)
 / 1024, y = (`0x300` − bottom + (bottom − top) / 4) / 768, z = 1 − (depth + 1) / 40 (`0x00476a70`); for the stream's
 (484, 179)-(748, 443) that is (−0.3906, 0.5091), the virtual screen's (624, 377). It steps on the constructor's 62 ms
-interval (`0x004759c4`). Message `0x14` (`0x0049b7b4`) frees it and sets both words to -1. **Not decoded:** how big a sprite
-flagged `0x40000` is drawn (its arm of `Sprite_BuildQuad`, `0x00589ce4`) with the scale 8.0, and what `0x10000` and
-`0x1000` in its flags do.
+interval, and the constructor writes its first due time too, now + the interval (`0x004759c4`..`0x004759df`), so its first
+frame comes on the first sprite pass more than 62 ms after the make. Message `0x14` (`0x0049b7b4`) frees it and sets both
+words to -1. **Not decoded:** how big a sprite flagged `0x40000` is drawn with the scale 8.0, and where its picture sits on
+the point: both come from `Sprite_BuildQuad`'s `0x40000` arm (`0x00589ce4`..`0x00589dc9`), which copies the point (y
+negated) and calls `FUN_005890e0( verts, size x, size y )` with the size from local 8 (`+0x2c`) times `[0x00702008]` (0.05),
+one axis also times `[0x008bcbcc]`; `FUN_005890e0` lays the corners from the picture record's `+0x0c`..`+0x16`, each divided
+by `+0x10`/`+0x12` and scaled by that size (`0x00589136`..`0x005891eb`). A lead, not proven: the quad's size is set by
+local 8, not by the picture's pixel count. Nor is what `0x10000` and `0x1000` in its flags do.
 
 **OpenTPW** (`ParkHireFigure`): the script is copied into `SpriteScript` at word 1832, the figure made on a pick by the
 rule above and freed on the close, stepped on the park's sprite ticks (every second 31 ms tick, so a new frame each 124 ms,
-as a person on the default interval), the costume brought within the kind's loaded banks (the deviation
-`ParkPeople.StaffPicture` makes, `docs/DECISIONS.md`), the picture's origin on the point above, and each picture pixel drawn
-one of the 1024 x 768 frame's: a stand-in size, counted as `STAFF_PORTRAIT_SIZE` at each make. **Seen off-screen in ours**
+as a person on the default interval) from a first due time one interval after the make, the costume brought within the
+kind's loaded banks (the deviation `ParkPeople.StaffPicture` makes, `docs/DECISIONS.md`). **It is not drawn** (`AGENTS.md`
+rule 4): its size and anchor are not decoded, and `STAFF_PORTRAIT_SIZE` is counted at each make (Q1513). **Seen off-screen in ours**
 (Q419, a cloud container, the stock park, no photograph beside the original): the cleaners' tab made the figure for
 candidate 12 (kind 5, `SPR_HA`, picture 90, 51 x 45, mirrored); the pointer on candidate 8 (the same role and costume)
 picked them and made none; the mechanics' tab made it for candidate 9 (kind 6, costume 1, `SPR_OM`); the close freed it
-and a reopen made it again. Whether this figure and the staff window's preview (`STAFF_WINDOW_PREVIEW`, `FUN_00486530`)
+and a reopen made it again. That run drew it at a stand-in size since taken out; nothing of its drawing was confirmed
+(Q1512). Whether this figure and the staff window's preview (`STAFF_WINDOW_PREVIEW`, `FUN_00486530`)
 share one decode is not settled.
 
 #### The staff and visitor locators

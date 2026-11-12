@@ -156,16 +156,8 @@ public static class Display
 
 		// SDL hands the window its new size as an event the next pump reads, so the size above is the one it had before
 		// (Q1200: "FullScreen at 2560 x 1440, window 2560x1359"); the size it is put at is logged as it arrives.
-		if ( _watched != window )
-		{
-			_watched = window;
-			window.Resized += size => { if ( Watch.Resized( size ) is { } line ) Log.Info( line ); };
-		}
-
-		Watch.Arm( mode );
+		Watch.Listen( window, handler => window.Resized += handler, mode, line => Log.Info( line ) );
 	}
-
-	private static Window? _watched;
 
 	/// <summary>The resize <see cref="Apply"/> waits for, the first after it.</summary>
 	public static readonly ResizeWatch Watch = new();
@@ -176,14 +168,32 @@ public static class Display
 
 	/// <summary>
 	/// The first resize after <see cref="Apply"/>, logged as the size the window was put at; a later one (a drag) is not. Where the window
-	/// already had the size asked for no resize comes, and the applied line's size is the one it keeps.
+	/// already had the size asked for no resize comes, and the applied line's size is the one it keeps; the watch then stays armed, so
+	/// the next resize of any cause (a drag, a restore) is logged as the display's. It is not disarmed at the next pump, as a window
+	/// manager may answer a full screen some pumps later.
 	/// </summary>
 	public sealed class ResizeWatch
 	{
 		private DisplayMode? _waiting;
+		private object? _heard;
 
 		/// <summary>The next resize is <paramref name="mode"/>'s.</summary>
 		public void Arm( DisplayMode mode ) => _waiting = mode;
+
+		/// <summary>
+		/// What <see cref="Apply"/> does after its line: hears <paramref name="source"/>'s resizes, subscribing through
+		/// <paramref name="subscribe"/> once a source, each awaited one's line to <paramref name="log"/>, then arms for <paramref name="mode"/>.
+		/// </summary>
+		public void Listen( object source, Action<Action<Point2>> subscribe, DisplayMode mode, Action<string> log )
+		{
+			if ( _heard != source )
+			{
+				_heard = source;
+				subscribe( size => { if ( Resized( size ) is { } line ) log( line ); } );
+			}
+
+			Arm( mode );
+		}
 
 		/// <summary>The line for a resize to <paramref name="size"/>, or null where none is awaited.</summary>
 		public string? Resized( Point2 size )

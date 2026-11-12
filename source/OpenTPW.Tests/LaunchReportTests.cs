@@ -89,6 +89,36 @@ public class LaunchReportTests
 		Assert.AreEqual( "Display: Windowed, window 1024x768 after its resize", watch.Resized( new Point2( 1024, 768 ) ) );
 	}
 
+	/// <summary>
+	/// <b><c>Display.Apply</c>'s wiring</b> (Q1200): <see cref="Display.ResizeWatch.Listen"/> subscribes once a window and arms on every
+	/// apply, so the first resize after each apply is logged and no other; <c>Apply</c> itself wants SDL, so that it calls
+	/// <c>Listen</c> and <c>AppliedLine</c> is read from its source.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> no subscription; a subscription each apply (two lines a resize); not armed.</remarks>
+	[TestMethod]
+	public void ApplyHearsTheWindowOnceAndArmsEachTime()
+	{
+		var watch = new Display.ResizeWatch();
+		var window = new object();
+		var handlers = new List<Action<Point2>>();
+		var lines = new List<string>();
+
+		void Resize( Point2 size ) { foreach ( var handler in handlers.ToArray() ) handler( size ); }
+
+		watch.Listen( window, handlers.Add, DisplayMode.FullScreen, lines.Add );
+		Resize( new Point2( 2560, 1440 ) );
+		Resize( new Point2( 1200, 800 ) );
+		watch.Listen( window, handlers.Add, DisplayMode.Windowed, lines.Add );
+		Resize( new Point2( 1024, 768 ) );
+
+		Assert.AreEqual( 1, handlers.Count, "one subscription a window" );
+		CollectionAssert.AreEqual( new[] { "Display: FullScreen, window 2560x1440 after its resize", "Display: Windowed, window 1024x768 after its resize" }, lines );
+
+		var apply = File.ReadAllText( Path.Join( RepoFiles.Root(), "source", "OpenTPW.Common", "Client", "Display.cs" ) );
+		StringAssert.Contains( apply, "Log.Info( AppliedLine( mode, fullScreen, window.Size ) );" );
+		StringAssert.Contains( apply, "Watch.Listen( window, handler => window.Resized += handler, mode, line => Log.Info( line ) );" );
+	}
+
 	[TestMethod]
 	public void TheDataLineCountsTheDiscsFilesAndNamesTheFirstMissing()
 	{

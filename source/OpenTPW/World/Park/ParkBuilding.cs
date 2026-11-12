@@ -634,8 +634,7 @@ public static class ParkBuilding
 		rides?.Unbind( thingId, item );
 		objects?.Remove( thingId );
 
-		// Its model's destruction destroys a coaster and every node's pylon with it (Coaster_Destroy, 0x00436fa0). A deviation in
-		// time: the original frees the object at the thing sweep, on the next eighth 31 ms tick (FUN_00516380); this is at once.
+		// Its model's destruction destroys a coaster and every node's pylon with it, at once (Coaster_Destroy, 0x00436fa0).
 		if ( item.TrackType == ItemDescriptionFile.CoasterTrack )
 			_ = TakeDownPylons?.Invoke( thingId ) ?? ParkCoasterPylons.Current?.TakeDown( thingId );
 
@@ -1419,8 +1418,14 @@ public static class ParkBuilding
 	/// <c>UI.ParkUpgradesWindow</c>, and the console's <c>carry &lt;item&gt; &lt;thing&gt;</c>). A thing that is itself
 	/// an add-on names the ride in its <c>+0x30</c> (<c>FUN_005276d0</c>, <c>0x005277b3</c>..<c>0x00527831</c>).
 	/// </summary>
-	public static string CarryFor( int catalogueId, int thingId )
+	public static string CarryFor( int catalogueId, int thingId ) => CarryFor( catalogueId, thingId, out _ );
+
+	/// <inheritdoc cref="CarryFor(int, int)"/>
+	/// <param name="held">Whether the item went into the hand.</param>
+	public static string CarryFor( int catalogueId, int thingId, out bool held )
 	{
+		held = false;
+
 		if ( Level.Current is not { ParkState: { } state, Catalogue: { } catalogue } )
 			return "carry: a park has to be loaded";
 
@@ -1431,7 +1436,7 @@ public static class ParkBuilding
 			? named.UpgradeParent
 			: thingId;
 
-		var answer = Carry( catalogueId, out var held );
+		var answer = Carry( catalogueId, out held );
 
 		if ( held && catalogue.TryGet( catalogueId, out var item ) && ParkTrackAddOn.Is( item ) )
 			CarryingFor = ride;

@@ -2765,8 +2765,6 @@ public static class DebugConsole
 				Reply( "hirescreen: opened" );
 				break;
 
-			// The per-object management window, by thing id rather than by pointing - the same reason
-			// `pick` and `click` take coordinates. `objects` lists what is standing in the park.
 			// The ride's Buy Upgrades list as ParkUpgradeList reads it (Q512), with no window: each row's kind, value, lettering and
 			// price. The window's own line is the same census.
 			case "upgrades":
@@ -2786,6 +2784,8 @@ public static class DebugConsole
 					ParkUpgradeList.For( upgraded, upgradeCatalogue, upgradeResearch, Level.InstantAction ), upgradeCatalogue, Level.InstantAction ) );
 				break;
 
+			// The per-object management window, by thing id rather than by pointing - the same reason
+			// `pick` and `click` take coordinates. `objects` lists what is standing in the park.
 			case "openthing":
 				if ( Level.Current is not { Kind: Level.Scene.Park } thingPark )
 				{

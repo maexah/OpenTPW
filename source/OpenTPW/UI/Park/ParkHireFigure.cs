@@ -16,17 +16,18 @@ namespace OpenTPW.UI;
 /// sprite kind by role from the table at <c>0x0049bb90</c> (<see cref="ParkStaffPool.SpriteKindFor"/>), the bank the
 /// costume, set 1, and the script <see cref="SpriteScript.StaffFigureEntry"/>, which shows the walk's eight frames facing 5
 /// with draw flag <c>0x40000</c>: no camera term, so direction 5, drawn as direction 3 reflected (<see cref="ParkGuestSprites.Picture"/>).
-/// It steps with the park's sprites, every second 31 ms tick on the interval the constructor writes (<c>0x004759c4</c>).
+/// It steps with the park's sprites, every second 31 ms tick, on the interval and the first due time the constructor writes
+/// (<c>0x004759c4</c>..<c>0x004759df</c>: due one interval after the make).
 /// </para>
 /// <para>
 /// <b>Where it stands</b> (<see cref="Place"/>): x = (left + (right − left) / 2 − <c>0x3f8</c>) / 1024 and y = (<c>0x300</c> −
-/// bottom + (bottom − top) / 4) / 768 in the screen's -1 to 1, the picture's origin on that point.
+/// bottom + (bottom − top) / 4) / 768 in the screen's -1 to 1.
 /// </para>
 /// <para>
-/// <b>Not decoded: its size.</b> <c>0x004755d0( handle, 8, 8.0f )</c> writes local 8, the sprite's scale, but how the draw
-/// sizes a sprite flagged <c>0x40000</c> (its arm at <c>0x00589ce4</c>) is not read. <b>A deviation, said here:</b> each picture
-/// pixel is drawn one pixel of the original's 1024 x 768 frame (two of the virtual screen's), and the size is counted
-/// (<c>STAFF_PORTRAIT_SIZE</c>) each time a figure is made.
+/// <b>Not decoded, so not drawn: its size and its anchor on that point.</b> <c>0x004755d0( handle, 8, 8.0f )</c> writes local 8,
+/// and the draw's <c>0x40000</c> arm (<c>0x00589ce4</c>) sizes the quad from it and lays its corners from the picture record
+/// (<c>FUN_005890e0</c>), not read through (<c>docs/QUEUE.md</c> Q1513). Rule 4: the figure is made, stepped and censused, and
+/// nothing is drawn; <c>STAFF_PORTRAIT_SIZE</c> is counted each time a figure is made.
 /// </para>
 /// </summary>
 internal sealed class ParkHireFigure : UiControl
@@ -37,16 +38,12 @@ internal sealed class ParkHireFigure : UiControl
 	/// <summary>The scale the figure's sprite is handed, local 8 (<c>0x004755d0( handle, 8, 8.0f )</c>): kept, not drawn by.</summary>
 	internal const float Scale = 8f;
 
-	/// <summary>Virtual-screen units a picture pixel is drawn across: one pixel of the original's 1024 x 768 frame (the deviation above).</summary>
-	internal const float UnitsPerPixel = 2f;
-
 	private readonly BaseFileSystem? _data;
 	private readonly string _theme;
 	private readonly ParkSpriteBanks? _banks;
 
 	private SpritePicture[] _pictures = [];
 	private SpriteBankFile? _bank;
-	private readonly Dictionary<int, Texture> _textures = [];
 
 	/// <param name="data">Where the sprite banks are read from; null where none is mounted, and nothing is drawn.</param>
 	/// <param name="theme">The park's theme, whose folder holds the entertainers.</param>
@@ -83,7 +80,8 @@ internal sealed class ParkHireFigure : UiControl
 	/// <c>FUN_0049ba00</c>: nothing with no candidate; a new figure where the candidate's role or costume is not the pair
 	/// the last was made for. Answers whether one was made.
 	/// </summary>
-	internal bool Show( ParkStaffPool.Candidate? candidate )
+	/// <param name="ticks">The game clock's ticks at the make (<see cref="GameClock.Ticks"/>): the new figure comes due one interval after.</param>
+	internal bool Show( ParkStaffPool.Candidate? candidate, int ticks )
 	{
 		if ( candidate is not { } person )
 			return false;
@@ -99,6 +97,7 @@ internal sealed class ParkHireFigure : UiControl
 		Costume = costume;
 		Sprite = new SpriteScript( SpriteScript.None, SpriteScript.None, spriteNumber: 1, frame: 0 );
 		Sprite.StartAt( SpriteScript.StaffFigureEntry );
+		Sprite.ScheduleFrom( (ticks & ~(ParkPeople.SpriteTickEvery - 1)) * ParkPeople.MillisecondsPerTick );
 		Made++;
 
 		Load();
@@ -192,20 +191,6 @@ internal sealed class ParkHireFigure : UiControl
 		return (1024f + (x * 1024f), 768f - (y * 768f));
 	}
 
-	/// <summary>
-	/// The picture's box on the virtual screen, its origin on <see cref="OnVirtualScreen"/>: reflected about the origin
-	/// (<c>docs/exe/park-engine.md</c>, "A reflected picture turns about its origin"), at <see cref="UnitsPerPixel"/>.
-	/// </summary>
-	internal static (float Left, float Top, float Width, float Height) Box( UiRect rect, SpritePicture picture, bool mirrored )
-	{
-		var (x, y) = OnVirtualScreen( rect );
-		var width = picture.Width * UnitsPerPixel;
-		var height = picture.Height * UnitsPerPixel;
-		var left = mirrored ? x - ((picture.Width - picture.OriginX) * UnitsPerPixel) : x - (picture.OriginX * UnitsPerPixel);
-
-		return (left, y - (picture.OriginY * UnitsPerPixel), width, height);
-	}
-
 	/// <summary>The screen's destroy: the figure freed and the pair set to -1 (<c>0x0049b7b4</c>).</summary>
 	internal void Free()
 	{
@@ -216,11 +201,6 @@ internal sealed class ParkHireFigure : UiControl
 		Sprite = null;
 		_bank = null;
 		_pictures = [];
-
-		foreach ( var texture in _textures.Values )
-			texture.Delete();
-
-		_textures.Clear();
 	}
 
 	/// <summary>What the figure is and shows: its pair, kind, bank, the program's place and the picture, for the log and the console.</summary>
@@ -238,35 +218,5 @@ internal sealed class ParkHireFigure : UiControl
 		return $"hire figure: role {Role} costume {Costume}, kind {Kind} bank {Bank} {BankName}, script {sprite.Script} pc {sprite.Pc} "
 			+ $"flags 0x{sprite.DrawFlags:x} set {sprite.Set} frame {sprite.Frame} facing {sprite.Facing} turns {sprite.Turns}, {showing}, "
 			+ $"at ({x:0.0000},{y:0.0000}) = virtual ({vx:0},{vy:0}), made {Made}";
-	}
-
-	protected override void OnDraw()
-	{
-		base.OnDraw();
-
-		if ( Showing() is not { } shown )
-			return;
-
-		if ( !_textures.TryGetValue( shown.Index, out var texture ) )
-			_textures[shown.Index] = texture = new Texture( shown.Picture.Rgba, shown.Picture.Width, shown.Picture.Height, TextureFlags.OwnPixels );
-
-		var (left, top, width, height) = Box( Rect, shown.Picture, shown.Mirrored );
-
-		// The virtual box through the portrait's own pixels, so the figure keeps to the box wherever the window puts it.
-		var box = Pixels;
-		var across = box.Width / Math.Max( Rect.Width, 1 );
-		var down = box.Height / Math.Max( Rect.Height, 1 );
-		var x = box.X + ((left - Rect.Left) * across);
-		var y = box.Y + ((top - Rect.Top) * down);
-		var w = width * across;
-		var h = height * down;
-
-		// The cursor's path for a picture read top row first (Cursor.OnRender); reflected by running u backwards.
-		var uvs = shown.Mirrored ? new Rectangle( 1f, 0f, -1f, 1f ) : new Rectangle( 0f, 0f, 1f, 1f );
-
-		Material.UI.Set( "Color", texture );
-
-		using ( _ = new Graphics.Scope( Screen.Size ) )
-			Graphics.Quad( new Rectangle( x, Screen.Height - y - h, w, h ), uvs, Material.UI );
 	}
 }

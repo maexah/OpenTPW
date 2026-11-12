@@ -11,6 +11,8 @@ namespace OpenTPW.Tests;
 /// sale's destructor destroys the coaster and every node's pylon (<c>Coaster_Destroy</c>, <c>0x00436fa0</c>), and a coaster put down
 /// is made with its station's two pylons and no track (<c>Coaster_Create</c>, <c>0x004368f0</c>). The pylons want a graphics device, so
 /// <see cref="ParkBuilding.StandPylons"/> and <see cref="ParkBuilding.TakeDownPylons"/> stand in for them and record what was asked.
+/// So <see cref="ParkCoasterPylons.StandBought"/>'s own gates and the instance <see cref="ParkCoasterPylons.TakeDown(int)"/>'s
+/// <c>Delete</c> of each model run in no test here: they are checked by the game run alone (the census and a frame of the spot).
 /// </summary>
 [TestClass]
 public class ParkCoasterSaleTests

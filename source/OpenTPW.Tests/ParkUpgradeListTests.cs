@@ -1,6 +1,8 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.IO;
+using OpenTPW.UI;
 using System.Linq;
+using System.Runtime.CompilerServices;
 
 namespace OpenTPW.Tests;
 
@@ -169,4 +171,185 @@ public class ParkUpgradeListTests
 		Assert.AreEqual( "AddOn 0 750; AddOn 0 900; Level 2 1500",
 			string.Join( "; ", rows.Select( row => $"{row.Kind} {row.Shown} {row.Price}" ) ), Shape( rows ) );
 	}
+}
+
+/// <summary>
+/// The list's window over the shipped park and the jungle's items (skipped without the game, <see cref="GameData"/>): a
+/// Dino Karts added with its station, its two add-ons researched at record prices of the test's own, and each choice put
+/// through the list's own <c>Activated</c>, the path a click takes.
+/// </summary>
+[TestClass]
+public class ParkUpgradesWindowTests
+{
+	private const int Kart = 1150;
+
+	private Level? _level;
+	private Point2 _screen;
+	private ParkState _state = null!;
+	private WindowStack _stack = null!;
+	private ParkItemCatalogue.Item _jump;
+	private ParkItemCatalogue.Item _tunnel;
+
+	[TestInitialize]
+	public void LoadThePark()
+	{
+		_level = Level.Current;
+		_screen = Screen.Size;
+
+		Screen.Size = new Point2( 2048, 1536 );
+		Log ??= new();
+		FileSystem = GameData.Required();
+		ParkBuildMode.Forget();
+		ParkTrackTool.Forget();
+		ParkBuilding.Drop();
+
+		using var stream = new MemoryStream( FileSystem.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
+		var world = new ParkWorld( new SaveReader( stream ).ReadFile() );
+		_state = new ParkState( world );
+		var catalogue = new ParkItemCatalogue( "jungle", FileSystem );
+
+		var addOns = catalogue.All.Where( item => item.AddOnUpgradesId == Kart ).OrderBy( item => item.BuildPrice ).ToArray();
+		Assert.AreEqual( 2, addOns.Length, "the Dino Karts' two add-ons" );
+		(_jump, _tunnel) = (addOns[0], addOns[1]);
+
+		// The jump's record price is its own build price; the tunnel's is 100 under its own, so the record's test can pass
+		// where the build price's does not.
+		var research = new ParkResearch(
+		[
+			new ParkWorld.ObjectControl( _jump.Id, true, 0, Price: _jump.BuildPrice ),
+			new ParkWorld.ObjectControl( _tunnel.Id, true, 0, Price: _tunnel.BuildPrice - 100 ),
+			new ParkWorld.ObjectControl( Kart, true, 1, Price: 0 )
+		], catalogue );
+
+		var level = (Level)RuntimeHelpers.GetUninitializedObject( typeof( Level ) );
+		typeof( Level ).GetProperty( nameof( Level.Park ) )!.SetValue( level, world );
+		typeof( Level ).GetProperty( nameof( Level.ParkState ) )!.SetValue( level, _state );
+		typeof( Level ).GetProperty( nameof( Level.Catalogue ) )!.SetValue( level, catalogue );
+		typeof( Level ).GetProperty( nameof( Level.Research ) )!.SetValue( level, research );
+		Level.Current = level;
+
+		_stack = new WindowStack();
+	}
+
+	[TestCleanup]
+	public void PutItAllBack()
+	{
+		ParkBuilding.Drop();
+		Entity.ApplyDeletions();
+		ParkBuildMode.Forget();
+		Level.Current = _level!;
+		Screen.Size = _screen;
+	}
+
+	/// <summary>
+	/// <b>A dearer add-on closes the list and leaves the ride window (<c>0x004ae4f9</c>); one within the balance goes into the
+	/// hand and closes both; a level's order the bank refuses closes the list alone.</b> The jump at its price less one, at
+	/// its price, and level 2 at its upgrade cost exactly (the order wants the balance strictly above it).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the dearer add-on leaves the list up (the old rule); a carry leaves the ride window open.</remarks>
+	[TestMethod]
+	public void EachChoiceClosesWhatTheOriginalsCloses()
+	{
+		var kart = Add( Kart, 30, 24 );
+
+		var (ride, list) = Open( kart );
+		_state.SetBalance( _jump.BuildPrice - 1 );
+		Choose( list, _jump.Id );
+		Assert.IsFalse( Up( list ), "a dearer add-on closes the list" );
+		Assert.IsTrue( _stack.Windows.Contains( ride ), "and leaves the ride window" );
+		Assert.AreEqual( 0, ParkBuilding.Carrying, "with nothing in the hand" );
+		_stack.Close( ride );
+
+		(ride, list) = Open( kart );
+		_state.SetBalance( _jump.BuildPrice );
+		Choose( list, _jump.Id );
+		Assert.IsFalse( Up( list ), "a carry closes the list" );
+		Assert.IsFalse( _stack.Windows.Contains( ride ), "and the ride window" );
+		Assert.AreEqual( _jump.Id, ParkBuilding.Carrying, "the jump in the hand" );
+		Assert.AreEqual( kart, ParkBuilding.CarryingFor, "for the karts" );
+		ParkBuilding.Drop();
+
+		(ride, list) = Open( kart );
+		var levelTwo = Level.Current!.Catalogue!.TryGet( Kart, out var karts ) ? karts.UpgradeCostAt( 1 ) : -1;
+		_state.SetBalance( levelTwo );
+		Choose( list, -1 );
+		Assert.IsFalse( Up( list ), "a level the bank refuses closes the list" );
+		Assert.IsTrue( _stack.Windows.Contains( ride ), "and leaves the ride window" );
+	}
+
+	/// <summary>
+	/// <b>An add-on whose record price is met and whose build price is not (the carry's own test, a deviation) is answered as a
+	/// dearer one:</b> the list closes, the ride window stays, the hand stays empty.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the refused carry closes the ride window as a held one does; it leaves the list up.</remarks>
+	[TestMethod]
+	public void ACarryTheBuildPriceRefusesIsAnsweredAsADearerAddOn()
+	{
+		var kart = Add( Kart, 30, 24 );
+		var (ride, list) = Open( kart );
+
+		_state.SetBalance( _tunnel.BuildPrice - 50 );
+		Assert.AreEqual( ParkUpgradeList.Outcome.Carry, ParkUpgradeList.Choose( _tunnel.Id, _state.Objects.First( o => o.ThingId == kart ),
+			Level.Current!.Catalogue!, Level.Current.Research!, _state.Balance ), "the record's price is met" );
+
+		Choose( list, _tunnel.Id );
+		Assert.AreEqual( 0, ParkBuilding.Carrying, "the build price is not" );
+		Assert.IsFalse( Up( list ), "the list closes" );
+		Assert.IsTrue( _stack.Windows.Contains( ride ), "the ride window stays" );
+	}
+
+	/// <summary>
+	/// <b>A second click on <c>b_upgrade</c> while the list stands opens none (<c>0x004ae579</c>); once it is closed the next
+	/// opens one.</b> And the list picks its first row as it fills (<c>0x0066403b</c>): in the stock park's Instant Action the
+	/// one message row, -7890.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> no guard (two lists); the guard never let go (none after the close); no first-row pick.</remarks>
+	[TestMethod]
+	public void OneListAtATimeWithItsFirstRowPicked()
+	{
+		var kart = Add( Kart, 30, 24 );
+		var ride = new ParkObjectWindow( _stack, kart );
+		_stack.Open( ride );
+		var upgrade = Find( ride.Root, 0x3e35 );
+
+		upgrade.Clicked!();
+		upgrade.Clicked!();
+		Assert.AreEqual( 1, Lists().Length, "one list" );
+
+		var list = (UiList)Find( Lists()[0].Root, 0x1f4d );
+		Assert.AreEqual( ParkUpgradeList.MessageValue, list.Selected, "the first row picked" );
+
+		_stack.Close( Lists()[0] );
+		upgrade.Clicked!();
+		Assert.AreEqual( 1, Lists().Length, "a list again once the first is closed" );
+	}
+
+	private ParkUpgradesWindow[] Lists() => [.. _stack.Windows.OfType<ParkUpgradesWindow>()];
+
+	private (ParkObjectWindow Ride, ParkUpgradesWindow List) Open( int thing )
+	{
+		var ride = new ParkObjectWindow( _stack, thing );
+		_stack.Open( ride );
+		Find( ride.Root, 0x3e35 ).Clicked!();
+		Assert.AreEqual( 1, Lists().Length, "the list open" );
+		return (ride, Lists()[0]);
+	}
+
+	private bool Up( ParkUpgradesWindow list ) => _stack.Windows.Contains( list );
+
+	private static void Choose( ParkUpgradesWindow window, int value ) => ((UiList)Find( window.Root, 0x1f4d )).Activated!( value );
+
+	private int Add( int item, int x, int y )
+	{
+		var thing = new ParkWorld.CatalogueObject( _state.NextThingId(), item, x << 8, y << 8, 0 );
+		_state.AddObject( thing );
+		ParkTrackPieces.LayStation( _state, ItemDescriptionFile.CarTrack, x, y, 0 );
+		return thing.ThingId;
+	}
+
+	private static UiControl Find( UiControl root, int id )
+		=> FindOrNull( root, id ) ?? throw new AssertFailedException( $"no control 0x{id:x}" );
+
+	private static UiControl? FindOrNull( UiControl root, int id )
+		=> root.Id == id ? root : root.Children.Select( child => FindOrNull( child, id ) ).FirstOrDefault( found => found != null );
 }

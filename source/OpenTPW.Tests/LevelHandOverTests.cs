@@ -112,7 +112,8 @@ public class LevelHandOverTests
 
 	/// <summary>
 	/// <b>A park read in part is not written and the player is told</b> (Q1200): <see cref="Level.WritePark"/> over a file whose body
-	/// stops halfway answers null, writes nothing, and leaves PARK NOT SAVED waiting in the refusal's own words, not the folder's.
+	/// stops halfway answers null, writes nothing, and leaves PARK NOT SAVED waiting in the refusal's own words, not the folder's;
+	/// Quit Game's question over it says beforehand that it is not saved.
 	/// </summary>
 	[TestMethod]
 	public void AParkReadInPartIsNotWrittenAndSaysParkNotSaved()
@@ -147,6 +148,24 @@ public class LevelHandOverTests
 			Assert.IsFalse( File.Exists( Path.Combine( jungle, "Cut.TPWS" ) ) );
 			Assert.IsTrue( SaveTrouble.Pending, "the player is told" );
 			Assert.AreEqual( $"PARK NOT SAVED\n\n{SaveTrouble.ParkRefusedWhy}", SaveTrouble.Take() );
+
+			// Quit Game's question, asked over this park running, says so beforehand; over the park read whole it does not.
+			var running = (Level)System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject( typeof( Level ) );
+			var was = Level.Current;
+
+			try
+			{
+				typeof( Level ).GetProperty( nameof( Level.Park ) )!.SetValue( running, cut );
+				Level.Current = running;
+				Assert.AreEqual( $"QUIT GAME\n{SaveTrouble.QuitParkReadInPart}", SaveTrouble.QuitQuestion( "QUIT GAME" ) );
+
+				typeof( Level ).GetProperty( nameof( Level.Park ) )!.SetValue( running, shipped );
+				Assert.AreEqual( "QUIT GAME", SaveTrouble.QuitQuestion( "QUIT GAME" ) );
+			}
+			finally
+			{
+				Level.Current = was!;
+			}
 		}
 		finally
 		{

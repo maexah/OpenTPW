@@ -19,7 +19,8 @@ namespace OpenTPW;
 /// one is made) is told once to a visit, and a visit is one scene built (<see cref="NewVisit"/>), so a folder
 /// that stays shut does not nag. The autosave at leaving is told in the lobby the game goes on to, so it never holds
 /// the exit. Quit Game cannot tell afterwards, as the window is gone: its question says so beforehand
-/// (<see cref="QuitQuestion"/>). The window's own close tells nobody; the log says.
+/// (<see cref="QuitQuestion(string)"/>), for a folder that cannot be written and for a park whose file was read in part. The
+/// window's own close tells nobody, and neither does Quit Game a refusal it cannot know beforehand; the log says.
 /// </para>
 /// <para>
 /// A backup is told as a message box too (Q998, Alexah's, 2026-11-02), in a player's words and with no path: the log names
@@ -82,7 +83,8 @@ internal static class SaveTrouble
 	/// <summary>
 	/// The park file's writer refused the park (<c>ParkFileWriter</c>'s <see cref="InvalidOperationException"/>): the file it was
 	/// loaded from was read in part, or what is running cannot be put into it. Waits as a failure does, PARK outranking the rest,
-	/// with words of its own, as the folder is not at fault. <b>A deviation</b> (Q1200, <c>AGENTS.md</c> rule 11): the original's
+	/// with words of its own. Where a folder failure waits as well (a player's file written first, into a folder that is shut),
+	/// both sentences are kept, the refusal's first. <b>A deviation</b> (Q1200, <c>AGENTS.md</c> rule 11): the original's
 	/// writer has no such refusal, so it has no word for it; the log says which refusal it was.
 	/// </summary>
 	internal static void ParkRefused() => Lost( "PARK", ParkRefusedWhy );
@@ -91,8 +93,11 @@ internal static class SaveTrouble
 	{
 		if ( _what == null || what == "PARK" )
 		{
+			// Two faults at once, the folder's and the refusal's: neither hides the other, and the folder's is said once.
+			var folderToo = _what != null && _why != why && (_why.EndsWith( FolderShut ) || why == FolderShut);
+			var refusal = why == FolderShut ? _why : why;
+			_why = folderToo && refusal != FolderShut ? $"{(refusal.EndsWith( FolderShut ) ? refusal[..^FolderShut.Length].TrimEnd() : refusal)} {FolderShut}" : why;
 			_what = what;
-			_why = why;
 		}
 	}
 
@@ -199,7 +204,19 @@ internal static class SaveTrouble
 			? $"{BackedUpTitle( what )}\n\nThe game didn't read all of your old progress, so it kept a copy before writing over it."
 			: $"{BackedUpTitle( what )}\n\nThe game didn't read all of your old options, so it kept a copy before writing over it.";
 
-	/// <summary>Quit Game's question, with a line more where nothing can be saved.</summary>
-	internal static string QuitQuestion( string question )
-		=> SaveFolder.CanWrite() ? question : $"{question}\nThe save folder cannot be written, so nothing is saved.";
+	/// <summary>
+	/// Quit Game's question, with a line more where nothing can be saved, or where the running park's file was read in part, the
+	/// first refusal <c>ParkFileWriter.Body</c> makes and the one known beforehand (<see cref="ParkRefused"/>).
+	/// </summary>
+	internal static string QuitQuestion( string question ) => QuitQuestion( question, Level.Current?.Park?.Save?.Problem != null );
+
+	/// <inheritdoc cref="QuitQuestion(string)"/>
+	/// <param name="parkReadInPart">Whether the park running was loaded from a file read in part.</param>
+	internal static string QuitQuestion( string question, bool parkReadInPart )
+		=> !SaveFolder.CanWrite() ? $"{question}\nThe save folder cannot be written, so nothing is saved."
+			: parkReadInPart ? $"{question}\n{QuitParkReadInPart}"
+			: question;
+
+	/// <summary>Quit Game's line for a park whose file was read in part.</summary>
+	internal const string QuitParkReadInPart = "The game didn't read all of this park's file, so the park is not saved.";
 }

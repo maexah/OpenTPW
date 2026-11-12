@@ -105,7 +105,34 @@ public class SaveTroubleTests
 		SaveFolder.WritePark( 0, "Test", "jungle", "jungle", [1] );
 		SaveTrouble.ParkRefused();
 		SaveTrouble.Asked();
-		Assert.AreEqual( $"PARK NOT SAVED\n\n{SaveTrouble.ParkRefusedWhy}", SaveTrouble.Take(), "the later park's words are told" );
+		Assert.AreEqual( $"PARK NOT SAVED\n\n{SaveTrouble.ParkRefusedWhy} The save folder cannot be written.", SaveTrouble.Take(),
+			"the later park's words are told, and the folder's still with them" );
+	}
+
+	/// <summary>
+	/// <b>A refusal over a folder failure keeps both sentences</b> (the instance <c>WritePark</c> writes the player's file first): the
+	/// player's file lost to a shut folder, then the park refused, says PARK NOT SAVED with the refusal's words and the folder's.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the refusal's words alone (the folder hidden); the folder's sentence said twice.</remarks>
+	[TestMethod]
+	public void ARefusalOverAShutFolderSaysBoth()
+	{
+		SaveTrouble.Failed( "PLAYER", new IOException( "shut" ) );
+		SaveTrouble.ParkRefused();
+		SaveTrouble.Asked();
+
+		Assert.AreEqual( $"PARK NOT SAVED\n\n{SaveTrouble.ParkRefusedWhy} The save folder cannot be written.", SaveTrouble.Take() );
+
+		// Both, then the folder's failure again before the box: the folder said once.
+		SaveTrouble.Failed( "PLAYER", new IOException( "shut" ) );
+		SaveTrouble.ParkRefused();
+		SaveTrouble.Failed( "PARK", new IOException( "shut" ) );
+		SaveTrouble.Asked();
+		Assert.AreEqual( $"PARK NOT SAVED\n\n{SaveTrouble.ParkRefusedWhy} The save folder cannot be written.", SaveTrouble.Take() );
+
+		SaveTrouble.ParkRefused();
+		SaveTrouble.Asked();
+		Assert.AreEqual( $"PARK NOT SAVED\n\n{SaveTrouble.ParkRefusedWhy}", SaveTrouble.Take(), "alone, the refusal's words alone" );
 	}
 
 	/// <summary>The notice's name is handed out with its text, once, and a failure carries none.</summary>
@@ -256,6 +283,23 @@ public class SaveTroubleTests
 
 		Assert.IsFalse( SaveFolder.CanWrite() );
 		Assert.AreEqual( Question + "\nThe save folder cannot be written, so nothing is saved.", SaveTrouble.QuitQuestion( Question ) );
+		Assert.AreEqual( Question + "\nThe save folder cannot be written, so nothing is saved.", SaveTrouble.QuitQuestion( Question, true ),
+			"the folder's line covers the park too" );
+	}
+
+	/// <summary>
+	/// <b>Quit Game from a park whose file was read in part says the park is not saved</b> (Q1200): its autosave is refused after the
+	/// window is gone, so the question says it beforehand. A park read whole asks the plain question.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the park's line left out (the old question).</remarks>
+	[TestMethod]
+	public void AParkReadInPartIsToldBeforeQuitting()
+	{
+		const string Question = "QUIT GAME\nAre you sure?";
+
+		Assert.IsTrue( SaveFolder.CanWrite() );
+		Assert.AreEqual( Question + "\nThe game didn't read all of this park's file, so the park is not saved.", SaveTrouble.QuitQuestion( Question, true ) );
+		Assert.AreEqual( Question, SaveTrouble.QuitQuestion( Question, false ) );
 	}
 
 	private static string Profile( string root ) => Path.Combine( root, "save", "users", "1Test", "gms.dat" );

@@ -58,6 +58,8 @@ internal sealed class ParkUpgradesWindow : UiWindow
 			ColumnAligns = [TextAlign.Start, TextAlign.End],
 			RowHeight = UiList.RowHeightOf( RowFont ),
 			SelectsUnderPointer = true,
+			// Every row is added through 0x0066403b, which picks the first; the handler has no 0x401 arm, so the highlight alone.
+			PicksFirstRow = true,
 			Activated = Chose
 		} );
 
@@ -91,11 +93,11 @@ internal sealed class ParkUpgradesWindow : UiWindow
 
 		foreach ( var row in rows )
 		{
-			// The message is split into a row a line (0x0067c430 on 0x007558f0, 0x004ae3fa). What it splits on is not read;
-			// here it is the text's own line breaks, which UITEXT 27 has one of.
+			// The message is split into a row a line (0x004ae3fa): wcstok (0x0067c430) on L"\n" (0x007558f0), which skips
+			// empty tokens. UITEXT 27 has one line break.
 			if ( row.Kind == ParkUpgradeList.Kind.Message )
 			{
-				foreach ( var line in Lettered( row, catalogue ).Split( '\n' ) )
+				foreach ( var line in Lettered( row, catalogue ).Split( '\n', StringSplitOptions.RemoveEmptyEntries ) )
 					_list.Add( new UiList.Row( row.Value, line, 0, Values: [""] ) );
 
 				continue;
@@ -130,9 +132,15 @@ internal sealed class ParkUpgradesWindow : UiWindow
 	/// A row chosen (<c>0x004ae430</c>, message <c>0x400</c>, then <c>FUN_004af480</c>): see <see cref="ParkUpgradeList.Choose"/>.
 	/// An add-on goes into the hand for this ride (<c>0x0046c5a0( 4, item )</c>, <c>0x005276d0( 1 )</c>) and the ride window
 	/// closes (<c>0x0048cf70</c>), the list with it; a dearer one sounds <c>cat_ui</c> <c>0x1D</c> (<c>0x00486ae0</c>) and the
-	/// list stays. A level's order and the cancel close the list; what they do to the ride (<c>FUN_004e0050( 1 )</c> and
-	/// <c>( 0 )</c>) is not read through, so both are counted.
+	/// list closes (<c>0x004ae4f9</c>), the ride window staying. A level's order and the cancel close the list; what they do to
+	/// the ride (<c>FUN_004e0050( 1 )</c> and <c>( 0 )</c>) is not read through, so both are counted.
 	/// </summary>
+	/// <remarks>
+	/// <b>A deviation:</b> the carry asks the bank for the item's own build price too (<see cref="ParkBuilding.CarryFor"/>), a
+	/// test <c>FUN_004af480</c> does not make (its only money test is the control record's price). Where the record's price
+	/// is met and the build price is not, nothing goes into the hand: that refusal is answered as the dearer add-on's is, the
+	/// sound and the list closed, the ride window staying.
+	/// </remarks>
 	private void Chose( int value )
 	{
 		if ( Level.Current is not { ParkState: { } state, Catalogue: { } catalogue, Research: { } research }
@@ -162,13 +170,19 @@ internal sealed class ParkUpgradesWindow : UiWindow
 				return;
 
 			case ParkUpgradeList.Outcome.TooDear:
-				Log.Info( $"Upgrades list: cat_ui 0x{ParkBuyScreen.RefusedSound:x} for the refusal, "
-					+ $"{(UiSounds.Interface( ParkBuyScreen.RefusedSound ) ? "a voice" : "no voice")}" );
+				Refused();
 				return;
 
 			case ParkUpgradeList.Outcome.Carry:
-				// ParkBuilding.CarryFor also asks the item's own build price of the bank, as every carry does.
-				Log.Info( $"Upgrades list: {ParkBuilding.CarryFor( value, ThingId )}" );
+				// DEVIATION (see remarks): CarryFor also asks the item's own build price of the bank, as every carry does.
+				Log.Info( $"Upgrades list: {ParkBuilding.CarryFor( value, ThingId, out var held )}" );
+
+				if ( !held )
+				{
+					Refused();
+					return;
+				}
+
 				Stack.Close( this );
 
 				if ( _rideWindow != null )
@@ -176,5 +190,13 @@ internal sealed class ParkUpgradesWindow : UiWindow
 
 				return;
 		}
+	}
+
+	/// <summary>The refusal: <c>cat_ui</c> <c>0x1D</c>, then the list closes (<c>0x004ae4f9</c>, message 4 to it).</summary>
+	private void Refused()
+	{
+		Log.Info( $"Upgrades list: cat_ui 0x{ParkBuyScreen.RefusedSound:x} for the refusal, "
+			+ $"{(UiSounds.Interface( ParkBuyScreen.RefusedSound ) ? "a voice" : "no voice")}" );
+		Stack.Close( this );
 	}
 }

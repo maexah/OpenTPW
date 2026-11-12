@@ -512,6 +512,48 @@ public class ParkCoasterPylonsTests
 		Assert.AreEqual( there[0].Loft, east[0].Loft, 1e-4f );
 	}
 
+	/// <summary>
+	/// <b>A coaster bought turned stands its station's two pylons turned with it</b> (<c>ParkCoasterHeights.SetUpType</c> stands the
+	/// station by <c>placed.Angle</c>): put at (29,34), the pair (28,35) and (33,35) at 0 is (30,35) and (30,30) at 90, (30,33) and
+	/// (25,33) at 180, (28,33) and (28,38) at 270 - each a quarter turn of the last about the cell it was put on - and each pylon's
+	/// yaw a quarter turn on. That the original turns them about that cell is ours (<c>ParkObjects.ModelOriginFor</c>), not
+	/// measured against its turned purchase.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the angle ignored (the same pair at every turn); the turn taken the other way.</remarks>
+	[TestMethod]
+	public void ACoasterBoughtTurnedStandsItsStationsPylonsTurned()
+	{
+		var data = GameData.Required();
+		var catalogue = new ParkItemCatalogue( "jungle", data );
+		var field = JungleGround( data );
+		using var stream = new MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
+		var save = new ParkWorld( new SaveReader( stream ).ReadFile() );
+		Assert.IsTrue( catalogue.TryGet( 1180, out var gloom ) );
+
+		var owed = new Dictionary<int, (int, int)[]>
+		{
+			[0] = [(28, 35), (33, 35)],
+			[90] = [(30, 35), (30, 30)],
+			[180] = [(30, 33), (25, 33)],
+			[270] = [(28, 33), (28, 38)]
+		};
+
+		foreach ( var (angle, cells) in owed )
+		{
+			var placed = ParkBuilding.Constructed( gloom, 300, 29, 34, angle, 0, 0, default );
+			var places = ParkCoasterPylons.PlacesFor( save, placed, gloom, field, data, out _ )!;
+
+			CollectionAssert.AreEqual( new[] { "station 1", "station 3" }, places.Select( place => place.Which ).ToArray(), $"at {angle}" );
+			CollectionAssert.AreEqual( cells, places.Select( place => (place.CellX, place.CellY) ).ToArray(), $"at {angle}" );
+
+			// A quarter turn of the offset from (29,34): (dx, dy) to (dy, -dx).
+			if ( angle > 0 )
+				CollectionAssert.AreEqual( owed[angle - 90].Select( cell => (29 + (cell.Item2 - 34), 34 - (cell.Item1 - 29)) ).ToArray(), cells, $"{angle} a quarter turn on" );
+
+			Assert.AreEqual( MathF.PI / 2f * (angle / 90 + 1) % (2f * MathF.PI), places[0].Yaw % (2f * MathF.PI), 1e-3f, $"the yaw at {angle}" );
+		}
+	}
+
 	/// <summary>A sale takes down the sold coaster's pylons, each once, and leaves every other coaster's standing.</summary>
 	/// <remarks><b>Mutations:</b> another thing's pylons taken; one of its own left; the count of the list left answered.</remarks>
 	[TestMethod]

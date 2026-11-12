@@ -1262,15 +1262,22 @@ filed the items that cite it.
   lane: Q419 built the figure in a cloud container, which cannot photograph the original. On the stock park, the cleaners'
   and the mechanics' tabs, ours' portrait beside the original's (`q412/orig/a-button.png`), a frame a tab, and ours'
   `hirefigure` census beside each (`docs/TOOLING.md`, "The hire screen's figure"). Predict first: the same person, facing
-  the same way (direction 5, drawn as 3 reflected), feet a quarter of the box up, the walk's eight frames; ours is drawn at a
-  stand-in size (Q1513), so measure the original's figure's height in pixels for it. Settle too whether the staff window's
+  the same way (direction 5, drawn as 3 reflected), feet a quarter of the box up, the walk's eight frames; ours draws
+  nothing until Q1513 decodes the size (the portrait shows its frame alone), so measure the original's figure's height and
+  where its feet sit in pixels for it. Settle too whether the staff window's
   preview (`STAFF_WINDOW_PREVIEW`, Q31b) shares this decode.
 - [ ] **Q1513. The size the hire screen's figure is drawn (split from Q419).** Filed by Q419, 2026-11-12. The figure is a
   sprite flagged `0x40000` and handed scale 8.0 (local 8, `0x004755d0( handle, 8, 8.0f )`); how `Sprite_BuildQuad` sizes
   such a sprite (its `0x40000` arm, `0x00589ce4`) is not decoded, nor what `0x10000` and `0x1000` in its flags `0x51000` do
-  (`docs/exe/hud.md`, "The candidate's figure in the portrait `0x2484`"). Here each picture pixel is drawn one of the
-  1024 x 768 frame's, counted as `STAFF_PORTRAIT_SIZE` (`ParkHireFigure.cs`). Decode it in Ghidra, then draw it so and take
-  the count out. Confirm: beside the original (Q1512's frames).
+  (`docs/exe/hud.md`, "The candidate's figure in the portrait `0x2484`"), nor where the picture sits on its point: the same
+  arm copies the point and lays the corners through `FUN_005890e0( verts, size x, size y )` from the picture record's
+  `+0x0c`..`+0x16`, the size local 8 times `[0x00702008]` (0.05), one axis also times `[0x008bcbcc]` (a lead: 8.0 x 0.05 =
+  0.4 screen units, not proven). Rule 4: ours makes, steps and censuses the figure and draws nothing, counting
+  `STAFF_PORTRAIT_SIZE` at each make (`ParkHireFigure.cs`). The stand-in draw it had (one picture pixel to one of the
+  1024 x 768 frame's, the origin on the point, mirrored by running u backwards through `Graphics.Quad`) is in git history
+  before the run 22 review's fix group Q; when the draw is built, make its textures with no `TextureFlags.OwnPixels` (the
+  park's people from the same banks use none, so `graphics faithful` cuts them alike). Decode it in Ghidra, then draw it so
+  and take the count out. Confirm: beside the original (Q1512's frames).
 
 - [ ] **Q455. A click on the tab already down lifts it.** From the week-end audit (D4, `VERIFY-15a.md` Q364 1).
   `WindowStack` flips the radio button up and `Put` returns before setting it down; the original's group with style
@@ -1427,9 +1434,13 @@ filed the items that cite it.
 - [ ] **Q1516. The Buy Upgrades list's layout, beside the original (from Q512).** Ours (`UI.ParkUpgradesWindow`) takes the
   message box's frame (`w_dialog`) and lays the title, the list and the close button inside it, a deviation said at the
   site: stream `0x00755750`'s rectangles and meshes (title `0x1f4e`, list `0x1f4d`, the `-2` close) were not read
-  (`lib/uistream.py 755750` needs `testme.exe`). Read them and the price cell's skin, the separator at `0x007558f0` that
-  splits the message into rows (ours splits at the text's own line breaks), and whether the list pauses or shuts the park
-  out (ours does neither); then lay it as the stream does. Confirm in Full Simulation, both games: the Belly Bounce's list at
+  (`lib/uistream.py 755750` needs `testme.exe`). Read them and the price cell's skin (the list is given two cell callbacks
+  at open, `0x006639cb( 0x4ae700, 0x4ae7d0 )`, `0x004ae695`), whether the list pauses or shuts the park out (ours does
+  neither), and what the ride window's `+0x20` is that the open disables (`0x0048d860( 0 )` at `0x004ae5aa`, `( 1 )` at
+  `0x004ae54c`; the original's photograph `q780/orig/O1/6-upgrades.png` shows no verb greyed); then lay it as the stream
+  does. Also: ours logs "Could not load texture" for `b_upgradeg.wct` and `b_callmechg.wct`, which `data/ui.wad` does not
+  ship (it names 20 `*g.wct`, `b_moveg` among them, and neither of these; no file under `data/` names them): find who asks
+  for them and stop asking. Confirm in Full Simulation, both games: the Belly Bounce's list at
   level 0 (`Upgrade to level 2`, 400), the Dino Karts' with its two add-ons researched (Q1041's file: Jump 750, Tunnel 900,
   level 2 1500), a click on an add-on within the balance (the hand holds it, the ride window gone) and one dearer (the sound),
   a photograph of each beside the original's. `lib/upgradesrun.py` drives ours off-screen; an add-on row needs a park file
@@ -3196,7 +3207,7 @@ Back to the advisor in a park; saving a fresh park is Q783, in section A. Also l
   `guests` census at the crossing, then find what the walk asks of the crosswalk cells there.
   - **Note (play test 2026-10-31):** still seen in a short look at Halloween World; not the priority. Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
 
-- [ ] **Q1190. Counted, not built, and owned by no item: the interface (21 names, from Q243).** Filed by Q243's census,
+- [ ] **Q1190. Counted, not built, and owned by no item: the interface (19 names, from Q243).** Filed by Q243's census,
   2026-11-12: `python3 tools/gap_census.py` found each name below counted by `Unimplemented.Report` and named by no other item
   here. A session takes one name or a few: read the site and the `docs/exe/` page given, classify the path (`AGENTS.md`
   rule 3; only a site's own "dead by" words were read, given below, and the rest are not classified), then build it or

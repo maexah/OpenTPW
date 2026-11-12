@@ -52,14 +52,13 @@ public class ParkHireFigureTests
 	}
 
 	/// <summary>
-	/// <b>Where it stands</b>: for the portrait (484, 179)-(748, 443), x = (484 + 132 − 1016) / 1024 = −0.390625 and
-	/// y = (768 − 443 + 66) / 768, on the virtual screen (624, 377); a 41 x 52 picture with its origin (21, 45) drawn two
-	/// virtual units a pixel from (582, 287), and reflected from (584, 287).
+	/// <b>The point it is placed on</b>: for the portrait (484, 179)-(748, 443), x = (484 + 132 − 1016) / 1024 = −0.390625 and
+	/// y = (768 − 443 + 66) / 768, on the virtual screen (624, 377). Where the picture sits on that point, and its size, are not
+	/// decoded (Q1513), so nothing is drawn.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> the centre taken without the 8 (<c>0x3f8</c> as 1024); the foot at the bottom (no quarter);
-	/// the reflection about the picture's middle.</remarks>
+	/// <remarks><b>Mutations:</b> the centre taken without the 8 (<c>0x3f8</c> as 1024); the foot at the bottom (no quarter).</remarks>
 	[TestMethod]
-	public void TheFigureStandsWhereTheOriginalsPlacesIt()
+	public void TheFiguresPointIsTheOriginals()
 	{
 		var (x, y) = UI.ParkHireFigure.Place( Portrait );
 
@@ -70,11 +69,6 @@ public class ParkHireFigureTests
 
 		Assert.AreEqual( 624f, vx, 1e-3f );
 		Assert.AreEqual( 377f, vy, 1e-3f );
-
-		var picture = new SpritePicture( 41, 52, 21, 45, new byte[41 * 52 * 4] );
-
-		Assert.AreEqual( (582f, 287f, 82f, 104f), UI.ParkHireFigure.Box( Portrait, picture, mirrored: false ) );
-		Assert.AreEqual( (584f, 287f, 82f, 104f), UI.ParkHireFigure.Box( Portrait, picture, mirrored: true ) );
 	}
 
 	/// <summary>
@@ -89,27 +83,27 @@ public class ParkHireFigureTests
 	{
 		var figure = new UI.ParkHireFigure( null, "jungle", null ) { Rect = Portrait };
 
-		Assert.IsFalse( figure.Show( null ) );
+		Assert.IsFalse( figure.Show( null, 0 ) );
 		Assert.AreEqual( UI.ParkHireFigure.None, figure.Role );
 		Assert.AreEqual( 0, figure.Made );
 
-		Assert.IsTrue( figure.Show( Candidate( 1, kind: 1, costume: 0 ) ) );
+		Assert.IsTrue( figure.Show( Candidate( 1, kind: 1, costume: 0 ), 0 ) );
 		var first = figure.Sprite;
 
 		first!.Step( 100 );
 		first.Step( 200 );
 
-		Assert.IsFalse( figure.Show( Candidate( 2, kind: 1, costume: 0 ) ), "another mechanic in the same costume" );
+		Assert.IsFalse( figure.Show( Candidate( 2, kind: 1, costume: 0 ), 0 ), "another mechanic in the same costume" );
 		Assert.AreSame( first, figure.Sprite );
 		Assert.AreEqual( 1, figure.Sprite!.Frame, "the walk goes on" );
 
-		Assert.IsFalse( figure.Show( null ), "no candidate" );
+		Assert.IsFalse( figure.Show( null, 0 ), "no candidate" );
 		Assert.AreSame( first, figure.Sprite );
 
-		Assert.IsTrue( figure.Show( Candidate( 3, kind: 1, costume: 1 ) ), "another costume" );
+		Assert.IsTrue( figure.Show( Candidate( 3, kind: 1, costume: 1 ), 0 ), "another costume" );
 		Assert.AreEqual( (1, 1), (figure.Role, figure.Costume) );
 
-		Assert.IsTrue( figure.Show( Candidate( 4, kind: 3, costume: 1 ) ), "another role" );
+		Assert.IsTrue( figure.Show( Candidate( 4, kind: 3, costume: 1 ), 0 ), "another role" );
 		Assert.AreEqual( (3, 1, 7), (figure.Role, figure.Costume, figure.Kind) );
 		Assert.AreEqual( 3, figure.Made );
 
@@ -117,20 +111,22 @@ public class ParkHireFigureTests
 
 		Assert.AreEqual( (UI.ParkHireFigure.None, UI.ParkHireFigure.None), (figure.Role, figure.Costume) );
 		Assert.IsNull( figure.Sprite );
-		Assert.IsTrue( figure.Show( Candidate( 4, kind: 3, costume: 1 ) ), "made again after the destroy" );
+		Assert.IsTrue( figure.Show( Candidate( 4, kind: 3, costume: 1 ), 0 ), "made again after the destroy" );
 	}
 
 	/// <summary>
 	/// <b>It steps with the park's sprites</b>: on every second 31 ms tick, the interval the constructor writes (62) held
-	/// strictly, so a new frame each fourth tick, as a person on the default interval.
+	/// strictly, so a new frame each fourth tick, as a person on the default interval; and its first is due one interval after the
+	/// make (<c>0x004759df</c>), so a figure made at tick 0 shows its first frame at tick 4, not 2, and one made at tick 5 at tick 8.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> stepped on every call; on the tick itself, not the newest sprite tick; at 62 ms a tick.</remarks>
+	/// <remarks><b>Mutations:</b> stepped on every call; on the tick itself, not the newest sprite tick; at 62 ms a tick; no first
+	/// due time (the old rule: a turn on the first step).</remarks>
 	[TestMethod]
 	public void TheFigureStepsOnTheParksSpriteTicks()
 	{
 		var figure = new UI.ParkHireFigure( null, "jungle", null ) { Rect = Portrait };
 
-		figure.Show( Candidate( 1, kind: 0, costume: 0 ) );
+		figure.Show( Candidate( 1, kind: 0, costume: 0 ), 0 );
 
 		var seen = new List<(int Tick, int Frame)>();
 		var last = 0;
@@ -146,7 +142,13 @@ public class ParkHireFigureTests
 			}
 		}
 
-		CollectionAssert.AreEqual( new[] { (2, 0), (6, 1), (10, 2), (14, 3) }, seen.ToArray() );
+		CollectionAssert.AreEqual( new[] { (4, 0), (8, 1), (12, 2) }, seen.ToArray() );
+
+		var later = new UI.ParkHireFigure( null, "jungle", null ) { Rect = Portrait };
+		later.Show( Candidate( 2, kind: 0, costume: 0 ), 5 );
+
+		var first = Enumerable.Range( 6, 10 ).First( tick => { later.Step( tick ); return later.Sprite!.Turns > 0; } );
+		Assert.AreEqual( 8, first, "made at tick 5, due one interval on" );
 	}
 
 	/// <summary>
@@ -169,7 +171,7 @@ public class ParkHireFigureTests
 			var figure = new UI.ParkHireFigure( data, "jungle", banks ) { Rect = Portrait };
 
 			// Costume 1: on low detail the mechanics' and every other capped kind's one bank, so a costume past it is reduced.
-			figure.Show( Candidate( role, kind: role, costume: 1 ) );
+			figure.Show( Candidate( role, kind: role, costume: 1 ), 0 );
 
 			var kind = ParkStaffPool.SpriteKindFor( role );
 			var folder = ParkGuestSprites.FolderFor( kind, "jungle" )!;
@@ -200,10 +202,11 @@ public class ParkHireFigureTests
 	}
 
 	/// <summary>
-	/// <b>The hire screen makes the figure for the row it picks</b>, and frees it as it closes: opened on the mechanics'
-	/// tab, the first row's candidate is the figure's, and after the close the pair is -1.
+	/// <b>The hire screen makes the figure for the row it picks</b>, steps it on the game clock, and frees it as it closes: opened
+	/// on the mechanics' tab, the first row's candidate is the figure's, half a second of frames turns its script and shows a
+	/// picture, and after the close the pair is -1.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> the pick not handing the candidate to the figure; the close not freeing it.</remarks>
+	/// <remarks><b>Mutations:</b> the pick not handing the candidate to the figure; the screen's update not stepping it; the close not freeing it.</remarks>
 	[TestMethod]
 	public void TheHireScreenMakesTheFigureForThePickedRowAndFreesItOnClose()
 	{
@@ -240,6 +243,18 @@ public class ParkHireFigureTests
 			Assert.AreEqual( 1, figure.Made );
 			Assert.AreEqual( 6, figure.Kind );
 			Assert.IsTrue( figure.Bank >= 0, "a mechanics' bank read" );
+			Assert.AreEqual( 0, figure.Sprite!.Turns, "no turn before the clock moves" );
+
+			// The screen steps the figure on the game clock: a tenth of a second a frame, three ticks, for half a second.
+			for ( var frame = 0; frame < 5; ++frame )
+			{
+				Time.Update( 0.1f );
+				GameClock.Update( paused: false, GameClock.ParkCatchUp );
+				screen.Update();
+			}
+
+			Assert.IsTrue( figure.Sprite!.Turns > 0, "the screen's frames step it" );
+			Assert.IsNotNull( figure.Showing(), "and it shows a picture" );
 
 			stack.Close( screen );
 

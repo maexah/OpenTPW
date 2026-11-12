@@ -2125,28 +2125,36 @@ and a price cell in font 7) and `0x004ae140` fills it.
   level + 2, price `rideType[ +0x1b8 + 0x40 (level + 1) ]` (`CostOfUpgrade`, `rideType` = `0x004dd4e0( ride )`), value
   -(level + 1) (`0x004ae36f`).
 - With no row at all: UITEXT 27 in game type 2, 28 (`RideFullyUpgraded`) when the level is 2, else 26 (`NoUpgrades`), through
-  `0x00485b00`, split by `0x0067c430` on `0x007558f0`, one row of value -7890 a line (`0x004ae3fa`).
+  `0x00485b00`, split by `0x0067c430` (wcstok, which skips empty tokens) on `0x007558f0` (L"\n"), one row of value -7890
+  a line (`0x004ae3fa`). Every row goes in through `0x0066403b`, which picks the first row (`0x006643d4`).
 - **The choice** (`0x004ae430`, message `0x400`; -7890 does nothing): -12999 is `0x004af480( 0, 1 )`, which calls
   `0x004e0050( 0 )` (cancel). A negative value `v` is `0x004af480( v, 0 )`: `0x004e0050( 1 )` (order the upgrade) only when
   `CostOfUpgrade[-v]` is **strictly below** the balance (`0x004af4e9`), with no error cue for a dearer one, and the list
   closes. A positive value (an add-on) takes the price `+4` **at most** the balance: a tool-4 carry shell
   `0x0046c5a0( 4, type id )`, the ride made the builder's object (`0x005276d0( 1 )`), and the ride window closed
-  (`0x0048cf70`); a dearer one is `0x00486ae0`, `cat_ui` `0x1D` (Q402). The balance is `FUN_006ad810` on `FUN_005195d0`'s thing.
-  Message `0x14` closes the list; `0x100` with -2 closes it.
+  (`0x0048cf70`); a dearer one is `0x00486ae0`, `cat_ui` `0x1D` (Q402), and the list closes (`0x004ae4f9`: every zero
+  return of `0x004af480` and every value at or below nought sends the list message 4, the same close as the -2's). The
+  balance is `FUN_006ad810` on `FUN_005195d0`'s thing. Message `0x14` closes the list; `0x100` with -2 closes it.
+- **One list at a time:** the open returns at once while the ride window holds a list (`[ride window + 0x24]`,
+  `0x004ae579`; written at `0x004ae5a7`, noughted in the list's `0x14` arm at `0x004ae545`) or its `+0xc` is set
+  (`0x004ae584`). The open also calls `0x0048d860( 0 )` (`0x004ae5aa`) and the `0x14` arm `( 1 )` (`0x004ae54c`) on the
+  ride window's `+0x20`, which is not read.
 
 Lost Kingdom's stock park is Instant Action, so none of this is reached there; it is a Full Simulation window.
 
 **Built** (`docs/QUEUE.md` Q512, 2026-11-12, from this decode alone: no Ghidra, no original). `ParkUpgradeList.For` makes
 the rows and `ParkUpgradeList.Choose` judges a choice; `UI.ParkUpgradesWindow` (opened by the ride window's `0x3e35`, over it)
 letters them: an add-on by its item's name (`ParkObjectNames.NameOf`, `0x00412fb0`), UITEXT 29 and 30 with the level + 2 as
-parameter 0, the message split into a row a line at its own line breaks (UITEXT 27 has one), each price through the buy
-list's price text. An add-on within the balance goes into the hand for the ride (`ParkBuilding.CarryFor`, which also asks
-the item's own build price, as every carry does) and closes the ride window and the list; a dearer one plays `cat_ui` `0x1D`.
+parameter 0, the message split into a row a line at its line breaks with empty lines dropped (UITEXT 27 has one), each
+price through the buy list's price text, the first row picked. A second click on `b_upgrade` while the list stands opens
+none. An add-on within the balance goes into the hand for the ride and closes the ride window and the list; a dearer one
+plays `cat_ui` `0x1D` and closes the list. **A deviation:** `ParkBuilding.CarryFor` also asks the item's own build price,
+as every carry does; an add-on whose record price is met and build price is not is answered as a dearer one.
 **Counted, not built:** the level's order (`RIDE_UPGRADE_ORDER`) and the cancel (`RIDE_UPGRADE_CANCEL`), `FUN_004e0050( 1 )`
 and `( 0 )`, whose whole body is not read here (the state table above names state 2, the hoardings' 8 and "Cancelling
 request for upgrade"); a level dearer than the balance closes the list with nothing done. **Not read:** stream
-`0x00755750`'s rectangles and meshes (ours takes the message box's frame, `w_dialog`), the price cell's skin, the
-separator at `0x007558f0`, and whether the list pauses or is modal (ours does neither). The console's `upgrades <thing>`
+`0x00755750`'s rectangles and meshes (ours takes the message box's frame, `w_dialog`), the price cell's skin, what the
+ride window's `+0x20` is that the open disables, and whether the list pauses or is modal (ours does neither). The console's `upgrades <thing>`
 prints the rows as the window's log line does. Measured in this game (a cloud lane, `consoledrive.py`, the stock park
 loaded by a Full Simulation player): the Belly Bounce at level 0 reads `Level -1 'Upgrade to level 2' 400`, at level 1
 with `mState` 2 written into the file `Cancel -12999 'Cancel level 3 upgrade' 0`, at level 2 `Message -7890 'This ride is
