@@ -216,13 +216,13 @@ public class ParkCarSoundsTests
 	}
 
 	/// <summary>
-	/// OpenTPW's engine fade is a flat 0.06 s ramp (<see cref="ParkCarSounds"/>'s <c>FadeSeconds</c>): the rate the voice falls at is its
-	/// volume over 0.06 s. <b>A deviation:</b> the original's <c>Sound_StopFading</c> is a x0.6 step every 100 ms above sound detail 30
-	/// and a cut below (<c>docs/exe/audio.md</c>, "The fade"; Q509); rewrite this test when Q509 builds that law.
+	/// The engine's fade is <c>Sound_StopFading</c>'s (<see cref="Voice.StopFading"/>): flagged for the fade worker with nothing
+	/// taken off yet, and its first step leaves 0.68's level of 68 at <c>trunc( 60 x round( 68 x 0.75 ) / 100 )</c> = 30 of the
+	/// effects' 75 (<c>docs/exe/audio.md</c>, "The fade"; Q509).
 	/// </summary>
-	/// <remarks><b>Mutations:</b> a fade of 0.6 s; a fade of nought (a hard stop, so no fade is under way).</remarks>
+	/// <remarks><b>Mutations:</b> a <c>FadeOut</c> ramp in its place (nothing stepping); a hard stop (not playing).</remarks>
 	[TestMethod]
-	public void TheEnginesFadeIsSixtyMilliseconds()
+	public void TheEnginesFadeIsTheStoppingFade()
 	{
 		FileSystem = GameData.Required();
 
@@ -254,14 +254,11 @@ public class ParkCarSoundsTests
 
 			new ParkCarSounds( new RideScriptScheduler() ).Fade( held );
 
-			var fields = BindingFlags.Instance | BindingFlags.NonPublic;
-			var volume = held.Voice.Volume;
-			var rate = (float)( typeof( Voice ).GetField( "_volumeRate", fields )
-				?? throw new AssertFailedException( "Voice._volumeRate was renamed" ) ).GetValue( held.Voice )!;
+			Assert.IsTrue( held.Voice.Ending && held.Voice.Playing && held.Voice.Stepping, "stepping, and still sounding" );
+			Assert.AreEqual( 0.68f, held.Voice.Volume, 1e-6f, "nothing is taken off before the first step" );
 
-			Assert.IsTrue( held.Voice.Ending );
-			Assert.IsTrue( volume > 0f, "the voice has a volume to fade" );
-			Assert.AreEqual( 0.06f, volume / rate, 1e-4f, "seconds to silence" );
+			held.Voice.StepFade( 0.75 );
+			Assert.AreEqual( 30f / 75f, held.Voice.Volume, 1e-6f );
 		}
 		finally
 		{

@@ -175,14 +175,6 @@ public sealed class Advisor : Entity
 	/// </summary>
 	private const float CutOffSeconds = 0.01f;
 
-	/// <summary>
-	/// How long his voice takes to fade when he is quietened. <b>A deviation:</b> Advisor_StopQuietly (0x005996d0) hands
-	/// Sound_StopFading (0x0051c300), which at sound detail above SoundInfo.FADETOGGLE (30) takes 60 percent off the
-	/// voice's volume on each service pass and otherwise cuts it (docs/exe/audio.md, "The fade"; Q509). This flat
-	/// 0.06 s ramp stands in for both.
-	/// </summary>
-	private const float QuietenSeconds = 0.06f;
-
 	private readonly Random _random = new();
 
 	/// <summary>
@@ -535,7 +527,7 @@ public sealed class Advisor : Entity
 	internal void StopSpeaking()
 	{
 		var busy = Busy;
-		var sounding = Dismiss( CutOffSeconds );
+		var sounding = Dismiss( quietly: false );
 
 		if ( !sounding || _speech is not { IsValid: true } )
 		{
@@ -559,22 +551,29 @@ public sealed class Advisor : Entity
 	internal void StopQuietly()
 	{
 		var busy = Busy;
-		Dismiss( QuietenSeconds );
+		Dismiss( quietly: true );
 
 		if ( busy )
 			Log.Info( "Advisor: quietened" );
 	}
 
 	/// <summary>
-	/// What being cut off and being quietened share: his voice goes, over <paramref name="fadeSeconds"/>,
-	/// and so does he, with whatever was still to come in the line. Says whether his voice was sounding.
+	/// What being cut off and being quietened share: his voice goes, and so does he, with whatever was still to come in
+	/// the line. Quietened, his voice is Sound_StopFading's (0x0051c300, <see cref="Voice.StopFading"/>, as
+	/// Advisor_StopQuietly 0x005996d0 hands it); cut off, it fades over <see cref="CutOffSeconds"/>. Says whether his
+	/// voice was sounding.
 	/// </summary>
-	private bool Dismiss( float fadeSeconds )
+	private bool Dismiss( bool quietly )
 	{
 		var sounding = _voice is { Playing: true };
 
 		_pending = 0;
-		_voice?.FadeOut( fadeSeconds );
+
+		if ( quietly )
+			_voice?.StopFading();
+		else
+			_voice?.FadeOut( CutOffSeconds );
+
 		_voice = null;
 		_lips = null;
 		_gesturesEndAt = float.NegativeInfinity;
@@ -997,7 +996,7 @@ public sealed class Advisor : Entity
 	protected override void OnDelete()
 	{
 		_queue.Clear();
-		Dismiss( QuietenSeconds );
+		Dismiss( quietly: true );
 		Release();
 
 		if ( Current == this )

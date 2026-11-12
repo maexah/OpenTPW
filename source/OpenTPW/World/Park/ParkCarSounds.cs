@@ -22,9 +22,6 @@ public sealed class ParkCarSounds : ParkBumperCars.ISounds
 	/// <summary>The float the original scales a car's place by for the sound (<c>0x00700f20</c>): 302.7 to a world unit.</summary>
 	private const double PlaceScale = 0.0033036007080227137;
 
-	/// <summary>A deviation, as the advisor's: <c>Sound_StopFading</c> (<c>0x0051c300</c>) is a x0.6 volume step every 100 ms (a worker thread, not the service pass) above sound detail 30 and a cut below (<c>audio.md</c>, "The fade"; Q509), not a 0.06 s ramp.</summary>
-	private const float FadeSeconds = 0.06f;
-
 	/// <summary>A voice the cars hold: what plays, its variation's header, and the four controller slots' key and value.</summary>
 	public sealed class Held
 	{
@@ -166,7 +163,7 @@ public sealed class ParkCarSounds : ParkBumperCars.ISounds
 	{
 		if ( voice is Held held && !held.Voice.Ending )
 		{
-			held.Voice.FadeOut( FadeSeconds );
+			held.Voice.StopFading();
 			Log.Info( $"Car sounds: effect {held.Effect} '{held.Voice.Name}' faded" );
 		}
 	}

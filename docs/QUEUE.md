@@ -1464,25 +1464,13 @@ filed the items that cite it.
   photograph of a balloon's fringe against a body in both games; then say whether `FurthestFirst`, which orders every quad
   here by its unpulled depth, matches the original's order for a pulled body against an unpulled sprite, and whether the
   first-person view (render bit `0x80`, ungrouped; `docs/exe/park-engine.md`, "What hides a person below their feet") sorts at all.
-- [ ] **Q509. Sound_StopFading: the original's fade law, and FADEOBJ as a cut at low detail.** From the fork watch,
-  2026-10-18 (`verify-other-a.md` H1, `verify-audio-fx.md` F1; `docs/exe/audio.md`, "The fade, the SoundInfo settings
-  and the reverb"). The original's `Sound_StopFading` (`0x0051c300`) and `FADEOBJ`'s sound arm are a **x0.6 volume step
-  per fade step** (the 60 is a percentage kept, not milliseconds; a worker thread makes the steps, 100 ms apart, not
-  the service pass) while sound detail is above
-  `SoundInfo.FADETOGGLE` (30, `sound.sam`; stock detail is `DEFAULTQUALITY` 50, and 25 at boot on low graphics detail,
-  `0x0054de17`), and a **hard stop** (the same as `KILLOBJ` / `Sound_Stop`) at 30 or below. At 0, or with no channel, the
-  voice is stopped on the next service pass. OpenTPW stands a flat 0.06 s ramp in for both, said at the site in
-  `Advisor.QuietenSeconds`, `ParkAudio`'s rain and crowd fades, `ParkCarSounds` and `FADEOBJ`'s (`ParkAudio.ScriptFadeSeconds`, Q553). Build: (1) the fade as a geometric
-  decay on the voice's volume, one step every 100 ms (250 ms before the first when nothing was fading), each step
-  `own = trunc( 60 x round( own x group product ) / 100 )` with the group gains folded in at each step, ending in a stop
-  at 0 (the rate is read, not to be measured: `audio.md`, "The fade", fork watch 2026-10-19, `verify-other-b.md` H1); (2) `FADEOBJ` and `Sound_StopFading` as a cut when sound detail is
-  30 or below, the detail being the options' sound quality slider (`0x00423850`), so the options screen's slider must
-  reach it; (3) the stop-all at a level's end (`0x0051bcb0`, handed 90, `Level.StopAllSeconds`): trace whether the 90 is
-  the same kind of percentage before changing it. Confirm: the advisor quietened (options screen) and the bumper cars'
-  unload with a capture of the mix at detail 50 and at 30, beside the original at the same detail; predict the decay
-  per pass first. Predicted per step: at group product 1.0 the volume runs 100, 60, 36, 21, 12, 7, 4, 2, 1, 0 (nine steps, about 0.9 s
-  after the first step's wait of up to 250 ms); at the effects' measured 0.75 the device gets 75, 45, 20, 9, 4, 1, 0
-  (six steps, about 0.6 s). (Fork watch 2026-10-19, `verify-other-b.md` H1; `audio.md` holds the chain.)
+- [ ] **Q1232. What Q509 left: the stop-all's 90, the boot's sound detail, the fade heard beside the original.** Split from Q509 (cloud lane c28,
+  2026-11-12). (1) The stop-all at a level's end (`0x0051bcb0`, handed 90, `Level.StopAllSeconds` 0.09 s): trace whether the 90 is the same kind of
+  percentage before changing it. (2) At boot the library's detail is `DEFAULTQUALITY`, or half of it (25) at graphics detail 0 (`0x0054de0a`..`0x0054de22`),
+  so a low-detail start has fading off until the options' tick; whether a saved `SoundQuality` is applied at boot was not traced. Ours starts with fading on
+  and changes it only at the options' tick. (3) Whether `0x006bb860`'s mask bit 1 (gain[0], perhaps a master level) is set for any category: ours folds in
+  only the group's level and the duck. (4) Confirm by ear and capture: the advisor quietened (options screen) and the bumper cars' unload, the mix captured
+  at detail 50 and at 30 beside the original at the same detail; Q509's run read the census only (`voices`, `quieten`, `sounddetail`), no sound was heard.
 - [ ] **Q510. The hidden wide zoom: press it in the original, then build. Confirm first.** From the fork watch
   (2026-10-18, `verify-world-a.md` H1; `docs/exe/park-engine.md`, "A hidden wide zoom"). Camera row `0x11` (`0x00748298`,
   key `0x20`, modifier `0x3f`, handler `0x0042a520`) flips bit `0x200` of `[0x00790aac]`; by our key decode that is

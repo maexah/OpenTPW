@@ -136,7 +136,8 @@ public static class DebugConsole
 		{
 			return $"voices {Audio.Voices.Count}: " + string.Join( ", ", Audio.Voices.Select( voice =>
 				$"{voice.Name} {voice.Bus} {(voice.IsPlaced ? "placed" : "flat")}" + Ranged( voice ) +
-				(voice.Loop ? " looped" : "") + (voice.IsHeld ? " held" : "") + (voice.Playing ? "" : " stopped") + $" frames {voice.Frames}" ) );
+				(voice.Loop ? " looped" : "") + (voice.IsHeld ? " held" : "") + (voice.Stepping ? $" fading {voice.Volume:F4}" : "")
+				+ (voice.Playing ? "" : " stopped") + $" frames {voice.Frames}" ) );
 		}
 	}
 
@@ -729,6 +730,23 @@ public static class DebugConsole
 					Advisor.Current.Hush();
 
 				Reply( Advisor.Current?.State() ?? "no advisor" );
+				break;
+
+			// Advisor_StopQuietly, as opening the options screen calls it: his voice goes by Sound_StopFading (Q509).
+			case "quieten":
+				Advisor.Current?.StopQuietly();
+				Reply( Voices() );
+				break;
+
+			// The options' audio quality, handed on as the options' tick hands it: at FADETOGGLE (30) or below a fade is a stop.
+			case "sounddetail":
+				if ( parts.Length > 1 )
+				{
+					GameOptions.Current.AudioQuality = (int)Argument( 1 );
+					GameOptions.Current.ApplySoundDetail();
+				}
+
+				Reply( $"sound detail {GameOptions.Current.AudioQuality}, fades {(Audio.FadesOn ? "step" : "stop")}" );
 				break;
 
 			case "advisor":

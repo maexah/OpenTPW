@@ -1602,9 +1602,13 @@ and `Sound_Stop` (`0x0051c2c0`) post `{0x00700ba8, handle}` to the same library 
   device gets 75, 45, 20, 9, 4, 1, 0 (**six steps, about 0.6 s**). At 0, or
   with no channel (a held parent, line 98 above), the voice swaps `0x400` for `0x100` (`0x006bcc6e`) and the next service stops it (`0x006b62fe`).
   The names master / music / speech / effects for mask bits 1, 2, 4, 8 and the category masks 9 / 3 / 5 were not re-derived there (unproven).
-- **OpenTPW's fade is a deviation:** a flat 0.06 s ramp at every detail (`Advisor.QuietenSeconds`, `ParkAudio`'s rain and crowd fades, `ParkCarSounds`). The
-  original's law and the cut at detail 30 or below are Q509. The 90 handed to stop-all (`0x0051bcb0`) when a level ends is probably the same kind of
-  percentage; it was not traced.
+- **OpenTPW builds this law (Q509):** `Voice.StopFading` flags a voice and `Audio.NextFadeWake` runs the worker's 100 ms / 250 ms sleeps on the device's
+  clock, at most one wake a buffer; `Voice.StepFade` applies `Audio.FadeStep` with the group product (the options' percent over 100, `Audio.SetGroupLevel`,
+  times the duck off speech) and keeps the level over the product, as this mixer still multiplies by the group. A voice's own level starts as its volume out of
+  100, rounded. The advisor quietened, `ParkAudio`'s rain and crowd fades, `ParkCarSounds` and `FADEOBJ` take it. The options' tick hands the audio quality on
+  (`GameOptions.ApplySoundDetail`, `Audio.SetSoundDetail`): at `FADETOGGLE` or below a fade is the stop, and a fall to it stops every stepping voice.
+  Not built: the boot detail halved at graphics detail 0 and whether a saved quality is applied at boot, the master gain (mask bit 1, unproven) folded in,
+  and the 90 handed to stop-all (`0x0051bcb0`) when a level ends, probably the same kind of percentage and not traced (Q1232).
 
 **The voice pool's tie.** `0x006b6ba0` clears the 31 slots at the start of each pass; `0x006b6bc0` admits a voice only when its rank (`+0x20`) is strictly greater than the lowest,
 and places it before the first slot of strictly lower rank. `0x006b6a80` links a new voice at the list head (`+0x24`), so the rebuild sees the newest first
