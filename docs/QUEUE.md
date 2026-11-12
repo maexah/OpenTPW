@@ -1797,15 +1797,14 @@ filed the items that cite it.
   `0x80000000` locks against OpenTPW's unconditional shows, and whether `Dress`'s hidden props include a node in clip
   16's tracks (the map, node 6) on the slot 1 model's first clip, where the original's channel at `0xc` skips
   the call to `FUN_00472310` (the test at `0x00473096`, in `FUN_00472f60`; the call is `0x004730a9`).
-- [ ] **Q731. The swear filter's load after a profile read.** From the run 7 review (Q709 3, VERIFY-11). `FUN_005afd70`
-  (`0x005afeba..0x005aff37`): with `+0x25` set, open `Data\Language\<language>\swears.txt` (the language from the
-  registry's `Language`, `0x005c0d00`: 0x409 "American", else "English"); when it does not open, clear `+0x25`
-  (alloweds.txt's answer is ignored, `0x005d3226`). Build the same test on `PlayerFile.FilterSwearing` after a read. A
-  disc copy (the reference install, `~/Games/TPWorld`) has no `Language/american/swears.txt` and writes 0; the US
-  installer copies the lists there from `USEnglish/Filter/American` (`USEnglish/Setup/bffl.fls`), so an installed game
-  keeps 1. Confirm: gms.dat offset 0x13 after a park save equals the original's on the same folder. (Said at the site:
-  `PlayerFile.FilterSwearing`'s comment, "NOT MATCHED". The docs are corrected: `docs/exe/saves.md` `+0x25` row,
-  `docs/exe/hud.md` "Spending golden tickets", "The save".)
+- [ ] **Q1220. The swear filter's load: what the listing says beyond the item.** From Q731 (cloud lane c25, no Ghidra).
+  `PlayerFile.LoadSwearFilter` opens the list only with `+0x25` read set, as Q731 decodes it; `docs/exe/hud.md`, "The
+  save", says instead that `FUN_005afd70` sets `+0x25` to 1 and then clears it, which would turn a file's 0 into 1 where
+  the list opens. Read `0x005afeba`..`0x005aff37` in Ghidra and settle which, and whether a read that stopped early
+  (version below 12, a short file, two parks of one name) reaches that block: OpenTPW counts
+  `PLAYER_SWEAR_FILTER_AFTER_SHORT_READ` and keeps the flag. Then confirm gms.dat offset 0x13 after a park save equals
+  the original's on the same folder, a disc copy (0) and an installed one (1, after Q733's overlay), with a byte read as 0
+  among them.
 - [ ] **Q732. A moved ticket ride meets the money test.** From the run 7 review (Q709 4, VERIFY-11). In the original the
   move tool's put-down (`0x00523940..0x005239fc`) has no ticket exemption: `0x52398b call 0x52fb90( [item+0x1b8] )` sets
   the run price to the full price, then the shared cell test (`0x528a70` -> `0x532fc0(0x204,0,0)` -> `0x535670(4,0)`,
