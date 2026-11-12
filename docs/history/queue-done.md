@@ -12131,6 +12131,18 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   non-null where the entities step starts), or confirm it in a running game off-screen: the log's particle line before the
   catalogue's effects line, with the swap put back and the order seen to flip.
 - [x] **Q1036. The lobby bolt's brightness over its life. Decode first.** Folded into Q1044 (filed by the Sentinel the same hour from VERIFY-13, which decoded the envelope). From Q1034 and the Sentinel's second reading of Q152's fork review. OpenTPW dims the bolt over its whole life (`Lightning.OnUpdate`: opacity = life^2 x stutter, measured exact in Q1034: the lift in the frame is 78, 32, 13, 4.6 and 2.5 grey levels at 0.1, 0.2, 0.35, 0.4 and 0.45 s of a 0.5 s bolt, so it is out of sight by about 0.4 s), where the original is suspected to hold its bolt at 192 to 255 grey in saw-teeth for the whole 500 ms and cut at the end (the colour pulse `0x0057ee30` in Q1035; a second reading, neither decoded nor run). Decode the pulse's value over a bolt's life for the lobby's arguments (lifetime 500, argument 8), run the original's lobby bolt under Proton (`record.sh`, the island pinned) and write the figures in `docs/exe/weather.md`, "The bolt"; build the envelope only after that, in `Lightning.OnUpdate` and the `Flash` that lifts the lobby's sun and sky (`LobbyWeather`), and read it back with `q1034/confirm2.py` (`stepsweep`). Q1034 changed nothing in `Lightning.cs`.
+- [x] **Q280. A file's bumper ride with a peep on its leaving or boarding list and no car is written over where it
+  lies once the running lists are empty (`Level.WritePark`.** `Take`: only `CarsOf` is asked of the file), so the
+  file's type 7 and 8 chunks stay and the next load puts those peeps back on the lists. It should be taken out and
+  written whole whenever the file holds any chunk but the record and the close under its handle, as `FUN_005428e0`
+  writes the lists as they stand; a test that loads the commit's own "Boarder" file, empties the list and writes
+  again would show the stale chunk From the week-end audit (stage 6, the second reading of commit `05e54382`; read
+  from the code, not reproduced in the game). `OpenTPW/World/Level.cs`, line 587.
+  **Done 2026-11-12** (cloud lane c5): `Level.WritePark`'s `Take` writes a file's bumper ride over where it lies
+  only while the file holds nothing under its handle but the record and the close
+  (`ParkTrackRides.HoldsMoreThanTheRecordOf`); any other is written whole as it runs. `TheLevelWritesATrackRidesRecord`
+  loads the "Boarder" file, empties its list and writes again: nobody listed (the old rule: one). Tested only; not
+  run in either game.
 
 ## B. Docs and comments
 

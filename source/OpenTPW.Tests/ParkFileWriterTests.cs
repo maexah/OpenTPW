@@ -1056,6 +1056,33 @@ public class ParkFileWriterTests
 			Assert.IsFalse( sold.Objects.Any( thing => thing.ThingId == id ) );
 			Assert.AreEqual( 0, Counted( "SAVE_PARK_OBJECT_SOLD" ) );
 			Assert.AreEqual( shipped.Objects.Count, sold.Objects.Count );
+
+			// The file with somebody waiting to board, loaded and its list emptied: the file's boarding chunk does not
+			// stay under the ride's record, so the next load puts nobody back (FUN_005428e0 writes the lists as they stand).
+			again.Delete();
+			again = null;
+			Entity.ApplyDeletions();
+			TestRun.DeleteEvery<ParkPeople>();
+
+			var boarded = Written( "Boarder" );
+			var boardedPeople = new ParkPeople( boarded );
+
+			again = new ParkRides( "jungle", boarded, catalogue, FileSystem );
+
+			var waiting = boardedPeople.State.TrackRides.Cars.RideOf( Handle )!;
+
+			Assert.AreEqual( (0, boarder, 0), (waiting.Cars, waiting.Boarding.Single(), waiting.Leaving.Count), "the load puts the boarder back" );
+			waiting.Boarding.Clear();
+			Unimplemented.Forget();
+			Assert.IsNotNull( Level.WritePark( boarded, boardedPeople.State, "jungle", "Unboarded", boardedPeople, null, again, catalogue ) );
+
+			var unboarded = Written( "Unboarded" );
+
+			Assert.IsNull( unboarded.Problem );
+			Assert.AreEqual( (1, 0, 0), (unboarded.TrackRides.Rides.Count, unboarded.TrackRides.Listed.Count, unboarded.TrackRides.Cars.Count), "the record, and nobody listed" );
+			Assert.AreEqual( new SavedTrackRide( Handle, 0x20400, 0x12c00, 0, HotPot, 60, 1, 1, 4350, 1 ), unboarded.TrackRides.Rides.Single() );
+			Assert.IsFalse( unboarded.TrackRides.HoldsMoreThanTheRecordOf( Handle ) );
+			Assert.AreEqual( 0, Counted( "SAVE_PARK_TRACK_RIDE_AS_THE_FILE" ) );
 		}
 		finally
 		{

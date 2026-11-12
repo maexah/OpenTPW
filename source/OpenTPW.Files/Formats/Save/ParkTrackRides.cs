@@ -308,6 +308,14 @@ public sealed class ParkTrackRides
 	public int CarsOf( int handle ) => _chunks.Count( chunk => chunk.Type == CarType && chunk.Handle == handle );
 
 	/// <summary>
+	/// Whether the module holds any chunk under a ride's handle but its record (3) and its close (6): a section, a
+	/// car, a rider or a peep of either list. Such a ride cannot be written over where it lies, since what follows its
+	/// record is the file's and not the ride's as it runs (<c>FUN_005428e0</c> writes the lists as they stand).
+	/// </summary>
+	public bool HoldsMoreThanTheRecordOf( int handle )
+		=> _chunks.Any( chunk => chunk.Handle == handle && chunk.Type is not (RideType or CloseType) );
+
+	/// <summary>
 	/// A ride's record, each section of its list and its close as the original's writer leaves them for a ride with
 	/// no car and nobody on its lists (<c>FUN_005428e0</c>): the type 3 chunk, a type 4 for each section in circuit
 	/// order, then the type 6.

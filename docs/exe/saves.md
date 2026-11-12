@@ -3281,8 +3281,10 @@ records; the rider's head on lookup record nought, seat 1, a sprite of kind 1 wi
 
 **What OpenTPW writes** (`ParkCarWriter.Track`, `ParkBumperCars.Written( Car )`, `ParkTrackRides.RideChunks`
 and `SpliceWhole`, `ParkThingStates.CarRecord`, `ParkFileWriter.WrittenTrack`, `WrittenCar`, `CarModel`;
-`Level.WritePark`). A ride with a car out, here or in the file, is **taken out of the track-rides module with
-every chunk under its handle and put in again in its slot's place**: its record, each live car of the pool in
+`Level.WritePark`). A ride with a car out or a peep on either list here, or whose file holds any chunk under its
+handle but the record and the close (a car, a rider or a listed peep, `ParkTrackRides.HoldsMoreThanTheRecordOf`;
+Q280), is **taken out of the track-rides module with every chunk under its handle and put in again in its slot's
+place**, so a list emptied since the load leaves no chunk of the file's behind: its record, each live car of the pool in
 pool order with its riders head first, the leaving list, the boarding list, the close. **A car's `0xac` bytes**
 are the words `Car` keeps, `+0x58` among them now (`Car.Turned`, set by the step in a go and read by a load);
 3 and 2 at `+0x24` and `+0x28`, the lookup records of the model's emitter nodes of ids 2 and 1, looked up in
