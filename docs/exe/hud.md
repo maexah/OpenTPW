@@ -44,7 +44,7 @@ The stream argument is **16-bit opcodes compiled into the executable**, not a fi
     op 0xe,f [rect] like 6/7
     op 0x10  [short n][rect] type 6, id n|0x11100000, RECURSE
     op 0x11  [dword] the UIHELPTEXT row
-    op 0x12  [dword] the help row a toggle shows while it is on (the button class's getter `0x00669410`: state byte `+0x138` == 1 gives `+0x94`, else `+0x90`; -1 posts the empty text; fork watch 2026-10-28, verify-hz-ui-hud L3). No post reads the held state: a press (`0x10005`) posts nothing, and the pointer coming on posts (`0x006692b2`) before it sets the held bit (`0x0066930f`), so the bar shows the op 0x12 row over a button that is on, held or not. Ours: `UiButton.HelpWhenOn`, the rule in `UiButton.ShownHelp`; carried so far by the new player dialog's toggles alone (-1 each, Q772). Every other button is null and shown its op 0x11 row in every state, ours' deviation where its layout gives an op 0x12 row: the buy, hire and staff screens' tabs and the all-items tabs (op 0x12 -1), the call-mechanic button `0x3e36` (-1) and the entry-price door `0x4f3b1` (193) show their op 0x11 row while on, and the patrol switch `0x510` (87) is Q1444's; the ride window's door `0x3e38` (13 / 12) and a shop's switch `0xc082` (31 / 30) carry it by swapping their `HelpText` with the state
+    op 0x12  [dword] the help row a toggle shows while it is on (the button class's getter `0x00669410`: state byte `+0x138` == 1 gives `+0x94`, else `+0x90`; -1 posts the empty text; fork watch 2026-10-28, verify-hz-ui-hud L3). No post reads the held state: a press (`0x10005`) posts nothing, and the pointer coming on posts (`0x006692b2`) before it sets the held bit (`0x0066930f`), so the bar shows the op 0x12 row over a button that is on, held or not. Ours: `UiButton.HelpWhenOn`, the rule in `UiButton.ShownHelp`; carried so far by the new player dialog's toggles (-1 each, Q772) and the map's six switches and seven picks (Q684). Every other button is null and shown its op 0x11 row in every state, ours' deviation where its layout gives an op 0x12 row: the buy, hire and staff screens' tabs and the all-items tabs (op 0x12 -1), the call-mechanic button `0x3e36` (-1) and the entry-price door `0x4f3b1` (193) show their op 0x11 row while on, and the patrol switch `0x510` (87) is Q1444's; the ride window's door `0x3e38` (13 / 12) and a shop's switch `0xc082` (31 / 30) carry it by swapping their `HelpText` with the state
 
 ### Operand sizes, read out of `UI_ParseTreeStream` rather than inferred
 
@@ -2204,7 +2204,11 @@ its interior's grid lies over the picture in both games.
 
 Decoded from the listing and the decompiler (`q664/g1`, `g2`, `g3`), measured in the original's stock park (`q664/orig`,
 round a, `mapgrid.py`: every switch and picker pressed in turn, each step's words, records and picture as decoded;
-`q664/PREDICTION.txt`). **Not built here**: counted `MAP_OVERLAY` as the map opens; the build is Q684.
+`q664/PREDICTION.txt`). **Built here: the three words and the buttons that press them** (Q684, `ParkMapOverlay`,
+`ParkMapScreen`; each pick its value as its press puts it down and 0 as it lifts it, the radio group's `0x101` with 1 or 0;
+each button's op 0x12 row while it is down, `UiButton.HelpWhenOn`, by the tree stream's op 0x12 above). **Not built: the painting** (the code grid, the
+sprite records, the rectangles and the coaster lines), counted `MAP_OVERLAY` as the map opens and on every press; the build
+is Q1572.
 
 **Two layers.** The opener (`Map_Open`, `0x005f0b40`) fills the code grid (`Map_FillCodeGrid`, `FUN_005f2050`, below) and
 makes the sprite records (`Map_MakeSprites`, `FUN_005f3710`, then `Map_MakeRecords`, `FUN_005f3940`); the painter
@@ -2302,7 +2306,7 @@ under the mechanic; a shop's excitement fill is red (nought), a ride at full rep
 
 Decoded from the listing (`Map_ViewportProc`, `0x005f18d0`; `q665/g1`) and measured in the original's stock park
 (`q665/orig`, rounds b and c; `original/mapgrid.py PID hover`, `original/mapptr.py`, `original/maptarget.py`;
-`q665/PREDICTION.txt`). **Not built here**: it waits on the overlay's records and code grid (Q684); its build is Q685.
+`q665/PREDICTION.txt`). **Not built here**: it waits on the overlay's records and code grid (Q1572); its build is Q685.
 
 **The hover** (each move message, `0x10001` and `0x10003`, `0x005f198e`..`0x005f1cfc`):
 

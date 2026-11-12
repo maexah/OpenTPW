@@ -2797,33 +2797,31 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   (`ParkFileWriter.PutEmitters`), so it holds none. Read in the original whether such a file holds an emitter of effect 79
   to 82 (save within a second of a placing click, `original/emitters.py` on the loaded file), and write it if so, its area
   (`+0x44`) the box's as `ParkCreateEffect` sets it.
-- [ ] **Q684. The map's overlay, its six switches and two pickers (Q664's build).** From Q664 (`hud.md`, "The map's
-  overlay"; FileFormats `park-map.md`, "The overlay's six sprites"). Build the six layer switches (`0x987`, `0x993`, `0x994`,
-  `0x982`, `0x989`, `0x983`; toggles, flags `0x11`, their help pairs) and the two radio groups (`0x98e`, `0x98f`, `0x98c`,
-  `0x98d`; `0x998`, `0x997`, `0x999`) on the original's three words, each starting at 1 and kept across openings; the code
-  grid painted into the picture at its pixels, with its fills, ramp and outlines (black for a thing that cannot load);
-  the patrol rectangle of each shown member; the coaster lines; and the sprite records with their filters, tints,
+- [ ] **Q1572. The map's overlay painted (Q684's second piece).** From Q664 (`hud.md`, "The map's overlay"; FileFormats
+  `park-map.md`, "The overlay's six sprites"); the three words and their buttons are built (Q684, `ParkMapOverlay`). Paint
+  from them: the code grid into the picture at its pixels, with its fills, ramp and outlines (black for a thing that cannot
+  load); the patrol rectangle of each shown member; the coaster lines; and the sprite records with their filters, tints,
   `RegionFX` scales and depths, placed again whenever the view moves. Satisfaction's value (`FUN_004e1e30`) is not
   worked out here (its days are, `ParkObjectRings.Satisfaction`): read it, or count `MAP_SATISFACTION` where the metric
-  is 3. Replace `MAP_OVERLAY` by what stays unbuilt. Confirm: `q664/orig/run.sh`'s fourteen steps in both games, each
-  step's census against `original/mapgrid.py`'s and the picture's diff against `q664/orig/a-*.png` (`original/diffcells.py`).
-  - **Note (fork watch 2026-10-28, verify-hz-ui-hud L3):** the rule for a toggle's help lives in the button class, not per screen:
-    the base control's vtable slot `+0x2c` returns `+0x90` (op 0x11, `0x0065bc70`), and the button class overrides it
-    (`0x00669410`) with `byte [+0x138] == 1 ? [+0x94] : [+0x90]`; `+0x94` (op 0x12) defaults to -1 and is written by `0x00661850`.
-    `+0x138` is the state byte (press `0x10005` ORs 2, the release `0x10004` of a toggle, flags `0x11`, flips bit 1 and re-asks
-    the help, `0x00669172`, the radio group sets 1 on its pick `0x0066a468`), so a toggle that is on (state exactly 1) answers its
-    op 0x12 row and one held down (3) its op 0x11 row - though no post reads state 3 (a press posts nothing; the pointer coming
-    on posts before setting bit 2), so the bar never shows that held row (review 22, VERIFY-15); a row of -1 posts the empty text (`HelpBar_PostControlRow` `0x00492070`).
-    The map's six switches carry two rows each (`hud.md`); `hud.md`'s staff switch (`b_route`, second help 87) was measured NOT shown (`q431/confirm.py`): reconcile that run with this static reading (state byte exactly 1 while on). The new
-    player dialog's own case is Q772.
+  is 3. Replace `MAP_OVERLAY` (the opening and every press, `ParkMapScreen.Changed`) by what stays unbuilt. Confirm:
+  `q664/orig/run.sh`'s fourteen steps in both games, each step's census against `original/mapgrid.py`'s and the picture's
+  diff against `q664/orig/a-*.png` (`original/diffcells.py`).
   - **Note (fork watch 2026-11-12, verify-other.md L1):** the coaster lines are drawn by one of four routines picked by the picture's bits a
     pixel (`0x005f2fd0`, `( [map+0x3c] + 7 ) >> 3`: `0x005edad0`, `0x005ee580`, `0x005ef040`, `0x005efb10`); the picture takes the
     texture cache's format record `0x008bd558 + 32 x [0x008bd554]` (`0x005f1f81`..`0x005f1fcc`), so at the shipped `TEXTURE32 0`
     (`textures.md`) they are `0x005ee580`'s, into A4R4G4B4, with the 32-bit routine's blend (`v = s x c + d x ( 255 − c )` a
     channel, `( ( v >> 8 ) + v + 1 ) >> 8`, `0x005ee79e`..`0x005ee825`), each channel then cut to four bits. The option-to-entry
     link is `textures.md`'s, not re-read; the end point, a zero-length line and the neighbour order are not read.
+- [ ] **Q1573. The map's switches and pickers photographed beside the original's (Q684's check on screen).** Desk lane.
+  Q684 built them off-screen (a cloud lane, no display to photograph). In both games, a fresh process, the stock park: Space,
+  then `q664/orig/run.sh`'s clicks (rides, sideshows, shops, miscellaneous, tracks, visitors; the four staff; the three
+  metrics), a frame after each with the pointer parked on the text panel, and one with the pointer resting on a switch that
+  is down and one that is up (the help bar's "hide" and "show" rows). Predict: each button drawn down exactly while its
+  word says so (here the console's `map` census), the same frames as the original's. Reconcile with `hud.md`'s staff
+  switch measured NOT showing its second row (`q431/confirm.py`), against the button class's reading (`hud.md`, op 0x12:
+  the op 0x12 row over a button that is on, held or not; `UiButton.ShownHelp`).
 - [ ] **Q685. The map's hover and its click (Q665's build).** From Q665 (`hud.md`, "The map's hover and click"); needs
-  Q684's records and code grid. On each pointer move over the map keep the nearest shown record within 5 game pixels
+  Q1572's records and code grid. On each pointer move over the map keep the nearest shown record within 5 game pixels
   (in x and in y, then by distance, the first of equals) and the cell's thing id; repaint the picture when a member is
   hovered or left (his patrol rectangle in (25, 25, 250)); letter `0x991` with the member's name, UITEXT 456 "Visitor
   #{P24}" or 457 "New Visitor" for a guest, else the cell's thing's two name lines joined (`Thing_JoinedName`, as the
@@ -3144,9 +3142,9 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   2026-10-16 (`verify-ui-hud.md` M3, M4, C3). (1) The buy screen's stats panel is unbuilt (`ParkBuyScreen.cs`); its
   gauges are in `hud.md`, "The shop, sideshow and ride windows" (`0x004abb00`: excitement, text from
   `Upgrades[0].RedLineCapacity`, a gauge from `Upgrades[0].WearRate`; label text not read). (2) The map overlay is
-  unbuilt (`ParkMapScreen.cs`; its view, zoom and scroll are built, Q624, and the overlay's build is Q684); its colours are immediates in `0x005f0700` (`hud.md`, "The map's colours"); the
+  unbuilt (`ParkMapScreen.cs`; its view, zoom and scroll are built, Q624, its switches and pickers, Q684, and the overlay's painting is Q1572); its colours are immediates in `0x005f0700` (`hud.md`, "The map's colours"); the
   channel order (D3D, B, G, R, A in memory) and which record colours which code, sprite and line are settled by Q664
-  (`hud.md`, "The map's overlay"), so (2) is Q684's. (3) The frame routine brackets the
+  (`hud.md`, "The map's overlay"), so (2) is Q1572's. (3) The frame routine brackets the
   draws with `0x0046c100` (on `0x007b05a8`, at `0x0054e310`) and `0x0046c110` (at `0x0054e34f`), which sets `+4`
   (`0x007b05ac`) to the latched thing when its kind byte `+2` is 1, 4, 5, 6, 7, 8 or `0x12`, sets `+8` to the first
   thing on the picked cell (`+0x24`, `0x007b05cc`, by `0x00527e80`) and, when nothing was latched, copies `+8` into

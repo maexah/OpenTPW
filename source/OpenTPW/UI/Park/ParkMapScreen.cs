@@ -24,13 +24,14 @@ namespace OpenTPW.UI;
 /// put the camera on the view's cell as the map closes; Escape closes it where it is.
 /// </para>
 /// <para>
-/// <b>The overlay is not built</b> (counted, <c>MAP_OVERLAY</c>; the build is Q684). Over that picture the original paints a
+/// <b>The overlay's switches and pickers are built, its painting is not</b> (counted, <c>MAP_OVERLAY</c>, as the map opens and on
+/// every press; the build is Q1572). The six switches and the two pickers keep the original's three words
+/// (<see cref="ParkMapOverlay"/>). Over that picture the original paints a
 /// 128x128 grid of codes - paths, queues, land outside the park, and each ride, shop, sideshow, feature, toilet, camera
 /// and staff room, filled by a three-stop ramp over its repair, excitement or satisfaction - and over it draws a dot for
 /// each guest and member of staff, the litter, the guards', cameras' and entertainers' ranges and the chosen member's
 /// patrol area. Six layer switches, the staff picker and the metric picker choose what it shows
-/// (<c>docs/exe/hud.md</c>, "The map's overlay"). The two button panels that back the switches, buttpan1 and
-/// buttpan2, are kept bare, as the screen's own backing art.
+/// (<c>docs/exe/hud.md</c>, "The map's overlay"). The two button panels buttpan1 and buttpan2 are the switches' backing art.
 /// </para>
 /// <para>
 /// <b>No colours are painted over the picture</b>, so the shipped picture shows the park's terrain alone.
@@ -206,17 +207,103 @@ internal sealed class ParkMapScreen : UiWindow
 			Clicked = CloseOnTheView
 		} );
 
+		// The six layer switches (type 2, flags 0x11): each press XORs its bit of the layer word (Map_Proc 0x005f1130,
+		// message 0x100). Each carries a pair of help rows, "show" (op 0x11) while it is up or held and "hide" (op 0x12)
+		// while it is down.
+		Switch( 0x987, new UiRect( 64, 1409, 167, 1512 ), 267, "b_srides", ParkMapOverlay.Rides );
+		Switch( 0x994, new UiRect( 184, 1409, 286, 1512 ), 271, "b_sshow", ParkMapOverlay.Sideshows );
+		Switch( 0x993, new UiRect( 303, 1409, 406, 1512 ), 269, "b_sshop", ParkMapOverlay.Shops );
+		Switch( 0x982, new UiRect( 423, 1409, 525, 1512 ), 273, "b_sfeature", ParkMapOverlay.Miscellaneous );
+		Switch( 0x989, new UiRect( 542, 1409, 644, 1512 ), 275, "b_strack", ParkMapOverlay.Tracks );
+		Switch( 0x983, new UiRect( 1390, 1409, 1493, 1512 ), 277, "b_svisit", ParkMapOverlay.Visitors );
+
+		// The two pickers, type-8 groups of switches, put down from their words as the screen opens (FUN_005f0b40).
+		var staff = Root.Add( new UiRadioGroup { Id = 0x98b, Rect = new UiRect( 1883, 443, 1985, 987 ) } );
+		Pick( staff, 0x98e, new UiRect( 1883, 443, 1985, 546 ), 279, "b_shandy", ParkMapOverlay.Handyman, staffWord: true );
+		Pick( staff, 0x98f, new UiRect( 1883, 592, 1985, 694 ), 281, "b_smech", ParkMapOverlay.Mechanic, staffWord: true );
+		Pick( staff, 0x98d, new UiRect( 1883, 740, 1985, 842 ), 285, "b_senter", ParkMapOverlay.Entertainer, staffWord: true );
+		Pick( staff, 0x98c, new UiRect( 1883, 885, 1985, 987 ), 283, "b_sguard", ParkMapOverlay.Guard, staffWord: true );
+
+		var metric = Root.Add( new UiRadioGroup { Id = 0x996, Rect = new UiRect( 1526, 1409, 1868, 1512 ) } );
+		Pick( metric, 0x999, new UiRect( 1526, 1409, 1629, 1512 ), 291, "b_ssatis", ParkMapOverlay.Satisfaction, staffWord: false );
+		Pick( metric, 0x998, new UiRect( 1646, 1409, 1748, 1512 ), 287, "b_shap", ParkMapOverlay.Happiness, staffWord: false );
+		Pick( metric, 0x997, new UiRect( 1766, 1409, 1868, 1512 ), 289, "b_sexcit", ParkMapOverlay.Excitement, staffWord: false );
+
 		// The quiet stop, which is what the original takes here: Advisor_StopQuietly(1) fades his voice
 		// and throws the line away, where Hush would have him cry out. OptionsScreen is the only other
 		// thing in this game that takes it, and for the same reason.
 		Advisor.Current?.StopQuietly();
 
-		// The overlay, its switches and pickers (Q684).
+		// The overlay painted from the three words: not built (Q1572).
 		Unimplemented.Report( "MAP_OVERLAY" );
 
 		Stack.HelpBarTop = HelpBarTopAtTheMap;
 		Current = this;
-		Log.Info( $"Park map: opened, {_view}" );
+		Log.Info( $"Park map: opened, {_view}, {ParkMapOverlay.Census}" );
+	}
+
+	/// <summary>A layer switch, down while its bit of the layer word is set; a press XORs the bit.</summary>
+	private void Switch( int id, UiRect rect, int help, string mesh, int bit )
+	{
+		Root.Add( new UiButton
+		{
+			Id = id,
+			Rect = rect,
+			HelpText = help,
+			HelpWhenOn = help + 1,
+			Mesh = UiMesh.Get( mesh ),
+			Toggles = true,
+			IsDown = (ParkMapOverlay.Layers & bit) != 0,
+			Clicked = () =>
+			{
+				ParkMapOverlay.Layers ^= bit;
+				Changed( id );
+			}
+		} );
+	}
+
+	/// <summary>
+	/// One option of a picker, a switch (flags 0x11) in a type-8 group. Its press flips it, and the group posts the map
+	/// <c>0x101</c> with it and 1 if it went down, 0 if it came up (the radio group's pick, <c>0x0066a468</c>): the word takes
+	/// the option's value, or 0, so a press on the chosen one leaves none chosen ("hide", its op 0x12 row, says as much).
+	/// </summary>
+	private void Pick( UiRadioGroup group, int id, UiRect rect, int help, string mesh, int value, bool staffWord )
+	{
+		var option = group.AddOption( new UiButton
+		{
+			Id = id,
+			Rect = rect,
+			HelpText = help,
+			HelpWhenOn = help + 1,
+			Mesh = UiMesh.Get( mesh ),
+			Toggles = true
+		} );
+
+		option.Clicked = () =>
+		{
+			var word = option.IsDown ? value : 0;
+
+			if ( staffWord )
+				ParkMapOverlay.Staff = word;
+			else
+				ParkMapOverlay.Metric = word;
+
+			group.Put( option.IsDown ? id : -1 );
+			Changed( id );
+		};
+
+		if ( (staffWord ? ParkMapOverlay.Staff : ParkMapOverlay.Metric) == value )
+			group.Put( id );
+	}
+
+	/// <summary>
+	/// A switch or a pick: the original reloads its picture, repaints the overlay over it and uploads it
+	/// (<c>FUN_005f1ea0( 1 )</c>, <c>0x005f15fd</c>..<c>0x005f1633</c>). Nothing is painted here (Q1572), so the repaint is counted.
+	/// </summary>
+	private void Changed( int id )
+	{
+		Log.Info( $"Park map: 0x{id:x} pressed, {ParkMapOverlay.Census}" );
+		Unimplemented.Report( "MAP_OVERLAY" );
 	}
 
 	/// <summary>
