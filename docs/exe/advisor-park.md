@@ -1218,7 +1218,8 @@ Not heard in either game.
 ## The poll, and the control panel's line (message `0xb9`, Q316)
 
 **The poll.** The tick's first act, before its wait is looked at, is `FUN_0059c680( 1 )` on the balance object
-(`0x0059a58b`, `ECX = 0x00fb3540`): from the row its first dword names, the cursor, nought again past row `0x15e`,
+(`0x0059a58b`, `ECX = 0x00fb3540`): from the row its first dword names, the cursor (set to nought first where it is
+351 or more, `0x0059c6a8`, so a park file's cursor of `0x7FFFFFFF` begins again at row 1), nought again past row `0x15e`,
 it walks the metadata table until it has scored ONE row whose `+0x00` is nought, and leaves the cursor on the row
 after. A row is scored by its function (`+0x10`) where its mode (`+0x0c`) fits the game, and -1 otherwise; a score
 above nought of a message the gate (`FUN_0059abc0`, not forced) lets by makes that message the answer, and

@@ -4925,6 +4925,24 @@ public class ParkAdvisorMessageTests
 	}
 
 	/// <summary>
+	/// A park file's cursor at the top of the dword, 0x7FFFFFFF, is nought before the poll walks (0x0059c6a8): the
+	/// first tick scores row 1 and leaves the cursor on row 2, where a walk from the overflowed row would take 2^31
+	/// steps before it scored anything.
+	/// </summary>
+	[TestMethod]
+	public void AParkFilesPollCursorAtTheTopOfTheDwordBeginsAgainAtRowOne()
+	{
+		var cursor = new ParkAdvisorMessages.PollCursor { Row = 40 };
+		var messages = new ParkAdvisorMessages( Settings(), cursor: cursor );
+		Assert.IsTrue( messages.RestoreCursor( int.MaxValue ) );
+		var watch = System.Diagnostics.Stopwatch.StartNew();
+		var poll = System.Threading.Tasks.Task.Run( () => messages.Tick( 1100, 1100 * 250L, ( _, _ ) => 1000 ) );
+		Assert.IsTrue( poll.Wait( TimeSpan.FromSeconds( 5 ) ), $"the poll still walked after {watch.Elapsed}" );
+		Assert.AreEqual( 2, cursor.Row );
+		Assert.IsNotNull( messages.PollAnswer( 1 ) );
+	}
+
+	/// <summary>
 	/// The poll's bounds and its gate: on the row's sweep a park of ten days or of sixty is not posted, nor one
 	/// whose file says the line was said, nor one with the Tutorial option off, nor a score not above
 	/// MinScoreForConsideration; a second park takes the cursor where the first left it; and a row found while
