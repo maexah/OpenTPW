@@ -969,6 +969,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0054ec9f` | | OpenTPW/World/Level.cs OpenTPW/World/Park/ParkAudio.cs  |
 | `0x0054ed3f` | | OpenTPW/World/Level.cs  |
 | `0x0054ed7c` | | OpenTPW/Global/GameClock.cs OpenTPW/World/Level.cs  |
+| `0x0054f24e` | State 9 sends the advisor event 10 (`RESET_FOR_EASY_MODE`) on the player's first park, after the park file's load | OpenTPW/World/Advisor/ParkAdvisorMessages.cs OpenTPW/World/Level.cs  |
 | `0x0054f455` | | OpenTPW/Global/GameClock.cs  |
 | `0x0054f45f` | | OpenTPW/Global/GameClock.cs  |
 | `0x0054f47f` | | OpenTPW/World/Park/ParkRides.cs  |
@@ -1128,6 +1129,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x005994e0` | | OpenTPW/UI/Park/ParkFrontEnd.cs OpenTPW/World/Advisor/Advisor.cs  |
 | `0x005996d0` | | OpenTPW/World/Advisor/Advisor.cs  |
 | `0x00599880` | | OpenTPW/UI/FrontEnd/FrontEnd.cs OpenTPW/UI/FrontEnd/FrontEndLines.cs OpenTPW/World/Advisor/Advisor.cs OpenTPW/World/Advisor/ClipSequence.cs  |
+| `0x0059af63` | Event 10 handled in `FUN_0059ae20`: every record's line -1, said and slaps nought, tick kept | OpenTPW.Tests/ParkAdvisorMessageTests.cs OpenTPW/World/Advisor/ParkAdvisorMessages.cs  |
 | `0x005a0a50` | The advisor metadata table's filler: a static initializer run before WinMain, filling 0x0076e300's 351 rows | OpenTPW/UI/Park/ParkLines.cs  |
 | `0x005accf0` | | OpenTPW/Client/Players.cs  |
 | `0x005aef50` | | OpenTPW.Files/Formats/Save/PlayerFile.cs  |
@@ -1141,6 +1143,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x005afc60` | | OpenTPW.Files/Formats/Save/PlayerFile.cs OpenTPW.Tests/ProfilePreservationTests.cs  |
 | `0x005afd70` | | OpenTPW.Files/Formats/Save/PlayerFile.cs  |
 | `0x005aff50` | | OpenTPW.Files/Formats/Save/PlayerFile.cs OpenTPW.Files/Formats/Save/RecordStream.cs  |
+| `0x005b0109` | gms.dat's first-park byte (`+0x4c`) cleared | OpenTPW/World/Advisor/ParkAdvisorMessages.cs  |
+| `0x005b0597` | gms.dat's first-park byte (`+0x4c`) read | OpenTPW/World/Advisor/ParkAdvisorMessages.cs  |
 | `0x005b09c0` | A park's record: found or made, and answered only while its global.sam loads (`0x005b11c0`) | OpenTPW.Files/Formats/Save/PlayerFile.cs OpenTPW/World/Lobby/LobbyIsland.cs  |
 | `0x005b0cc0` | | OpenTPW.Files/Formats/Save/PlayerFile.cs  |
 | `0x005b0d70` | | OpenTPW.Files/Formats/Save/PlayerFile.cs  |

@@ -967,6 +967,8 @@ internal sealed class ParkAdvisorMessages
 	private readonly SettingsFile _settings;
 	private readonly Dictionary<int, Topic> _topics;
 	private readonly Dictionary<int, History> _histories;
+	// The records of the messages no topic builds, as ResetForEasyMode left them; empty until it runs.
+	private readonly Dictionary<int, ParkWorld.AdvisorHistory> _unbuilt = [];
 	private readonly Pending?[] _slots = new Pending?[ParkWorld.AdvisorSlots];
 	// The slots a park file's message this game cannot say stands in: taken, and never said or written over.
 	private readonly bool[] _carried = new bool[ParkWorld.AdvisorSlots];
@@ -1051,10 +1053,65 @@ internal sealed class ParkAdvisorMessages
 		return taken;
 	}
 
-	/// <summary>Each built message's record as a park file's advisor holds it (<see cref="ParkWorld.PutAdvisorHistories"/>).</summary>
+	/// <summary>
+	/// Event 10, <c>RESET_FOR_EASY_MODE</c> (handled in <c>FUN_0059ae20</c>, <c>0x0059af63</c>; sent once, on a player's
+	/// first park, <c>0x0054f24e</c>): every record's line goes to -1 and its said and slaps to nought, its tick kept.
+	/// The built messages' records are reset here; every other message's that <paramref name="saved"/> holds is kept
+	/// reset for <see cref="Written"/>, so the file is written as the original's advisor would be. Says how many
+	/// records it changed.
+	/// </summary>
+	internal int ResetForEasyMode( Func<int, ParkWorld.AdvisorHistory?> saved )
+	{
+		var changed = 0;
+		foreach ( var history in _histories.Values )
+		{
+			if ( history.Line == -1 && !history.Said && history.Slaps == 0 ) continue;
+			history.Line = -1;
+			history.Said = false;
+			history.Slaps = 0;
+			++changed;
+		}
+
+		_unbuilt.Clear();
+		for ( var id = 0; id < ParkWorld.AdvisorMessages; ++id )
+		{
+			if ( _histories.ContainsKey( id ) || saved( id ) is not { } record ) continue;
+			var reset = record with { Line = -1, Said = false, Slaps = 0 };
+			if ( reset != record ) ++changed;
+			_unbuilt[id] = reset;
+		}
+
+		Log.Info( $"Park advisor: reset for easy mode, {changed} records changed, their ticks kept" );
+		return changed;
+	}
+
+	/// <summary>
+	/// On the player's first park, by gms.dat's byte (<see cref="PlayerFile.FirstParkToCome"/>, read <c>0x005b0597</c>),
+	/// sends <see cref="ResetForEasyMode"/> and clears the byte (<c>0x005b0109</c>); it goes out with the player's next
+	/// save. Any later park, and a park with nobody playing, is left alone. Says whether it reset.
+	/// </summary>
+	internal bool FirstPark( PlayerFile? player, Func<int, ParkWorld.AdvisorHistory?> saved )
+	{
+		if ( player is not { FirstParkToCome: true } )
+			return false;
+
+		ResetForEasyMode( saved );
+		player.FirstParkToCome = false;
+		return true;
+	}
+
+	/// <summary>
+	/// Each built message's record as a park file's advisor holds it (<see cref="ParkWorld.PutAdvisorHistories"/>), and
+	/// after <see cref="ResetForEasyMode"/> every other message's as it left them.
+	/// </summary>
 	internal IReadOnlyDictionary<int, ParkWorld.AdvisorHistory> Written()
-		=> _histories.ToDictionary( pair => pair.Key,
+	{
+		var written = _histories.ToDictionary( pair => pair.Key,
 			pair => new ParkWorld.AdvisorHistory( pair.Value.LastTick, pair.Value.Line, pair.Value.Said, pair.Value.Slaps ) );
+		foreach ( var (id, record) in _unbuilt )
+			written[id] = record;
+		return written;
+	}
 
 	/// <summary>
 	/// Takes a park file's waiting messages into the slots they stand in (<paramref name="saved"/> answers null
