@@ -1644,28 +1644,21 @@ internal sealed class ParkGadget : UiWindow
 	private bool HiddenNow => ParkCamcorderCameraMode.Active || Stack.Windows.Any( window => window is ParkMapScreen );
 
 	/// <summary>
-	/// The date the park's calendar has reached.
-	///
-	/// <para>
-	/// <b>The format is an approximation, and knowingly one.</b> The original fills this control in
-	/// FUN_004a0e30: it builds the text through FUN_006acca0 from a compiled resource - entry 0x1c0 of
-	/// the bundle at DAT_0078ba94, into a 31-byte buffer - handed three numbered arguments typed 0x10,
-	/// 0x11 and 0x12, which
-	/// are the day, the month and the year. So the layout of the date is <b>the game's own localised
-	/// resource</b>, not the machine's setting: the executable imports no GetDateFormat at all, and
-	/// GetLocaleInfoA/W appear only inside CRT locale code.
-	/// </para>
-	/// <para>
-	/// That entry of that bundle is UITEXT 448, the row the Load Park list writes a save's date with
-	/// (<see cref="ParkFileScreen.DateOf"/>; docs/exe/saves.md). This does not use it: it shows the machine's
-	/// short date, a stand-in and not a match.
-	/// </para>
+	/// The date the park's calendar has reached, lettered by <see cref="DateText"/>. The original letters it in
+	/// <c>Gadget_SetDateAndTrend</c> (<c>0x004a0e30</c>) once a day and at a load; this writes it each frame, the same text.
 	/// </summary>
-	private void ShowDate()
-	{
-		_date.Text = GameCalendar.Now.ToShortDateString();
-		Unimplemented.Report( "GADGET_DATE_UITEXT_448" );
-	}
+	private void ShowDate() => _date.Text = DateText( GameCalendar.Now );
+
+	/// <summary>
+	/// A date as the gadget letters it (<c>0x004a0e30</c>, through <c>FUN_006acca0</c>): UITEXT 448 (entry <c>0x1c0</c> of the
+	/// bundle at <c>DAT_0078ba94</c>) with the day as parameter 16, the month as 17 and the year as 18, none padded, the
+	/// month counted from one and the year whole. So the layout is the game's own table's, "{16}.{17}.{18}" in the English
+	/// folder, and not the machine's; the Load Park list writes a save's date with the same row (<see cref="ParkFileScreen.DateOf"/>).
+	/// The original under Proton read "8.11.2000" on the American table (month first) at <c>mGameTick</c> 5000
+	/// (docs/exe/saves.md, "The container takes another deflate").
+	/// </summary>
+	internal static string DateText( DateTime date )
+		=> Localization.Format( 448, (16, $"{date.Day}"), (17, $"{date.Month}"), (18, $"{date.Year}") );
 
 	/// <summary>
 	/// The golden keys the player holds and the golden tickets they have not spent, read from their progress the way

@@ -415,7 +415,7 @@ each title yellow with its darker copy, its control's rect and skin rect the str
 (573, 74, 1517, 153), and `0x007c2118` at its `+0x98` (`uitree.py` from `[0x007c24c8]`, which prints that word as
 "text"), 0.037 to 0.041 of the widened rect yellow and none white. OpenTPW letters the three so (Q676,
 `ParkVisitorsScreen`, `ParkItemsScreen`, `ParkStaffScreen`). Ids with no control here are screens not built. The entry
-price's heading is `UI_SetTitle`'s too, and is empty and white here until it carries the park's name (Q158); the ride
+price's heading is `UI_SetTitle`'s too, and carries the park's name: the gate thing's two name lines as the file holds them (the record's `+60` and `+62`), joined as `FUN_004e2780` joins a thing's, "LOST Kingdom" in the stock park (Q158, `ParkEntryPriceScreen.ParkName`; a park with no file names its gate by its item's rows and counts `ENTRY_PRICE_FRESH_PARK_NAME`, Q1558); the ride
 window's title is `UI_SetTitle`'s too and is white here (Q548).
 
 **OpenTPW letters both screens larger** (Q644, a deviation at Alexah's word, 2026-10-25, `UiFonts.ParkScreenLettering`):

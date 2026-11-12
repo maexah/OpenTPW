@@ -2226,7 +2226,10 @@ public sealed partial class ParkWorld : IParkInitialState
 			}
 
 			if ( model == CatalogueObjectModel )
+			{
 				_objects.Add( ReadCatalogueObject( id, start ) );
+				_objectNames[id] = (ReadNameLineAt( start + 60 ), ReadNameLineAt( start + 62 ));
+			}
 			else if ( Array.IndexOf( PersonModels, model ) >= 0 )
 				_people.Add( ReadPerson( id, model, start ) );
 			else if ( model == EconomyModel )

@@ -189,6 +189,16 @@ arrow pointing up) and `red_down` (`red_down`, a red arrow pointing down), so fr
 red one. The builder disables it (vtable `+0x14` with 0, `0x004a22d9`) and does not hide it, so it is always drawn and
 never takes the pointer.
 
+**The date's words** (Q158). `Gadget_SetDateAndTrend` (`0x004a0e30`) letters `0x20` through `FUN_006acca0` from entry `0x1c0`
+of the bundle at `DAT_0078ba94`, UITEXT 448, into a 31-byte buffer, with three numbered arguments typed `0x10`, `0x11` and
+`0x12`: the day, the month and the year. So the layout is the game's table's, not the machine's (the executable imports no
+`GetDateFormat`): "{16}.{17}.{18}" in the English folder, "{17}.{16}.{18}" in the american one, as the Load Park list's
+(`saves.md`). The month is counted from one and the year is whole: the original read "8.11.2000" on the american table at
+`mGameTick` 5000 (`saves.md`, "The container takes another deflate"); its day against ours is Q1557's. OpenTPW:
+`ParkGadget.DateText`, written each frame where the original writes it once a day and at a load (the same words). Off-screen
+in a cloud lane (Q158, the run's output not kept), the stock park paused on tick 1567: `state` read `date=2000-02-08` and
+`control 20` read '8.2.2000', font 3 in (0, 0, 0).
+
 **The frame** is set by `Gadget_SetDateAndTrend` (`0x004a0e30`), the routine that also letters the date into `0x20`. It
 compares the newest closed month of the analyser's two money rings ("The mini-balance is a MONTHLY ACCOUNT", below):
 cash in (`+0x1fc94`) and all costs (`+0x1f5a4`), each read as the hire screen reads it (a negative index reads

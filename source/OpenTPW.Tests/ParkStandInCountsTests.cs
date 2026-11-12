@@ -1,5 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OpenTPW.UI;
+using System;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -8,10 +9,9 @@ using System.Runtime.CompilerServices;
 namespace OpenTPW.Tests;
 
 /// <summary>
-/// Four park-screen readouts are stand-ins for the original's, and each is counted where it is drawn (Q865, the
-/// counting piece of Q158): the object window's scrap row
-/// (<c>FUN_004e2400</c>), the entry-price screen's park-name heading (<c>0x00498e4c</c>), the gadget's date (UITEXT 448)
-/// and the buy screen's turning model and kind row (<c>0x1ec</c>). Reads the shipped park; skipped without the game
+/// The park-screen readouts of Q158: the object window's scrap row (<c>FUN_004e2400</c>), the entry-price screen's
+/// park-name heading (<c>0x00498e4c</c>) and the gadget's date (UITEXT 448), each built, and the buy screen's turning model
+/// and kind row (<c>0x1ec</c>), still counted where they are drawn (Q865). Reads the shipped park; skipped without the game
 /// (<see cref="GameData"/>).
 /// </summary>
 [TestClass]
@@ -134,34 +134,93 @@ public class ParkStandInCountsTests
 	private static UiControl? FindOrNull( UiControl root, int id )
 		=> root.Id == id ? root : root.Children.Select( c => FindOrNull( c, id ) ).FirstOrDefault( c => c != null );
 
-	/// <summary><b>The entry-price screen counts its empty heading when it is built.</b></summary>
-	/// <remarks><b>Mutations:</b> the report taken out.</remarks>
+	/// <summary>
+	/// <b>The entry-price screen letters the park's name in its heading as <c>UI_SetTitle</c> letters a title</b>
+	/// (<c>0x00498e4c</c>): the stock park's gate thing (11) holds "LOST" and "Kingdom", so the heading reads "LOST Kingdom", in
+	/// font 5 in (234, 239, 102) with its edge, in the stream's rect widened to 513..1457. The name is the file's lines, not
+	/// the gate's item's rows of <c>OBJECT_NAMES</c> (which read the same in the stock park), and nothing is counted for a park with a file.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the heading left empty; the gate named by its item's table rows; the lines joined without
+	/// the space; the lines swapped; the white of the stream; the stream's rect unwidened.</remarks>
 	[TestMethod]
-	public void TheEntryPriceScreenCountsItsParkNameHeading()
+	public void TheEntryPriceScreenLettersTheParksNameInItsHeading()
 	{
-		var before = Times( "ENTRY_PRICE_TITLE_PARK_NAME" );
+		var counted = Times( "ENTRY_PRICE_TITLE_PARK_NAME" ) + Times( "ENTRY_PRICE_FRESH_PARK_NAME" );
 
 		_stack.Open( new ParkEntryPriceScreen( _stack ) );
 
-		Assert.AreEqual( before + 1, Times( "ENTRY_PRICE_TITLE_PARK_NAME" ) );
+		var heading = Find( _stack.Windows.OfType<ParkEntryPriceScreen>().Single().Root, 0x4f3af );
+
+		Assert.AreEqual( "LOST Kingdom", heading.Text );
+		Assert.AreEqual( "LOST Kingdom", ParkEntryPriceScreen.ParkName( Level.Current!.Park, _ => "the item's rows" ), "the file's lines, not the item's rows" );
+		Assert.AreEqual( new UiColour( 234, 239, 102 ), heading.TextColour );
+		Assert.IsTrue( heading.TextShadow );
+		Assert.AreEqual( 5, heading.Font );
+		Assert.AreEqual( new UiRect( 513, 174, 1457, 253 ), heading.Rect );
+		Assert.AreEqual( counted, Times( "ENTRY_PRICE_TITLE_PARK_NAME" ) + Times( "ENTRY_PRICE_FRESH_PARK_NAME" ) );
 	}
 
-	/// <summary><b>The gadget counts its date each time it writes it</b>: once built, and again each frame.</summary>
-	/// <remarks><b>Mutations:</b> the report taken out; counted only at the build.</remarks>
+	/// <summary>
+	/// <b>A park file's objects keep the two lines of their names</b> (<c>+60</c> and <c>+62</c>, four bytes a character): the
+	/// stock gate "LOST" and "Kingdom", the Belly Bounce "Belly" and "Bounce", the Traffic Lights one line and an empty second;
+	/// an id that is no object has none.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the lines read two bytes a character; the two offsets swapped; a line read past its nought.</remarks>
 	[TestMethod]
-	public void TheGadgetCountsItsDateEachTimeItIsWritten()
+	public void AParkFilesObjectsKeepTheTwoLinesOfTheirNames()
+	{
+		var world = (ParkWorld)Level.Current!.Park!;
+
+		Assert.IsTrue( world.TryNameOf( 11, out var a, out var b ) );
+		Assert.AreEqual( ("LOST", "Kingdom"), (a, b) );
+		Assert.IsTrue( world.TryNameOf( 13, out a, out b ) );
+		Assert.AreEqual( ("Belly", "Bounce"), (a, b) );
+		Assert.IsTrue( world.TryNameOf( 12, out a, out b ) );
+		Assert.AreEqual( ("Traffic Lights", ""), (a, b) );
+		Assert.IsFalse( world.TryNameOf( 0, out _, out _ ) );
+	}
+
+	/// <summary>
+	/// <b>A park with no file names its gate as its item's rows do, and counts it</b>: what the original's fresh gate holds is not read.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the count taken out; the file's lines asked of a park with none.</remarks>
+	[TestMethod]
+	public void AParkWithNoFileNamesItsGateByItsItemAndCountsIt()
+	{
+		var fresh = new FreshPark( "jungle", new ParkBalance( "jungle", easyMode: false ), _catalogue, FileSystem );
+		var before = Times( "ENTRY_PRICE_FRESH_PARK_NAME" );
+
+		Assert.AreEqual( $"item rows of {fresh.ParkGates}", ParkEntryPriceScreen.ParkName( fresh, id => $"item rows of {id}" ) );
+		Assert.AreEqual( before + 1, Times( "ENTRY_PRICE_FRESH_PARK_NAME" ) );
+	}
+
+	/// <summary>
+	/// <b>The gadget letters the calendar's date from UITEXT 448</b>, day, month and year unpadded with the month from one and
+	/// the year whole, as the English table orders them: <c>mGameTick</c> 5000 is 5 August 2000, "5.8.2000"; nothing is counted.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the machine's short date ("8/5/2000"); the month from nought ("5.7.2000"); the year less
+	/// 1900 ("5.8.100"); the day and the month swapped; the count left in.</remarks>
+	[TestMethod]
+	public void TheGadgetLettersTheDateFromUitext448()
 	{
 		var before = Times( "GADGET_DATE_UITEXT_448" );
 
-		var gadget = new ParkGadget( _stack );
-		_stack.Open( gadget );
+		try
+		{
+			GameCalendar.Rebase( 5000 );
 
-		var built = Times( "GADGET_DATE_UITEXT_448" );
-		Assert.IsTrue( built > before, "written when built" );
+			var gadget = new ParkGadget( _stack );
+			_stack.Open( gadget );
+			_stack.Update();
 
-		_stack.Update();
-
-		Assert.IsTrue( Times( "GADGET_DATE_UITEXT_448" ) > built, "and rewritten on a frame" );
+			Assert.AreEqual( new DateTime( 2000, 8, 5, 0, 20, 0 ), GameCalendar.Now );
+			Assert.AreEqual( "5.8.2000", Find( gadget.Root, 0x20 ).Text );
+			Assert.AreEqual( before, Times( "GADGET_DATE_UITEXT_448" ) );
+		}
+		finally
+		{
+			GameCalendar.Rebase();
+		}
 	}
 
 	/// <summary>

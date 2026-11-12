@@ -124,9 +124,8 @@ internal abstract class ParkFileScreen : UiWindow
 
 	/// <summary>
 	/// A save's date as its row shows it: UITEXT 448 with the day as parameter 16, the month as 17 and the year as
-	/// 18, none padded, then a space and the hour and the minute, two digits each (<c>0x00752564</c>).
+	/// 18, none padded, as the gadget letters a date (<see cref="ParkGadget.DateText"/>), then a space and the hour and the minute, two digits each (<c>0x00752564</c>).
 	/// </summary>
 	internal static string DateOf( DateTime written )
-		=> Localization.Format( 448, (16, $"{written.Day}"), (17, $"{written.Month}"), (18, $"{written.Year}") )
-			+ $" {written.Hour:00}:{written.Minute:00}";
+		=> ParkGadget.DateText( written ) + $" {written.Hour:00}:{written.Minute:00}";
 }

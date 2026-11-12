@@ -12145,6 +12145,22 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q158. Four park-screen readouts are stand-ins; each is counted where it is drawn (Q865).** **First piece done (cloud lane c104, 2026-11-12): the gadget's date is lettered from UITEXT 448 (`ParkGadget.DateText`) and the entry price's heading letters the park's name, the gate thing's two name lines as the file holds them (`ParkWorld.TryNameOf`, `ParkEntryPriceScreen.ParkName`), as `UI_SetTitle` letters a title; `GADGET_DATE_UITEXT_448` and `ENTRY_PRICE_TITLE_PARK_NAME` are gone. The buy panel's model and kind row are Q1556, the photographs Q1557, a fresh park's gate name Q1558, the list notes from Q130e Q1559.** Found by the 2026-09-26 staleness
+  audit (`AGENTS.md` rule 4). `ParkObjectWindow`'s scrap row letters the build price as money (row 449, "$ 500"), where `FUN_004e2400`
+  scales it by the age bucket's percentage (`FUN_004e2290`: `percent x +0x1b8 / 100`, the original's "$ 250"), `SCRAP_VALUE_DEPRECIATION`, counted
+  where something is sold, at the shop window's scrap row and at the object window's. The percentage is built since Q1052
+  (`ParkScrap.Percent`, `ItemDescriptionFile.ScrapValueAt`: the item's four-year `ScrapValueYear1`..`4` picked by the age, 100 only under 30 days with no customer yet); the row
+  and the sales that still counted `SCRAP_VALUE_DEPRECIATION` were Q1054's (built 2026-11-12; the photograph is Q1344's).
+  (The object window's Age row is built: UITEXT 433, "{P8} days".) `ParkEntryPriceScreen`'s heading
+  `0x4f3af` is empty, and its remark says "left empty and counted"; the original titles it with the name of the thing
+  at world `+0x1da732`, `mParkGates` (`ParkWorld`), and its help row 191 reads "Park name - left-click to edit", so
+  the title is the park's name and its edit is Q28's. The name is lettered by `UI_SetTitle` (`0x00485d20`, called at `0x00498e4c`): yellow, with the edge, in
+  the stream's rect widened by half its width either side (749..1221 to 513..1457), where ours letters the empty heading white (Q676). `ParkGadget.ShowDate` prints the machine's short date (Q527). `ParkBuyScreen`'s description panel `0x1ea` draws its frame and the footprint picture, and neither the item's turning model nor its kind row `0x1ec`.
+  **Counted since Q865** (each where it is drawn: `SCRAP_VALUE_DEPRECIATION` at the object window's scrap row, gone since Q1054,
+  `ENTRY_PRICE_TITLE_PARK_NAME`, `GADGET_DATE_UITEXT_448`, `BUY_SCREEN_ITEM_MODEL` and `BUY_SCREEN_ITEM_KIND_ROW`, the last two for every row the panel is filled for, land and mystery rows too); **what is left is each build**,
+  and a count goes when its build lands: scale the scrap row by `FUN_004e2400`; letter the
+  park's name in the heading (`UI_SetTitle`); write the date from UITEXT 448; turn the item's model in the buy panel and write its kind row `0x1ec` (`ITEMTYPES.str`, item `+0x90`). Three rows are model-and-string pairs of their own (`FUN_004ab1b0`, `0x004ab55f`..`0x004ab654`, `FUN_00486410` then `FUN_00485b00`): a mystery ride builds item 100 and writes UITEXT `0x89` "??? Mystery Ride! ???"; Buy Land (row -1) builds item 101 and writes `0x86` "Buy Land"; Clear Land (row -2) builds item 102 and writes `0x87` "Clear Land".
+  Confirm each: its name leaves `unimplemented` after opening a ride's window, the entry-price screen and the buy screen.
 
 ## B. Docs and comments
 
