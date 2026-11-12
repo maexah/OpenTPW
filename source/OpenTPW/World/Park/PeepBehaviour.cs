@@ -1287,9 +1287,10 @@ public sealed class PeepBehaviour
 	/// orders the leaver's two cells and its remainder picks the split's arm (<c>0x004fecb4</c>).
 	/// </para>
 	/// <para>
-	/// <b>Watching an entertainer is built</b> and ends the turn (<see cref="Watch"/>). <b>The other arms before the
-	/// split are counted, not built</b>: <see cref="CountBeforeLeaving"/> and <see cref="CountAfterLeaving"/>, either
-	/// side of the leave test as the original has them.
+	/// <b>The happy jump comes first and is built</b> (<see cref="JumpsForJoy"/>), ending the turn. <b>Watching an
+	/// entertainer is built</b> and ends the turn (<see cref="Watch"/>). <b>The other arms before the split are
+	/// counted, not built</b>: <see cref="CountBeforeLeaving"/> and <see cref="CountAfterLeaving"/>, either side of the
+	/// leave test as the original has them.
 	/// </para>
 	/// </summary>
 	private void Decide( Peep peep, PeepWalk walk, int tick )
@@ -1298,6 +1299,9 @@ public sealed class PeepBehaviour
 			return;
 
 		var draw = _random.Next();
+
+		if ( JumpsForJoy( peep, tick ) )
+			return;
 
 		CountBeforeLeaving( peep, walk, draw, tick );
 
@@ -1397,22 +1401,37 @@ public sealed class PeepBehaviour
 	internal Func<Peep, int, int, bool> BalloonBeside { get; set; } = static ( _, _, _ ) => false;
 
 	/// <summary>
-	/// The deciding turn's three arms ahead of the leave test (<c>0x004fecb9</c>..<c>0x004fee51</c>), each counted
-	/// where the original tests it and none built: the happy jump, the vomit, and litter, which goes to a bin in
+	/// The deciding turn's first arm, (a) - <c>0x004fecd2</c>..<c>0x004fecea</c>: more than <see cref="HappyJumpGap"/>
+	/// sweeps, unsigned, past <see cref="Peep.TimeOfLastSpotAnim"/> and the happiness byte above
+	/// <see cref="HappyJumpAbove"/>, the guest plays spot animation <see cref="SpotHappy"/>
+	/// (<see cref="PlaySpotAnimation"/>, which stamps the sweep again) and the turn ends
+	/// (<c>docs/exe/ride-operation.md</c>, "The state-6 turn, in order").
+	/// </summary>
+	/// <returns>Whether the guest jumped, ending the turn.</returns>
+	private bool JumpsForJoy( Peep peep, int tick )
+	{
+		if ( (uint)(tick - peep.TimeOfLastSpotAnim) <= HappyJumpGap || (byte)(int)peep.Happiness <= HappyJumpAbove )
+			return false;
+
+		PlaySpotAnimation( peep, SpotHappy, tick );
+
+		return true;
+	}
+
+	/// <summary>
+	/// The deciding turn's two arms after the happy jump and ahead of the leave test (to <c>0x004fee51</c>),
+	/// each counted where the original tests it and neither built: the vomit, and litter, which goes to a bin in
 	/// reach or onto the ground (<c>docs/exe/ride-operation.md</c>, "The state-6 turn, in order").
 	/// </summary>
 	/// <remarks>
-	/// In the original the jump, the vomit and the bin errand each end the turn, and each clears its own test:
-	/// the jump stamps <c>+0x208</c>, the vomit and the dropped litter zero their levels. Here nothing ends the
-	/// turn or clears a test, so a count is of deciding turns on which the test held, and the turn goes on to the
-	/// leave test and the split as before. The bin's route (<c>FUN_004fa530</c> inside <c>FUN_00500dc0</c>) is not
-	/// asked, so a bin in reach is counted as the errand whether or not a walk would get there.
+	/// In the original the vomit and the bin errand each end the turn, and each clears its own test: the vomit and
+	/// the dropped litter zero their levels. Here nothing ends the turn or clears a test, so a count is of deciding
+	/// turns on which the test held, and the turn goes on to the leave test and the split as before. The bin's route
+	/// (<c>FUN_004fa530</c> inside <c>FUN_00500dc0</c>) is not asked, so a bin in reach is counted as the errand
+	/// whether or not a walk would get there.
 	/// </remarks>
 	private void CountBeforeLeaving( Peep peep, PeepWalk walk, int draw, int tick )
 	{
-		if ( (uint)(tick - peep.TimeOfLastSpotAnim) > HappyJumpGap && (byte)(int)peep.Happiness > HappyJumpAbove )
-			Unimplemented.Report( "DECIDE_HAPPY_SPOT_ANIMATION" );
-
 		if ( (byte)(int)peep.Vomit == VomitAt && draw % 3 == 0 )
 			Unimplemented.Report( "DECIDE_VOMIT" );
 
@@ -2051,8 +2070,8 @@ public sealed class PeepBehaviour
 	/// no animation of its own. <see cref="Step"/>'s case for that state brings them back.
 	/// </summary>
 	/// <remarks>
-	/// The queue turn's two arms and the deciding turn's empty hand call it. The original's other two calls are
-	/// the deciding turn's 5 and 7, counted in <see cref="CountBeforeLeaving"/>.
+	/// The queue turn's two arms, the deciding turn's happy jump (<see cref="JumpsForJoy"/>) and its empty hand call
+	/// it. The original's fifth call is the deciding turn's 7, counted in <see cref="CountBeforeLeaving"/>.
 	/// </remarks>
 	internal void PlaySpotAnimation( Peep peep, int animation, int tick )
 	{

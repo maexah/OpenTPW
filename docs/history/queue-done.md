@@ -13452,3 +13452,10 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   and before the next due visit, so `ParkRides.WrittenChannel` can write the nought as it stands (the engine saves `+0x30` whatever it holds) where it now writes the file's stale speed (`Speed: channel.DeferredSpeed != 0f ? ... : file.QueuedSpeed`). A made
   channel's nought (a bought ride before its first visit) falls back to `MadeChannel`'s 1.0 or `NeverStartedChannel`'s nought, and the original's own just-bought Hot Pot (`q257r` hotpot-bought-shut, slot 90, item 1140) holds 1.1, its divisor (the Sentinel's review datum, 2026-11-05; not read by Q1063; `fix-bought.TPWS` is OpenTPW's file, not the original's), so a just-bought thing must not save nought and the nought is for a clear's alone (a promotion `0x004738af` or a start-at-once trigger `0x00473408` leaves `+0x30` nought and the engine saves it so until the next due visit); a made channel's value before any visit is what is unmeasured: read a bought ride's `+0x30` in the original before its first visit
   (the model maker, `docs/exe/saves.md`, "A park made fresh"). Confirm: a loaded ride saved within 248 ms of a promotion, the saved `+0x30` read; predicted first.
+- [x] **Q224. A happy guest does not jump on their deciding turn.** Found by Q111 (`ride-operation.md`, "The state-6
+  turn, in order", (a)). More than 100 sweeps past `+0x208` and happiness above 80: spot animation 5 and the turn ends
+  (`0x004fecd2`..`0x004fecea`). Every part is built (`PeepBehaviour.PlaySpotAnimation`, `SpotHappy`); build it where
+  `DECIDE_HAPPY_SPOT_ANIMATION` is counted. The original's stock park made one in 964 sweeps (guest 33 at 83).
+  Confirm: a guest at happiness 90 deciding, set 5 for eleven sweeps and no sooner than 101 sweeps again; a screenshot
+  of the jump, beside the original's.
+  Built (c55, cloud): `PeepBehaviour.JumpsForJoy`; the screenshot is Q1340.
