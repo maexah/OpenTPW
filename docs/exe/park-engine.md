@@ -4468,7 +4468,7 @@ placed object, on the item's `WhichUIType`:
 vs "the shop" vs "the sideshow" vs "the toilet" - not inferred.
 
 Built in OpenTPW: the ride's (`ParkObjectWindow`), the shop's (`ParkShopWindow`, `hud.md`, "The shop's window"), the staff
-member's and the visitor's; the other five are counted where they are reached (Q31b, Q960, Q961).
+member's and the visitor's; the other five are counted where they are reached (Q31b, Q1520, Q961).
 
 Five verbs live in the shared base: cycle forward, cycle back, move, delete, close. **The ride's three
 sliders are buffered and committed only when the window closes OR either cycle button is pressed**, and
