@@ -3476,6 +3476,34 @@ key's `Park keys: shortcut row N, name` line and the screen `windows` named, a f
 to `9-map.png`); in that run, before Q631, A held a second left the camera's point where it was and W held a second moved it
 200 units (now A pans and W moves about 105 a second at zoom 110: `q631/ours-run3`).
 
+#### The candidate's figure in the portrait `0x2484` (Q419)
+
+**Decoded by the fork watch, not read again for Q419** (`verify-audio-fx.md` O4, 2026-10-16; `verify-ui-hud.md` H1,
+2026-11-12; Q419's notes, now in `docs/history/queue-done.md`). `FUN_0049ba00`, whose one caller is the hire handler
+(`0x0049b97b`), returns at once with no candidate, and makes the figure again only when the candidate's dword `+0` (the
+role) or byte `+9` (the costume) differs from `[0x007523e8]` / `[0x007523ec]`. It makes it at `0x0049bb4a`..`0x0049bb64`:
+`0x00475a10( 0x0074f758, kind, bank, 1, x, y, z )`, the kind by role from the table at `0x0049bb90` (roles 0 to 4: 5, 6, 4,
+7, 8), the bank the costume, set 1; the handle at `[0x007ca310]`; then `0x004755d0( handle, 8, 8.0f )`, local 8, the scale.
+The script `0x0074f758` (word 1832) is SetLocal 16 = `0x51000`, SetSet 1, SetLocal 15 = 5, Frame 0 to 7, Jump to its start.
+Draw flag `0x40000` takes sector 0 with no camera term (`0x005421cc`, `park-engine.md`), so local 15 is the direction: 5,
+past a five-way walk's last, drawn as 3 reflected. It stands on the portrait's rect: x = (left + (right − left) / 2 − `0x3f8`)
+/ 1024, y = (`0x300` − bottom + (bottom − top) / 4) / 768, z = 1 − (depth + 1) / 40 (`0x00476a70`); for the stream's
+(484, 179)-(748, 443) that is (−0.3906, 0.5091), the virtual screen's (624, 377). It steps on the constructor's 62 ms
+interval (`0x004759c4`). Message `0x14` (`0x0049b7b4`) frees it and sets both words to -1. **Not decoded:** how big a sprite
+flagged `0x40000` is drawn (its arm of `Sprite_BuildQuad`, `0x00589ce4`) with the scale 8.0, and what `0x10000` and
+`0x1000` in its flags do.
+
+**OpenTPW** (`ParkHireFigure`): the script is copied into `SpriteScript` at word 1832, the figure made on a pick by the
+rule above and freed on the close, stepped on the park's sprite ticks (every second 31 ms tick, so a new frame each 124 ms,
+as a person on the default interval), the costume brought within the kind's loaded banks (the deviation
+`ParkPeople.StaffPicture` makes, `docs/DECISIONS.md`), the picture's origin on the point above, and each picture pixel drawn
+one of the 1024 x 768 frame's: a stand-in size, counted as `STAFF_PORTRAIT_SIZE` at each make. **Seen off-screen in ours**
+(Q419, a cloud container, the stock park, no photograph beside the original): the cleaners' tab made the figure for
+candidate 12 (kind 5, `SPR_HA`, picture 90, 51 x 45, mirrored); the pointer on candidate 8 (the same role and costume)
+picked them and made none; the mechanics' tab made it for candidate 9 (kind 6, costume 1, `SPR_OM`); the close freed it
+and a reopen made it again. Whether this figure and the staff window's preview (`STAFF_WINDOW_PREVIEW`, `FUN_00486530`)
+share one decode is not settled.
+
 #### The staff and visitor locators
 
 Read 2026-10-16 (Q424; the fork review 2's lead L1, `verify-ui-hud.md`, checked again in the private Ghidra). **Built

@@ -132,10 +132,9 @@ internal sealed class ParkHireScreen : UiWindow
 			TextAcross = TextAlign.End
 		} );
 
-		// The portrait. The original renders the chosen candidate's own actor into it, rebuilt only
-		// when the (kind, costume) pair changes - and it uses the SPRITE BANK numbering, not the thing
-		// model's. Nothing is drawn into it here; the frame is the screen's own art.
-		Root.Add( new UiControl
+		// The portrait: the frame is the screen's own art, and the picked candidate's figure stands in it, made again only
+		// when the role or costume changes (ParkHireFigure, FUN_0049ba00).
+		_figure = Root.Add( new ParkHireFigure( FileSystemOrNull, Level.Current?.ThemeName ?? "jungle", Level.Current?.SpriteBanks )
 		{
 			Id = 0x2484,
 			Rect = new UiRect( 484, 179, 748, 443 ),
@@ -307,11 +306,13 @@ internal sealed class ParkHireScreen : UiWindow
 		_list.AddScrollbar( new UiRect( 1743, 398, 1802, 843 ), up: new UiRect( 1742, 331, 1803, 391 ),
 			down: new UiRect( 1742, 850, 1803, 910 ), thumb: new UiRect( 1735, 651, 1802, 718 ) );
 		Show( openOn ?? _lastKind );
-
-		// Reached every time this screen opens, and not answerable yet: the portrait needs the candidate's own actor
-		// rendered into its frame. Counted rather than left quietly blank.
-		Unimplemented.Report( "STAFF_PORTRAIT_ACTOR" );
 	}
+
+	/// <summary>The portrait <c>0x2484</c> and the candidate's figure in it.</summary>
+	private readonly ParkHireFigure _figure;
+
+	/// <summary>The figure's census, for the console's <c>hirefigure</c>.</summary>
+	internal string FigureCensus() => _figure.Census();
 
 	/// <summary>What the original letters the two outgoing rows in - <c>FUN_0065c5d5( 0xff, 0, 0, 0xff )</c>.</summary>
 	private static readonly UiColour Cost = new( 255, 0, 0 );
@@ -412,6 +413,9 @@ internal sealed class ParkHireScreen : UiWindow
 	/// </summary>
 	protected internal override void Closed()
 	{
+		// Message 0x14 (0x0049b7b4): the figure freed, its pair set to -1.
+		_figure.Free();
+
 		_asked?.AdvisorMessages?.Withdraw( ParkAdvisorMessages.HireScreen, (long)(GameClock.Now * 1000), () => Advisor.Current?.StopSpeaking() );
 
 		if ( _following == null )
@@ -451,6 +455,7 @@ internal sealed class ParkHireScreen : UiWindow
 
 			_skill.Units = SkillUnits( person.Grade );
 			ShowAccount( person.Wage );
+			_figure.Show( person );
 			Log.Info( $"Hire screen: candidate {person.Id} grade {person.Grade}, skill bar {SkillUnits( person.Grade )} of 1024, {Account()}" );
 
 			return;
@@ -502,6 +507,7 @@ internal sealed class ParkHireScreen : UiWindow
 	protected internal override void Update()
 	{
 		_list.TakePosted();
+		_figure.Step( GameClock.Ticks );
 
 		if ( Park is { } state )
 			_money.Text = ParkBuyScreen.MoneyText( state.Balance );

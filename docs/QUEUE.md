@@ -1247,24 +1247,6 @@ filed the items that cite it.
   the price from the carry's first frame or only after the first pointer move, and, if wanted, the balance's colour in a
   second park of one session (the original's stale band cache, `hud.md`, a deviation here).
 
-- [ ] **Q419. The hire screen's candidate box is empty.** From the run review, 2026-10-16. On the same file the
-  original's hire screen shows the chosen candidate's figure where this game's box is black (`q412/run-fix2/3-screen.png`
-  beside `q412/orig/a-button.png`; the same in `q415`). The candidates' names differ too, which may be the pool's
-  top-up (Q356's note); not looked into. Decode what the original draws there first. Confirm: the box beside the
-  original's on the same file, a screenshot and the census of what is drawn.
-  - **Note (fork watch 2026-10-16, `verify-audio-fx.md` O4):** the figure is made at `0x0049bb4a` to `0x0049bb64`:
-    `0x00475a10( 0x0074f758, kind, bank, 1, x, y, z )`, the sprite kind by role from the table at `0x0049bb90` (roles 0
-    to 4: 5, 6, 4, 7, 8), the bank the candidate's byte `+9`, set 1, the handle kept at `[0x007ca310]`, then
-    `0x004755d0( handle, 8, 8.0f )`, register 8 the draw scale. The script is read (the note of 2026-11-12, below).
-  - **Note (play test 2026-10-21, note 18):** the hire screen shows no staff picture. Figure made at `0x0049bb4a` to
-    `0x0049bb64`, sprite script `0x0074f758`, frames 0 to 7 (QUEUE:1170-1173).
-  - **Note (play test 2026-10-31):** the same missing figure is reported on the placing cursor (Q40); settle whether this box and Q31b's `STAFF_WINDOW_PREVIEW` share one decode. Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
-  - **Note (fork watch 2026-11-12, verify-ui-hud.md H1):** the script `0x0074f758` is SetLocal 16 = `0x51000`, SetSet 1, SetLocal 15 (the
-    facing) = 5, Frame 0 to 7, Jump back to its start. `0x0049ba00` (one caller, `0x0049b97b`, in the hire handler) returns at
-    once with no candidate, and remakes the figure only when the candidate's dword `+0` (the role) or byte `+9` differs from
-    `[0x007523e8]`/`[0x007523ec]`; message `0x14` (`0x0049b7b4`) deletes it and sets both to -1. It stands on control `0x2484`'s
-    rect: x = ( left + ( right − left ) / 2 − `0x3f8` ) / 1024, y = ( `0x300` − bottom + ( bottom − top ) / 4 ) / 768, z =
-    1 − ( depth + 1 ) / 40 (`0x00476a70`); the sprite steps every 62 ms (`0x004759c4`).
 - [ ] **Q1424. The end of the park's screen, photographed beside the original (split from Q404).** `FUN_00481b50` to
   `FUN_0048ac40` (`park-engine.md`, the full-screen view's table): first person or a ride view left, `FUN_004e15b0( 0 )`,
   the keys taken, the full-screen view off, the open screen closed, layers 0 and 1 hidden, the control `0x7472` (handler
@@ -1281,6 +1263,19 @@ filed the items that cite it.
   turn skipped in state 4; counted, `ADVISOR_PARK_ENDED_IN_THE_RED`. (3) The render flag `0x00763f84` and what reads it;
   counted, `PARK_END_RENDER_FLAG`. (5) The order the bank's broadcast reaches the bank's
   handler and the advisor.
+- [ ] **Q1512. The hire screen's figure beside the original's (split from Q419).** Filed by Q419, 2026-11-12, for a desk
+  lane: Q419 built the figure in a cloud container, which cannot photograph the original. On the stock park, the cleaners'
+  and the mechanics' tabs, ours' portrait beside the original's (`q412/orig/a-button.png`), a frame a tab, and ours'
+  `hirefigure` census beside each (`docs/TOOLING.md`, "The hire screen's figure"). Predict first: the same person, facing
+  the same way (direction 5, drawn as 3 reflected), feet a quarter of the box up, the walk's eight frames; ours is drawn at a
+  stand-in size (Q1513), so measure the original's figure's height in pixels for it. Settle too whether the staff window's
+  preview (`STAFF_WINDOW_PREVIEW`, Q31b) shares this decode.
+- [ ] **Q1513. The size the hire screen's figure is drawn (split from Q419).** Filed by Q419, 2026-11-12. The figure is a
+  sprite flagged `0x40000` and handed scale 8.0 (local 8, `0x004755d0( handle, 8, 8.0f )`); how `Sprite_BuildQuad` sizes
+  such a sprite (its `0x40000` arm, `0x00589ce4`) is not decoded, nor what `0x10000` and `0x1000` in its flags `0x51000` do
+  (`docs/exe/hud.md`, "The candidate's figure in the portrait `0x2484`"). Here each picture pixel is drawn one of the
+  1024 x 768 frame's, counted as `STAFF_PORTRAIT_SIZE` (`ParkHireFigure.cs`). Decode it in Ghidra, then draw it so and take
+  the count out. Confirm: beside the original (Q1512's frames).
 
 - [ ] **Q455. A click on the tab already down lifts it.** From the week-end audit (D4, `VERIFY-15a.md` Q364 1).
   `WindowStack` flips the radio button up and `Put` returns before setting it down; the original's group with style
@@ -3221,7 +3216,6 @@ Back to the advisor in a park; saving a fresh park is Q783, in section A. Also l
   - `ALL_VISITORS_SCREEN` (`ParkCategoryScreens.cs`); dead by CODE at its site: the work is removing the unreachable arm (`AGENTS.md` rule 3), not building it
   - `UNKNOWN_CATEGORY_SCREEN` (`ParkCategoryScreens.cs`); dead by CODE at its site: the work is removing the unreachable arm (`AGENTS.md` rule 3), not building it
   - `TAG_BAR_BUTTON` (`ParkGadget.cs`; `hud.md`, `advisor-park.md`)
-  - `STAFF_PORTRAIT_ACTOR` (`ParkHireScreen.cs`)
   - `RIDE_EXCITEMENT_BAR` (`ParkObjectWindow.cs`; `park-engine.md`)
   - `RIDE_RELIABILITY_BAR` (`ParkObjectWindow.cs`; `park-engine.md`)
   - `STAFF_LIST_ADVISOR_LINE` (`ParkStaffScreen.cs`; `hud.md`)

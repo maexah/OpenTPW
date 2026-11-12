@@ -802,7 +802,7 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// a deliberate departure: a wrong frame of the right person beats a picture of somebody else.
 	/// </para>
 	/// </summary>
-	private static int Picture( SpriteSet set, int frame, int heading, out bool mirrored )
+	internal static int Picture( SpriteSet set, int frame, int heading, out bool mirrored )
 	{
 		mirrored = false;
 

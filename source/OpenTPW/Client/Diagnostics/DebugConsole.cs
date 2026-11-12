@@ -853,6 +853,12 @@ public static class DebugConsole
 					.FirstOrDefault() is { } researchScreen ? $"research screen: {researchScreen.Census()}" : "research screen: none" );
 				break;
 
+			case "hirefigure":
+				// The hire screen's candidate figure: its role and costume, kind and bank, its program and the picture it shows.
+				Reply( Level.Current?.Hud?.Children.OfType<UI.WindowStack>().FirstOrDefault()?.Windows.OfType<UI.ParkHireScreen>()
+					.FirstOrDefault()?.FigureCensus() ?? "hire figure: no hire screen" );
+				break;
+
 			case "visitorwindow":
 				// The visitor's window: its guest, title, figures, bar and thought, or that none is up.
 				Reply( Level.Current?.Hud?.Children.OfType<UI.WindowStack>().FirstOrDefault()?.Windows.OfType<UI.ParkVisitorWindow>()
