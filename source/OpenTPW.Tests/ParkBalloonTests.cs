@@ -259,11 +259,14 @@ public class ParkBalloonTests
 	}
 
 	/// <summary>
-	/// <b>The park asks the cell a guest is linked into</b>: a path in the shipped park counts them, a ride's footprint
-	/// does not.
+	/// <b>The park asks the cell under a guest's position, never the cell list they are linked into</b>
+	/// (<c>FUN_004fa990</c> reads the thing's bytes <c>+5</c> and <c>+7</c>, docs/exe/park-gate.md): linked into a path
+	/// but standing on a ride's footprint they are not counted, and linked into the footprint but standing on the path
+	/// they are. The gate's census and the guest's own test answer alike (Q217).
 	/// </summary>
+	/// <remarks><b>Mutation:</b> reading the link first (the rule this replaced) fails both halves.</remarks>
 	[TestMethod]
-	public void TheParkAsksTheCellTheGuestIsLinkedInto()
+	public void TheParkAsksThePositionsCellNotTheLink()
 	{
 		var world = Park();
 		var people = new ParkPeople( world );
@@ -272,12 +275,39 @@ public class ParkBalloonTests
 			.Select( at => (X: at % ParkWorld.MapSize, Y: at / ParkWorld.MapSize) ).ToArray();
 		var path = cells.First( cell => people.State.Record( cell.X, cell.Y ).Type == 1 );
 		var footprint = cells.First( cell => people.State.Record( cell.X, cell.Y ).Type == 2 );
+		foreach ( var other in people.Peeps.Where( other => other != peep ) )
+			other.Navigator.Position = FixedVector.AtCell( footprint.X, footprint.Y );
 
 		people.State.StandOn( peep.ThingId, path.X, path.Y );
-		Assert.IsTrue( people.OnACountingCell( peep ), $"on the path at {path}" );
+		peep.Navigator.Position = FixedVector.AtCell( footprint.X, footprint.Y );
+		Assert.IsFalse( people.OnACountingCell( peep ), $"linked into the path at {path}, standing on the footprint at {footprint}" );
+		Assert.AreEqual( 0, people.GateGuestCensus, "the census counts no one on the footprint" );
 
 		people.State.StandOn( peep.ThingId, footprint.X, footprint.Y );
-		Assert.IsFalse( people.OnACountingCell( peep ), $"on the footprint at {footprint}" );
+		peep.Navigator.Position = FixedVector.AtCell( path.X, path.Y );
+		Assert.IsTrue( people.OnACountingCell( peep ), $"linked into the footprint at {footprint}, standing on the path at {path}" );
+		Assert.AreEqual( 1, people.GateGuestCensus, "the census counts the one on the path" );
+	}
+
+	/// <summary>
+	/// <b>A position off the map counts nobody</b>, and is counted as the gap <c>COUNTING_CELL_OFF_MAP</c>: the cell
+	/// record off the map reads as type 0, which would count.
+	/// </summary>
+	[TestMethod]
+	[DoNotParallelize]
+	public void APositionOffTheMapCountsNobody()
+	{
+		static int OffMap() => Unimplemented.Summary.FirstOrDefault( entry => entry.What == "COUNTING_CELL_OFF_MAP" ).Times;
+		var world = Park();
+		var people = new ParkPeople( world );
+		var peep = people.Guests.Values.First();
+		var before = OffMap();
+
+		peep.Navigator.Position = FixedVector.AtCell( ParkWorld.MapSize, 5 );
+		Assert.IsFalse( people.OnACountingCell( peep ), "x one past the map" );
+		peep.Navigator.Position = new FixedVector( -1, 5 << 16 );
+		Assert.IsFalse( people.OnACountingCell( peep ), "x just below nought" );
+		Assert.AreEqual( before + 2, OffMap() );
 	}
 
 	/// <summary><b>Entering the leaving state lets go of the balloon</b> (case <c>0x11</c>), its life kept.</summary>
@@ -615,10 +645,9 @@ public class ParkBalloonTests
 	/// <summary>
 	/// <b>A guest the park has linked into no cell is asked by the cell under their feet, the whole part of their 16.16
 	/// position</b> - <c>FUN_004fa990</c> reads the integer cell coordinates out of the position (docs/exe/park-gate.md),
-	/// and <see cref="ParkPeople.OnACountingCell"/> falls back to them before the guest's first turn has linked them. In
+	/// and <see cref="ParkPeople.OnACountingCell"/> reads them whether or not the guest is linked into a cell. In
 	/// the middle of a path cell (type 1, one of the five counted) they count; in the middle of a ride's footprint
-	/// (type 2, not one of them) they do not. A cell off the map reads as type 0, which counts, so a wrong cell shows
-	/// on the footprint.
+	/// (type 2, not one of them) they do not.
 	/// </summary>
 	[TestMethod]
 	public void AGuestLinkedIntoNoCellIsAskedByTheWholePartOfTheirPosition()

@@ -2153,8 +2153,9 @@ public sealed class ParkState
 	public int NextOnCell( int thingId ) => _onCellNext.GetValueOrDefault( thingId );
 
 	/// <summary>
-	/// The cell a thing is linked into (<see cref="StandOn"/>), or null for one on none - the original's thing bytes
-	/// <c>+5</c> and <c>+7</c>, which <c>FUN_004fa990</c> reads.
+	/// The cell a thing is linked into (<see cref="StandOn"/>), or null for one on none - the cell list the original
+	/// relinks a person into as their position's cell changes (<c>FUN_0050b6a0</c>). The park's counts do not read it:
+	/// <c>FUN_004fa990</c> reads the position (<see cref="PeepBehaviour.OnACountingCell(FixedVector)"/>).
 	/// </summary>
 	public (int X, int Y)? CellOf( int thingId )
 		=> _cellOf.TryGetValue( thingId, out var cell ) ? (cell % ParkWorld.MapSize, cell / ParkWorld.MapSize) : null;
