@@ -858,7 +858,7 @@ is looked at, so the frame's middle is the eye plus the forward times the zoom: 
 `[0x007908e0]`, X by `[0x007908e4]`, each worked out from a pan's scroll term (`0x0042c822`..`0x0042c964`):
 `0.005 sqrt( 100 |t| ) - 0.001` signed as the x term `0x00790a88` and kept only past nought, so nought at rest (the terms are
 noughted under 0.0001) and about 0.015 radians on a held pan at zoom 110. The X angle is nought at every term: its scale is
--0.005 (`0x006fde2c`), so both of its branches fail their clamp. Ours has no lean: Q1109. The matrix is copied out by
+-0.005 (`0x006fde2c`), so both of its branches fail their clamp ("The lean while panning", below). The matrix is copied out by
 `FUN_00578bc0` (`0x0042cc93`) only when `FUN_0042b070` answers nought (`0x0042cc7c`): it sums the absolute differences between the new matrix's entries and the last copy's (`0x00790a48`) and answers 1 when the sum is under 1e-5 (`[0x0074c980]`), so the copy is skipped only for an unchanged matrix, and then the asked and drawn rotations are reduced instead (`0x0042cc9a`..`0x0042ccc2`). **Measured** (Q1106 and Q1107,
 Alexah's New Save, a copy, by `fsload.sh`; `q1107/orig/run1/camera-1.txt`, `proj-1.txt`): at the point (595, 355), zoom 70,
 rotation 180, over ground 2.6265, the stored point reads (595.000, 0.000, 355.000), the eye (595.000, 52.124, 404.497) and
@@ -873,6 +873,36 @@ higher before, `q1107/side-before1.png`, `side-after1.png`). Before Q1107 it loo
 degrees down there, and drew the point at row 341.4. Q1106's 338.3 was at another eye: its frames were taken with the camera moved
 under `pause`, so the eye kept the eased ground of the file's own camera point, -4.896 (an eye 44.60 up, read in `q1107/ours/before1`
 before its `step 30`; VERIFYING rule 91).
+
+**The lean while panning** (Q1109, decoded and measured). `Matrix_TurnByAxisString` (`FUN_0046f870`, named in Q1109) takes
+its axis string from the table `0x0074da38` (entry 9, `"ZX"`) and turns the matrix by each letter in turn, eating one angle a
+letter: `X` by `Matrix_TurnX` (`FUN_0046f350`), `Y` by `Matrix_TurnY` (`FUN_0046f650`), `Z` by `Matrix_TurnZ`
+(`FUN_0046f5c0`), each handed (m, cos, sin). `Matrix_TurnZ` writes every row's first two columns as `(a cos - b sin, a sin +
+b cos)`, so it multiplies the matrix by the turn on the right: the camera's rows (right, up, forward; the eye is row 3 and is
+copied in after, untouched) are `Rx( pitch ) . Ry( rotation ) . Rz( L )`, the last turn **about the world's Z axis through
+the eye**, not about the view (`Matrix_PitchThenYaw`, `FUN_0046fb50`, is the first two). L is `0.005 sqrt( 100 |t| ) - 0.001`
+signed as t, the world-x scroll term `0x00790a88` after the frame's step, kept only past nought (0, 100, 0.005, 0.001 and
+-0.005 at `0x006fdd6c`, `0x006fde20`, `0x006fddcc`, `0x006fde28`, `0x006fde2c`, read in Ghidra). So facing along z (rotation
+0 or 180) a pan along x looks aside by sin( pitch ) x L and rolls the picture by cos( pitch ) x L; facing along x (90, 270)
+the same pan nods the view by L; a pan along z leans nothing. The picker's ray is turned by the same leaned matrix
+(`0x00790990`, `FUN_0046fca0` at `0x0045c15c`), and a sprite's span is added in clip space ("The size a sprite is drawn"),
+so the people stay upright on the screen while the ground rolls under them.
+- **Measured** (`q1109/orig/run1`, run2; `q325/stock.TPWS` off-screen, point (475, 175), zoom 110, the key held 0.25 s
+  before the reads): keypad 6 at rotation 0, `[0x007908e0]` 0.01519266, term 0.10488, the camera matrix `0x0087aff0` rows
+  (0.9999, 0.0152, 0.0000), (-0.0080, 0.5249, 0.8511), (0.0129, -0.8510, 0.5250); keypad 4 the same negated; keypad 8 at
+  rotation 0 and keypad 6 at rotation 90, nought and the zoom's rows; keypad 8 at rotation 90, 0.01519266, row 0 (0, 0, -1)
+  unchanged and the forward (0.5378, -0.8430, 0), 57.46 degrees down against the zoom's 58.33; `[0x007908e4]` nought in
+  every case and both nought at rest. Each mid-pan frame against a frame at its own point at rest (`lib/frameroll.py`):
+  keypad 6 at rotation 0 turned the picture 0.442 degrees clockwise, keypad 4 0.453 the other way, keypad 8 at 0 and keypad
+  6 at 90 by 0.000 and 0.027 (the rule's cos p x L is 0.457).
+- **OpenTPW** (`ParkOrbitCameraMode.LeanAt`, `Leaned`, `Place`; `CameraMode.Up`, which `Camera` builds its view against, and
+  the picker's ray and the people's quads with it): the same turn of the look and the up about the map's y (this engine's
+  name for the original's Z) by the term along x, per second here. On the desk at the same five cases (`q1109/ours/run4`, the committed build): the
+  `camera` census mid-hold read lean 0.01517 (the term 104.60 a second, its ease 0.3 per cent short at 0.25 s), look (0.0129,
+  0.5250, -0.8510) and up (-0.0080, 0.8511, 0.5249), the original's rows in this engine's axes; at the original's 90 the look
+  57.46 degrees down; the frames turned 0.520 clockwise, 0.459 the other way, 0.045 and 0.001 where nothing leans; `main`'s
+  build before Q1109 read no turn in any case (0.043 at most). A pan facing along x nods the view, which a shift of a rest frame
+  cannot match: `frameroll.py` read 0.182 there in the original and 0.116 here, the keystone's and not a roll (0.010 on main).
 
 **The turn** (Q440, decoded and measured). The update builds the eye's offset as (0, sin p x zoom, -cos p x zoom)
 (`0x00790aa0` nought, `0x00790aa4`, `0x00790aa8`) and turns it by the drawn rotation `0x007909e0`: x' = x cos r + z sin r,

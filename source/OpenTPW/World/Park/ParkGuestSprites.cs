@@ -1645,11 +1645,12 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// the basis has to lean with the camera's pitch rather than stand in world up.
 	/// </para>
 	/// <para>
-	/// The basis comes from the view direction and world up rather than from <c>Rotation.Right</c> and
-	/// <c>Rotation.Up</c>, because <see cref="Rotation.LookAt"/> leaves roll arbitrary and those two
+	/// The basis comes from the view direction and <see cref="Camera.Up"/> rather than from <c>Rotation.Right</c>
+	/// and <c>Rotation.Up</c>, because <see cref="Rotation.LookAt"/> leaves roll arbitrary and those two
 	/// carry it - the same trap <see cref="AudioListener"/> and <see cref="Audio"/> both record against
-	/// their own use of it. <c>Forward</c> is the one of the three that can be trusted, and a roll-free
-	/// basis follows from it and world up.
+	/// their own use of it. The camera's up carries the orbit's lean, so a picture stays upright on the screen while
+	/// the view rolls, as the original's, whose span is added in clip space (<c>docs/exe/park-engine.md</c>, "The size a
+	/// sprite is drawn").
 	/// </para>
 	/// <para>
 	/// The picture's own origin decides where the quad sits about that point: it is stored negated in
@@ -1660,7 +1661,7 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// </summary>
 	internal static bool Corners( Span<Vertex> corners, Vector3 forward, Vector3 centre, Region picture, bool mirrored, int alpha, float instanceScale = 1f )
 	{
-		var across = forward.Cross( Vector3.Up );
+		var across = forward.Cross( Camera.Up );
 
 		// Looking straight down there is no horizontal left to hang the sprite on, and every quad
 		// would be edge-on anyway.
@@ -1669,7 +1670,7 @@ public sealed class ParkGuestSprites : ModelEntity
 
 		across = across.Normal;
 
-		// Square to both the view and that across, which is the camera's own up with no roll in it.
+		// Square to both the view and that across, which is the camera's own up, the orbit's lean in it.
 		var upward = across.Cross( forward ).Normal;
 
 		var (_, _, above, below) = Extent( picture.Width, picture.Height, picture.OriginX, picture.OriginY, instanceScale );

@@ -7,6 +7,9 @@ public static class Camera
 	public static Vector3 Position => CameraMode?.Position ?? Vector3.Zero;
 	public static Rotation Rotation => CameraMode?.Rotation ?? Rotation.Identity;
 
+	/// <summary>The picture's up, which the view is built against - see <see cref="CameraMode.Up"/>.</summary>
+	public static Vector3 Up => CameraMode?.Up ?? Vector3.Up;
+
 	/// <summary>Where the scene is heard from - see <see cref="CameraMode.Ears"/>.</summary>
 	public static Vector3 Ears => CameraMode?.Ears ?? Vector3.Zero;
 
@@ -96,7 +99,7 @@ public static class Camera
 		if ( CameraMode == null )
 			return;
 
-		var up = Vector3.Up;
+		var up = CameraMode.Up;
 		var direction = CameraMode.Rotation.Forward;
 		var position = CameraMode.Position;
 

@@ -559,11 +559,45 @@ public sealed class ParkOrbitCameraMode : CameraMode
 	internal void Place( float ground )
 	{
 		(Position, var aim) = View( PointOfInterest, Yaw, Zoom, ground );
+		var (look, up) = Leaned( aim, LeanAt( Scroll.X ) );
 
 		// Only Forward is taken from this - see Rotation.LookAt, whose roll is arbitrary, and the note
-		// on it in AudioListener. Camera builds its view from Forward and a fixed world up, so that is
-		// all this has to be right about.
-		Rotation = Rotation.LookAt( aim );
+		// on it in AudioListener. Camera builds its view from Forward and Up.
+		Rotation = Rotation.LookAt( look );
+		Up = up;
+	}
+
+	/// <summary>
+	/// The turn the original gives its orbit while it pans, in radians: <c>0.005 sqrt( 100 |t| ) - 0.001</c> signed as
+	/// <c>t</c>, the pan's term along the map's x in units a millisecond (<c>0x00790a88</c>), and nought where that is not
+	/// past nought (<c>0x0042c822</c>..<c>0x0042c8cf</c>): nought at rest, 0.0152 on a pan held at zoom 110. Its second turn,
+	/// from the term along the map's y by -0.005, fails both of its clamps at every term (<c>0x0042c8d2</c>..<c>0x0042c964</c>),
+	/// so there is none here.
+	/// </summary>
+	internal static float LeanAt( float scrollX )
+	{
+		var lean = (0.005f * MathF.Sqrt( 100f * MathF.Abs( scrollX ) / 1000f )) - 0.001f;
+
+		return lean > 0f ? MathF.CopySign( lean, scrollX ) : 0f;
+	}
+
+	/// <summary>
+	/// The look along <paramref name="aim"/> and its up with no roll, both turned by <paramref name="lean"/> about the
+	/// map's y through the eye: the original turns its camera's three axes, after the pitch and the spin, about its world
+	/// Z (<c>FUN_0046f870( m, 9, 0x007908e0 )</c>, <c>0x0042cc1d</c>; the axis string <c>"ZX"</c>, <c>FUN_0046f5c0</c> on the
+	/// columns), which is this engine's y. So a pan along the map's x leans the view sideways and rolls it by
+	/// <c>cos( pitch ) x lean</c> facing along y, and nods it facing along x; a pan along y leans nothing
+	/// (<c>docs/exe/park-engine.md</c>, "The park camera").
+	/// </summary>
+	internal static (Vector3 Look, Vector3 Up) Leaned( Vector3 aim, float lean )
+	{
+		var look = aim.Normal;
+		var up = look.Cross( Vector3.Up ).Cross( look ).Normal;
+		var (sin, cos) = MathF.SinCos( lean );
+
+		return (Turn( look ), Turn( up ));
+
+		Vector3 Turn( Vector3 v ) => new( (v.X * cos) - (v.Z * sin), v.Y, (v.X * sin) + (v.Z * cos) );
 	}
 
 	/// <summary>
@@ -674,7 +708,8 @@ public sealed class ParkOrbitCameraMode : CameraMode
 
 	/// <summary>
 	/// A one-line summary for the debug console. Cell comes back out of the world position by the same
-	/// rule that put it in: <c>grid = (world - 5) / 10</c>.
+	/// rule that put it in: <c>grid = (world - 5) / 10</c>. The pan's term, the lean it gives and the look and up the
+	/// last frame was drawn with end it.
 	///
 	/// <para>
 	/// <c>ground</c> is sampled fresh rather than being the eased value the camera is actually riding,
@@ -701,6 +736,9 @@ public sealed class ParkOrbitCameraMode : CameraMode
 			$"yaw={Yaw:F2} zoom={Zoom:F0} pitch={Pitch:F1} " +
 			$"ground={(ground.HasValue ? ground.Value.ToString( "F1" ) : "-")} " +
 			$"attr={(attributes != null ? attributes.At( cellX, cellY ).ToString() : "-")} " +
-			$"eye=({Camera.Position.X:F3},{Camera.Position.Y:F3},{Camera.Position.Z:F3})";
+			$"eye=({Camera.Position.X:F3},{Camera.Position.Y:F3},{Camera.Position.Z:F3}) " +
+			$"scroll=({Scroll.X:F2},{Scroll.Y:F2}) lean={LeanAt( Scroll.X ):F5} " +
+			$"look=({Camera.Rotation.Forward.X:F4},{Camera.Rotation.Forward.Y:F4},{Camera.Rotation.Forward.Z:F4}) " +
+			$"up=({Camera.Up.X:F4},{Camera.Up.Y:F4},{Camera.Up.Z:F4})";
 	}
 }

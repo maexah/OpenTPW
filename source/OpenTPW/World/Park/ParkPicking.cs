@@ -40,8 +40,9 @@ namespace OpenTPW;
 /// <para>
 /// <b>The camera's own roll may NOT be used to build the ray.</b> <see cref="Camera.Rotation"/> comes
 /// from <c>Rotation.LookAt</c>, whose roll is arbitrary (<c>AudioListener.Facing</c> says why) - only its forward
-/// vector means anything. The view matrix is built by <c>CreateLookTo</c> against the world's up, so
-/// the basis here is rebuilt the same way. Taking <c>Rotation.Right</c> instead would work only while
+/// vector means anything. The view matrix is built by <c>CreateLookTo</c> against <see cref="Camera.Up"/>, so
+/// the basis here is rebuilt the same way, and leans with the orbit as the original's ray is turned by the leaned
+/// camera matrix (<c>0x00790990</c>, <c>0x0045c15c</c>). Taking <c>Rotation.Right</c> instead would work only while
 /// the roll happened to be zero.
 /// </para>
 /// </summary>
@@ -516,20 +517,20 @@ public static class ParkPicking
 	/// The direction the pointer points, in world space.
 	///
 	/// <para>
-	/// The basis is rebuilt against the world's up rather than taken from the camera's rotation - see
+	/// The basis is rebuilt against the camera's up rather than taken from the camera's rotation - see
 	/// the class remarks for why that is not a tidying. <see cref="Camera.HorizontalTangent"/> is how
 	/// far the frustum reaches sideways one unit ahead, and it already carries the whole of the
 	/// aspect-ratio rule this game applies to windows that are not 4:3, so the vertical reach is simply
 	/// that over the aspect.
 	/// </para>
 	/// </summary>
-	private static Vector3 RayThrough( Vector2 screen )
+	internal static Vector3 RayThrough( Vector2 screen )
 	{
 		var forward = Camera.Rotation.Forward.Normal;
 
 		// The same handedness the engine's own constants use: facing +X with Z up, this gives
 		// (0,-1,0), which is exactly Vector3.Right.
-		var right = Cross( forward, Vector3.Up ).Normal;
+		var right = Cross( forward, Camera.Up ).Normal;
 		var up = Cross( right, forward ).Normal;
 
 		// Pixels to the -1..1 box. Down the screen is positive in pixels and negative here, which is
