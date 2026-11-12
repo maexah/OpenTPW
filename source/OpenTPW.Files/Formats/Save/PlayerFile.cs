@@ -208,11 +208,15 @@ public sealed class PlayerFile
 	}
 
 	/// <summary>
-	/// The swear list under the game's folder for a Windows language, as the profile loader names it: 0x409 reads
-	/// <c>American</c>, any other <c>English</c> (<c>0x005c0d00</c>; <c>docs/exe/saves.md</c>, the <c>+0x25</c> row).
+	/// The swear list under the game's folder for a Windows language, as the profile loader names it (<c>0x005c0d00</c>,
+	/// the names at <c>0x00f7ec28</c>; <c>docs/exe/saves.md</c>, the <c>+0x25</c> row). A value it does not list is English.
 	/// </summary>
-	public static string SwearListPath( int windowsLanguage )
-		=> $@"data\Language\{(windowsLanguage == 0x409 ? "American" : "English")}\swears.txt";
+	public static string SwearListPath( int windowsLanguage ) => $@"data\Language\{windowsLanguage switch
+	{
+		0x409 => "American", 0x40c => "French", 0x7 => "German", 0xa => "Spanish", 0x1d => "Swedish", 0x10 => "Italian",
+		0x13 => "Dutch", 0x15 => "Polish", 0x6 => "Danish", 0x11 => "Japanese", 0x404 => "TraditionalChinese",
+		0x804 => "SimplifiedChinese", 0x41e => "Thai", 0x412 => "Korean", 0x40d => "Hebrew", _ => "English",
+	}}\swears.txt";
 
 	/// <summary>
 	/// The swear filter's load after a profile read (<c>FUN_005afd70</c>, <c>0x005afeba</c>..<c>0x005aff37</c>): with

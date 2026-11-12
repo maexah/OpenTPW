@@ -143,11 +143,12 @@ public static class Audio
 
 	/// <summary>
 	/// One step of <c>Sound_StopFading</c>'s fade on a voice's own level out of 100, under <paramref name="product"/>, the
-	/// product of its group's gains: <c>trunc( 60 x round( own x product ) / 100 )</c>, the round half to even as
-	/// <c>fistp</c> rounds (<c>0x006bb860</c>, <c>0x006c5709</c>..<c>0x006c5742</c>; <c>docs/exe/audio.md</c>, "The fade").
+	/// product of its group's gains: <c>trunc( 60 x round( own x product ) / 100 )</c>, the product stored as a float
+	/// (<c>fstp DWORD</c>, <c>0x006bb8b6</c>) and then rounded half to even as <c>fistp</c> rounds (<c>0x006bb860</c>,
+	/// <c>0x006c5709</c>..<c>0x006c5742</c>; <c>docs/exe/audio.md</c>, "The fade").
 	/// </summary>
 	internal static int FadeStep( int own, double product )
-		=> (int)(60L * (long)Math.Round( own * product, MidpointRounding.ToEven ) / 100);
+		=> (int)(60L * (long)Math.Round( (double)(float)(own * product), MidpointRounding.ToEven ) / 100);
 
 	/// <summary>The fade worker's sleep after a scan that stepped a voice, in frames: 100 ms (<c>0x006b6260</c>).</summary>
 	internal const double FadeStepFrames = SampleRate * 0.1;
@@ -640,7 +641,7 @@ public static class Audio
 				var voice = Voices[i];
 
 				if ( !voice.MixInto( output, frames, bufferStart, master * BusVolumes[(int)voice.Bus], duck, duckStep,
-					fadeWakeAt, GroupLevels[(int)voice.Bus] ) )
+					fadeWakeAt, GroupLevels[(int)voice.Bus], BusVolumes[(int)voice.Bus] ) )
 					Voices.RemoveAt( i );
 			}
 		}

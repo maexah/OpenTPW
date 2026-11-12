@@ -284,7 +284,7 @@ public sealed partial class ParkAudio : Entity
 			if ( !CrowdVoiceHeld )
 				return;
 
-			_crowd?.StopFading();
+			_crowd?.StopFading( CrowdVoiceSample.Volume );
 			_crowd = null;
 			CrowdVoiceHeld = false;
 
@@ -692,7 +692,7 @@ public sealed partial class ParkAudio : Entity
 		if ( seconds is { } fade )
 			rain.Voice?.FadeOut( fade );
 		else
-			rain.Voice?.StopFading();
+			rain.Voice?.StopFading( rain.Volume );
 
 		rain.Voice = null;
 		rain.Held = false;

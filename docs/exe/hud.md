@@ -4565,8 +4565,9 @@ the cell colour, the click, the carry, the purchase and the lab; the help state 
 - **The save.** Nothing here writes `gms.dat`; the progress object is written at its next write ("Load Game and Save
   Game", `saves.md`): after a park save the file read spent 3 and ride ids [1170] (`q709/orig/a/gms-after.dat`);
   one byte more changed, file offset `0x13` (the swear filter, `+0x25`) from 1 to 0, which none of the functions above
-  writes: the profile loader `FUN_005afd70` sets `+0x25` to 1, then clears it when `swears.txt` under
-  `Data\Language\<language>\` does not open (`0x005afeba`..`0x005aff37`; `saves.md`), and a disc copy (the reference
+  writes: the profile loader `FUN_005afd70` starts `+0x25` at 1 (`0x005afd93`), reads the file's byte over it
+  (`0x005b055f`), and only with it set (`0x005afeba`) opens `swears.txt` under `Data\Language\<language>\`, clearing it
+  when that does not open (`0x005aff37`; `saves.md`), and a disc copy (the reference
   install) has no `Language\American\swears.txt` where an installed game has it, so an installed game keeps 1, so no test is built on "nothing else
   changes". Afterwards the row is the ride's own, "Jurassic Tours" at "$ 3000", with the owned tick.
 - **The lab** asks the same set for a kind-4 project (`park-engine.md`, "The next project").

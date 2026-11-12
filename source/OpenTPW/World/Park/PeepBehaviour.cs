@@ -447,7 +447,8 @@ public sealed class PeepBehaviour
 			// them, or whose gate does not report 1, skips the walk, is sent to one of the two ticket booths by
 			// the draw's low bit (FUN_00516330, FUN_004d8610; the draw is always taken, so a guest already on a
 			// booth may be sent to the other) and is put in state 2 again. ParkOpeningWait is left as it is.
-			// With no admission there are no booths to name, so they stand, as a guest with no fee to judge does.
+			// With no admission there are no booths to name, so they stand (OpenTPW's own: the original's booths are always
+			// set, FUN_004d8610 reads globals), as a guest with no fee to judge does.
 			case PeepState.Entering:
 				if ( !GateWillAdmit )
 				{

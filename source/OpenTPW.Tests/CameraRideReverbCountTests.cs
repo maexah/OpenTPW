@@ -45,12 +45,13 @@ public class CameraRideReverbCountTests
 
 	/// <summary>
 	/// <b>A ride under the camera is counted once each eighth tick, and no ride is not counted</b>: 24 ticks in its view count
-	/// 3, 40 ticks count 5, and 24 ticks of the plain camera count none. With no people the loop still hands it, as the
+	/// 3, 40 ticks count 5, a tick a frame counts only on tick 96, and 24 ticks of the plain camera count none. With no people the loop still hands it, as the
 	/// original's step runs it whatever the sweep did.
 	/// </summary>
 	/// <remarks>
 	/// <b>Mutations:</b> counted every tick (24); every second (12); not asked whether a ride is viewed (3 with none); asked only
-	/// beside the people's sweep (0 here).
+	/// beside the people's sweep (0 here); the beat taken from the frame's own index, or from another of the eight ticks (a tick a
+	/// frame counts elsewhere than 96).
 	/// </remarks>
 	[TestMethod]
 	public void EachEighthTickInARidesViewIsCountedAndNoneWithout()
@@ -65,6 +66,10 @@ public class CameraRideReverbCountTests
 			ViewARide();
 			Assert.AreEqual( 3, Counted( 24 ), "24 ticks hold three eighth ticks" );
 			Assert.AreEqual( 5, Counted( 40 ), "40 ticks hold five" );
+
+			// Ticks 89 to 97 one a frame: only 96 is an eighth tick, so the beat is the tick's and not the frame's.
+			var single = Enumerable.Range( 89, 9 ).Select( _ => Counted( 1 ) ).ToArray();
+			CollectionAssert.AreEqual( new[] { 0, 0, 0, 0, 0, 0, 0, 1, 0 }, single, "one frame a tick, from 89" );
 		}
 		finally
 		{

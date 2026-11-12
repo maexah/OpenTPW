@@ -29,11 +29,13 @@ public class SoundStopFadingTests
 
 	/// <summary>
 	/// The step on a level out of 100: at a group product of 1.0 it runs 100, 60, 36, 21, 12, 7, 4, 2, 1, 0 (nine steps); at the
-	/// effects' 0.75 the device gets 75, then 45, 20, 9, 4, 1, 0 (six steps).
+	/// effects' 0.75 the device gets 75, then 45, 20, 9, 4, 1, 0 (six steps). The product is stored as a float before it is rounded
+	/// (<c>0x006bb8b6</c>): 45 x 0.1f is 4.5 as a float, which rounds to 4, where the double just above 4.5 rounds to 5.
 	/// </summary>
 	/// <remarks>
 	/// <b>Mutations:</b> rounding <c>60 x n / 100</c> instead of truncating gives 22 for 36's step; rounding <c>own x product</c> half away from
-	/// nought gives 3 for 6 at 0.75 (4.5 rounds to 4 by <c>fistp</c>); the product left out gives 60, 36, 21 at 0.75; a step of x0.4 fails the first.
+	/// nought gives 3 for 6 at 0.75 (4.5 rounds to 4 by <c>fistp</c>); the product left out gives 60, 36, 21 at 0.75; a step of x0.4 fails the first;
+	/// the double rounded without the float store gives 3 for 45 at 0.1f.
 	/// </remarks>
 	[TestMethod]
 	public void TheStepIsSixtyPercentOfTheLevelTimesItsGroupTruncated()
@@ -44,6 +46,7 @@ public class SoundStopFadingTests
 		Assert.AreEqual( 21, Audio.FadeStep( 36, 1.0 ), "60 x 36 / 100 = 21.6 is truncated" );
 		Assert.AreEqual( 2, Audio.FadeStep( 6, 0.75 ), "6 x 0.75 = 4.5 rounds half to even, to 4" );
 		Assert.AreEqual( 0, Audio.FadeStep( 100, 0.0 ), "a group switched off takes the level to nought at once" );
+		Assert.AreEqual( 2, Audio.FadeStep( 45, 0.1f ), "45 x 0.1f stored as a float is 4.5, which rounds to 4: 60 x 4 / 100 = 2.4" );
 
 		static List<int> Run( int own, double product )
 		{
@@ -83,35 +86,32 @@ public class SoundStopFadingTests
 	}
 
 	/// <summary>
-	/// A voice faded at full volume in a group at 1.0 is heard at 0.6, 0.36, 0.21 ... of itself, and its ninth step stops it; in the
-	/// effects at 0.75 it is heard at 45, 20, 9, 4, 1 of the 75 it began at, and its sixth step stops it. It plays on until then.
+	/// An effect voice faded from the game's own gain (<see cref="ParkAudio.ChannelGain"/>) is heard, in the original's levels of 127,
+	/// at the steps its variation's volume gives: 100 starts at 75 and is heard at 45, 20, 9, 4, 1, its sixth step stopping it; the
+	/// bumper engine's 68 starts at 51 and is heard at 30, 13, 6, 2, 1; the crowd's 14 starts at 10 and is heard at 6, 2, 1. It plays
+	/// on until then.
 	/// </summary>
 	/// <remarks>
-	/// <b>Mutations:</b> the volume kept as the stepped level without dividing by the product gives 0.45 for the first heard step at 0.75;
-	/// stopping at the first step, or never, fails the counts; <see cref="Voice.StopFading"/> starting the level at 100 whatever the volume
-	/// fails the half-volume voice's 30.
+	/// <b>Mutations:</b> the level seeded as the voice's gain out of 100 (41 for 100) rather than the variation's volume gives 43.6 for
+	/// 100's first step and stops a step early; the stepped level kept as the level over the product (the scale of a hundred) gives
+	/// 0.6 of the volume, 99 of 127; stopping at the first step, or never, fails the counts.
 	/// </remarks>
 	[TestMethod]
 	public void AFadedVoiceIsHeardAtTheOriginalsStepsAndStopsAtNought()
 	{
-		Assert.AreEqual( 9, Heard( 1.0f, 1.0, [0.6f, 0.36f, 0.21f, 0.12f, 0.07f, 0.04f, 0.02f, 0.01f] ) );
-		Assert.AreEqual( 6, Heard( 1.0f, 0.75, [45f / 75, 20f / 75, 9f / 75, 4f / 75, 1f / 75] ) );
-		Assert.AreEqual( 0.3f, Heard( 0.5f, 1.0, null ), 1e-6f, "a voice at half volume starts at 50 and steps to 30" );
+		Assert.AreEqual( 6, Heard( 100, [45f, 20f, 9f, 4f, 1f] ) );
+		Assert.AreEqual( 6, Heard( 68, [30f, 13f, 6f, 2f, 1f] ) );
+		Assert.AreEqual( 4, Heard( 14, [6f, 2f, 1f] ) );
 
-		// The steps' count, or, with no levels given, what the first step leaves.
-		static float Heard( float volume, double product, float[]? expected )
+		// The steps' count.
+		static int Heard( int variationVolume, float[] expected )
 		{
-			var voice = MakeVoice( volume );
-			voice.StopFading();
+			var voice = MakeVoice( ParkAudio.ChannelGain( variationVolume ) );
+			var start = Of127( voice.Volume );
+			voice.StopFading( variationVolume );
 
 			Assert.IsTrue( voice.Stepping && voice.Ending && voice.Playing, "flagged, and still sounding" );
-			Assert.AreEqual( volume, voice.Volume, "nothing is taken off before the first step" );
-
-			if ( expected is null )
-			{
-				voice.StepFade( product );
-				return voice.Volume;
-			}
+			Assert.AreEqual( start, Of127( voice.Volume ), "nothing is taken off before the first step" );
 
 			var steps = 0;
 			var heard = new List<float>();
@@ -120,19 +120,53 @@ public class SoundStopFadingTests
 			{
 				steps++;
 
-				if ( voice.StepFade( product ) )
-					heard.Add( voice.Volume / volume );
+				if ( voice.StepFade( 0.75, 1.0 ) )
+					heard.Add( Of127( voice.Volume ) );
 			}
 
-			Assert.AreEqual( expected.Length, heard.Count );
-
-			for ( var i = 0; i < expected.Length; i++ )
-				Assert.AreEqual( expected[i], heard[i], 1e-5f, $"step {i + 1}" );
-
+			CollectionAssert.AreEqual( expected, heard.ConvertAll( level => MathF.Round( level, 3 ) ), $"from {variationVolume}" );
 			Assert.IsFalse( voice.Stepping );
 			return steps;
 		}
 	}
+
+	/// <summary>
+	/// The stepped level is heard over what the mixer still multiplies a voice by: with the effects' slider at twice its default (a bus
+	/// of 2.0) and the group at 1.0, 100's first step, 60 of 127, is kept at half the gain it would have at a bus of 1.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the bus left out of <c>StepFade</c>'s division plays 60 of 127 twice over, at 120.</remarks>
+	[TestMethod]
+	public void AStepIsHeardOverTheBusesSlider()
+	{
+		var voice = MakeVoice( ParkAudio.ChannelGain( 100 ) );
+		voice.StopFading( 100 );
+		voice.StepFade( 1.0, 2.0 );
+
+		Assert.AreEqual( 60f, Of127( voice.Volume ) * 2f, 1e-4f );
+	}
+
+	/// <summary>
+	/// Advisor_StopQuietly sets his voice's volume to 0 (<c>0x005996e0</c>) before Sound_StopFading (<c>0x00599786</c>): the quietened
+	/// voice is silent at once, and the fade's first step, on a level of nought, stops it.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> the <c>SetVolume( 0f )</c> taken out of <c>Advisor.Quieten</c> leaves the voice at 0.52; seeding the fade from 52 rather
+	/// than 0 leaves it playing after the first step.
+	/// </remarks>
+	[TestMethod]
+	public void TheQuietenedAdvisorIsSilentAtOnceAndStopsAtTheFirstStep()
+	{
+		var voice = MakeVoice( 0.52f, AudioBus.Speech );
+		Advisor.Quieten( voice );
+
+		Assert.AreEqual( 0f, voice.Volume, "silent at once" );
+		Assert.IsTrue( voice.Playing && voice.Stepping, "handed to the fade" );
+		Assert.IsFalse( voice.StepFade( 1.0, 1.0 ), "the first step stops it" );
+		Assert.IsFalse( voice.Playing );
+	}
+
+	/// <summary>A level of 127, as the original's device has it: the music's 60 plays at <see cref="ParkAudio.MusicVolume"/>.</summary>
+	private static float Of127( float volume ) => volume / ParkAudio.MusicVolume * ParkAudio.MusicGroupLevel;
 
 	/// <summary>
 	/// At sound detail 30 (the shipped <c>FADETOGGLE</c>) or below, <c>Sound_StopFading</c> is the hard stop; at 31 it fades; and a detail
@@ -147,12 +181,12 @@ public class SoundStopFadingTests
 	{
 		Audio.SetSoundDetail( 30, 30 );
 		var cut = MakeVoice( 1f );
-		cut.StopFading();
+		cut.StopFading( 100 );
 		Assert.IsFalse( cut.Playing, "at 30 it is the hard stop" );
 
 		Audio.SetSoundDetail( 31, 30 );
 		var faded = MakeVoice( 1f );
-		faded.StopFading();
+		faded.StopFading( 100 );
 		Assert.IsTrue( faded.Playing && faded.Stepping, "at 31 it fades" );
 
 		var other = MakeVoice( 1f );

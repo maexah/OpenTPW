@@ -163,7 +163,7 @@ public sealed class ParkCarSounds : ParkBumperCars.ISounds
 	{
 		if ( voice is Held held && !held.Voice.Ending )
 		{
-			held.Voice.StopFading();
+			held.Voice.StopFading( held.Volume );
 			Log.Info( $"Car sounds: effect {held.Effect} '{held.Voice.Name}' faded" );
 		}
 	}

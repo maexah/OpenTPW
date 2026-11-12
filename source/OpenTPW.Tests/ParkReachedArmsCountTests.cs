@@ -122,6 +122,38 @@ public class ParkReachedArmsCountTests
 			$"both booths drawn from booth A; drew {string.Join( ", ", chosen )}" );
 	}
 
+	/// <summary>
+	/// With no admission there are no booths to name (OpenTPW's own: the original's booths are always set): an entering guest
+	/// in a shut park stands where they are, still entering, not aimed anywhere new and not admitted.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the walk run on with no admission (they move); the guest admitted; HeadingForGate set with no target.</remarks>
+	[TestMethod]
+	public void WithNoAdmissionAnEnteringGuestTurnedBackStands()
+	{
+		using var stream = new MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
+		var world = new ParkWorld( new SaveReader( stream ).ReadFile() );
+		var state = new ParkState( world );
+
+		state.SetParkClosed( true );
+
+		var behaviour = new PeepBehaviour( world, new Random( 1 ), admission: null, () => ParkRides.GateIsOpen, state );
+		var guest = ParkPeople.PeepsIn( world ).First( peep => peep.ThingId == 38 );
+
+		guest.SetState( PeepState.Entering, 0, new Random( 1 ) );
+
+		var walk = new PeepWalk( guest.Navigator, CellEdge.For( world, ParkPeople.WalkingMode ).Blocked );
+		var at = walk.Position;
+		var target = guest.Navigator.Target;
+		var visitors = behaviour.VisitorsToDate;
+
+		behaviour.Step( guest, walk, playing: null, tick: 1 );
+
+		Assert.AreEqual( PeepState.Entering, guest.State );
+		Assert.AreEqual( at, walk.Position, "they stand" );
+		Assert.AreEqual( target, guest.Navigator.Target, "aimed nowhere new" );
+		Assert.AreEqual( visitors, behaviour.VisitorsToDate, "nobody is admitted" );
+	}
+
 	/// <summary>The guard is built, so it is no longer counted, and the other states do not ask it.</summary>
 	[TestMethod]
 	[DataRow( PeepState.Entering )]
@@ -198,10 +230,12 @@ public class ParkReachedArmsCountTests
 		// Reopened while they walk: a path cell under them again, as one of the cells on the way is.
 		behaviour.State.SetParkClosed( false );
 		behaviour.State.StandOn( guest.ThingId, cell.X, cell.Y );
+		var standing = walk.Position;
 		behaviour.Step( guest, walk, playing: null, tick: 3 );
 
 		Assert.AreEqual( PeepState.Deciding, guest.State, "reopened while they walk out" );
 		Assert.AreEqual( 100, guest.ExitLevel, "the change of mind writes no exit level" );
+		Assert.AreEqual( standing, walk.Position, "and they take no step on the turn they change their mind (0x00500aad returns)" );
 
 		behaviour.Step( guest, walk, playing: null, tick: 4 );
 		Assert.AreNotEqual( PeepState.HeadingForExit, guest.State, "the open park's leave test does not send them out again" );

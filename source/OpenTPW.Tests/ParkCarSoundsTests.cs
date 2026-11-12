@@ -1,4 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -217,10 +218,15 @@ public class ParkCarSoundsTests
 
 	/// <summary>
 	/// The engine's fade is <c>Sound_StopFading</c>'s (<see cref="Voice.StopFading"/>): flagged for the fade worker with nothing
-	/// taken off yet, and its first step leaves 0.68's level of 68 at <c>trunc( 60 x round( 68 x 0.75 ) / 100 )</c> = 30 of the
-	/// effects' 75 (<c>docs/exe/audio.md</c>, "The fade"; Q509).
+	/// taken off yet, its own level the variation's 68, and heard at 51 of 127 beside the music's 60, then 30, 13, 6, 2, 1, and
+	/// stopped at the sixth step: <c>trunc( 60 x round( own x 0.75 ) / 100 )</c> on the channel's number (<c>docs/exe/audio.md</c>,
+	/// "The fade").
 	/// </summary>
-	/// <remarks><b>Mutations:</b> a <c>FadeOut</c> ramp in its place (nothing stepping); a hard stop (not playing).</remarks>
+	/// <remarks>
+	/// <b>Mutations:</b> a <c>FadeOut</c> ramp in its place (nothing stepping); a hard stop (not playing); the level seeded from the
+	/// voice's gain (28) rather than the variation's 68 gives 29.1 for the first step and stops a step early; the stepped level kept over
+	/// the product rather than on <see cref="ParkAudio.ChannelGain"/>'s scale gives 0.4 for the first.
+	/// </remarks>
 	[TestMethod]
 	public void TheEnginesFadeIsTheStoppingFade()
 	{
@@ -243,22 +249,34 @@ public class ParkCarSoundsTests
 		{
 			park = new ParkAudio( "jungle" );
 
-			var rides = park.Rides!;
-			var held = new ParkCarSounds.Held
-			{
-				Effect = 194, Header = rides.VariationsOf( 194 )[0], Keys = [(byte)rides.ParameterOf( 194 ), 16, 0, 0]
-			};
+			var sounds = new ParkCarSounds( new RideScriptScheduler() );
+			var held = sounds.Start( park.Rides!, 194, Vector3.Zero );
 
-			held.Voice = Audio.Play( rides.PickFrom( 194, 0 ), 0.68f, loop: true, position: Vector3.Zero )!;
-			Assert.IsNotNull( held.Voice );
+			Assert.IsNotNull( held );
+			Assert.AreEqual( 68, held.Volume, "the variation's volume" );
+			Assert.AreEqual( ParkAudio.ChannelGain( 68 ), held.Voice.Volume, 1e-6f, "the game's own gain" );
 
-			new ParkCarSounds( new RideScriptScheduler() ).Fade( held );
+			sounds.Fade( held );
 
 			Assert.IsTrue( held.Voice.Ending && held.Voice.Playing && held.Voice.Stepping, "stepping, and still sounding" );
-			Assert.AreEqual( 0.68f, held.Voice.Volume, 1e-6f, "nothing is taken off before the first step" );
+			Assert.AreEqual( 51f, Of127( held.Voice.Volume ), 1e-4f, "nothing is taken off before the first step" );
 
-			held.Voice.StepFade( 0.75 );
-			Assert.AreEqual( 30f / 75f, held.Voice.Volume, 1e-6f );
+			var heard = new List<float>();
+			var steps = 0;
+
+			while ( held.Voice.Playing && steps < 20 )
+			{
+				steps++;
+
+				if ( held.Voice.StepFade( 0.75, 1.0 ) )
+					heard.Add( Of127( held.Voice.Volume ) );
+			}
+
+			Assert.AreEqual( 6, steps, "the sixth step stops it" );
+			CollectionAssert.AreEqual( new[] { 30f, 13f, 6f, 2f, 1f }, heard.ConvertAll( level => MathF.Round( level, 3 ) ) );
+
+			// A level of 127, as the original's device has it: the music's 60 plays at MusicVolume.
+			static float Of127( float volume ) => volume / ParkAudio.MusicVolume * ParkAudio.MusicGroupLevel;
 		}
 		finally
 		{

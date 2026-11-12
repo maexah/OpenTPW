@@ -1,7 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.IO;
-using System.Linq;
 
 namespace OpenTPW.Tests;
 
@@ -43,16 +42,17 @@ public class PlayerFileSwearFilterTests
 
 	private static string Profile( string root ) => Path.Combine( root, "save", "users", "1Test", "gms.dat" );
 
-	private static int Times( string what ) => Unimplemented.Summary.FirstOrDefault( entry => entry.What == what ).Times;
-
-	/// <summary>0x409 names the American folder, every other language the English one (<c>0x005c0d00</c>).</summary>
-	/// <remarks><b>Mutations:</b> the folders swapped; English for every language.</remarks>
+	/// <summary>Each language the loader lists names its own folder; any other is English (<c>0x005c0d00</c>).</summary>
+	/// <remarks><b>Mutations:</b> the folders swapped; English for every language; English for every language but 0x409; a full
+	/// German LCID (0x407) read as German.</remarks>
 	[TestMethod]
-	public void TheSwearListIsUnderAmericanFor0x409AndEnglishOtherwise()
+	public void TheSwearListFolderFollowsTheLoadersTable()
 	{
 		Assert.AreEqual( @"data\Language\American\swears.txt", PlayerFile.SwearListPath( 0x409 ) );
 		Assert.AreEqual( @"data\Language\English\swears.txt", PlayerFile.SwearListPath( 0x809 ) );
-		Assert.AreEqual( @"data\Language\English\swears.txt", PlayerFile.SwearListPath( 0x40c ) );
+		Assert.AreEqual( @"data\Language\French\swears.txt", PlayerFile.SwearListPath( 0x40c ) );
+		Assert.AreEqual( @"data\Language\German\swears.txt", PlayerFile.SwearListPath( 0x7 ) );
+		Assert.AreEqual( @"data\Language\English\swears.txt", PlayerFile.SwearListPath( 0x407 ), "a value the switch does not list" );
 		Assert.AreEqual( 0x409, SaveFolder.SwearListLanguage, "the US installer's value, as the reference install writes" );
 	}
 
@@ -102,10 +102,10 @@ public class PlayerFileSwearFilterTests
 		Assert.AreEqual( american ? 1 : 0, File.ReadAllBytes( Profile( root ) )[0x13] );
 	}
 
-	/// <summary>A read that stopped early keeps what it read and counts the unread step rather than guessing it.</summary>
+	/// <summary>A read that stopped early keeps what it read and never opens the swear list (<c>0x005afe81</c>).</summary>
 	/// <remarks><b>Mutation:</b> the load run after a short read: the flag comes out 0 where no list is under the folder.</remarks>
 	[TestMethod]
-	public void AShortReadKeepsItsFlagAndIsCounted()
+	public void AShortReadKeepsItsFlag()
 	{
 		Directory.CreateDirectory( Path.GetDirectoryName( Profile( root ) )! );
 
@@ -115,11 +115,9 @@ public class PlayerFileSwearFilterTests
 			File.WriteAllBytes( Profile( root ), memory.ToArray()[..0x20] );
 		}
 
-		var before = Times( "PLAYER_SWEAR_FILTER_AFTER_SHORT_READ" );
 		var file = SaveFolder.LoadPlayer( 0, "Test" )!;
 
 		Assert.IsFalse( file.IsComplete );
 		Assert.IsTrue( file.FilterSwearing, "byte 0x13 was read as 1 before the file ended" );
-		Assert.AreEqual( before + 1, Times( "PLAYER_SWEAR_FILTER_AFTER_SHORT_READ" ) );
 	}
 }

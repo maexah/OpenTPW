@@ -7,10 +7,15 @@ first one matching the regex `until` (or the timeout); `key(name)` and `click(x,
 run's own Xvfb display, and on no other: each is refused where `run_display` cannot find that Xvfb in the run's session; `quit()` ends the run and kills what is left. Everything the game prints is in <out>/stdout.txt,
 each command after `>>> `.
 
-As consolerun.py, the game never runs on <game> itself: <out>/game links to <game>'s entries with a COPY of its save/
-(empty where it has none), XDG_DATA_HOME is <out>/xdg, and <game>'s save/ is checksummed either side (AGENTS.md rule
-12). Sets SDL_AUDIODRIVER=dummy, OPENTPW_DEBUG_CONSOLE=1, OPENTPW_NO_MESSAGE_BOX=1 and OPENTPW_LOG_DIR=<out>."""
-import hashlib, os, queue, re, shutil, signal, subprocess, threading, time
+As consolerun.py, the game never runs on <game> itself (consolegame.py): <out>/game links to <game>'s entries with a COPY
+of its save/ (empty where it has none), XDG_DATA_HOME is <out>/xdg, and <game>'s save/ is checksummed either side
+(AGENTS.md rule 12). Sets SDL_AUDIODRIVER=dummy, OPENTPW_DEBUG_CONSOLE=1, OPENTPW_NO_MESSAGE_BOX=1, OPENTPW_LOG_DIR=<out>
+and SDL_VIDEODRIVER=x11, with WAYLAND_DISPLAY taken out, so the game opens on the run's Xvfb and nowhere else. The
+display is the first free one from `display` up (no /tmp/.X<n>-lock or socket), as xvfb-run's -a picks, and the run
+stops with the game's output if xvfb-run ends before the lobby wait does (a display taken after all, a build that will
+not start), so no key or click is ever sent to a display that is not the run's."""
+import os, queue, re, signal, subprocess, sys, threading, time
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); import consolegame
 
 
 def run_display(sid):
@@ -43,37 +48,25 @@ def run_display(sid):
     return {"DISPLAY": xvfb[0], "XAUTHORITY": xvfb[1]}
 
 
-def _save_sum(folder):
-    h = hashlib.md5()
-    for root_, _, files in sorted(os.walk(os.path.join(folder, "save"))):
-        for f in sorted(files):
-            p = os.path.join(root_, f); h.update(p.encode()); h.update(open(p, "rb").read())
-    return h.hexdigest()
+def free_display(first):
+    """The first display number from `first` with no X server's lock file or socket."""
+    for n in range(first, first + 400):
+        if not os.path.exists(f"/tmp/.X{n}-lock") and not os.path.exists(f"/tmp/.X11-unix/X{n}"):
+            return n
+    raise SystemExit(f"consoledrive: no free X display from :{first}")
 
 
 class Drive:
     def __init__(self, out, binp, game, display=97, lobby_secs=25):
         self.out = out = os.path.abspath(out); self.game = game = os.path.abspath(game)
         os.makedirs(out, exist_ok=True)
-        private = os.path.join(out, "game")
-        if os.path.realpath(private) == os.path.realpath(game):
-            raise SystemExit("consoledrive: <out>/game is <game> itself")
-        if os.path.lexists(private):
-            shutil.rmtree(private)
-        os.makedirs(private)
-        for entry in os.listdir(game):
-            if entry != "save":
-                os.symlink(os.path.join(game, entry), os.path.join(private, entry))
-        if os.path.isdir(os.path.join(game, "save")):
-            shutil.copytree(os.path.join(game, "save"), os.path.join(private, "save"), symlinks=True)
-        else:
-            os.makedirs(os.path.join(private, "save"))
-        xdg = os.path.join(out, "xdg"); os.makedirs(xdg, exist_ok=True)
-        self.before = _save_sum(game)
+        private, xdg, self.before = consolegame.private_game(out, game, "consoledrive")
         self.auth = os.path.join(out, "xauth")
+        display = free_display(display)
         self.display = f":{display}"
-        env = dict(os.environ, OPENTPW_DEBUG_CONSOLE="1", SDL_AUDIODRIVER="dummy", OPENTPW_NO_MESSAGE_BOX="1",
-                   OPENTPW_LOG_DIR=out, OPENTPW_GAME_PATH=private, XDG_DATA_HOME=xdg)
+        env = consolegame.console_env(out, private, xdg)
+        env["SDL_VIDEODRIVER"] = "x11"
+        env.pop("WAYLAND_DISPLAY", None)
         self.p = subprocess.Popen(["xvfb-run", "-n", str(display), "-f", self.auth, "-s", "-screen 0 1280x1024x24",
                                    "dotnet", os.path.join(binp, "OpenTPW.dll"), "--game", private],
                                   stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
@@ -81,7 +74,13 @@ class Drive:
         self.log = open(os.path.join(out, "stdout.txt"), "w")
         self.lines = queue.Queue()
         threading.Thread(target=self._pump, daemon=True).start()
-        time.sleep(lobby_secs)
+        end = time.time() + lobby_secs
+        while time.time() < end:
+            if self.p.poll() is not None:
+                self.log.flush()
+                tail = open(os.path.join(out, "stdout.txt")).read()[-2000:]
+                raise SystemExit(f"consoledrive: xvfb-run on {self.display} ended (exit {self.p.returncode}) before the lobby wait did:\n{tail}")
+            time.sleep(0.5)
 
     def _pump(self):
         for line in self.p.stdout:
@@ -110,8 +109,8 @@ class Drive:
         time.sleep(secs); return self.drain()
 
     def _xdotool(self, *args):
-        """xdotool on the run's own Xvfb only (run_display): where :97 is not this run's server (Xvfb failed to start on
-        it, another server holds it), nothing is sent and the refusal is logged."""
+        """xdotool on the run's own Xvfb only (run_display): where the display this run picked (free_display) is not this
+        run's server (Xvfb failed to start on it, another server took it), nothing is sent and the refusal is logged."""
         found = run_display(self.p.pid)
         if found != {"DISPLAY": self.display, "XAUTHORITY": self.auth}:
             self.log.write(f"!!! refused xdotool {' '.join(args)}: {self.display} is not this run's Xvfb ({found})\n"); self.log.flush()
@@ -133,5 +132,5 @@ class Drive:
             try: os.killpg(self.p.pid, sig)
             except ProcessLookupError: break
             time.sleep(5)
-        if _save_sum(self.game) != self.before:
+        if consolegame.save_sum(self.game) != self.before:
             print("consoledrive: the game folder's save/ CHANGED during the run")

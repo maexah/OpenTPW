@@ -3297,7 +3297,7 @@ public class Level
 	/// How long every voice still sounding takes to fade as a level ends. The original's state machine hands its
 	/// stop-all (0x0051bcb0) 90; Sound_StopFading's 60 is a percentage kept per 100 ms worker step (docs/exe/audio.md, "The
 	/// fade, the SoundInfo settings and the reverb"), and whether the 90 is the same is not traced. A deviation: 0.09
-	/// seconds stands in for it (docs/QUEUE.md Q509).
+	/// seconds stands in for it (docs/QUEUE.md Q1232).
 	/// </summary>
 	private const float StopAllSeconds = 0.09f;
 

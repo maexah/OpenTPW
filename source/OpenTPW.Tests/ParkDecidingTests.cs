@@ -357,8 +357,7 @@ public class ParkDecidingTests
 	/// they never decide at all.
 	/// </para>
 	/// <para>
-	/// Losing <c>BigHappinessChange</c> rather than the medium one is what separates this from every other
-	/// mood change in the admission states, so the amount is asserted and not just the direction.
+	/// The amount, <c>BigHappinessChange</c>, is <c>ParkLeavingTests</c>'s.
 	/// </para>
 	/// <para>
 	/// <b>They walk to the crossing and arrive</b>, so the arrival is asserted as well as the aim: a guest only

@@ -733,7 +733,7 @@ public static class DebugConsole
 				Reply( Advisor.Current?.State() ?? "no advisor" );
 				break;
 
-			// Advisor_StopQuietly, as opening the options screen calls it: his voice goes by Sound_StopFading (Q509).
+			// Advisor_StopQuietly, as opening the options screen calls it: his voice set to 0 and handed to Sound_StopFading.
 			case "quieten":
 				Advisor.Current?.StopQuietly();
 				Reply( Voices() );
@@ -1816,6 +1816,7 @@ public static class DebugConsole
 						if ( who != 0 && balloon.Thing != who )
 							continue;
 
+						++listed;
 						var place = System.Numerics.Vector4.Transform( new System.Numerics.Vector4( balloon.Origin.X, balloon.Origin.Y, balloon.Origin.Z, 1f ), Camera.ViewMatrix * Camera.ProjMatrix );
 						Reply( $"circle: balloon of thing {balloon.Thing} anchor ({balloon.Origin.X:F3},{balloon.Origin.Y:F3},{balloon.Origin.Z:F4}) " +
 							$"origin pixel ({(place.X / place.W + 1f) * Screen.Width / 2f:F1},{(1f - place.Y / place.W) * Screen.Height / 2f:F1}) " +

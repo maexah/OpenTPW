@@ -17,41 +17,17 @@ value: a driver SDL has not, such as `none`, runs the game with no sound device,
 OPENTPW_NO_MESSAGE_BOX=1 and OPENTPW_LOG_DIR=<outdir>. Everything the game prints, each command after `>>> `, is in
 <outdir>/stdout.txt. End the script with `8 quit`; whatever is still running 20 s after the last line (the game, Xvfb,
 xvfb-run) is sent SIGTERM as one process group, and SIGKILL 5 s later. No memory cap: on a desk use gamedrive.py's."""
-import hashlib, os, shutil, signal, subprocess, sys, threading, time
-
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import os, signal, subprocess, sys, threading, time
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); import consolegame
 from consoledrive import run_display
 
 out, binp, game, script = sys.argv[1:5]
 out = os.path.abspath(out); game = os.path.abspath(game)
 os.makedirs(out, exist_ok=True)
 
-def save_sum(folder):
-    h = hashlib.md5()
-    for root_, _, files in sorted(os.walk(os.path.join(folder, "save"))):
-        for f in sorted(files):
-            p = os.path.join(root_, f); h.update(p.encode()); h.update(open(p, "rb").read())
-    return h.hexdigest()
-
-# The run's own game folder: links to the game's entries, its own copy of save/.
-private = os.path.join(out, "game")
-if os.path.realpath(private) == os.path.realpath(game):
-    raise SystemExit("consolerun: <outdir>/game is <game> itself")
-if os.path.lexists(private):
-    shutil.rmtree(private)
-os.makedirs(private)
-for entry in os.listdir(game):
-    if entry != "save":
-        os.symlink(os.path.join(game, entry), os.path.join(private, entry))
-if os.path.isdir(os.path.join(game, "save")):
-    shutil.copytree(os.path.join(game, "save"), os.path.join(private, "save"), symlinks=True)
-else:
-    os.makedirs(os.path.join(private, "save"))
-xdg = os.path.join(out, "xdg"); os.makedirs(xdg, exist_ok=True)
-before = save_sum(game)
-
-env = dict(os.environ, OPENTPW_DEBUG_CONSOLE="1", SDL_AUDIODRIVER=os.environ.get("CONSOLERUN_AUDIODRIVER", "dummy"), OPENTPW_NO_MESSAGE_BOX="1", OPENTPW_LOG_DIR=out,
-           OPENTPW_GAME_PATH=private, XDG_DATA_HOME=xdg)
+# The run's own game folder: links to the game's entries, its own copy of save/ (consolegame.py).
+private, xdg, before = consolegame.private_game(out, game, "consolerun")
+env = consolegame.console_env(out, private, xdg, os.environ.get("CONSOLERUN_AUDIODRIVER", "dummy"))
 p = subprocess.Popen(["xvfb-run", "-a", "-s", "-screen 0 1280x1024x24", "dotnet", os.path.join(binp, "OpenTPW.dll"), "--game", private],
                      stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env,
                      start_new_session=True)
@@ -107,5 +83,5 @@ signal_group(signal.SIGKILL)
 p.wait()
 
 print(f"consolerun: the game's exit code {p.returncode} (negative: ended by that signal, after the last line's 20 s)")
-after = save_sum(game)
+after = consolegame.save_sum(game)
 print(f"consolerun: {game}/save {'unchanged' if after == before else 'CHANGED during the run'} ({before} -> {after})")

@@ -212,9 +212,10 @@ public sealed class Voice
 	/// The original's <c>Sound_StopFading</c> (<c>0x0051c300</c>): above sound detail <c>SoundInfo.FADETOGGLE</c> the voice is
 	/// flagged for the fade worker, which takes it down a x0.6 step at a time (<see cref="StepFade"/>, <see cref="Audio.FadeStep"/>);
 	/// at that detail or below it is the hard stop, <see cref="Stop"/> (<c>0x006b8930</c>; <c>docs/exe/audio.md</c>, "The fade").
-	/// Its own level starts as its volume out of 100, rounded.
+	/// Its own level starts as <paramref name="ownLevel"/>, the volume of a hundred its variation gave it: the channel's
+	/// <c>+0x18</c>, which the set-up fills from <c>0x006bc090</c>'s answer, not the gain this mixer plays it at.
 	/// </summary>
-	public void StopFading()
+	public void StopFading( int ownLevel )
 	{
 		lock ( Audio.Lock )
 		{
@@ -227,7 +228,7 @@ public sealed class Voice
 			if ( _stopped || _fadeOwn >= 0 )
 				return;
 
-			_fadeOwn = (int)MathF.Round( _volume.Clamp( 0f, 1f ) * 100f );
+			_fadeOwn = Math.Max( ownLevel, 0 );
 			_targetVolume = _volume;
 			_volumeRate = 0f;
 			_stopWhenFaded = false;
@@ -240,12 +241,19 @@ public sealed class Voice
 	/// and at 0 it stops (<c>0x006bcc6e</c>). Says whether it is still going. The caller holds <see cref="Audio.Lock"/>.
 	///
 	/// <para>
-	/// The original's device plays the stepped level with the group gains already folded in, where this mixer still
-	/// multiplies by the group (its bus and the duck), so the volume kept here is the level over the product: what is
-	/// heard is the original's sequence, 75, 45, 20, 9, 4, 1 of a hundred at the effects' 0.75.
+	/// The original's device plays the stepped level as a whole number of 127 with the group gains already folded in. Here
+	/// that number plays on <see cref="ParkAudio.ChannelGain"/>'s scale, the music's 60 at <see cref="ParkAudio.MusicVolume"/>,
+	/// over <paramref name="heard"/>, what this mixer still multiplies a voice by (its bus's slider and the duck): a
+	/// variation's 100 is heard at 75, 45, 20, 9, 4, 1 of 127 at the effects' 0.75, and the bumper engine's 68 at 51, 30, 13,
+	/// 6, 2, 1.
+	/// </para>
+	/// <para>
+	/// The duck is in <paramref name="product"/> here; no duck factor has been traced into the original's step
+	/// (<c>0x006bb860</c>'s four group floats), and whether its duck (<c>0x0051bdf9</c>, the speech group's level times
+	/// <c>DUCKINGLEVEL</c>) reaches them is not known.
 	/// </para>
 	/// </summary>
-	internal bool StepFade( double product )
+	internal bool StepFade( double product, double heard )
 	{
 		if ( _stopped )
 			return false;
@@ -262,7 +270,9 @@ public sealed class Voice
 			return false;
 		}
 
-		_volume = (float)(_fadeOwn / (100.0 * product));
+		_volume = heard > 0
+			? (float)Math.Clamp( _fadeOwn / (double)ParkAudio.MusicGroupLevel * ParkAudio.MusicVolume / heard, 0.0, 1.0 )
+			: 0f;
 		_targetVolume = _volume;
 		return true;
 	}
@@ -393,8 +403,9 @@ public sealed class Voice
 	/// <param name="bufferStart">Which frame of the device's output this buffer starts at.</param>
 	/// <param name="fadeWakeAt">The frame of this buffer the fade worker wakes on, or -1 (<see cref="Audio.NextFadeWake"/>).</param>
 	/// <param name="group">Its group's level as the original's library holds it (<see cref="Audio.SetGroupLevel"/>), which a fade step folds in with the duck.</param>
+	/// <param name="bus">Its bus's slider factor, which <paramref name="master"/> already holds and a fade step plays its level over.</param>
 	internal unsafe bool MixInto( float* output, int frames, long bufferStart, float master, float duck, float duckStep,
-		int fadeWakeAt, float group )
+		int fadeWakeAt, float group, float bus )
 	{
 		if ( _stopped )
 			return false;
@@ -424,7 +435,7 @@ public sealed class Voice
 
 		for ( int i = 0; i < frames; ++i )
 		{
-			if ( i == fadeWakeAt && _fadeOwn >= 0 && !StepFade( (double)group * duck ) )
+			if ( i == fadeWakeAt && _fadeOwn >= 0 && !StepFade( (double)group * duck, (double)bus * duck ) )
 				return false;
 
 			if ( _volumeRate > 0f )

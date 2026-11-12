@@ -471,7 +471,7 @@ public sealed partial class ParkAudio
 		sound.Stopped = true;
 
 		if ( fade && !sound.Chain )
-			sound.Voice?.StopFading();
+			sound.Voice?.StopFading( sound.Kept.Volume );
 		else
 			sound.Voice?.Stop();
 

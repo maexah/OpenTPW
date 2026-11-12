@@ -551,8 +551,7 @@ internal static class SaveFolder
 			{
 				Log.Warning( $"Saves: {path} ended early or is not a player, so only what came before that was read" );
 
-				// Whether the original's loader reaches its swear list after a read that stopped is not read (FUN_005afd70).
-				Unimplemented.Report( "PLAYER_SWEAR_FILTER_AFTER_SHORT_READ" );
+				// The original's loader returns before its swear list when the read stops (0x005afe81, FUN_005afd70).
 				return file;
 			}
 

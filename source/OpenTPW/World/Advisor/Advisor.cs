@@ -545,8 +545,8 @@ public sealed class Advisor : Entity
 
 	/// <summary>
 	/// Advisor_StopQuietly (0x005996d0), which opening the options screen calls with 1: everything
-	/// <see cref="StopSpeaking"/> does but the cry, with his voice faded (Sound_StopFading, 0x0051c300)
-	/// rather than cut. What is still queued stays queued.
+	/// <see cref="StopSpeaking"/> does but the cry, with his voice silenced at once and then handed to
+	/// Sound_StopFading (0x0051c300), which stops it. What is still queued stays queued.
 	/// </summary>
 	internal void StopQuietly()
 	{
@@ -559,9 +559,10 @@ public sealed class Advisor : Entity
 
 	/// <summary>
 	/// What being cut off and being quietened share: his voice goes, and so does he, with whatever was still to come in
-	/// the line. Quietened, his voice is Sound_StopFading's (0x0051c300, <see cref="Voice.StopFading"/>, as
-	/// Advisor_StopQuietly 0x005996d0 hands it); cut off, it fades over <see cref="CutOffSeconds"/>. Says whether his
-	/// voice was sounding.
+	/// the line. Quietened, his voice is set to 0 and then faded, as Advisor_StopQuietly does (0x005996e0 sets the volume
+	/// through 0x0051c0e0, then 0x00599786 calls Sound_StopFading): the fade's first step on a level of nought stops it
+	/// (<see cref="Voice.StopFading"/>; docs/exe/audio.md, "The fade"). Cut off, it fades over <see cref="CutOffSeconds"/>.
+	/// Says whether his voice was sounding.
 	/// </summary>
 	private bool Dismiss( bool quietly )
 	{
@@ -570,7 +571,7 @@ public sealed class Advisor : Entity
 		_pending = 0;
 
 		if ( quietly )
-			_voice?.StopFading();
+			Quieten( _voice );
 		else
 			_voice?.FadeOut( CutOffSeconds );
 
@@ -588,6 +589,13 @@ public sealed class Advisor : Entity
 		ResetFace();
 
 		return sounding;
+	}
+
+	/// <summary>Advisor_StopQuietly's two calls on his voice: its volume to 0 (0x005996e0), then Sound_StopFading (0x00599786).</summary>
+	internal static void Quieten( Voice? voice )
+	{
+		voice?.SetVolume( 0f );
+		voice?.StopFading( 0 );
 	}
 
 	/// <summary>
