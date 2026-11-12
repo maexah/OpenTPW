@@ -7,7 +7,7 @@
 #            (seed, test, first line of the message) and DONE last; OUT.progress a line a seed. ONLYFILE lists Class.Method lines.
 # The control (prove the instrument can fail): put the pre-Q1022 ScriptSoundTests back (`git show 0606a264^:source/OpenTPW.Tests/ScriptSoundTests.cs`),
 #   list its AHeldParksHeldChainMakesItsChildrenUnheardAndNoneBurstsOnResume in an ONLYFILE and sweep with SWEEP_RAW=1 (every generator gets the
-#   seed itself, not a per-name hash): it fails at seeds 2199 and 2307 ("not before the newest child's time") and passes at 942 (q1023/control-*.txt).
+#   seed itself, not a per-name hash): it fails at seeds 2199 and 2307 ("not before the newest child's time") and passes at 942 (q1023/control-*.txt; again on this runner in Q1025, q1025/).
 # Async tests are awaited, a TestContext is given, DynamicData / params / optional arguments are bound, and ParkWeatherFreshTests are left out (Q1024).
 # Time.Now is set to 0 before each test: left to grow, a float stops advancing by 1/60 s after about eight passes
 # and five tests fail on the clock, not on a seed. Run from anywhere; set OPENTPW_GAME_PATH.
