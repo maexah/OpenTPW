@@ -13748,3 +13748,21 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   nought, as Restart Park reads, holds a nought stamp, so its load forecasts on sweep 1 where this game's applies a roll
   (`docs/exe/weather.md`, "A park's first days"), and the instants move a fresh park's first delivery from sweep 93 to the original's 94. Confirm: q528's `run3/q528-fix2.TPWS`
   loaded here and in the original, the quality, the drops and the forecast's delivery tick (17097) predicted, a frame
+- [x] **Q536. A carried item's passes set the latch.** From the run 5 review (Q532 2). Mode 4's pass clears
+  `DAT_00816d50` at `0x005234f2` and sets it and `d5c` at `0x0052365c`/`0x00523662` each tick when the item's
+  BuildPrice (`+0x1b8`) is above the bank's balance, unless the golden-ticket cost `+0xc4` is positive and
+  `FUN_004d4b70` says it is unpaid (then the pending price is 0 and d50 stays clear), and not under the replay
+  (`[0x00785a2c]`). The placer (`FUN_00528a70`, `0x0052390e`) also sets d50 at `0x005295e8` and `0x00529730` for an
+  entrance or exit facing off the map (trigger not re-derived). Build both in `ParkBuildMarkers.OnUpdate` while
+  `ParkBuilding.Carrying != 0`; the player reaches it by a move with the price above the balance, which `Carry`
+  refuses but `Move` does not. `Hold` clears the latch for now; said at the site (`ParkBuilding.Hold`).
+  From Q539 (its last piece; counted as `CARRY_PASS_REFUSAL_LATCH`; the carried thing's squares are Q633's): confirm beside the original's `[0x00816d50]` and the
+  locator's edges; the bank can be held low in the original with `thingpoke.py` (`TOOLING.md`, "Recipes", Q542).
+  **Done 2026-11-12 (cloud lane c73), the money arm only:** `ParkBuilding.CarryPassLatched` from `ParkBuildMarkers.OnUpdate`
+  while an item is in the hand (`LatchAfterFrame` takes the carry's pass as a tool's); the off-map arm is Q1412, counted
+  `CARRY_PLACER_OFF_MAP_LATCH`. The console run (stock park, the pointer held on (48,31)): `money balance -100`, `move 13 48 31`
+  ("costs 500 and the park has 473", the hand holding 1100 moved), `tool` latch 1; balance 500, latch 0; 499, latch 1;
+  `drop`, latch 1 (no pass with nothing held); `carry 1100` at 100000, latch 0; balance 100, latch 1. Tests
+  `TheCarrysPassLatchesWhereThePriceIsAboveTheBank`, `TheCarrysPassLatchesWhileTheHandIsDearerThanTheBank`,
+  `TheCarrysPassFindsAnEndFacingOffTheMap`. Not checked: the original (no Ghidra, no Proton in the lane), the patrol edges
+  on screen.

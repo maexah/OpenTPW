@@ -267,7 +267,13 @@ public sealed class ParkBuildMarkers : ModelEntity
 		var strip = picked ? ParkPathBuilding.Strip( x, y, out latched ) : [];
 		var carried = picked ? ParkBuilding.CarrySquares( x, y ) : [];
 
-		ParkBuildMode.RefusalLatched = LatchAfterFrame( ParkBuildMode.RefusalLatched, ParkBuildMode.Current, picked, latched );
+		// The carry's own pass (mode 4) clears the latch and sets it again while the thing in the hand is dearer than the bank.
+		var carrying = ParkBuilding.Carrying != 0;
+
+		if ( picked && carrying )
+			latched = ParkBuilding.CarryPassLatched( x, y );
+
+		ParkBuildMode.RefusalLatched = LatchAfterFrame( ParkBuildMode.RefusalLatched, ParkBuildMode.Current, carrying, picked, latched );
 
 		if ( picked && ParkGround.Current?.Heightfield is { } ground )
 			_glideTarget = (x * ground.CellSizeX, y * ground.CellSizeY);
@@ -307,11 +313,13 @@ public sealed class ParkBuildMarkers : ModelEntity
 	public void QueuePatrolEdges( List<(int X, int Y)> cells ) => _patrolQueued = cells;
 
 	/// <summary>
-	/// The refusal latch after a frame: an armed tool's pass over the park leaves it as its verdicts set it
-	/// (<c>FUN_005234d0</c>, cleared at <c>0x005234f2</c> and set by them); with no tool armed none runs and it stands.
+	/// The refusal latch after a frame: an armed tool's pass over the park, or the carry's (mode 4,
+	/// <see cref="ParkBuilding.CarryPassLatched(int, int)"/>), leaves it as its verdicts set it (<c>FUN_005234d0</c>, cleared
+	/// at <c>0x005234f2</c> and set by them); with nothing armed or in the hand none runs and it stands. With no cell picked
+	/// no pass is taken here (our choice, as for a tool).
 	/// </summary>
-	internal static bool LatchAfterFrame( bool latch, int mode, bool picked, bool passLatched )
-		=> picked && mode != ParkBuildMode.None ? passLatched : latch;
+	internal static bool LatchAfterFrame( bool latch, int mode, bool carrying, bool picked, bool passLatched )
+		=> picked && (mode != ParkBuildMode.None || carrying) ? passLatched : latch;
 
 	/// <summary>
 	/// The patrol edges' squares: the original's verdict for them (<c>FUN_00535670( 0x36 )</c>, <c>0x005356df</c>) is the

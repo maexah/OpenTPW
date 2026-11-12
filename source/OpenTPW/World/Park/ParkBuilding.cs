@@ -1441,11 +1441,63 @@ public static class ParkBuilding
 
 		// The install of mode 4 (and of the move tool) runs a pass first, which clears the refusal latch a followed
 		// member's patrol edges read (DAT_00816d50, FUN_0046d5a0, 0x0046d5e8). The place mode's later passes set it
-		// again while the price is above the balance (0x0052365c, a golden-ticket item not yet paid for excepted) and
-		// where the placer finds an entrance or exit facing off the map (0x005295e8, 0x00529730); none of those is
-		// built, so a carried item leaves the latch clear (Q536).
+		// again (CarryPassLatched, from the markers' frame).
 		ParkBuildMode.RefusalLatched = false;
-		Unimplemented.Report( "CARRY_PASS_REFUSAL_LATCH" );
+	}
+
+	/// <summary>
+	/// Whether the carry's pass (mode 4, <c>FUN_005234d0</c>) leaves the refusal latch <c>DAT_00816d50</c> set with the
+	/// pointer on (x, y): the pass clears it (<c>0x005234f2</c>) and sets it, with <c>d5c</c>, where the item's BuildPrice
+	/// (<c>+0x1b8</c>) is above the bank's balance (<c>0x0052365c</c>, <c>0x00523662</c>). A ride with a golden-ticket cost
+	/// (<c>+0xc4</c>) not yet bought (<c>FUN_004d4b70</c>) prices the run at nought and skips that test
+	/// (<c>0x005235e6</c>..<c>0x0052360b</c>), a move's as well: the move's own money test is its put-down's
+	/// (<c>0x0052398b</c>), not this pass's. The original skips the pass's latch under the layout replay
+	/// (<c>[0x00785a2c]</c>), which ours never runs. docs/exe/hud.md, "The patrol edges".
+	/// </summary>
+	internal static bool CarryPassLatched( int pointerX, int pointerY )
+	{
+		if ( Carrying == 0 || Level.Current is not { ParkState: { } state, Catalogue: { } catalogue }
+			|| !catalogue.TryGet( Carrying, out var item ) )
+			return false;
+
+		// The placer (FUN_00528a70, called at 0x0052390e) also sets the latch at 0x005295e8 and 0x00529730, for an entrance
+		// or exit facing off the map; which arm reaches each store is not re-derived (Q1412), so where ours finds an end
+		// facing off the map it is counted and the latch left to the money test.
+		if ( item.HasEntrance && !ParkTrackAddOn.Is( item ) )
+		{
+			var (cellX, cellY) = CarriedAnchorUnder( state, item, pointerX, pointerY, out _ );
+
+			if ( EndFacesOffMap( item, cellX, cellY, CarryingAngle ) )
+				Unimplemented.Report( "CARRY_PLACER_OFF_MAP_LATCH" );
+		}
+
+		return CarryPassLatched( state, item, GoldenTickets.Rides );
+	}
+
+	/// <summary>The carry pass's money verdict (<see cref="CarryPassLatched(int, int)"/>): dearer than the bank, an unbought ticket ride never.</summary>
+	internal static bool CarryPassLatched( ParkState state, ParkItemCatalogue.Item item, IReadOnlyCollection<ushort>? rides )
+		=> !GoldenTickets.IsMystery( item, rides ) && item.BuildPrice > state.Balance;
+
+	/// <summary>Whether a thing anchored at (x, y) faces an end off the map, as <see cref="EndRefusal"/>'s off-map arms find it.</summary>
+	internal static bool EndFacesOffMap( ParkItemCatalogue.Item item, int cellX, int cellY, int angle )
+	{
+		if ( !item.HasEntrance )
+			return false;
+
+		var (entryX, entryY) = RotateDelta( item.EntryDeltaX, item.EntryDeltaY, angle );
+		var faced = Step( cellX + entryX, cellY + entryY, CellEdge.Opposite( RotateBit( item.EntryDirection, angle ) ) );
+
+		if ( !ParkState.OnMap( faced.X, faced.Y ) )
+			return true;
+
+		var (exitX, exitY) = RotateDelta( item.ExitDeltaX, item.ExitDeltaY, angle );
+
+		if ( !item.HasQueue || (entryX == exitX && entryY == exitY) )
+			return false;
+
+		var exitFaced = Step( cellX + exitX, cellY + exitY, RotateBit( item.ExitDirection, angle ) );
+
+		return !ParkState.OnMap( exitFaced.X, exitFaced.Y );
 	}
 
 	/// <summary>

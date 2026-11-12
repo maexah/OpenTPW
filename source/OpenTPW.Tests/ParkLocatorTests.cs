@@ -1237,6 +1237,97 @@ public class ParkLocatorTests
 	}
 
 	/// <summary>
+	/// <b>The carry's pass on the stock park latches while the thing in the hand is dearer than the bank</b>
+	/// (<c>0x0052365c</c>): the Belly Bounce (1100, $ 500) taken into the hand clears a latch left set (the install's pass,
+	/// <c>0x0046d5e8</c>), latches nothing at the park's own balance or at exactly 500, and latches at 499, the pointer
+	/// over bare ground (48,31); with the hand empty no carry's pass runs.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the pass reading the balance at or below the price; the pass answering for an empty hand; <c>Hold</c> keeping the latch.</remarks>
+	[TestMethod]
+	public void TheCarrysPassLatchesWhileTheHandIsDearerThanTheBank()
+	{
+		var state = Level.Current!.ParkState!;
+		var balance = state.Balance;
+
+		try
+		{
+			ParkBuildMode.RefusalLatched = true;
+			StringAssert.StartsWith( ParkBuilding.Carry( 1100 ), "carry: holding 'Belly Bounce' (1100) at 500" );
+			Assert.IsFalse( ParkBuildMode.RefusalLatched, "taking it into the hand cleared it" );
+			Assert.IsFalse( ParkBuilding.CarryPassLatched( 48, 31 ), $"affordable at {state.Balance}" );
+
+			state.SetBalance( 500 );
+			Assert.IsFalse( ParkBuilding.CarryPassLatched( 48, 31 ), "the price exactly" );
+
+			state.SetBalance( 499 );
+			Assert.IsTrue( ParkBuilding.CarryPassLatched( 48, 31 ), "a dollar short" );
+			Assert.IsTrue( ParkBuildMarkers.LatchAfterFrame( false, ParkBuildMode.Current, ParkBuilding.Carrying != 0, true,
+				ParkBuilding.CarryPassLatched( 48, 31 ) ), "the frame takes it" );
+
+			ParkHand.LetGo();
+			Assert.IsFalse( ParkBuilding.CarryPassLatched( 48, 31 ), "the hand empty" );
+		}
+		finally
+		{
+			ParkHand.LetGo();
+			state.SetBalance( balance );
+			ParkBuildMode.Forget();
+		}
+	}
+
+	/// <summary>
+	/// <b>Where the carry's pass counts the placer's off-map latch</b> (<c>CARRY_PLACER_OFF_MAP_LATCH</c>, Q1412): for every
+	/// theme item with an entrance, on every cell within eight of the map's edge at every angle, an end is found facing off
+	/// the map wherever <see cref="ParkBuilding.EndRefusal"/> refuses it for that, and never where it refuses nothing; on
+	/// bare ground in the park, (48,31), at none.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the exit's arm dropped; the entrance's faced cell taken without its turn.</remarks>
+	[TestMethod]
+	public void TheCarrysPassFindsAnEndFacingOffTheMap()
+	{
+		var level = Level.Current!;
+		var items = level.Catalogue!.All.Where( item => item.HasEntrance ).ToList();
+		Assert.IsTrue( items.Count > 0, "some item has an entrance" );
+
+		var (entrances, exits) = (0, 0);
+
+		foreach ( var item in items )
+			for ( var angle = 0; angle < 4; ++angle )
+				for ( var at = 0; at < 128 * 128; ++at )
+				{
+					var (x, y) = (at % 128, at / 128);
+
+					if ( x is > 8 and < 119 && y is > 8 and < 119 )
+						continue;
+
+					var why = ParkBuilding.EndRefusal( level.ParkState!, item, x, y, angle );
+					var found = ParkBuilding.EndFacesOffMap( item, x, y, angle );
+
+					if ( why is null )
+						Assert.IsFalse( found, $"{item.Id} at ({x},{y}) turned {angle}: nothing refused" );
+					else if ( why.EndsWith( "is off the map" ) )
+					{
+						Assert.IsTrue( found, $"{item.Id} at ({x},{y}) turned {angle}: {why}" );
+						_ = why.StartsWith( "its exit" ) ? ++exits : ++entrances;
+					}
+				}
+
+		// No theme item's exit faces off the map where its entrance does not (EndRefusal tests the entrance first), so the
+		// exit's arm is shown on a made-up item: the way in on its cell facing north, the way out a cell east facing east.
+		Assert.IsTrue( entrances > 0, "some entrance faces off the map" );
+		Assert.AreEqual( 0, exits, "no exit alone, in the jungle's items" );
+		Assert.IsFalse( Enumerable.Range( 0, 4 ).Any( angle => ParkBuilding.EndFacesOffMap( items[0], 48, 31, angle ) ), "bare ground in the park" );
+
+		var made = new ParkItemCatalogue.Item( 9, "x", "", "ride", 2, 1, null, HasQueue: true, ExitDeltaX: 1, HasEntrance: true,
+			EntryDirection: 0x10, ExitDirection: 0x04 );
+		Assert.IsFalse( ParkBuilding.EndFacesOffMap( made, 64, 64, 0 ), "in the middle" );
+		Assert.IsTrue( ParkBuilding.EndFacesOffMap( made, 64, 0, 0 ), "the way in faces (64,-1)" );
+		Assert.IsTrue( ParkBuilding.EndFacesOffMap( made, 126, 5, 0 ), "the way out faces (128,5)" );
+		Assert.IsFalse( ParkBuilding.EndFacesOffMap( made, 125, 5, 0 ), "the way out faces (127,5)" );
+		Assert.IsTrue( ParkBuilding.EndFacesOffMap( made, 64, 127, 180 ), "turned half round the way in faces (64,128)" );
+	}
+
+	/// <summary>
 	/// <b>A carried thing wears <c>c_place</c> where it would go down and <c>c_noplace</c> where it would not</b>
 	/// (<c>FUN_0052f950</c>, mode 4: cursor 7, then 8 under the pass's refusal), as the original's did over (48,31) and over
 	/// the stock Belly Bounce (51,25) (<c>q633/orig/c-run.out</c>, cursor 7 and 8); with the hand empty, the view's own.
