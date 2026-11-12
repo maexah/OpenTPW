@@ -3,7 +3,7 @@
 
 consolerun.py's interactive sibling for a cloud lane (no python-xlib, Q862): a run script imports it, starts the game with
 `Drive(out, bin, game)`, then `ask(command, until)` sends one console command and returns the lines printed up to the
-first one matching the regex `until` (or the timeout); `key(name)` and `click(x, y)` are real X events by xdotool on the
+first one matching the regex `until` (or the timeout); `key(name)`, `focus_key(name)`, `click(x, y)` and `wheel(x, y, notches)` are real X events by xdotool on the
 run's own Xvfb display, and on no other: each is refused where `run_display` cannot find that Xvfb in the run's session; `quit()` ends the run and kills what is left. Everything the game prints is in <out>/stdout.txt,
 each command after `>>> `.
 
@@ -121,6 +121,17 @@ class Drive:
     def key(self, name): self._xdotool("key", name)
 
     def click(self, x, y): self._xdotool("mousemove", str(int(x)), str(int(y)), "click", "1")
+
+    def focus_key(self, name):
+        """key(name) with the game's window given the keyboard first (windowfocus --sync), which a key the console has no
+        command for needs (Q994: a plain key was not seen); F1 over the park, Q231."""
+        self._xdotool("search", "--onlyvisible", "--name", ".", "windowfocus", "--sync", "%1", "key", name)
+
+    def wheel(self, x, y, notches):
+        """The pointer to (x, y) and the wheel turned `notches` times: away (button 4) for a positive count, toward (button 5,
+        a notch down, the park's zoom out) for a negative one (Q231)."""
+        self._xdotool("mousemove", str(int(x)), str(int(y)), "click", "--repeat", str(abs(int(notches))), "--delay", "150",
+                      "4" if notches > 0 else "5")
 
     def quit(self):
         try:

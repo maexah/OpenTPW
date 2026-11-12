@@ -78,6 +78,41 @@ public class ModalWheelTests
 		Assert.IsFalse( Taken( -1f, 1900, 1400, 1200 ), "on the bare park" );
 	}
 
+	/// <summary>
+	/// <b>A park screen takes the wheel over its rectangle alone</b> (Q231; <c>docs/exe/hud.md</c>, "The wheel over a park screen"): over its
+	/// bare frame and over a control on it the notch is the screen's, so the camera does not zoom; beside it, on the bare park, the camera
+	/// zooms as with none; a screen put away, and the full-screen view's cover over the stack, take nothing.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the park screen clause left out of <c>WindowStack.OnUpdate</c> (the frame zooms); the clause taken with
+	/// no test of the rectangle (the park beside zooms no more); the cover not asked.</remarks>
+	[TestMethod]
+	public void AParkScreenTakesTheWheelOverItsRectangleAlone()
+	{
+		var screen = new AParkScreen( _stack );
+		_stack.Open( screen );
+
+		Assert.IsTrue( Taken( -1f, 300, 300, 1000 ), "the screen's bare frame" );
+		Assert.IsTrue( Taken( 1f, 560, 100, 1100 ), "a control on the screen" );
+		Assert.IsFalse( Taken( -1f, 1900, 1400, 1200 ), "the bare park beside the screen" );
+
+		_stack.Cover( true );
+		Assert.IsFalse( Taken( -1f, 300, 300, 1300 ), "under the cover" );
+		_stack.Cover( false );
+
+		screen.Hidden = true;
+		Assert.IsFalse( Taken( -1f, 300, 300, 1400 ), "a screen put away" );
+	}
+
+	private sealed class AParkScreen : UiWindow
+	{
+		public AParkScreen( WindowStack stack ) : base( stack )
+		{
+			ParkScreen = true;
+			Root = new UiControl { Rect = new UiRect( 100, 80, 700, 600 ), HoldsChildren = true };
+			Root.Add( new UiControl { Rect = new UiRect( 540, 80, 580, 120 ) } );
+		}
+	}
+
 	private sealed class AModal : UiWindow
 	{
 		public AModal( WindowStack stack, bool modal ) : base( stack )

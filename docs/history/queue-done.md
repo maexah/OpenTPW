@@ -12145,6 +12145,32 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q231. Under an open park screen: F1, the wheel and the release.** Found by Q115 (`park-engine.md`, "A park
+  screen is open"); decoded in Q870. Build: (1) F1 let go with no modifier says the kept tutorial line again, screen
+  or no screen: keep the last category-1 raise beside the slots (also when the gate refuses it), forget it when its id
+  is withdrawn, and on F1 post it forced at `ContextHelpScore` (`advisor-park.md`, "F1: the kept tutorial line said
+  again"); here only the buy screen's `0xbc`, the hire screen's `0xbd`, the tag's `0x11c` and the polled `0xb9` and
+  `0x11a` are built, so F1 has those to repeat, and the kept record goes into the advisor's park-file record
+  (`+0x16d0`, "The slots in a park file"). (2) The wheel over a park screen's rectangle is taken (`WindowStack`), a
+  list or slider under it still scrolling; beside it the park still zooms (`hud.md`, "The wheel over a park screen").
+  (3) An armed tool's click beside a screen is taken on the press here, where the original skips the press and
+  commits on the release (`park-engine.md`, "A park screen is open", the pointer; `Level.KeptFromThePark`), which is
+  `RunBuildMode`'s standing difference.
+  Confirm, the original (Q930's `q930/orig.sh` way: `loadfile.sh` the stock easymode.TPWI, off-screen 1024 x 768):
+  (a) `advisor.py` gains a `kept` argument printing the kept record (+0x16d0 thing, +0x16d8 line, +0x16dc message,
+  +0x16e0 score, +0x16e4 mValid, +0x16e5 forced, +0x16e6 overridden; FUN_0059a940 0x0059a988, FUN_0059ab50
+  0x0059ab9b..0x0059aba3); run `advisor.py PID SECS 0xbc kept` and `screens.py PID SECS` from before the first click;
+  the Tutorial byte [0x0078d90d] read first and held at 1 (`bytehold.py`) if it is not. (b) `setcam.py PID 725,265 100
+  0 off`, `camera.py PID` reads zoom [0x007909ec] = 100. (c) Open the buy screen (Buy, (113,590)): predict a slot with
+  0xbc and the kept record message 0xbc, mValid 1, forced 0, overridden 0. (d) After 0xbc's record reads said 1 and its
+  slot is gone, F1 (`orig.sh key F1`) with the pointer on the screen: predict kept score 1000, forced 1, overridden 1, a
+  slot 0xbc at score 1000 and a new action start (he says it again). F1 again while that line plays settles
+  `advisor-park.md`'s open "whether a slot is emptied when its line starts" (refused by test 4 if not). (e) The stats
+  panel's pixel from `uitree.py PID 0x007c24c8` (the child with ours' 0x1ed's rectangle, 2048 x 1536 halved),
+  `gmove.py` there, `wheel.sh PID -1 2`, `camera.py`: predict 100; `setcam` back to 100, a point right of the screen's
+  root, `wheel.sh PID -1 1`: predict 110. (f) Escape or the cross closes it: predict mValid 0; F1 then: no slot, the
+  kept record unchanged. A frame (`orig.sh shot`) at (c), (d), (e) and (f). Ours the same steps by `q870/run1.py`
+  (TOOLING), the log's `Park advisor: post message=188` lines and `camera`'s zoom= beside them.
 
 ## B. Docs and comments
 

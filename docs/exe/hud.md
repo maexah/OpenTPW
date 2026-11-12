@@ -2682,7 +2682,7 @@ with no screen open a notch over the park moves the zoom by 10 (110, 120, 130 at
 box and the map** open, three notches each way at Load Park's frame, bezel, exit cross, title, the park below and right of it and the gadget; two notches down (and three up at the map's middle) at Save Park's frame, cross and the park below, the menu beside its rows, over a row and outside it, four places of the Options screen, three of the Restart Park box (its edge, middle, the park below) and three of the map, left the zoom exactly where it was
 (the map's picture did not change either, `q930/o2-map.png` against `o2-map-after.png`; no `mapview.py` read of its `Z` was kept, and the item's `orig.sh` sent `wheel.sh`'s output to `/dev/null`, so a failed gdb attach would have read as "unchanged": the Load Park rows that did scroll, and the zoom that moved 110 to 120 after them, are what show the message arrives); the cross closed Load Park with the zoom as it opened, and a notch over the park moved it by 10 again.
 The Options screen's pointer was near the screen's edge, so the point of interest crept under the edge scroll, which has nothing to do with the wheel. Not measured: the other message boxes, the lobby's
-dialogs, and the park screens that are not modal (decoded below, "The wheel over a park screen"; built in `docs/QUEUE.md` Q231).
+dialogs, and the park screens that are not modal (decoded below, "The wheel over a park screen"; built in `docs/QUEUE.md` Q231, the original not run).
 
 **OpenTPW** (Q930): `WindowStack.OnUpdate` takes the wheel (`WheelTaken`) whenever a modal window is up (`ModalUp`), wherever the pointer is, so the park behind it does not zoom; a list or a slider under the
 pointer still scrolls by it first. Before this, the wheel over the frame, the exit cross or the bare park round a modal screen moved `ParkOrbitCameraMode.Zoom` by 5 a notch (Load Park, Save Park and the game
@@ -2712,7 +2712,12 @@ zooms by 10, as with none. (Three other procedures hand every message to the cam
 **OpenTPW today** (measured off-screen on the lane B build of `1d5be3de`, `q870/run1`, the stock park, `camera 475 175
 100` before each): a notch down over the bare park 110; two over the buy screen's stats panel (control `0x1ed`, at
 (281,291) size (334,132) of 1280 x 720) **120** (`q870-3-after-wheel-on-body.png`), where the original's would stay 100;
-one over the park right of the screen 110, as the original's. Built in Q231.
+one over the park right of the screen 110, as the original's.
+
+**Built in Q231** (`WindowStack.OnUpdate`: the wheel is taken wherever `OnParkScreen` holds the pointer, the cover not up;
+a list or a slider under it still scrolls first). Measured on the stock park off-screen in a cloud container (Q231, `consoledrive.py`'s `focus_key` and `wheel`; no original, no Ghidra; the run's output was not kept), `camera 475 175 100` before each: two notches down
+over the buy screen's stats panel (window (400,350) of 1280 x 720) read `zoom=100`, and one beside it (1168,368) `zoom=110`,
+predicted first.
 
 ### Both trees, walked to a balanced op 5
 

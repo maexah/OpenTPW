@@ -568,8 +568,13 @@ internal sealed class WindowStack : Panel
 		if ( Input.Mouse.Wheel != 0f && _hovered is UiRepeatButton )
 			WheelTaken = true;
 
-		// A deviation: over a park screen's body the wheel zooms the camera here; the original's does not, the screen's handler
-		// passing the notch to a control class that moves a value or drops it (docs/exe/hud.md, "The wheel over a park screen"; Q231).
+		// Over a park screen's rectangle the notch is the screen's root's or one of its controls', never the park layer's: the
+		// screen's handler hands it to the control's class (0x00488c56), which moves a value (the list and the slider, above) or
+		// drops it, so the camera does not zoom; beside the screen the park layer is hovered and zooms as with none
+		// (docs/exe/hud.md, "The wheel over a park screen"). Under the full-screen view's cover nothing of the stack is pointed at.
+		if ( Input.Mouse.Wheel != 0f && !Covered && OnParkScreen( Input.Mouse.Position.X, Input.Mouse.Position.Y ) )
+			WheelTaken = true;
+
 		// A modal screen up takes the wheel wherever the pointer is. The notch goes to the control under the pointer (0x1000d to
 		// the hovered control, 0x00658bcb) and only the park layer's procedure turns it into a zoom (FUN_0042a760); under the Load Park
 		// screen, the Save Park screen and the game menu the zoom stayed put at every place tried, the frame, the exit cross, the

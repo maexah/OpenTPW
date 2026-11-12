@@ -421,6 +421,8 @@ public class Level
 		{
 			Log.Info( $"{ThemeName}: {ParkState.AdvisorMessages.Restore( advised.AdvisorHistoryOf )} of the advisor's built messages have a record in the file" );
 			Log.Info( $"{ThemeName}: {ParkState.AdvisorMessages.RestoreSlots( advised.AdvisorSlotOf )} of the file's waiting advisor messages are taken up" );
+			// The kept tutorial message, which F1 raises again (FUN_0059ab50), is the file's.
+			ParkState.AdvisorMessages.RestoreKept( advised.AdvisorKeptOf() );
 			// His last action is timed on the file's second stopwatch; a file whose clock did not read keeps none.
 			if ( advised.AdvisorActionOf() is { } action && advised.Clock.Second is { } stopwatch )
 				ParkState.AdvisorMessages.RestoreAction( action, stopwatch, (long)(GameClock.Now * 1000) );
@@ -1187,7 +1189,8 @@ public class Level
 			people != null ? (people.Strikes.ForceWord, people.Strikes.Records) : null,
 			state.Economy, state.CalendarAtLastUpdate, ParkWeather.Current?.Written( loaded.WeatherRecord ), research?.Written,
 			state.RecentlyResearched.Written, ids, ParkAudio.Current?.FileVoicesLetGo,
-			ParkAudio.Current?.FileVoicesNotPutBack == true );
+			ParkAudio.Current?.FileVoicesNotPutBack == true,
+			state.AdvisorMessages?.WrittenKept( subject => state.TryObject( subject, out var about ) ? about.CatalogueId : 0 ) );
 
 		// The sound module goes out as the loaded file's, less the voices put back from it and let go since: the original
 		// writes the manager's live voices (Sound_SaveModule, 0x0051c350), so what was started here, and each put-back
@@ -1238,6 +1241,9 @@ public class Level
 			if ( running.AdvisorSlots![index] is { Valid: true } slot )
 				Log.Info( $"Save: advisor slot {index} written: message {slot.Message} thing {slot.Thing} secondary {slot.Secondary} score {slot.Score}" );
 		}
+
+		if ( running.AdvisorKept is { } keptWritten )
+			Log.Info( $"Save: advisor kept message written: message {keptWritten.Message} thing {keptWritten.Thing} score {keptWritten.Score} valid {(keptWritten.Valid ? 1 : 0)} forced {(keptWritten.OverrideOnlyOnce ? 1 : 0)} overridden {(keptWritten.ScoreOverridden ? 1 : 0)}" );
 
 		foreach ( var tag in running.Tags ?? [] )
 			Log.Info( $"Save: aerial tag {tag.Id} written: thing {tag.Thing} item {tag.Item} life {tag.Life} picture {tag.Picture} "
