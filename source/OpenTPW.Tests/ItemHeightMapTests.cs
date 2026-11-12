@@ -350,6 +350,59 @@ public class ItemHeightMapTests
 		Assert.IsFalse( Unimplemented.Summary.Any( entry => entry.What == "MARKER_LIFT_OVER_TRACK_THING" ), "nothing is counted" );
 	}
 
+	/// <summary>
+	/// <b>Floor or truncation, the same cell</b> (Q221 (5)): over every Lost Kingdom item with a <c>.hmp</c>, in both
+	/// catalogues, at every quarter turn, each cell the item covers has its middle land half a cell inside one of its
+	/// file's cells, never below nought, so flooring it (<c>ParkItemHeights.AboveBase</c>) and truncating it, as the
+	/// original truncates a corner's offset (<c>0x00452bb0</c>), pick the same cell. Which corner the original takes is
+	/// not read here (Q1561).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the cell's corner taken for its middle (each offset lands on a cell's edge); the turn
+	/// not undone (offsets below nought).</remarks>
+	[TestMethod]
+	public void EveryCoveredCellsMiddleLandsInsideItsFileCell()
+	{
+		HeightfieldFile field;
+
+		using ( var terrain = data.OpenRead( "levels/jungle/terrain/base.MD2" ) )
+			field = new HeightfieldFile( terrain );
+
+		var items = new ParkItemCatalogue( "jungle", data, instantAction: true ).All
+			.Concat( new ParkItemCatalogue( "jungle", data, instantAction: false ).All )
+			.Select( item => (Item: item, File: ParkItemHeights.For( item )) )
+			.Where( pair => pair.File != null )
+			.ToArray();
+
+		var cells = 0;
+
+		foreach ( var (item, file) in items )
+		{
+			foreach ( var angle in new[] { 0, 90, 180, 270 } )
+			{
+				var (modelX, modelY) = ParkObjects.ModelCell( item, 64, 64, angle );
+				var origin = ParkObjects.OriginFor( modelX, modelY, angle, field ).GetSystemVector3();
+
+				foreach ( var (x, y) in ParkObjects.CoveredCells( item, 64, 64, angle ) )
+				{
+					var (column, row) = ParkItemHeights.LocalCell( origin, angle, field, x, y );
+					var at = $"{item.Name} ({item.Id}) at {angle}, cell ({x},{y}): ({column:F4}, {row:F4})";
+
+					Assert.IsTrue( column > 0f && row > 0f, $"{at} is below nought, where floor and truncation part" );
+					Assert.AreEqual( 0.5f, column - MathF.Floor( column ), 1e-3f, $"{at}: the column is not half a cell in" );
+					Assert.AreEqual( 0.5f, row - MathF.Floor( row ), 1e-3f, $"{at}: the row is not half a cell in" );
+					Assert.AreEqual( (int)MathF.Floor( column ), (int)column, at );
+					Assert.AreEqual( (int)MathF.Floor( row ), (int)row, at );
+					Assert.IsNotNull( file!.HeightOver( (int)column, (int)row ), $"{at} is outside its {file.Columns}x{file.Rows} file" );
+					++cells;
+				}
+			}
+		}
+
+		Assert.IsTrue( items.Length >= 10, $"{items.Length} items with a .hmp" );
+		Assert.IsTrue( cells >= 100, $"{cells} cells" );
+		Console.WriteLine( $"{items.Length} item entries with a .hmp, {cells} covered cells over four turns" );
+	}
+
 	/// <summary>The original's rounding: <c>(t + 9) / 10 * 10</c>, integer division towards nought.</summary>
 	[TestMethod]
 	public void TheLiftRoundsUpToTen()

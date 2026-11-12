@@ -374,6 +374,42 @@ public class ParkResearchTests
 	}
 
 	/// <summary>
+	/// <b>No Lost Kingdom item's model fails to load</b> (Q221 (2)), so the original's fourth buy-list skip, the
+	/// descriptor's <c>+0x508</c> (<c>docs/exe/hud.md</c>, "What the buy list actually filters on"), and the fresh lab's
+	/// same test leave out nothing here: every item of either catalogue that a buy list or the lab can reach
+	/// (<c>Info.WhichUIType</c> under 4) has a model at <c>&lt;directory&gt;/&lt;stem&gt;.MD2</c>, the one a placed
+	/// object is built from, that the reader reads whole. That the original's loader sets <c>+0x508</c> on exactly the
+	/// models ours cannot read is not checked (no Ghidra here).
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the path's extension changed (every item fails).</remarks>
+	[TestMethod]
+	public void EveryLostKingdomItemABuyListReachesHasAModelThatReads()
+	{
+		var data = GameData.Required();
+		var items = new ParkItemCatalogue( "jungle", data, instantAction: true ).All
+			.Concat( new ParkItemCatalogue( "jungle", data ).All )
+			.Where( item => item.UiType < ParkResearch.Upgrade )
+			.ToArray();
+
+		var failed = items.Where( item =>
+		{
+			try
+			{
+				var model = new ModelFile( new MemoryStream( data.ReadAllBytes( $"{item.Directory}/{item.Stem}.MD2" ) ) );
+				return model.Meshes.Count == 0;
+			}
+			catch ( System.Exception )
+			{
+				return true;
+			}
+		} ).Select( item => $"{item.Name} ({item.Id})" ).ToArray();
+
+		Assert.IsTrue( items.Length >= 20, $"{items.Length} item entries" );
+		Assert.AreEqual( "", string.Join( ", ", failed ), "an item whose model would not load" );
+		System.Console.WriteLine( $"{items.Length} item entries a list or the lab reaches, every model read" );
+	}
+
+	/// <summary>
 	/// <b>An item's name is its two <c>OBJECT_NAMES</c> lines joined</b> (<c>0x004146b0</c>): a space between, none
 	/// where the second is empty, and a first line's closing hyphen cut with the second joined straight on.
 	/// </summary>

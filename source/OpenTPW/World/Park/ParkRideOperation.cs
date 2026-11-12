@@ -699,9 +699,10 @@ public sealed class ParkRideOperation
 	/// Each term is the low byte of the object's <c>mQualityOfGoods</c> or <c>mAmountOfSpecialIngredient</c>, less 50,
 	/// times 0.005, held to ±0.5; the ingredient's is taken off for fat and ice (<c>SpecialIngredient</c> 1 and 3)
 	/// and added for anything else. At 50 and 50 it is the cost itself. The two terms are stored as floats; the sum
-	/// and the product are in double, the runtime's starting precision, where which precision is live is not
-	/// settled (<c>docs/exe/park-engine.md</c>, "Which rounding is live"): only off the steps of 50 the saves hold
-	/// does it matter, and a Drinks Shop at a quality of nought and an amount of 10 books 18 here and 19 at 24 bits.
+	/// and the product are in double, the 53 bits the running original holds under Proton, which is the one matched
+	/// (Alexah, 2026-11-02, Q221 (7); <c>docs/exe/park-engine.md</c>, "Which rounding is live"): only off the steps of 50
+	/// the saves hold does it matter, and a Drinks Shop at a quality of nought and an amount of 10 books 18 here and
+	/// would book 19 at 24 bits.
 	/// The cost is the object's <c>+0x188</c>, read as unsigned.
 	/// </remarks>
 	internal static int ShopCostOfGoods( ParkItemCatalogue.Item item, ParkWorld.CatalogueObject shop )

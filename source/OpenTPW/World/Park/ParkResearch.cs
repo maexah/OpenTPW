@@ -659,7 +659,8 @@ public sealed class ParkResearch
 	/// can show (<c>Info.WhichUIType</c> under 4), in the catalogue's order, gives at most one project: its own
 	/// research where that costs anything, and otherwise the first later tier whose research costs anything, as a
 	/// project of kind 4. A tier costing nothing is passed over and counted researched (<c>FUN_00504580</c>), so an
-	/// item with no upgrade is left at tier 2; an item of kind 4 has no upgrade and is left at 0.
+	/// item with no upgrade is left at tier 2; an item of kind 4 has no upgrade and is left at 0. The fill's other test, a
+	/// model that loaded (<c>+0x508</c> nought), is not built: dead by content, as <see cref="OpenTPW.UI.ParkBuyScreen.Listed"/> says.
 	/// </summary>
 	public static (IReadOnlyList<ParkWorld.ResearchProject> Projects, IReadOnlyDictionary<int, int> Tiers) FreshLab(
 		IEnumerable<ParkItemCatalogue.Item> items )
