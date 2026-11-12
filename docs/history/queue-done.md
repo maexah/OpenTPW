@@ -13228,3 +13228,11 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   is read. Load one, or name the test for what it does. (5) `docs/exe/ride-operation.md` says the remeasure tail
   `FUN_004de1f0` leaves at once when `+0x68` is non-zero; `ParkRideOperation.ReopenAfterRemeasure` clears
   `AssignedStaff` whatever was decided and cites `0x004de48c`. Read the tail in Ghidra and make the two agree. Put the bug back for each test (`AGENTS.md` rule 6). No game run. **Done 2026-11-12 (cloud lane c30, no Ghidra):** (1) renamed `TerrainEndpointsSampleOpenTPWsLargerRectangleNotTheOriginals`; (2) measured: in all 129 outlines mesh 0 is the only mesh with a base vertex, asserted in the corpus test; (4) renamed `MakingThePeopleAgainKeepsADisconnectedRidesDoor`, no save read; (5) needs Ghidra and is Q1240.
+- [x] **Q861. An entering guest turned back at the gate (`ENTERING_GATE_GUARD`).** From Q157, which counts it. `FUN_004ffb20`'s first two tests
+  (`0x004ffb2b`..`0x004ffb42`: `mParkClosed` set, or the gate's status not 1) send the guest to a ticket booth and put them in state 2
+  (`HeadingForGate`) in place of the walk through the gate; `PeepBehaviour`'s `Entering` arm counts it (`!GateWillAdmit`) and walks on. The
+  draw is always taken: `FUN_00516330 & 1` into `FUN_004d8610` (`0x004ffb85`..`0x004ffba1`), then `FUN_004fa530` to that cell, so build it as
+  `EitherOf( TicketBoothA, TicketBoothB )` (the way the gate's own `Entering` turn at line 689 picks), not `BoothFor`, which keeps the booth a
+  guest already stands at; `ParkOpeningWait` untouched. Seen in Q157: `7x ENTERING_GATE_GUARD` after `step 2`, which was not predicted as a
+  number and is the seven guests then in `Entering` (things 32, 33, 34, 36, 37, 40, 41 in `q157/run-final2/run.log`), one turn each. Confirm: the entry-price door shut by a real click with a guest in `Entering`
+  (`q157/confirm.py` has the click), `peeps` on that guest before and after, predicted first; the count leaves the census.

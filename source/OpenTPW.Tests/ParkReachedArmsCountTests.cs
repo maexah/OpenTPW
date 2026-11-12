@@ -7,10 +7,10 @@ using System.Linq;
 namespace OpenTPW.Tests;
 
 /// <summary>
-/// The guests' reached arms that are counted, not built (Q157): the gate's guard on an entering guest
-/// (<c>FUN_004ffb20</c>) and the route improver's diagonal pass (<c>FUN_005108a0</c>). Each name is asserted present
-/// where the original tests and absent where it does not. A leaver's change of mind (<c>FUN_00500a50</c>), counted
-/// here first, is built (Q862) and asserted by the state it leaves.
+/// The guests' reached arms that Q157 counted: the gate's guard on an entering guest (<c>FUN_004ffb20</c>, built by
+/// Q861), a leaver's change of mind (<c>FUN_00500a50</c>, built by Q862 and asserted by the state it leaves) and the
+/// route improver's diagonal pass (<c>FUN_005108a0</c>), counted. Each count is asserted present where the original
+/// tests and absent where it does not.
 /// </summary>
 [TestClass]
 public class ParkReachedArmsCountTests
@@ -46,38 +46,89 @@ public class ParkReachedArmsCountTests
 			.Select( at => (X: at % ParkWorld.MapSize, Y: at / ParkWorld.MapSize) )
 			.First( cell => state.Record( cell.X, cell.Y ).Type == type );
 
-	/// <summary>The guard is asked on every turn of the state and counted only when the park or the gate says no.</summary>
+	/// <summary>
+	/// The gate's guard on an entering guest (<c>FUN_004ffb20</c>, <c>0x004ffb2b</c>..<c>0x004ffb42</c>, Q861): a shut park
+	/// or a gate not reporting 1 skips the walk, sends the guest to the centre of a ticket booth (<c>FUN_004fa530</c>)
+	/// and puts them in state 2, their opening wait untouched and nobody admitted. An open park and gate walk on.
+	/// </summary>
 	[TestMethod]
 	[DataRow( false, ParkRides.GateIsOpen, false, "open park, open gate" )]
 	[DataRow( true, ParkRides.GateIsOpen, true, "the entry-price door shut the park" )]
 	[DataRow( false, 0, true, "the gate reports something other than 1" )]
 	[DataRow( false, 2, true, "the gate reports 2" )]
-	public void AnEnteringGuestIsCountedWhereTheGateGuardWouldTurnThemBack( bool shut, int gate, bool counted, string why )
+	public void AnEnteringGuestIsTurnedBackToATicketBoothWhenTheGateWillNotAdmit( bool shut, int gate, bool turnedBack, string why )
 	{
 		var (behaviour, guest, walk) = Guest( PeepState.Entering, shut, gate );
-		var before = Counted( "ENTERING_GATE_GUARD" );
+		var admission = behaviour.Admission!;
+		var at = walk.Position;
+		var visitors = behaviour.VisitorsToDate;
+
+		guest.ParkOpeningWait = 77;
 
 		behaviour.Step( guest, walk, playing: null, tick: 1 );
 
-		Assert.AreEqual( counted ? before + 1 : before, Counted( "ENTERING_GATE_GUARD" ), why );
+		if ( !turnedBack )
+		{
+			Assert.AreEqual( PeepState.Entering, guest.State, why );
+			Assert.AreNotEqual( at, walk.Position, $"{why}: the walk goes on" );
+			return;
+		}
+
+		var booths = new[] { admission.TicketBoothA, admission.TicketBoothB }
+			.Select( cell => new FixedVector( PeepNavigator.WaypointCentre( cell.X ), PeepNavigator.WaypointCentre( cell.Y ) ) );
+
+		Assert.AreEqual( PeepState.HeadingForGate, guest.State, why );
+		CollectionAssert.Contains( booths.ToList(), guest.Navigator.Target, $"{why}: the centre of a ticket booth" );
+		Assert.AreEqual( at, walk.Position, $"{why}: the walk is skipped" );
+		Assert.AreEqual( 77, guest.ParkOpeningWait, $"{why}: the opening wait is left as it is" );
+		Assert.AreEqual( visitors, behaviour.VisitorsToDate, $"{why}: nobody is admitted" );
 	}
 
-	/// <summary>A guard that is counted changes nothing else: the walk goes on as it did.</summary>
+	/// <summary>
+	/// The booth is drawn every time (<c>0x004ffb85</c>..<c>0x004ffba1</c>): a guest standing on booth A is sent to
+	/// booth B by some draws, where keeping the booth they stand on (the waiting turn's rule) would never.
+	/// </summary>
 	[TestMethod]
-	public void TheGateGuardIsOnlyCounted()
+	public void TheTurnedBackGuestsBoothIsDrawnEvenOnABooth()
 	{
-		var (behaviour, guest, walk) = Guest( PeepState.Entering, shut: true );
+		var chosen = new HashSet<(int X, int Y)>();
 
-		behaviour.Step( guest, walk, playing: null, tick: 1 );
+		for ( var seed = 0; seed < 16; seed++ )
+		{
+			using var stream = new MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
+			var world = new ParkWorld( new SaveReader( stream ).ReadFile() );
+			var admission = new ParkAdmission( new ParkBalance( "jungle", easyMode: true ), world.Economy!.Value.AdmissionFee );
+			var state = new ParkState( world );
 
-		Assert.AreEqual( PeepState.Entering, guest.State );
+			state.SetParkClosed( true );
+
+			var behaviour = new PeepBehaviour( world, new Random( seed ), admission, () => ParkRides.GateIsOpen, state );
+
+			var guest = ParkPeople.PeepsIn( world ).First( peep => peep.ThingId == 38 );
+
+			guest.SetState( PeepState.Entering, 0, new Random( 1 ) );
+			guest.Navigator.Position = new FixedVector( PeepNavigator.WaypointCentre( admission.TicketBoothA.X ),
+				PeepNavigator.WaypointCentre( admission.TicketBoothA.Y ) );
+
+			var walk = new PeepWalk( guest.Navigator, CellEdge.For( world, ParkPeople.WalkingMode ).Blocked );
+
+			behaviour.Step( guest, walk, playing: null, tick: 1 );
+
+			Assert.AreEqual( PeepState.HeadingForGate, guest.State );
+			chosen.Add( guest.Navigator.Target.Cell );
+		}
+
+		Assert.IsTrue( chosen.Contains( (47, 13) ) && chosen.Contains( (48, 13) ),
+			$"both booths drawn from booth A; drew {string.Join( ", ", chosen )}" );
 	}
 
-	/// <summary>The other states do not ask the guard.</summary>
+	/// <summary>The guard is built, so it is no longer counted, and the other states do not ask it.</summary>
 	[TestMethod]
-	public void OnlyAnEnteringGuestIsAskedTheGuard()
+	[DataRow( PeepState.Entering )]
+	[DataRow( PeepState.HeadingForExit )]
+	public void TheGateGuardIsNoLongerCounted( PeepState state )
 	{
-		var (behaviour, guest, walk) = Guest( PeepState.HeadingForExit, shut: true );
+		var (behaviour, guest, walk) = Guest( state, shut: true );
 		var before = Counted( "ENTERING_GATE_GUARD" );
 
 		behaviour.Step( guest, walk, playing: null, tick: 1 );

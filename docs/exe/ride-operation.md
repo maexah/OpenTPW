@@ -1663,8 +1663,10 @@ nought or less from any state, is gone. Read with it, first-hand:
   arms; the change of mind (Q862, `PeepBehaviour.WouldChangeTheirMind`: exit level above nought, the happiness byte truncated by `__ftol` not nought, `mParkClosed` (`FUN_0051a280`) clear, `FUN_004fa990` on the guest's own cell) puts the guest back in `Deciding` with no walk that turn and the exit level kept, the debug print kept as the log line "Make up your mind!"; its `+0x188` = 0 is the walking mode, 0 for every walk here. Counted as `HEADING_FOR_EXIT_CHANGE_OF_MIND` before it was built (Q157). A running game reaches it: the leaving arm of the deciding turn and the guard's throw-out write no exit level (the only stores to `+0x1bc` in `0x004fe000`..`0x00500fff` are the gate's two arms at `0x004ff9af` and `0x004ffaa3`; none in `0x004fee87`..`0x004fef13` or at `0x004febf6`), so a guest the shut park sent out keeps a positive one, and reopening the park while they walk makes the test hold.
 - **State 5, the `Entering` turn's guard (`FUN_004ffb20`, `0x004ffb2b`..`0x004ffb42`)**: `FUN_0051a280` (`mParkClosed`) nonzero, or
   `FUN_0051a290` (the gate's status) not 1, skips the walk: a ticket booth by the draw's low bit (`FUN_00516330`, `FUN_004d8610`),
-  `FUN_004fa530` to it, state 2. The draw is always taken (`0x004ffb85`..`0x004ffba1`), so Q861 builds `EitherOf( TicketBoothA, TicketBoothB )`. OpenTPW asks the same pair (`GateWillAdmit`) and counts it, `ENTERING_GATE_GUARD`, then walks on
-  (Q157; built by Q861).
+  `FUN_004fa530` to it, state 2. The draw is always taken (`0x004ffb85`..`0x004ffba1`). OpenTPW builds it (Q861,
+  `PeepBehaviour`'s `Entering` arm): the same pair (`GateWillAdmit`), the walk skipped, `EitherOf( TicketBoothA, TicketBoothB )`
+  (not `BoothFor`, which keeps a booth the guest stands on) to that cell's centre, state 2, the opening wait untouched. With no
+  `ParkAdmission` there are no booths to name, so the guest stands (OpenTPW's own; the original always has them).
 - **The gate's leavers aim at the crossing too.** `FUN_004ff9d0`'s far-too-expensive arm and `FUN_004ff7f0`'s
   waited-out arm each write `+0x188` = 1, send the guest to `FUN_004d86d0( draw & 1 )`, set state `0x12` and then write
   `mExitLevel` = 0; the expensive arm's leaver (happiness byte nought after the medium change) gets the state and the
