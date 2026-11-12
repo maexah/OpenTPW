@@ -13499,3 +13499,13 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   test made `<=` each failed it. Off-screen run, pointer held on (10,10): 19 gave `latch 1`, 20 `latch 0`, the store
   dropped `latch 0`. Not watched in the original (no original in the lane): Q1364. **Done 2026-11-12** (cloud lane c61,
   `alexah/1040-empty-hand-click-clears-refusal-latch`).
+- [x] **Q17. Camcorder mode can strafe.** `ParkCamcorderCameraMode.Walk` passes
+  `Input.Right` into `Step`. `park-engine.md`, "Walking on the ground is swept against the cell edges", decodes the sweep by two velocities but not the
+  keys. Remove the strafe. Confirm: press the strafe key, the stand position in the `camcorder` census
+  does not move sideways, screenshot.
+  - **Note (play test 2026-10-21, note 33):** Alexah felt the strafe as part of an arcade feel; see Q25's note. Q631
+    decides which of A and D remain in the orbit view; the camcorder's A and D stay strafe-free (the original has none).
+    (Inferred from the notes: Alexah's WASD request is stated for the camera scroll, notes 6 and 11, not the camcorder.)
+  - **Note (fork watch 2026-11-12, verify-other.md L2):** the original's first person has no strafe at all: Left and Right (and keypad 9
+    and 7) turn, and the across term is 0.0 (`0x0042b82a`; `park-engine.md`, "The walk's keys, turn and speed"). Removing the
+    strafe leaves Left and Right to Q1161's turn.
