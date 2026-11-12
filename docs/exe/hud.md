@@ -1193,8 +1193,9 @@ on, the camera read from memory): the right button held 1.84 s on the view, the 
 after, the position 40.4 along the facing, still in first person; the Up arrow held 1.87 s, the word `0xa0`, 40.4;
 both for 0.81 s, `0xa4`, 34.1, twice the rate; Down with the button, `0xc4`, standing to a frame; held 2 s on the eject
 button, the word `0x80` throughout and the position unmoved; a quick right click, out of first person. So one forward
-term walks about 21.8 units a second there. The velocity that term feeds is not decoded to a speed (`0x0042bc2a` on:
-the square root of the zoom word times `[0x006fddf8]` 0.02, halved with the last frame's).
+term walks about 21.8 units a second there. The velocity that term feeds settles at `sqrt( zoom ) x 2` a second, 20.98
+at zoom 110 (`0x0042bc2a`..`0x0042bc96`; `park-engine.md`, "The walk's keys, turn and speed"), 3 to 5% under this
+measurement; which is off is Q1452's.
 
 **In a ride view** (`gui_CameraFlags` 4, "Ride it!", `FUN_004e15b0` → `FUN_0042a560`) the same exits run `FUN_0042a190`,
 which goes back to walking first person when the ride was entered from it (`0x400`, `0x0042ac0b`) and to the orbit
@@ -1208,9 +1209,10 @@ otherwise. Flag `0x10` is tested and never set (dead by CODE). The two views of 
 it with RMB cancel on. The limit is timed on `Time.WallMilliseconds`, real time as the original's, and the way into first
 person closes the open park screen, as the original's does (`FUN_00485b40` at `0x00481a2b`), so none is there to take the press. The eject button is `ParkViewfinder`'s, `Clicked = ParkCamcorderCameraMode.Leave`. A held right button walks:
 `ParkCamcorderCameraMode.RightHeld` is the bit, read once a frame after the interface has had the press, and `Walk`
-adds the forward key's amount for it. The walk's speed is a chosen 40 units a second for one forward term, where the
-original's measures about 21.8, and its keys are W and S, where the original's are the zoom's, Up and Down
-(`docs/QUEUE.md` Q25). There is no ride view: walking onto a ride's
+adds the forward key's amount for it. The walk's speed is the original's decoded `sqrt( zoom ) x 2` a second for one
+forward term (20.98 at zoom 110, where the original's measures about 21.8), eased on the pan's term, and its keys are
+the original's Up and Down and keypads 1 and 3, with W and S too (`park-engine.md`, "The walk's keys, turn and speed";
+Q1161). There is no ride view: walking onto a ride's
 entrance, which rides it in the original, is counted instead (`FIRST_PERSON_WALK_INTO_RIDE`, `park-engine.md`).
 
 ### A click and a double click: the UI library's `0x10006` and `0x10007`

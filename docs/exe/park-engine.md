@@ -2304,6 +2304,13 @@ unit of excess past ±0.4. Each velocity term becomes `( sqrt( zoom ) x 0.02 x v
 (`0x0042bc2a`; `0x006fddf8`, `0x006fddfc`), so a held key settles at `sqrt( zoom ) x 0.002` units a millisecond, 21 a
 second at zoom 110. Nothing on the way in from the orbit writes the velocity `0x00790a88`..`0x00790a90` (its writers
 are `0x0042aa8b`..`0x0042aaa0`, `FUN_0042aab0` and `FUN_0042b1c0` itself), so the pan's velocity carries into the walk.
+First person's direction is `0x0042bad9`..`0x0042bb27`, which jumps to the shared term at `0x0042bc2a`..`0x0042bc96`.
+With no key held the term halves the same way: in first person `esi` is `!(gui_CameraFlags & 0x800)`
+(`0x0042b58b`..`0x0042b5b3`) and `0x0042b729` then skips the coast block `0x0042b73d`..`0x0042b81c`, so the eased
+formula runs with v = 0; `0x800` is set only for the ride view (`0x0042abd5`, `FUN_0042ab20`'s mode-4 arm) and cleared
+by every `FUN_0042ab20` call (`0x0042ab2c`), the way into first person. Both turn rows apply when both are held
+(`0x0042b417` then `0x0042b432`) and Down's -0.1 (`0x0042b44d`) is undone by Up's (`0x0042b45e`), so both ways cancel.
+The terms are noughted only when all three are under 0.0001 a millisecond (`0x0042bd69`..`0x0042bdc3`, `0x0074c988`).
 Read from the listing; not measured in the running original.
 
 ### Where OpenTPW's camcorder differs
@@ -2328,9 +2335,14 @@ in these places, of which a walk in the park reaches only `FUN_0042a340`'s branc
   and only the cap ends it. The put-back loads its cell with `FILD` over a zero high word (`0x0042c0b0` and the
   others), so a cell below 0 reads as unsigned and lands past 4e10; and `__ftol` keeps the low word of a
   position past 2e10, where C# saturates. None of it is reached on the map with a finite step.
-- **The keys, the turn and the speed** (above, "The walk's keys, turn and speed"): ours turns 2.0 radians a second a
-  unit past ±0.4 (5/6 of the original's), walks 40 units a second and has no key turn (`docs/QUEUE.md` Q1161);
-  like the original's, its across term is 0, so A and D strafe nobody (Q17).
+- **The keys, the turn and the speed** (above, "The walk's keys, turn and speed"; Q1161): ours turns 1.2 radians a
+  second on Left and keypad 9, Right and keypad 7 with no modifier, 2.4 a unit past ±0.4 by the pointer, walks on Up,
+  Down and keypads 1 and 3, and eases the pan's own term (`ParkOrbitCameraMode.Scroll`, so a pan carries in and the
+  walk carries out) to `sqrt( zoom ) x 2` a second (`ParkCamcorderCameraMode.Move`), halving with no key held and
+  noughted only when both axes are under 0.1 a second, as the original's; like the original's, its across term is 0, so
+  A and D strafe nobody (Q17), and both ways held cancel. It differs in these: the term halves its gap every 31 ms, not
+  every frame (rule 10); and W and S walk too (W with Up twice as fast) and A and D turn too (A left, D right, at the
+  keys' one rate). Not measured against the running original (Q1452).
 
 Which precision is live is open (above). At 24 bits two of `ParkCamcorderWalkTests`' cases come out otherwise: a
 step of 5 from 245 is taken whole and put back at 249.999 instead of crossing onto 250, and the tie from (45, 45)

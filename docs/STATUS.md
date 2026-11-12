@@ -32,7 +32,7 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 - Sound: a per-effect repeat delay that is really a priority (Q43); most of a park file's live voices are counted, not put back (Q741).
 - Staff: the handyman's litter search and the guard's chase are unbuilt; a strike's posts are counted (Q212, Q229).
 - Rides: the isles' random clips, the idle repeat, a coaster's excitement and the Hot Pot's wake are counted (Q76, Q77); a water ride's pieces flow only after an add-on's put-down (Q448); a bought Dino Karts admits its queue's guests (`BUMP 5` is answered) and holds them `Riding`, not drawn, until the ride is sold (Q588).
-- Camcorder: entered where the orbit looks, not by a click, and walks at 40 units a second where the original's measures about 21.8 (Q25); three of the four ride views are counted (Q246).
+- Camcorder: entered where the orbit looks, not by a click, and walks at the original's `sqrt( zoom ) x 2` a second, eased, on Up and Down (and W and S), turning on Left and Right (and A and D) (Q1161); three of the four ride views are counted (Q246).
 
 ## Next
 
@@ -42,10 +42,28 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the maintainer's pre-commit hook: grep it by Q-number.
 
-- **Q213 (the ride window's status box lettered in font 8, black):** in a cloud container (no Ghidra, no original, no photograph; the run's output was not kept), `0x3e25` is made in font slot 8, black, and the door's refresh sets its text only, from the fork watch's decode (verify-ui-hud.md H3, taken from the item and not read in Ghidra). `ParkRideWindowDoorTests` (needing the game) pins (black, 8) for CLOSED and for LINE NOT CONNECTED; font 6 put back failed both tests with `Actual:<(UiColour { R = 0, G = 0, B = 0 }, 6)>`, and the per-status recolour put back failed them with `(128, 128, 128)` and `(255, 150, 30)`. Off-screen (`consoledrive.py`), the stock park's Belly Bounce closed by its door read `control 0x3e25 ... reads 'CLOSED' ... lettered font 8 in (0, 0, 0) without the edge`, and hidden again once reopened. Not checked: a photograph beside the original's, and whether ours breaks LINE NOT CONNECTED into two lines as the original does (Q1500, no display here); the broken-ride warning is black now too, by the same decode, unseen. The shop window still recolours its box per status (Q1501).
+- **Q1161 (first person's keys turn, and its turn rate and walk speed are the original's):** built in a cloud container (no
+  Ghidra, no original, no Proton, no photograph; the runs' output was not kept), from `park-engine.md`, "The walk's keys, turn
+  and speed". Seven tests in `ParkCamcorderKeysTests` pass, and seven bugs put back by hand (the pointer's 2.0, the key turn at
+  2.0, the old 40 a second, the per-frame half with no time, the turn's sign swapped, `Enter` noughting the term, the walk
+  before the turn) each failed one or more. Two off-screen park runs (`lib/consolerun.py`, `xdotool` keys): `keys 0 1 60`
+  turned the yaw -2.8591 to -1.6591; `keys 1 0 60` walked 20.20 and left the term at 20.976 (zoom 110); held Left about a
+  second turned 1.24, keypad 9 and 7 turned about half a second's worth each way, Ctrl+Left turned nothing, a held Up walked
+  21.2 units in about a second. Not checked: any of it against the original (Q1452: `campoi.py` under Proton, and a photograph
+  of both games after the same held Left). Rebased onto
+  Q17's walk (nothing strafes, the across term 0, and Q17's stop with no forward key dropped so a turn alone and the
+  halving run): A and D turn too, as W and S walk too (ours, said at the site). After the first review the term is
+  noughted only when both axes are under 0.1 (the original's `0x0042bd69`..`0x0042bdc3`) and the halving with no key is
+  read from the listing (`0x0042b58b`..`0x0042b5b3`, `0x0042b729`). Four tests added (`AAndDTurnAndWalkNobodyAside`,
+  `UpAndKeypadOneWalkThroughTheRealKeys`, `WithTheTableOffTheKeysDoNothing`, `AWalkNearAMapAxisKeepsItsSmallAxis`) and
+  `ItAddsToWhatTheKeysGive` changed (D now turns, then walks along the new heading) pass, and eight bugs put back by hand
+  (the strafe passed as the across term; Q17's early return; A and D doing nothing; their sign swapped; A and Left at twice
+  the rate; each axis floored alone; the arrows left out of the forward term; the table's gate dropped) each failed one to
+  three. The rebased build was not run in a game.
 
 ## Numbers (take counts fresh; these go stale within a day)
 
+- Linux, 2026-11-12, Q1161 (`capped.sh`; eleven tests added, none needing the game; built in a cloud container, rebased onto Q18 and re-gated here after the review fixes of group M): with the game, 5626 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5628; with no game named, 2436 passed, 0 failed, 3192 skipped.
 - Linux, 2026-11-12, review fixes group M (`capped.sh`; three tests added, needing no game; after Q213): with the game, 5627 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5629; with no game named, 2425 passed, 0 failed, 3204 skipped.
 - Linux, 2026-11-12, Q213 (`capped.sh`; the status box's lettering; three tests added, needing the game; built in a cloud container, re-gated here after Q72): with the game, 5624 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5626; with no game named, 2422 passed, 0 failed, 3204 skipped.
 - Linux, 2026-11-12, Q72 (`capped.sh`; values read from the island data; eighteen tests added, five needing no game; built in a cloud container, re-gated here after Q1312): with the game, 5621 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5623; with no game named, 2422 passed, 0 failed, 3201 skipped.

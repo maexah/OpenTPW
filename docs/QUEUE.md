@@ -2172,16 +2172,14 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   turns into a camera move (`FUN_004868d0`, `hud.md`); none of the six is built. As each is built, give `ThingOf` its
   case (and the dword at the balance object's `+8`, the record's `+4`, where its score leaves one), with a test whose
   said event carries it.
-- [ ] **Q1161. The camcorder's keys turn, and its turn rate and walk speed are the original's.** From the fork watch 2026-11-12
-  (`verify-other.md` L2, `verify-world.md` M3, M4). The original's first person is read in `park-engine.md`, "The walk's keys,
-  turn and speed": Left and keypad 9, Right and keypad 7 turn at 1.2 radians a second; Up, Down and keypads 1 and 3 walk; the
-  pointer turns 2.4 radians a second a unit past ±0.4; the walk settles at `sqrt( zoom ) x 0.002` units a millisecond (21 a
-  second at zoom 110) by a half step a frame; the orbit's pan velocity carries in. Ours (`ParkCamcorderCameraMode`) turns
-  2.0 a unit, walks 40 a second on W and S, not the original's Up and Down (which do nothing in ours' first person), and has no key turn
-  (its strafe is gone, Q17); each is said at the site. Build them on
-  `Time.Delta` (rule 10: the per-frame half step becomes its time-based equivalent, said at the site). Confirm under Proton
-  first (`campoi.py` in first person: the yaw after a held Left of known length, the position after a held Up at zoom 110),
-  then ours' `camcorder` census against it.
+- [ ] **Q1452. First person's key turn and walk, photographed and measured beside the original (from Q1161).** Q1161 built
+  the keys, the turns (1.2 a second by key, 2.4 a unit by the pointer) and the eased walk (`sqrt( zoom ) x 2` a second, the
+  pan's term) from `park-engine.md`, "The walk's keys, turn and speed", in a cloud container with no original, no Proton and
+  no display to photograph; what is drawn changes as the view turns and walks. Under Proton, `campoi.py` in first person: the
+  yaw after a held Left of known length and the position after a held Up at zoom 110 (reconcile `hud.md`'s measured 21.8 a
+  second with the decode's 20.98); then ours' `keys` census and real keys
+  (`docs/TOOLING.md`, "First person's keys in a cloud container") against it, and a photograph of each game after the same
+  held Left from the same stand.
 - [ ] **Q1162. The bump cars' particle 15: its name, the removal's skip and the seating beam's gate.** From the fork watch
   2026-11-12 (`verify-world.md` M2). The launch's draw spawns particle `0xf` at the car (`park.md`, "Where a bumper ride's cars
   float"), which `ParLib` names `P_EFFECT_BeamUpCar`, not the splash (12); ours counts it as `BUMPER_CAR_SPLASH`. The removal

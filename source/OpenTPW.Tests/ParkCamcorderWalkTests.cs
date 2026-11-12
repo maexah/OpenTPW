@@ -48,7 +48,7 @@ public class ParkCamcorderWalkTests
 
 	/// <summary>
 	/// <b>The console's walk takes fixed steps of a sixtieth of a second</b>, an instrument, whatever the frame it runs in:
-	/// ten steps walk a sixth of a second, 6.667 units at <c>WalkSpeed</c>'s 40 a second, in a frame of a twentieth of a
+	/// ten steps walk a sixth of a second, 6.667 units at <c>DebugWalkSpeed</c>'s 40 a second, in a frame of a twentieth of a
 	/// second as in a paused one, where the walk is taken too. No park is on show, so each step is the plain one, taken whole.
 	/// </summary>
 	/// <remarks><b>Mutations:</b> the step on <see cref="Time.Delta"/> walks 20 units in the long frame and nothing paused.</remarks>
