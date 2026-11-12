@@ -117,7 +117,7 @@ with a screenshot and message/score/threshold log. To exercise the audible branc
 private configuration fixture raising only both door scores to **26** before posting, leaving the threshold at 25.
 Read or explicitly reset the two histories before predicting the response/sample sequence: event 10 in
 `FUN_0059ae20` sets every rotation index to −1 and every record's said and slaps to nought, keeping its tick, so each
-message then selects line 0, then 1, then 0. It is sent once, on a player's first park (`0x0054f24e`; Q454).
+message then selects line 0, then 1, then 0. It is sent once, on a player's first park (`0x0054f24e`), after the park file's load, by gms.dat's `+0x4c` byte (read `0x005b0597`, cleared `0x005b0109`); OpenTPW: `ParkAdvisorMessages.FirstPark` (Q454).
 A saved history may begin elsewhere; Q90b traces the fresh constructor below. Confirm both the actual door action and
 advisor on screen with its matching log. Cover alternating lines, same-state posting, duplicate suppression,
 the strict 25 boundary, per-message cooldown and queue priority in regression tests; restore the missing
@@ -1360,7 +1360,7 @@ park**, days 21 to 79.
 the message its last action names as playing. From the file's cursor, 277, row 282 is the fifth row scored: tick
 760, then every 155 ticks. So Instant Action's Lost Kingdom, loaded by a player who has played a park before, never says it either: it scores
 100 and is refused as said once, and from tick 1845 scores nought. A new player's first park clears the said bytes
-first (event 10, `0x0054f24e`; not built here, Q454), so there it can be said.
+first (event 10, `0x0054f24e`; built, Q454), so there it can be said: ours posts it on tick 760 and says response 542, sample 559, and row 185's line on tick 877 (Q454's cloud run, a player made in the New Player dialog as Instant Action).
 
 ### OpenTPW (`ParkAdvisorMessages.ExplainTooltips`, a second topic with `Polled` and an `AgeSection`)
 

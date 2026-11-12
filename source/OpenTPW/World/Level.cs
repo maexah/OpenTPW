@@ -428,6 +428,10 @@ public class Level
 			if ( advised.AdvisorPollCursorOf() is { } row )
 				ParkState.AdvisorMessages.RestoreCursor( row );
 		}
+		// The save's load is followed by event 10 on the player's first park (0x0054f24e). With nobody playing,
+		// which only the debug console reaches, there is no gms.dat byte to read, and nothing is reset.
+		if ( ParkState.AdvisorMessages.FirstPark( Players.Roster.Current?.File, park?.Save is { } first ? first.AdvisorHistoryOf : _ => null ) )
+			Log.Info( $"{ThemeName}: the player's first park: the advisor's records are reset and the first park byte cleared" );
 		load.Mark( "park state" );
 
 		Research = park == null || catalogue == null ? null : new ParkResearch( park.ObjectControlRecords, catalogue, park.ResearchProjects,

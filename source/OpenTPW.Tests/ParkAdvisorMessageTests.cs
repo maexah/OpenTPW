@@ -206,6 +206,103 @@ public class ParkAdvisorMessageTests
 		Assert.IsTrue( fresh.Post( ParkAdvisorMessages.TagMessage, 1079 ) );
 	}
 
+	/// <summary>
+	/// Event 10 (<c>RESET_FOR_EASY_MODE</c>, <c>0x0059af63</c>) sets every record's line to -1 and its said and slaps
+	/// to nought and keeps its tick: the built messages' and, for the file, every other message's the file holds.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> the tick cleared; the line left or set to nought; said or slaps left; the unbuilt records
+	/// not written; a record the file does not hold written.
+	/// </remarks>
+	[TestMethod]
+	public void EventTenResetsEveryRecordAndKeepsItsTick()
+	{
+		var unbuilt = Enumerable.Range( 0, ParkWorld.AdvisorMessages ).First( id => ParkAdvisorMessages.ParkTopics.All( topic => topic.Id != id ) );
+		var absent = Enumerable.Range( 0, ParkWorld.AdvisorMessages ).Last( id => ParkAdvisorMessages.ParkTopics.All( topic => topic.Id != id ) );
+		ParkWorld.AdvisorHistory? Saved( int id ) => id == absent ? null : new ParkWorld.AdvisorHistory( 100 + id, 2, true, 3 );
+
+		var messages = new ParkAdvisorMessages( Settings() );
+		messages.Restore( Saved );
+		Assert.AreEqual( ParkWorld.AdvisorMessages - 1, messages.ResetForEasyMode( Saved ) );
+		var written = messages.Written();
+		Assert.AreEqual( ParkWorld.AdvisorMessages - 1, written.Count, "every record the file holds" );
+		Assert.AreEqual( new ParkWorld.AdvisorHistory( 100 + ParkAdvisorMessages.TagMessage, -1, false, 0 ), written[ParkAdvisorMessages.TagMessage] );
+		Assert.AreEqual( new ParkWorld.AdvisorHistory( 100 + ParkAdvisorMessages.ExplainTooltips, -1, false, 0 ), written[ParkAdvisorMessages.ExplainTooltips] );
+		Assert.AreEqual( new ParkWorld.AdvisorHistory( 100 + unbuilt, -1, false, 0 ), written[unbuilt] );
+		Assert.IsFalse( written.ContainsKey( absent ) );
+		StringAssert.Contains( messages.Census(), $"message=284/score=1000/line=-1/lastTick={100 + 284}/said=0/slaps=0" );
+
+		// Said once, in the file: refused before the reset, taken after it, and the line chosen is line 0.
+		var before = new ParkAdvisorMessages( Settings() );
+		before.Restore( Saved );
+		Assert.IsFalse( before.Post( ParkAdvisorMessages.TagMessage, 2000 ) );
+		Assert.IsTrue( messages.Post( ParkAdvisorMessages.TagMessage, 2000 ) );
+	}
+
+	/// <summary>
+	/// The reset is sent on the player's first park only, by gms.dat's byte, which it clears; a later park, and a
+	/// park with nobody playing, keep the file's records.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the byte not read; the byte not cleared; the reset sent with nobody playing.</remarks>
+	[TestMethod]
+	public void OnlyThePlayersFirstParkIsReset()
+	{
+		ParkWorld.AdvisorHistory? Saved( int id ) => id == ParkAdvisorMessages.TagMessage ? new ParkWorld.AdvisorHistory( 911, 0, true, 0 ) : null;
+		var player = new PlayerFile();
+		Assert.IsTrue( player.FirstParkToCome, "on for a new player" );
+
+		var first = new ParkAdvisorMessages( Settings() );
+		first.Restore( Saved );
+		Assert.IsTrue( first.FirstPark( player, Saved ) );
+		Assert.IsFalse( player.FirstParkToCome );
+		Assert.AreEqual( new ParkWorld.AdvisorHistory( 911, -1, false, 0 ), first.Written()[ParkAdvisorMessages.TagMessage] );
+
+		var second = new ParkAdvisorMessages( Settings() );
+		second.Restore( Saved );
+		Assert.IsFalse( second.FirstPark( player, Saved ) );
+		Assert.AreEqual( new ParkWorld.AdvisorHistory( 911, 0, true, 0 ), second.Written()[ParkAdvisorMessages.TagMessage] );
+
+		var nobody = new ParkAdvisorMessages( Settings() );
+		nobody.Restore( Saved );
+		Assert.IsFalse( nobody.FirstPark( null, Saved ) );
+		Assert.AreEqual( new ParkWorld.AdvisorHistory( 911, 0, true, 0 ), nobody.Written()[ParkAdvisorMessages.TagMessage] );
+	}
+
+	/// <summary>
+	/// The shipped Lost Kingdom as a new player's first park: the file's said 0xb9 and 0x11a are cleared, their ticks
+	/// kept, so the tips line the poll reaches on tick 760 (row 282, the fifth from the file's cursor 277) is posted
+	/// where a later park refuses it as said once (<c>docs/exe/advisor-park.md</c>, "What the shipped park holds").
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the reset not sent; the said byte left.</remarks>
+	[TestMethod]
+	public void ANewPlayersFirstShippedParkCanSayTheTipsLine()
+	{
+		var data = GameData.Required();
+		var shipped = new ParkWorld( new SaveReader( new MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) ) ).ReadFile() );
+		Assert.AreEqual( new ParkWorld.AdvisorHistory( 605, 0, true, 0 ), shipped.AdvisorHistoryOf( 0x11a ) );
+
+		ParkAdvisorMessages Park( PlayerFile player )
+		{
+			var messages = new ParkAdvisorMessages( Settings(), tutorial: () => true, cursor: new ParkAdvisorMessages.PollCursor { Row = 277 } );
+			messages.Restore( shipped.AdvisorHistoryOf );
+			messages.FirstPark( player, shipped.AdvisorHistoryOf );
+			for ( var tick = 756; tick <= 760; ++tick )
+				messages.Tick( tick, 0, ( response, sample ) => 0 );
+			return messages;
+		}
+
+		var player = new PlayerFile();
+		var first = Park( player );
+		var written = first.Written();
+		Assert.AreEqual( new ParkWorld.AdvisorHistory( 257, -1, false, 0 ), written[0xb9] );
+		Assert.AreEqual( new ParkWorld.AdvisorHistory( 55, -1, false, 0 ), written[0xbd] );
+		Assert.AreEqual( new ParkWorld.AdvisorHistory( 16, -1, false, 0 ), written[0x143] );
+		Assert.AreEqual( "post", first.PollAnswer( ParkAdvisorMessages.ExplainTooltips ) );
+
+		var later = Park( player );
+		Assert.AreEqual( "said-once", later.PollAnswer( ParkAdvisorMessages.ExplainTooltips ) );
+	}
+
 	[TestMethod]
 	public void StockDoorPostsBothMessagesButSpeaksNeitherAndRetainsSlots()
 	{

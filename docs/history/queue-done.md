@@ -13421,3 +13421,8 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   54, not following) with a direction and holding emitter 54's +0x38 to the template's (0, 31, 0) and the seed
   three draws on would show it From the week-end audit (stage 6, the second reading of commit `d490bc90`; read
   from the code, not reproduced in the game). `OpenTPW.Files/Formats/Save/ParkParticles.cs`, line 376.
+- [x] **Q454. A new Instant Action player's first park clears the advisor's records.** From the week-end audit (D3,
+  `VERIFY-1b.md` Q313 1). Event 10 (`RESET_FOR_EASY_MODE`, sent `0x0054f24e`, handled `0x0059af63`) sets every record's
+  line to -1 and its said and slaps to nought, keeping the tick, on the player's first park only (the gms.dat byte
+  read `0x005b0597`, written `0x005b0109`). Ours keeps Easymode.TPWI's said bytes, so 0xb9 and 0x11a are never said.
+  `PlayerFile.FirstParkToCome` is never cleared here. Confirm: a new player's first park in both games, tick 877.
