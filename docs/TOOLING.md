@@ -1293,6 +1293,7 @@ after its poller starts**, so a key meant inside either line cannot be sent afte
   Pot on (41,23): `buy 1140 41 23 0`, node (43,22), path (43,21); four boats are out six seconds on (Q257r).
 - **Fill a ride:** `admit <x> <y>` on a path cell answers a new guest's id, `send <guest> <thing>` sends them; poll
   the ride's census (`bumpers`, `rides`) until it counts them (Q179d, Q257r).
+- **`savepark` from `lib/consolerun.py`, with no private player** (Q735, a cloud lane): `savepark` refuses with nobody playing (`nobody is playing, so there is no folder to write it in`). Give `consolerun.py` a game folder of your own: links to the game's entries and a `save/users/1Tester/jungle/` holding a copy of `Data/levels/jungle/Easymode.TPWI` (with no park file there the entry makes a fresh empty park). Script `3 click 1007 56` (slot 1's button, `control 7a14` reads its middle at 1024 x 768) then `40 park jungle`; `savepark NAME` writes `users/1Tester/jungle/NAME.TPWS` in the run's own copy, and `dotnet/walkriders` reads it. Walk riders: the Mayan Spinner as below, five `admit 56 22` (guests 44 to 48), then `send 44..48 43` each two seconds; 25 s later all six slots are carried under action 6.
 - **The rest of Lost Kingdom's rides, shops and sideshows with guests** (Q584, `q580/confirm.py`): Tom Tom Twister
   `buy 1113 40 22 0`, node (42,21) joined at (43,21) (on (41,22) its node lands on the path and no queue joins); Mayan
   Spinner `buy 1108 57 23 0`, node (58,22) joined at (56,22); the Burger `1207` or the Fries `1212` on (41,30); the Giant

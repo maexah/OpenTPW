@@ -753,6 +753,103 @@ public class WalkRidersTests
 		}
 	}
 
+	/// <summary>
+	/// <b>A walk's rider is saved where its placer left them, and a hidden one with no sprite</b> (<see cref="ParkPeople.Written"/>
+	/// through <see cref="ParkGuestSprites.WalkedOnRide"/>; <c>docs/exe/saves.md</c>, "A walk's rider is saved where its placer
+	/// left them"). On the Mayan Spinner a rider carried under action 6 on node 2, facing 5, is written at the walk's point
+	/// (581.190, 242.909), its height the point's less the ground there (the jungle's, raised to 7 round the ride), facing 5; one carried under action 1 is written
+	/// with sprite slot nought and no sprite; and the control, a guest no walk holds, is written at their navigator as before.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations (each fails here):</b> <c>&amp;&amp; walked is not { Hidden: true }</c> dropped (the hidden rider keeps a
+	/// sprite); <c>SpritePlaced</c> ignored by <c>PutSprite</c> (the navigator's place); the ground not taken off the height; the
+	/// slot's facing replaced by the person's own.
+	/// </remarks>
+	[TestMethod]
+	public void AWalksRiderIsSavedWhereThePlacerLeftThemAndAHiddenOneWithNoSprite()
+	{
+		var data = GameData.Required();
+		var all = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public;
+		var groundProperty = typeof( ParkGround ).GetProperty( nameof( ParkGround.Current ), all )!;
+		var groundBefore = groundProperty.GetValue( null );
+		var filesBefore = FileSystemOrNull;
+
+		using var landscape = new MemoryStream( data.ReadAllBytes( "levels/jungle/terrain/base.MD2" ) );
+		var field = new HeightfieldFile( landscape );
+
+		// The stock ground is flat at the ride; raised 7 units round it, a height the ground was not taken off is seen.
+		for ( var y = 14; y <= 34; ++y )
+			for ( var x = 48; x <= 68; ++x )
+				field.Heights[(y * (field.CellsX + 1)) + x] += 7f;
+		var ground = (ParkGround)System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject( typeof( ParkGround ) );
+		typeof( ParkGround ).GetField( "<Heightfield>k__BackingField", all )!.SetValue( ground, field );
+
+		using var stream = new MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
+		var reader = new SaveReader( stream );
+		var shipped = new ParkWorld( reader.ReadFile(), reader.Preamble );
+
+		try
+		{
+			FileSystem = data;
+			groundProperty.SetValue( null, ground );
+
+			WithTheSpinnersWalks(
+			[
+				new SavedWalkSlot( 1, 2, 2, 16, 5000, 5700, 29, 6, (short)RideScript.WalkState.Carried, 1, 5 ),
+				new SavedWalkSlot( 1, 2, 2, 16, 5000, 5700, 31, 1, (short)RideScript.WalkState.Carried, 1, 3 ),
+			], ( people, players, nodes ) =>
+			{
+				foreach ( var id in new[] { 29, 31 } )
+				{
+					var peep = people.Peeps.Single( one => one.ThingId == id );
+					peep.MajorDest = 13;
+					peep.SetState( PeepState.Riding, tick: 1, new Random( 1 ) );
+				}
+
+				var control = people.Peeps.First( one => one.ThingId is not 29 and not 31 && one.State != PeepState.Riding );
+				var placed = ParkGuestSprites.WalkedOnRide( people, 29 )!.Value;
+				var under = ParkGuestSprites.StandsOn( field, placed.At.X, placed.At.Y );
+
+				Assert.AreEqual( 7f, under, 0.01f, "the control: the raised ground under the rider" );
+
+				var body = ParkFileWriter.Body( shipped, new ParkFileWriter.Running( shipped.GameTick, shipped.ParkClosed != 0,
+					shipped.NumberOfVisitorsToDate, shipped.Economy!.Value.Balance, shipped.Camera.Saved!.Value,
+					People: people.Written( Level.WrittenThings( shipped ).Contains ) ) );
+				var written = new ParkWorld( body );
+
+				Assert.IsNull( written.Problem );
+
+				ParkWorld.Sprite SpriteOf( int id )
+				{
+					var slot = written.People.Single( person => person.ThingId == id ).SpriteSlot;
+					Assert.AreNotEqual( 0, slot, $"guest {id} has a sprite" );
+					return written.Sprites.Single( sprite => sprite.Slot == slot );
+				}
+
+				var rider = SpriteOf( 29 );
+
+				Assert.AreEqual( 581.190f, rider.X, 0.001f, "at the walk's point" );
+				Assert.AreEqual( 242.909f, rider.Y, 0.001f );
+				Assert.AreEqual( placed.At.Z - under, rider.Height, 0.001f, "the point's height less the ground under it" );
+				Assert.AreNotEqual( 5, written.People.Single( person => person.ThingId == 29 ).Facing, "the control: the person's own facing is another" );
+				Assert.AreEqual( 5, rider.Facing, "the slot's facing" );
+
+				Assert.AreEqual( 0, written.People.Single( person => person.ThingId == 31 ).SpriteSlot, "the hidden rider has none" );
+
+				var stood = written.People.Single( person => person.ThingId == control.ThingId );
+				var own = SpriteOf( control.ThingId );
+
+				Assert.AreEqual( stood.Navigator.X * 10f / ParkWorld.NavigatorState.One, own.X, 0.001f, "the control at their navigator" );
+				Assert.AreEqual( stood.Navigator.Y * 10f / ParkWorld.NavigatorState.One, own.Y, 0.001f );
+			} );
+		}
+		finally
+		{
+			groundProperty.SetValue( null, groundBefore );
+			FileSystemOrNull = filesBefore;
+		}
+	}
+
 	private static int Word( Opcode opcode ) => unchecked( (int)(0x80000000u | (uint)opcode) );
 
 	/// <summary>A script declaring <paramref name="walkSlots"/> walk slots, two variables, and <paramref name="body"/>.</summary>

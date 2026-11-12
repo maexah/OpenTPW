@@ -159,7 +159,8 @@ public sealed partial class ParkWorld
 	/// <see cref="Person"/> carries what the reader's own records hold; its <see cref="Person.SpriteSlot"/> is not
 	/// read, because the writer keeps the file's slot or gives out one of its own. <see cref="Sprite"/> is null for
 	/// somebody who is not drawn, and only its picture is read (<see cref="Sprite.Type"/> to
-	/// <see cref="Sprite.Pc"/>): where the sprite stands is the navigator's position.
+	/// <see cref="Sprite.Pc"/>): where the sprite stands is the navigator's position, unless
+	/// <see cref="SpritePlaced"/> says it is the picture's own.
 	/// </para>
 	/// <para>
 	/// <see cref="Waypoints"/> and <see cref="LegLengths"/> are the navigator's <c>subpath_buffer</c> and
@@ -193,13 +194,17 @@ public sealed partial class ParkWorld
 	/// The drawing flags of the person's own sprite, its local 16 (<see cref="SpriteFlagsOf"/>). Null leaves the
 	/// record's.
 	/// </param>
+	/// <param name="SpritePlaced">
+	/// The sprite stands at its picture's <see cref="Sprite.X"/>, <see cref="Sprite.Y"/> and <see cref="Sprite.Height"/>,
+	/// where something other than the person's walk put it (a walk ride's placer, <c>FUN_005580a0</c>), not at the navigator.
+	/// </param>
 	public readonly record struct WrittenPerson( Person Person, Sprite? Sprite,
 		IReadOnlyList<(int X, int Y)>? Waypoints = null, IReadOnlyList<int>? LegLengths = null,
 		int PreviousX = 0, int PreviousY = 0, int NextAnim = 0, int NextServiceInterval = 0,
 		bool? SetDestSuccessfully = null, int LastThought = 0, int TimeBubbleShown = 0,
 		uint StrandedTime = 0, int SpriteInterval = 0x3e, int? MadeSetByte = null, int? StateSetByte = null,
 		WrittenSprite? Balloon = null, WrittenSprite? Bubble = null, int? LastRecordedMapId = null,
-		IReadOnlyList<int>? SpriteLoops = null, int? SpriteFlags = null );
+		IReadOnlyList<int>? SpriteLoops = null, int? SpriteFlags = null, bool SpritePlaced = false );
 
 	/// <summary>
 	/// A sprite that is no person's own picture, as the writer takes it: a balloon or a thought bubble. All of
@@ -1156,21 +1161,20 @@ public sealed partial class ParkWorld
 	}
 
 	/// <summary>Writes a person's picture and place over their sprite's record: the program and how far into it, the
-	/// interval, the place (the navigator's, ten world units to a cell), alpha, kind, bank, set, frame and facing,
+	/// interval, the place (the navigator's, ten world units to a cell, or with <see cref="WrittenPerson.SpritePlaced"/>
+	/// the picture's own: a walk's rider at its placer's point, <c>docs/exe/saves.md</c>, "A walk's rider is saved where its
+	/// placer left them"), alpha, kind, bank, set, frame and facing,
 	/// and with <see cref="WrittenPerson.SpriteLoops"/> its loop stack: the room left, the words pushed and the
 	/// count of loops it is inside (<c>0x004763c6</c>), the words below the room left as they lie, as a pop leaves them
-	/// (<c>FUN_00475260</c>), and with <see cref="WrittenPerson.SpriteFlags"/> its drawing flags.
-	/// <para>A deviation: a walk's rider is written here as anyone, at the navigator, where the original's files hold none
-	/// for a rider the walk hides and the placer's point for one it shows (<c>docs/exe/saves.md</c>, "A walk's rider is saved
-	/// with a sprite").</para></summary>
+	/// (<c>FUN_00475260</c>), and with <see cref="WrittenPerson.SpriteFlags"/> its drawing flags.</summary>
 	private static void PutSprite( byte[] record, WrittenPerson person, Sprite picture )
 	{
 		Put32( record, SpritePcAt, picture.Pc );
 		Put32( record, SpriteScriptAt, picture.Script );
 		Put32( record, SpriteIntervalAt, person.SpriteInterval );
-		PutSingle( record, SpriteX, person.Person.Navigator.X * 10f / NavigatorState.One );
+		PutSingle( record, SpriteX, person.SpritePlaced ? picture.X : person.Person.Navigator.X * 10f / NavigatorState.One );
 		PutSingle( record, SpriteHeight, picture.Height );
-		PutSingle( record, SpriteY, person.Person.Navigator.Y * 10f / NavigatorState.One );
+		PutSingle( record, SpriteY, person.SpritePlaced ? picture.Y : person.Person.Navigator.Y * 10f / NavigatorState.One );
 		Put32( record, SpriteAlpha, picture.Alpha );
 		Put32( record, SpriteType, picture.Type );
 		Put32( record, SpriteBank, picture.Bank );
