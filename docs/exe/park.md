@@ -300,7 +300,7 @@ The struct has a shipped name: `FUN_00464580` is a debug dumper that prints ever
 |---|---|---|
 | `model+0x0e` | - | ushort channel count |
 | `model+0x10` | - | channel array, **stride 0x38** |
-| `channel+0x00` | `Flags` | flag `0x1` = loop (`LOOPANIM` at `0x00552beb` passes flags 1; `TRIGANIM`/`WAITANIM` pass 0, all on channel 0); `0x2` = freeze at frame 0; **`0x4` = held on the last frame**, set with `0x10` as `0x14` by the end-of-clip hold (`0x00472fe8`; `0x10` goes at `0x00473a19` when the channel is posed); `0x40` selects the alternate frame snapshot. `0x2` and `0x4` are cleared only by `FUN_00472f60`'s `AND AL,0xf9` when it starts a loaded role's in-range entry over a channel that is not idle (`0x0047302b`, `0x0047303b`), and by the whole-word copies (the RSYS restore `0x00464bcd`, the instance copy `0x004558fc`); a pseudo-role ORs its bits in without clearing, and a start on an idle channel, or of an entry past the count, keeps a stale one |
+| `channel+0x00` | `Flags` | flag `0x1` = loop (`LOOPANIM` at `0x00552beb` passes flags 1; `TRIGANIM`/`WAITANIM` pass 0, all on channel 0); `0x2` = freeze at frame 0; **`0x4` = held on the last frame**, set with `0x10` as `0x14` by the end-of-clip hold (`0x00472fe8`; `0x10` is cleared at `0x00473a17`..`0x00473a19` when the channel is posed); `0x40` selects the alternate frame snapshot. `0x2` and `0x4` are cleared only by `FUN_00472f60`'s `AND AL,0xf9` when it starts a loaded role's in-range entry over a channel that is not idle (`0x0047302b`, `0x0047303b`), and by the whole-word copies (the RSYS restore `0x00464bcd`, the instance copy `0x004558fc`); a pseudo-role ORs its bits in without clearing, and a start on an idle channel, or of an entry past the count, keeps a stale one |
 | `channel+0x04` | `AnimID` | role (12 = none) |
 | `channel+0x08` | `SubAnim` | entry |
 | `channel+0x0c` | - | float speed (1.0f) |
@@ -2927,8 +2927,11 @@ through `NodePoser` (Q561, Q583), and counted nowhere (Q573). Over the shipped g
 scripts, 47 clips with a route) the effect starts a script names on such a node are, in Lost Kingdom, five sounds of
 type 8: the bus's (`bus.RSE` word 13, node 1, `mk_bus_1` at its route's frame-0 point), the ferry's (`Ferry.RSE` word
 12, node 1) and the seaplane's (`seaplane.RSE` words 10, 18 and 67, node 1), the same three vehicles in each other
-theme; the only particle records on a route are the Halloween haunted house's four type 2 fumes (`Haunt.RSE` words 194
-to 209, nodes 1 to 4), and no walk node hangs under a route.
+theme; the only particle records on a route the census resolves are the Halloween haunted house's four type 2 fumes
+(`Haunt.RSE` words 194 to 209, nodes 1 to 4), and no walk node hangs under a route. It does not resolve the 26
+ADDOBJ and EVENT starts whose type or node is a variable (listed `variable`), and one of them is on a route:
+`Haunt.RSE` word 100's EVENT, a type 1 on node RAND(3)+1 (nodes 1 to 3, words 94 to 100). Halloween only; of Lost
+Kingdom's route wads, the ferry's and the seaplane's listings hold no such start (`bus.RSE` has no stored listing).
 
 **Deviations and gaps, each counted where it is reached.** Started nowhere: an effect of the item's own
 (`PARK_PARTICLE_ITEM_EFFECT`), a record with no node or one the model lacks (`PARK_PARTICLE_NO_PLACE`), a type 2

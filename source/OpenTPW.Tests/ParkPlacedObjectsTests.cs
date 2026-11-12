@@ -405,6 +405,8 @@ public class ParkPlacedObjectsTests
 	/// the fall at (530, 513), range 97, set up with the listener at the world's corner has no output; in range it is given
 	/// one; 98 off over the ground it is stopped and let go; 90 off over the ground and 500 up it is in range, the height
 	/// left out; exactly 97 off is in range; and each return is a new output from the sample's start, not the old one resumed.
+	/// The held draw is not seen here: the shipped effect 8 has one variation of one sample at volume 100, so a fresh draw
+	/// at each return gives the same sample and volume.
 	/// </summary>
 	[TestMethod]
 	public void APlacedLoopOutOfRangeReleasesItsOutputAndComesBackWithAFreshOne()
@@ -491,6 +493,48 @@ public class ParkPlacedObjectsTests
 			HearFrom( 2000f, 2000f );
 			park.Update();
 			Assert.AreEqual( 2, Times( Gap ), "left again: counted again" );
+		} );
+	}
+
+	/// <summary>
+	/// <b>Each placed voice of no script whose leaving range is not built is counted under its own kind</b> (Q1416): started at
+	/// the fall with the listener there, it is counted once when the listener goes 2,000 off. The gulls' and the sea's
+	/// (<c>FOLLOWING</c>) are placed beside the listener wherever it goes, so they are not reached this way.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> any one kind's <c>PlaysOnOutOfRange</c> call deleted, or given another kind's name.</remarks>
+	[DataTestMethod]
+	[DataRow( "THUNDER" )]
+	[DataRow( "SINGLE_SCREAM" )]
+	[DataRow( "PUT_OFF" )]
+	[DataRow( "STAFF" )]
+	[DataRow( "YAWN" )]
+	[DataRow( "CHARGE" )]
+	[DataRow( "BUMPER_ENGINE" )]
+	public void EachKindOfVoiceThatPlaysOnIsCountedUnderItsOwnName( string kind )
+	{
+		WithTheJunglesAudio( park =>
+		{
+			var at = new Vector3( 530f, 513f, 0f );
+			HearFrom( 540f, 513f );
+
+			var started = kind switch
+			{
+				"THUNDER" => park.Thunder( at ),
+				"SINGLE_SCREAM" => park.SingleScream( 1, -1, at ),
+				"PUT_OFF" => park.PutOff( at ),
+				"STAFF" => park.StaffSound( 0xa9, at ),
+				"YAWN" => park.Yawn( at ),
+				"CHARGE" => park.Charge( at ),
+				_ => new ParkCarSounds( new RideScriptScheduler() ).Start( park.Rides!, 194, at ) is not null,
+			};
+			Assert.IsTrue( started, $"{kind} started" );
+
+			park.CountPlayingOn();
+			Assert.AreEqual( 0, Times( $"PLACED_VOICE_OUT_OF_RANGE_{kind}" ), "in range: nothing counted" );
+
+			HearFrom( 2540f, 513f );
+			park.CountPlayingOn();
+			Assert.AreEqual( 1, Times( $"PLACED_VOICE_OUT_OF_RANGE_{kind}" ), "left range while sounding: counted once" );
 		} );
 	}
 

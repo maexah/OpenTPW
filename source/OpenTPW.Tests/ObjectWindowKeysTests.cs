@@ -33,7 +33,8 @@ public class ObjectWindowKeysTests
 	}
 
 	/// <summary>A window in front that is no object window (a message box over a shop's, the game menu) hears neither key, and none in front neither.</summary>
-	/// <remarks><b>Mutations:</b> the keys handed to an object window behind the front one.</remarks>
+	/// <remarks><b>Mutations:</b> a window that is no object window, or none, stepped. The choice of the front window is
+	/// <c>ParkKeys</c>' (<see cref="TheParksKeysStepTheObjectWindowInFrontAlone"/>).</remarks>
 	[TestMethod]
 	public void OnlyAnObjectWindowInFrontHearsThem()
 	{
@@ -42,6 +43,42 @@ public class ObjectWindowKeysTests
 
 		Assert.AreEqual( 0, ParkFrontEnd.ObjectWindowKeys( new NotAnObjectWindow( stack ), [Key.Up, Key.Down] ) );
 		Assert.AreEqual( 0, ParkFrontEnd.ObjectWindowKeys( null, [Key.Down] ) );
+	}
+
+	/// <summary>
+	/// <b>The park's keys hand them to the window in front</b> (<c>ParkFrontEnd.ParkKeys</c>, through the stack's
+	/// <c>KeysWithoutFocus</c>, with the frame's real key events): an object window in front steps on Down, and on Up with
+	/// Shift held (<c>FUN_0048d200</c> compares the key word alone, <c>0x0048d228</c>); a message box opened over it takes
+	/// the keys, so it does not step. Needs the game, for the park's interface.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the call in <c>ParkKeys</c> deleted; the window chosen as the last object window rather than
+	/// the front one (it steps under the box); the keys taken only with no modifier held.</remarks>
+	[TestMethod]
+	public void TheParksKeysStepTheObjectWindowInFrontAlone()
+	{
+		var stack = ParkEscapeOnReleaseTests.APark();
+		try
+		{
+			var window = new Stepping( stack );
+			stack.Open( window );
+
+			ParkEscapeOnReleaseTests.Frame( stack, ParkEscapeOnReleaseTests.Down( Key.Down ) );
+			ParkEscapeOnReleaseTests.Frame( stack, ParkEscapeOnReleaseTests.Up( Key.Down ) );
+			CollectionAssert.AreEqual( new[] { false }, window.Steps, "Down in front: one step towards the oldest" );
+
+			ParkEscapeOnReleaseTests.Frame( stack, ParkEscapeOnReleaseTests.Down( Key.ShiftLeft ), ParkEscapeOnReleaseTests.Down( Key.Up ) );
+			ParkEscapeOnReleaseTests.Frame( stack, ParkEscapeOnReleaseTests.Up( Key.Up ), ParkEscapeOnReleaseTests.Up( Key.ShiftLeft ) );
+			CollectionAssert.AreEqual( new[] { false, true }, window.Steps, "Shift+Up steps too" );
+
+			stack.Open( new MessageBox( stack, "Restart this park?", () => { } ) );
+			ParkEscapeOnReleaseTests.Frame( stack, ParkEscapeOnReleaseTests.Down( Key.Down ) );
+			ParkEscapeOnReleaseTests.Frame( stack, ParkEscapeOnReleaseTests.Up( Key.Down ) );
+			CollectionAssert.AreEqual( new[] { false, true }, window.Steps, "under a message box: no step" );
+		}
+		finally
+		{
+			Input.ForgetHeldKeys();
+		}
 	}
 
 	private sealed class Stepping( WindowStack stack ) : UiWindow( stack ), IObjectWindowSteps

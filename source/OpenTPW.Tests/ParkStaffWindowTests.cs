@@ -1023,6 +1023,32 @@ public class ParkStaffWindowTests
 	}
 
 	/// <summary>
+	/// <b>The unanchored queue click is charged the queue price twice</b> (<c>ParkPathBuilding.RunQueue</c> into
+	/// <c>FirstQueueClick</c>; docs/exe/park-engine.md, "The unanchored click"): on the bare ground at (11,10) a balance of
+	/// twice the queue price less one refuses and anchors nothing, and twice the queue price anchors. The path tool's
+	/// price is not the queue's, so either in the queue's place would anchor on the first.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> <c>RunQueue</c> handing <c>FirstQueueClick</c> the path's price (<c>CellCost</c>).</remarks>
+	[TestMethod]
+	public void AnUnanchoredQueueClickAsksTwiceTheQueuePrice()
+	{
+		var level = Level.Current!;
+		var state = level.ParkState!;
+		var price = ParkPathBuilding.QueueCost( level );
+		Assert.AreNotEqual( price, ParkPathBuilding.CellCost( level ), "the two tools' prices differ" );
+
+		ParkBuildMode.Arm( ParkBuildMode.Queue, 13 );
+		state.SetBalance( 2 * price - 1 );
+		StringAssert.Contains( level.ClickWorldAt( 11, 10, 0 ),
+			$"queue: (11,10) would bring the run to {2 * price} against a balance of {2 * price - 1} - nothing anchored" );
+		Assert.IsFalse( ParkBuildMode.Anchored );
+
+		state.SetBalance( 2 * price );
+		StringAssert.Contains( level.ClickWorldAt( 11, 10, 0 ), "queue: anchored at (11,10)" );
+		ParkBuildMode.Disarm();
+	}
+
+	/// <summary>
 	/// <b>The patrol switch let up gives the member the whole map</b> (<c>FUN_004b5b50( 0 )</c>, <c>FUN_00506e90</c>: cells 1
 	/// to <c>0x4000</c>); the window stays and no tool is armed.
 	/// </summary>

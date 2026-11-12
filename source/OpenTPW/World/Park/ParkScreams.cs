@@ -290,10 +290,8 @@ internal sealed class ParkScreams
 			return true;
 
 		var range = variations[Math.Clamp( chain.RangeVariation, 0, variations.Count - 1 )].Range;
-		var x = chain.At.X - ears.X;
-		var y = chain.At.Y - ears.Y;
 
-		return x * x + y * y <= range * range;
+		return ParkAudio.InRange( chain.At, range, ears );
 	}
 
 	/// <summary>

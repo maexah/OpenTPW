@@ -1053,8 +1053,11 @@ So F1 over an open screen has him say that screen's line again, unless a later c
 which the close leaves standing. The kept record is written and read with the advisor thing ("The slots in a park file",
 below), so it lasts across a save. The object windows' handlers withdraw their own lines on the close too (`FUN_00497640`: `0x12b`, `0xd5`; the handler with
 its `0x14` arm at `0x004af6b2`: `0x129`, `0xcf`), and some 40 other sites withdraw category-1 lines (`0x00486b40`'s and
-`FUN_0059aa70`'s callers). Not read: whether a
-slot is emptied when its line starts (which decides whether F1 during the line is refused by test 4).
+`FUN_0059aa70`'s callers). Both say helpers empty the slot before anything else (`FUN_0059b620` `0x0059b649`,
+`FUN_0059b870` `0x0059b898`), so F1 during the line is not refused by test 4 (`0x0059ad29..0x0059ad82`). The tick
+sends a record with its +0x16 set (a score the poster gave: F1's) to `FUN_0059b870` (`0x0059a800..0x0059a80f`), which
+has no score recheck; only `FUN_0059b620` rechecks (`0x0059b6be`, `0x0059b6c3`), so F1's post is said at its given
+score whatever the score function now answers.
 
 ### OpenTPW (Q231: `ParkAdvisorMessages.SayKeptAgain`, `RestoreKept`, `WrittenKept`; `ParkFrontEnd.HelpKey`)
 
@@ -1065,9 +1068,9 @@ full-screen view's cover hear no F1); the forced post skips the said byte and th
 `kept=<id>/score/valid/forced/overridden`. A park file's kept record is taken as it stands and written back whole once
 it changes (`ParkWorld.AdvisorKeptOf`, `PutAdvisorKept`, 5,820 bytes into the advisor's record); a slot holding F1's post
 is written with its forced and given-score bytes. Counted: F1 on a file's kept message of a topic not built here
-(`PARK_ADVISOR_KEPT_MESSAGE_NOT_BUILT`), and a given-score record whose score function has fallen under the threshold by
-its turn, dropped as the plain helper drops one (`PARK_ADVISOR_OVERRIDDEN_RECORD_RECHECK`): what the tick does with an
-overridden record is not read. A file's slot holding a forced or given-score post is still carried, not said
+(`PARK_ADVISOR_KEPT_MESSAGE_NOT_BUILT`). A given-score record (+0x16 set: F1's) is said without the score recheck, as
+`FUN_0059b870` (`0x0059a800..0x0059a80f`) has none; only a plain record is rechecked and let go (`FUN_0059b620`,
+`0x0059b6c3`). A file's slot holding a forced or given-score post is still carried, not said
 (`PARK_ADVISOR_SAVED_SLOT_NOT_BUILT`, "The slots in a park file").
 
 Measured on the stock park off-screen in a cloud container (Q231, `consoledrive.py`'s `focus_key` and `wheel`; no original, no Ghidra; the run's output was not kept), predicted first, seven of seven: the load logged `restored kept=346/score=1000/valid=0`, and F1
@@ -1079,8 +1082,8 @@ line still playing and the copy waiting: `result=duplicate`; he said it again wh
 Escape: `withdraw message=188 cleared=0 cut=0 slaps=0 kept=forgotten`, and F1 then `F1 with no kept message (message=188
 forgotten)`. Not checked: the original's own reading of any of it (no original here), a save of it in a game run (the
 console's `savepark` needs a player; the writer is held by `TheAdvisorsKeptMessageIsWrittenOverTheFilesOwn`), and the
-other park screens' lines. Ours empties a slot as its line starts, so F1 during the line is not refused by test 4 here;
-the original's is still not read.
+other park screens' lines. Ours empties a slot as its line starts, so F1 during the line is not refused by test 4 here,
+as the original's does (`0x0059b649`, `0x0059b898`).
 
 ## The records in a park file (Q313)
 

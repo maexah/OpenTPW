@@ -29,6 +29,41 @@ public class ParkBuildMarkersTests
 	}
 
 	/// <summary>
+	/// <b>The markers made at a texture quality load their slots from its folder</b>: at 1 every slot's file is
+	/// <c>stexture</c>'s and <see cref="ParkBuildMarkers.Folder"/> says so; at 2 every one is <c>textures</c>'.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the constructor loading <c>TexturePaths( "textures" )</c> whatever its folder, or setting the folder from a constant quality.</remarks>
+	[TestMethod]
+	public void TheMarkersLoadEverySlotFromTheirQualitysFolder()
+	{
+		FileSystem = GameData.Required();
+
+		foreach ( var (quality, folder) in new[] { (1, "stexture"), (2, "textures") } )
+		{
+			var loaded = new System.Collections.Generic.List<string>();
+			var none = (Texture)System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject( typeof( Texture ) );
+			var markers = new ParkBuildMarkers( quality, path =>
+			{
+				loaded.Add( path );
+				return none;
+			}, none );
+
+			try
+			{
+				Assert.AreEqual( folder, markers.Folder );
+				Assert.AreEqual( 9, loaded.Count, "nine drawn slots" );
+				Assert.IsTrue( loaded.All( path => path.StartsWith( $"generic/dynamic/{folder}/" ) ), string.Join( " ", loaded ) );
+				Assert.AreEqual( $"generic/dynamic/{folder}/blue.wct", loaded[0] );
+			}
+			finally
+			{
+				markers.Delete();
+				Entity.ApplyDeletions();
+			}
+		}
+	}
+
+	/// <summary>
 	/// At low detail (<c>low.sam</c>'s <c>TEXTUREQUALITY</c>) the blue and red squares are the small files, 211 and 122
 	/// bytes, where medium's are 493 and 340; every slot's file is there in both folders.
 	/// </summary>

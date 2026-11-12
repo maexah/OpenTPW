@@ -1146,7 +1146,8 @@ internal sealed class ParkAdvisorMessages
 	/// for a file with no advisor), as the original's advisor is read back whole with its thing: a built message
 	/// with its file's score, subject and second word. A taken slot this game cannot say - a message of no built
 	/// topic, a forced post or a score the poster gave - is counted and stays taken,
-	/// said by nothing and written back as the file's. Says how many were taken to be said.
+	/// said by nothing and written back as the file's. The tick's road for a given-score record is read (FUN_0059b870,
+	/// 0x0059a800), so such a slot could be taken with its two bytes; it is not yet. Says how many were taken to be said.
 	/// </summary>
 	internal int RestoreSlots( Func<int, ParkWorld.AdvisorSlot?> saved )
 	{
@@ -1877,7 +1878,8 @@ internal sealed class ParkAdvisorMessages
 
 	/// <summary>
 	/// One world sweep: the poll's one row, then, past the wait, the best slot. Playback returns the response duration (zero when the speaker cannot start).
-	/// The helper still succeeds after a zero playback return; its score recheck alone can reject here.
+	/// The helper still succeeds after a zero playback return; the plain helper's score recheck alone can reject here (a record
+	/// whose score the poster gave has none).
 	/// <paramref name="said"/> hears the event a said line sends, with the response's group, the subject and the record's
 	/// second word where the poster handed one.
 	/// <paramref name="park"/> answers what a score function reads of the running park; with none, such a score is nought.
@@ -1901,13 +1903,11 @@ internal sealed class ParkAdvisorMessages
 
 		var pending = _slots[index]!;
 		_slots[index] = null;
-		var score = FilteredScoreOf( pending.Topic, gameTick );
+		// Only the plain helper rechecks the score (FUN_0059b620, 0x0059b6c3); a record whose score the poster gave (F1's,
+		// SayKeptAgain) goes to FUN_0059b870, which has none (chosen at 0x0059a800), and is said at its stored score.
+		var score = pending.Overridden ? pending.Score : FilteredScoreOf( pending.Topic, gameTick );
 		if ( score < Threshold )
 		{
-			// The recheck is the non-overridden helper's (FUN_0059b620, 0x0059b6c3); what the tick does with a record whose
-			// score the poster gave (F1's, SayKeptAgain) is not read, so here it is dropped the same and counted.
-			if ( pending.Overridden )
-				Unimplemented.Report( "PARK_ADVISOR_OVERRIDDEN_RECORD_RECHECK" );
 			Log.Info( $"Park advisor: dropped message={pending.Topic.Id} subject={pending.Subject} queued={pending.Score} score={score} threshold={Threshold} tick={gameTick}" );
 			return;
 		}

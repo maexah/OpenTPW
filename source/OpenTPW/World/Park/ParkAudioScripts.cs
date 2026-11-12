@@ -847,10 +847,8 @@ public sealed partial class ParkAudio
 			return true;
 
 		var range = sound.Category.VariationsOf( sound.Effect )[Math.Max( sound.Chain ? sound.RangeVariation : sound.Variation, 0 )].Range;
-		var x = place.X - ears.X;
-		var y = place.Y - ears.Y;
 
-		return x * x + y * y <= range * range;
+		return InRange( place, range, ears );
 	}
 
 	/// <summary>The parameter a parked music voice is left at (<c>0x006be55e</c>); a set to it does not wake the voice.</summary>

@@ -231,9 +231,10 @@ internal sealed class ParkFrontEnd : Panel
 	/// DOWN (<c>0x1000a</c>), each press and each auto-repeat (<c>FUN_00658c38</c> posts both), cursor Up (<c>0x2600</c>)
 	/// calls <c>FUN_0048cbe0</c> and cursor Down (<c>0x2800</c>) <c>FUN_0048caf0</c>, which apply the window's settings
 	/// and step it to the next of its class towards the newest or the oldest (<see cref="IObjectWindowSteps"/>). Only the
-	/// window in front hears them: the object window has the focus once it opens (<c>FUN_004862a0</c>), and a box opened
-	/// over it takes the keys. The keypad's 8 and 2 with NumLock off are <c>0x26</c> and <c>0x28</c>, not these keys.
-	/// Whether <c>FUN_0048d200</c> reads the modifiers is not traced, so a key held with Shift, Ctrl or Alt steps too.
+	/// window in front hears them, and a box opened over it takes the keys; which holder the original's focus
+	/// (<c>FUN_004862a0</c>) gives an object window is not traced. The keypad's 8 and 2 with NumLock off are <c>0x26</c>
+	/// and <c>0x28</c>, not these keys. <c>FUN_0048d200</c> compares the key word alone (<c>0x0048d228</c>); the
+	/// modifiers are not read, so a key held with Shift, Ctrl or Alt steps too.
 	/// Answers how many steps were taken.
 	/// </summary>
 	internal static int ObjectWindowKeys( UiWindow? front, IReadOnlyList<Key> pressed )

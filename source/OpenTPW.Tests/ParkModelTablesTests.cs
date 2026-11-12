@@ -539,6 +539,35 @@ public class ParkModelTablesTests
 	}
 
 	/// <summary>
+	/// <b>A loop's restart binds the clip's node words again over itself</b> (Q661; <c>0x00473840</c>..<c>0x00473848</c> start it
+	/// with <c>0x1</c>, so <c>FUN_00472d70</c> hides its list again): a node of the Crazy Ape's riding clip's hide list, shown
+	/// after the first bind as a walk shows a node (<c>&amp; ~0x10</c> alone), stays shown through the first run and is
+	/// hidden again by the restart. The seaplane's take-off cannot show it: its one hide-list node is transform-only, so a
+	/// restart over itself leaves its words as they were.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the restart leaving the node words alone (<c>Nodes?.Started</c> skipped where <c>End</c> restarts a loop).</remarks>
+	[TestMethod]
+	public void ALoopsRestartBindsTheNodeWordsAgain()
+	{
+		var (model, clips, _) = Load( CrazyApe );
+		clips.Nodes = new ParkModelTables.Running( model, clips.ChannelCount );
+		var rest = ParkModelTables.NodeWordsAtRest( model );
+		var node = clips.Clip( 3, 0 )!.HideList.Select( one => (int)one ).First( one => (rest[one] & ParkModelTables.TransformOnly) == 0 );
+		var length = clips.DurationMilliseconds( 3, 0 );
+
+		clips.Trigger( 3, 0, AnimTimeControl.StartAtOnceFlag | AnimTimeControl.LoopFlag, 1f, 0 );
+		Assert.AreEqual( ParkModelTables.Hidden, clips.Nodes.Words( clips.NodeFrames() )[node] & ParkModelTables.Hidden, "hidden by the first bind" );
+
+		clips.Nodes.SetHidden( node, false );
+		clips.Advance( length / 2 );
+		Assert.AreEqual( 0u, clips.Nodes.Words( clips.NodeFrames() )[node] & ParkModelTables.Hidden, "shown, half way through" );
+
+		clips.Advance( length + length / 4 );
+		Assert.AreEqual( 3, clips.Channel( 0 )!.AnimID, "still riding, a quarter into its second run" );
+		Assert.AreEqual( ParkModelTables.Hidden, clips.Nodes.Words( clips.NodeFrames() )[node] & ParkModelTables.Hidden, "hidden again by the restart" );
+	}
+
+	/// <summary>
 	/// A stop (role 12) or a role the model has no clips for takes the outgoing clip's marks off and binds none
 	/// (<c>FUN_00472f60</c>, <c>0x00473131</c>); a freeze, a hold, an entry past a role's count and a stop with the
 	/// caller's <c>0x4</c> or <c>0x8</c> take nothing off; and a start with the caller's <c>0x4</c> binds the new clip over

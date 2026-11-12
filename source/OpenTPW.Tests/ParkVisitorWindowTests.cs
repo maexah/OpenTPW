@@ -233,6 +233,28 @@ public class ParkVisitorWindowTests
 	}
 
 	/// <summary>
+	/// <b>The cursor keys walk the guests as the arrows do</b> (Q547, <c>FUN_0048d200</c>): from the newest, Down steps towards
+	/// the oldest to the second, and Up twice goes back and round from the newest to the oldest.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the visitor's window left without the keys (<c>IObjectWindowSteps</c> taken off it); Up and Down swapped.</remarks>
+	[TestMethod]
+	public void TheCursorKeysWalkTheGuests()
+	{
+		var peeps = _people.Peeps;
+		Assert.IsTrue( peeps.Count >= 3, "three guests, so round from the newest is not the second" );
+
+		ParkVisitorWindow.Open( _stack, peeps[0].ThingId );
+		var window = Window!;
+
+		Assert.AreEqual( 1, ParkFrontEnd.ObjectWindowKeys( _stack.Windows[^1], [NeoVeldrid.Key.Down] ) );
+		Assert.AreEqual( peeps[1].ThingId, window.ThingId, "Down: towards the oldest" );
+
+		ParkFrontEnd.ObjectWindowKeys( _stack.Windows[^1], [NeoVeldrid.Key.Up, NeoVeldrid.Key.Up] );
+		Assert.AreEqual( peeps[^1].ThingId, window.ThingId, "Up twice: back, then round from the newest" );
+		_stack.Close( window );
+	}
+
+	/// <summary>
 	/// <b>The advisor tells of the window as it is built and is taken back as it closes</b>: message <c>0x12e</c>,
 	/// response 562, sample 580, one line, a tutorial line.
 	/// </summary>

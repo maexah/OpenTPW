@@ -1052,14 +1052,15 @@ filed the items that cite it.
   additive restore `FUN_00473c70`/`0x00473d0c` puts the turn back every advance, then build it in both posers when the
   coaster pylons are drawn (Q594). Confirm by a pylon's turn beside the original's. (Q817 draws the pylons by taking each rotation key as the
   node's turn, which is the composition on the nodes the file leaves unturned, as `ParkCoasterPylon` does for the knot; the general order stays here.)
-- [ ] **Q1384. Is a channel held on its last frame posed again every frame?** From Q574's sweep. Ours poses every
+- [ ] **Q1384. A channel held on its last frame is posed once, not every frame.** From Q574's sweep. Ours poses every
   channel that is not idle every frame (`RideAnimations.PoseOnto`), a HELD one too, so while the Inca Totem breaks down
   (role 9 on channel 0) its channels 1 to 3, held on the role-5 clip of the ride before, turn `tp_legs`, `tp_bodies` and
-  `tp_heads` (meshes 8 to 10) after channel 0 does, and theirs is the turn drawn. `docs/exe/park.md` says a frozen clip
-  "is posed once more at its true final frame and held" (`0x00473a19` sets `0x10` when the channel is posed); if the
-  original then skips a held channel, role 9's turn is drawn on those three meshes there. Read the sweep (`FUN_004735d0`,
-  `FUN_00473c70`) in Ghidra into `docs/exe/park.md` first; then, only if they differ, build it with a test of the
-  Totem's breakdown, and confirm by a frame of the breakdown beside the original's.
+  `tp_heads` (meshes 8 to 10) after channel 0 does, and theirs is the turn drawn. The listing already answers most of
+  it: `0x00473a17`..`0x00473a19` clear `0x10` once the channel is posed, and `0x004739a3`..`0x004739a9` skip the pose of
+  a channel with `0x4` set and `0x10` clear unless the model's `+0x4` carries `0x400000` (`0x00473990`), so the original
+  poses a held channel once and then draws role 9's turn on those three meshes. Decode the sweep's `[esp+0x2c]` (which
+  gates the pose at `0x00473999`) and the models that carry `0x400000` into `docs/exe/park.md`, then build the skip with
+  a test of the Totem's breakdown, and confirm by a frame of the breakdown beside the original's.
 - [ ] **Q725. The Lost Kingdom speakers' raw vertex frames are skipped.** From the upstream look, 2026-10-19
   (`verify-models.md` L3; FileFormats `models.md`, "Raw vertex frames"). `AnimationFile` skips every track that sets bit
   `0x4000` (30 in the game); Lost Kingdom has the 8 of `speaker1c` to `speaker4c` (4 x 16 vertices and 4 x 8). The data is

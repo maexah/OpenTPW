@@ -928,10 +928,11 @@ public class ParkAdvisorMessageTests
 	/// <summary>
 	/// <b>A park file's kept message</b> is taken as it stands and written back as the file's until it changes: one of a message
 	/// built here is said again on F1, one of a message not built is counted and posts nothing. F1's record put in with a score
-	/// the poster gave, whose own score has fallen under the threshold by its turn, is dropped as the plain helper drops one and counted.
+	/// the poster gave is said at its turn though its own score has fallen under the threshold (FUN_0059b870 has no recheck,
+	/// 0x0059a800); a plain post whose score has fallen is let go unsaid (FUN_0059b620, 0x0059b6c3).
 	/// </summary>
 	/// <remarks><b>Mutations:</b> <c>WrittenKept</c> answering a restored record unchanged; the unbuilt message posted; the recheck
-	/// skipped for an overridden record (the control panel's line said at nought).</remarks>
+	/// asked of an overridden record (the control panel's F1 line dropped); the recheck skipped for every record (the plain post said).</remarks>
 	[TestMethod]
 	public void AParkFilesKeptMessageIsTakenAsItStands()
 	{
@@ -952,10 +953,16 @@ public class ParkAdvisorMessageTests
 		var panel = new ParkAdvisorMessages( Settings(), tutorial: () => true );
 		panel.RestoreKept( new ParkWorld.AdvisorSlot( 0, 0, ParkAdvisorMessages.ControlPanel, 110, true, -1, false, false ) );
 		Assert.IsTrue( panel.SayKeptAgain( 1_000_000 ) );
-		var dropped = Counted( "PARK_ADVISOR_OVERRIDDEN_RECORD_RECHECK" );
-		panel.Tick( 1_000_001, 1000, ( _, _ ) => throw new Exception( "said at nought" ) );
-		Assert.AreEqual( dropped + 1, Counted( "PARK_ADVISOR_OVERRIDDEN_RECORD_RECHECK" ) );
+		var said = new List<int>();
+		panel.Tick( 1_000_001, 1000, ( response, _ ) => { said.Add( response ); return 1000; } );
+		CollectionAssert.AreEqual( new[] { ParkAdvisorMessages.ParkTopics.Single( one => one.Id == ParkAdvisorMessages.ControlPanel ).FirstResponse }, said,
+			"F1's post is said at its given score, though the panel's own is nought past CutoffTime" );
 		Assert.AreEqual( 0, panel.PendingCount );
+
+		var plain = new ParkAdvisorMessages( Settings(), tutorial: () => true );
+		Assert.IsTrue( plain.Post( ParkAdvisorMessages.ControlPanel, 1381 ) );
+		plain.Tick( 1_000_001, 1000, ( _, _ ) => throw new Exception( "a plain post said at nought" ) );
+		Assert.AreEqual( 0, plain.PendingCount, "a plain post whose score has fallen is let go unsaid" );
 	}
 
 	/// <summary>The shipped <c>Advisor.sam</c>'s <c>HelpMessage.ContextHelpScore</c> is 1000, the score F1's post is given.</summary>

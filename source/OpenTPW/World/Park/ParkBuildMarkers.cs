@@ -220,7 +220,15 @@ public sealed class ParkBuildMarkers : ModelEntity
 	public string Folder { get; }
 
 	/// <summary>The markers, their textures the small copies where <paramref name="textureQuality"/> is 0 or 1, as the sea's.</summary>
-	public ParkBuildMarkers( int textureQuality )
+	public ParkBuildMarkers( int textureQuality ) : this( textureQuality, Load )
+	{
+	}
+
+	/// <summary>
+	/// The markers with each slot's file handed to <paramref name="load"/> and the slots past them given
+	/// <paramref name="missing"/> (<see cref="Texture.Missing"/> where null): a test's, which needs no device.
+	/// </summary>
+	internal ParkBuildMarkers( int textureQuality, Func<string, Texture> load, Texture? missing = null )
 	{
 		Name = "build markers";
 
@@ -228,7 +236,7 @@ public sealed class ParkBuildMarkers : ModelEntity
 
 		var paths = TexturePaths( Folder );
 		for ( var slot = 0; slot < _textures.Length; ++slot )
-			_textures[slot] = slot < paths.Length ? Load( paths[slot] ) : Texture.Missing;
+			_textures[slot] = slot < paths.Length ? load( paths[slot] ) : missing ?? Texture.Missing;
 
 		Log.Info( $"Build markers: {paths.Length} textures from {Folder}" );
 		Current = this;

@@ -190,7 +190,7 @@ public class ClipBindTests
 	/// A loop's restart is a start of the same clip, so the drawn side puts it back over itself and hides its list again
 	/// at every restart, as at a trigger's start of it (<c>FUN_00472f60</c> with <c>0x1</c>; <see cref="RideAnimations.PoseChannel"/>).
 	/// </summary>
-	/// <remarks><b>Mutation:</b> the restart given <c>0x8</c>, as before Q661 (the second pose only <c>pose m1</c>).</remarks>
+	/// <remarks><b>Mutation:</b> the restart given <c>0x8</c>, as before Q661 (the third pose only <c>pose C</c>).</remarks>
 	[TestMethod]
 	public void ALoopsRestartPutsBackAndHidesAsAStartDoes()
 	{

@@ -448,6 +448,9 @@ public static class ParkPathBuilding
 	/// the latch and answers red before the cell's type is read. Past that it charges bare ground a second time onto the run's
 	/// total (<c>FUN_0052fba0</c>) and asks the money again, so a balance below the square's total and one cell more refuses
 	/// too. Its own end of this ride's queue answers blue, and is anchored on. docs/exe/park-engine.md, "The unanchored click".
+	/// <b>The threshold is ours:</b> the run's total here is the strip's own (<see cref="QueueSquare.Owed"/>), so bare ground is
+	/// refused on a balance below twice the queue price; the original's total <c>DAT_0081af4c</c> is zeroed only by message
+	/// <c>0x1e</c>, so its threshold depends on how often that comes (docs/QUEUE.md Q541).
 	/// </remarks>
 	internal static string FirstQueueClick( ParkState state, IParkInitialState park, QueueSquare square, int price )
 	{

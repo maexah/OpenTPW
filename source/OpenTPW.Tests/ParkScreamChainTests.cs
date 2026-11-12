@@ -2255,6 +2255,47 @@ public class ParkScreamChainTests
 	}
 
 	/// <summary>
+	/// <b>Every 32nd tick's step sets the levels, its sweep dropped or not</b> (<c>0x0054f689</c> <c>jae 0x54f828</c> -> the
+	/// block at <c>0x0054f82d</c>, inside the per-tick loop): one frame of ticks 1 to 64 sweeps on 8, 16 and 24 and drops
+	/// the five after, so both its 32nd ticks are dropped steps, and the level is set twice, from the count the sweep of 24 left.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the block asked only on a swept step (no set); asked once a frame (one set).</remarks>
+	[TestMethod]
+	public void EveryThirtySecondStepSetsTheLevelsThoughItsSweepIsDropped()
+	{
+		var data = GameData.Required();
+		FileSystem = data;
+
+		using var clock = new SimulationClockScope();
+
+		using var stream = new System.IO.MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
+		var world = new ParkWorld( new SaveReader( stream ).ReadFile() );
+		var people = new ParkPeople( world, new ParkBalance( "jungle", easyMode: true ), random: new Random( 1 ),
+			behaviourRandom: new Random( 1 ), rideRandom: new Random( 1 ), staffRandom: new Random( 1 ) );
+
+		try
+		{
+			InAPark( "jungle", park =>
+			{
+				Frame( held: false, 64.5f * GameClock.TickSeconds );
+				Assert.AreEqual( (64, 64), (GameClock.Ticks, GameClock.TicksDue), "one frame of ticks 1 to 64" );
+
+				var sets = park.LevelSets;
+				ParkLoop.Run( null, null, people, audio: park );
+
+				Assert.AreEqual( 5, people.SweepsDropped, "32 to 64 dropped" );
+				Assert.AreEqual( sets + 2, park.LevelSets, "set on 32 and on 64" );
+				Assert.AreEqual( ParkAudio.MusicLevel( people.GateGuestCensus, 0 ), park.LevelNow );
+			} );
+		}
+		finally
+		{
+			people.Delete();
+			Entity.ApplyDeletions();
+		}
+	}
+
+	/// <summary>
 	/// <c>ParkAudio.OnDelete</c>, "the park is ending: what it has playing fades": the crowd's voice, started on the
 	/// beat by thirteen guests within four cells of the pointer's cell (<c>docs/exe/audio.md</c>, "The crowd's
 	/// voice"), has its playing sample told to end as the park is deleted, as the original stops every voice

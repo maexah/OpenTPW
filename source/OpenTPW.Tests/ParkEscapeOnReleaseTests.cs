@@ -417,6 +417,76 @@ public class ParkEscapeOnReleaseTests
 		Assert.IsFalse( ParkCamcorderCameraMode.Active, "the next leaves first person" );
 	}
 
+	/// <summary>
+	/// <b>F1 let go with no modifier says the kept tutorial line again</b> (<c>ParkFrontEnd.HelpKey</c>; the original's
+	/// key 0x70 with modifiers 0, <c>0x00488bee</c>; docs/exe/advisor-park.md, "F1: the kept tutorial line said again"),
+	/// over the park or a park screen; the game menu, the map, a modal window and first person hear none. Ctrl+F1 posts nothing.
+	/// The census's <c>forced=1</c> is F1's post.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> <c>release.Plain</c> dropped from the F1 arm; any one of the four exclusions dropped; a park
+	/// screen in front excluded as a modal one.</remarks>
+	[TestMethod]
+	public void F1LetGoPlainSaysTheKeptLineAgainWhereTheParkHearsIt()
+	{
+		var stack = APark();
+		var current = Level.Current;
+		try
+		{
+			var level = (Level)RuntimeHelpers.GetUninitializedObject( typeof( Level ) );
+			var state = new ParkState( parkIsClosed: false, visitorsToDate: 0 );
+			var messages = new ParkAdvisorMessages( new SettingsFile( "Advisor/Advisor.sam" ), tutorial: () => true );
+			state.AdvisorMessages = messages;
+			typeof( Level ).GetProperty( nameof( Level.ParkState ) )!.SetValue( level, state );
+			Level.Current = level;
+
+			Assert.IsTrue( messages.Post( ParkAdvisorMessages.HireScreen, 100 ) );
+			messages.Tick( 101, 1000, ( _, _ ) => 4000 );
+			state.SetGameTick( 102 );
+			const string plain = " kept=189/score=1000/valid=1/forced=0/overridden=0";
+
+			foreach ( var front in new UI.UiWindow?[] { Uninitialized<UI.GameMenu>(), Uninitialized<UI.ParkMapScreen>(), new Front( stack, modal: true ) } )
+			{
+				Assert.IsFalse( UI.ParkFrontEnd.HelpKey( front ), $"{front!.GetType().Name} hears no F1" );
+				StringAssert.EndsWith( messages.Census(), plain );
+			}
+
+			InFirstPerson( true );
+			Assert.IsFalse( UI.ParkFrontEnd.HelpKey( null ), "first person hears no F1" );
+			InFirstPerson( false );
+			StringAssert.EndsWith( messages.Census(), plain );
+
+			Frame( stack, Down( Key.ControlLeft ), Down( Key.F1 ) );
+			Frame( stack, Up( Key.F1 ), Up( Key.ControlLeft ) );
+			StringAssert.EndsWith( messages.Census(), plain, "Ctrl+F1 posts nothing" );
+
+			Frame( stack, Down( Key.F1 ) );
+			Frame( stack, Up( Key.F1 ) );
+			StringAssert.EndsWith( messages.Census(), " kept=189/score=1000/valid=1/forced=1/overridden=1", "a plain F1 over the park posts" );
+
+			var again = new ParkAdvisorMessages( new SettingsFile( "Advisor/Advisor.sam" ), tutorial: () => true );
+			state.AdvisorMessages = again;
+			Assert.IsTrue( again.Post( ParkAdvisorMessages.HireScreen, 100 ) );
+			again.Tick( 101, 1000, ( _, _ ) => 4000 );
+			Assert.IsTrue( UI.ParkFrontEnd.HelpKey( new Front( stack, modal: true, parkScreen: true ) ), "a park screen in front, modal or not, hears it" );
+		}
+		finally
+		{
+			Level.Current = current;
+		}
+	}
+
+	private static T Uninitialized<T>() => (T)RuntimeHelpers.GetUninitializedObject( typeof( T ) );
+
+	/// <summary>A window of the test's own, modal or a park screen as asked.</summary>
+	private sealed class Front : UI.UiWindow
+	{
+		public Front( UI.WindowStack stack, bool modal = false, bool parkScreen = false ) : base( stack )
+		{
+			Modal = modal;
+			ParkScreen = parkScreen;
+		}
+	}
+
 	/// <summary>A park's interface: the real front end over a stack made without its constructor, with its gadget and viewfinder up.</summary>
 	internal static UI.WindowStack APark()
 	{
