@@ -3949,7 +3949,7 @@ walk-aways, ring `+0x230`); `mNumCustomers` above nought loses the new object's 
 | 4 | `0x004fda1b`..`0x004fda47` | `3d` = 3 × ((trunc happiness `& 0xff`) − (trunc snapshot `+0x20c` `& 0xff`)), logged into the bare `RET`; happiness itself is not moved | - |
 | 5 | `FUN_004e1e00` | Today's satisfaction `+0x340`: `3d` when it is nought, otherwise (it + `3d`) / 2, truncated toward nought; no count, no clamp, so a day that averages to nought is overwritten by the next visit | Customer satisfaction, below |
 | 6 | `0x004fda92`..`0x004fdb2c` | Analyser samples of `(3d + 50) & 0xff` (a byte `ADD`, so it wraps): a shop one of kind 10..13 by `SpecialIngredient` 1..4 and one of kind 15 or 16 by `AppearanceEffect` 1 or 2; a sideshow kind 18; a ride or a feature none | Nothing (below) |
-| 7 | `FUN_004e19f0`, `0x004fdb33` | Today's served count `+0x2b8` +1, for every kind of object | A sideshow's "Winners last month" (`FUN_004e1f20`: 30 days' served × 100 / 30 days' customers, `0xa096`, UITEXT 42); for any other kind nothing |
+| 7 | `FUN_004e19f0`, `0x004fdb33` | Today's served count `+0x2b8` +1, for every kind of object | A sideshow's "Winners last month" (`FUN_004e1f20`: 30 days' served × 100 / 30 days' customers, 0 with no customer (`0x004e1fca`), `0xa096`, UITEXT 42); for any other kind nothing |
 | 8 | `0x004fdb38`..`0x004fdb7f` | A sideshow's winner: thought 5 and event `0x18` naming it | A thumbs-up bubble; the thought in the visitor window |
 | - | `0x004fdb8d`.. | The nought arm instead: "Person lost this sideshow...", happiness less `MediumHappinessChange`, and for a sideshow thought 6 and event `0x19`; none of steps 3 to 8 | A thumbs-down bubble |
 

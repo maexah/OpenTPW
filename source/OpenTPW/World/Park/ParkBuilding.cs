@@ -176,6 +176,9 @@ public static class ParkBuilding
 
 		if ( addOn )
 		{
+			// The build pass clears an add-on's cells as any thing's (0x0052910c): a path under a `*` goes before the stamp.
+			ClearPathsUnder( state, park, ParkTrackAddOn.Cells( item, cellX, cellY, angle ).Select( cell => (cell.X, cell.Y) ) );
+
 			var flagged = ParkTrackAddOn.Stamp( state, item, cellX, cellY, angle );
 
 			// The pieces under it go with their cells' models (FUN_00536780 at 0x00529141).
@@ -186,20 +189,7 @@ public static class ParkBuilding
 		{
 			var covered = ParkObjects.CoveredCells( item, cellX, cellY, angle ).ToList();
 
-			// The placer clears each cell before it stamps it (Cell_Clear( 0, 0 ), 0x0052910c): a path there goes, its
-			// neighbours unlinked from it, with no refund (BodyCellRefusal lets a body stand only on bare ground or path).
-			foreach ( var (x, y) in covered )
-			{
-				if ( !ParkState.OnMap( x, y ) || state.Record( x, y ).Type != CellEdge.Path )
-					continue;
-
-				// Whoever stands there is left on the new body: what the original does with them is unread (Q1508).
-				if ( state.CellAt( x, y ).Occupant != 0 )
-					Unimplemented.Report( "BUILD_OVER_PEOPLE_ON_A_PATH" );
-
-				ParkPathBuilding.ClearPathCell( state, park, x, y, stepped: false );
-			}
-
+			ClearPathsUnder( state, park, covered );
 			Stamp( state, covered, cellX, cellY );
 
 			// A coaster is made with its station's nodes and their two pylons, and no track (Coaster_Create, 0x004368f0): a move's
@@ -240,6 +230,25 @@ public static class ParkBuilding
 		return new( $"buy: '{item.Name}' built as thing {thingId} at ({cellX},{cellY}) for {paid}, " +
 			$"balance {state.Balance}" + (node is { } at ? $", queue node at ({at.X},{at.Y})" : ""), thingId, node,
 			item.HasQueue, addOn ? 0 : item.TrackType, AddOnFor: addOn ? addOnFor : 0 );
+	}
+
+	/// <summary>
+	/// The placer's clear before its stamp (<c>Cell_Clear( 0, 0 )</c>, <c>0x0052910c</c>): a path on a cell goes, its neighbours
+	/// unlinked from it, with no refund (the verdict lets a body stand only on bare ground or path).
+	/// </summary>
+	private static void ClearPathsUnder( ParkState state, IParkInitialState park, IEnumerable<(int X, int Y)> cells )
+	{
+		foreach ( var (x, y) in cells )
+		{
+			if ( !ParkState.OnMap( x, y ) || state.Record( x, y ).Type != CellEdge.Path )
+				continue;
+
+			// Whoever stands there is left on the new body: what the original does with them is unread (Q1508).
+			if ( state.CellAt( x, y ).Occupant != 0 )
+				Unimplemented.Report( "BUILD_OVER_PEOPLE_ON_A_PATH" );
+
+			ParkPathBuilding.ClearPathCell( state, park, x, y, stepped: false );
+		}
 	}
 
 	/// <summary>
@@ -816,7 +825,8 @@ public static class ParkBuilding
 	/// in its own order, or null where it passes: only bare ground or a path, inside the park, not NOMODIFY, with no track
 	/// under it. So a path under a footprint is no refusal: the build clears it first (<see cref="Build"/>).
 	/// </summary>
-	/// <param name="priority">The held item's <c>Info.OverwritePriority</c> (<c>DAT_00818c10</c>, <c>0x005239a9</c>).</param>
+	/// <param name="priority">The held item's <c>Info.OverwritePriority</c> (<c>DAT_00818c10</c>, written by the purchase at
+	/// <c>0x005236a4</c> and the move at <c>0x005239a9</c>).</param>
 	internal static string? BodyCellRefusal( ParkState state, int x, int y, int priority )
 	{
 		var cell = state.Record( x, y );
@@ -868,11 +878,10 @@ public static class ParkBuilding
 	/// <remarks>
 	/// <b>An end facing off the map</b> makes the placer return null (<c>0x00529744</c>..<c>0x00529757</c>
 	/// for the entrance, <c>0x005299e2</c>..<c>0x005299f5</c> for the exit). <b>A queued thing's entrance</b>
-	/// is tested as op 4, whose verdict passes only bare ground or a path that is not NOMODIFY - so another
-	/// queue, another thing's placer cell, water or rock all refuse. <b>Any other end</b> - a queued thing's
-	/// exit, or the entrance of a thing with no queue - is tested as op 1, which refuses another thing's
-	/// cells (every shipped item's overwrite priority is 5, and the verdict wants the other's lower) and
-	/// accepts a NOMODIFY path.
+	/// asks <c>0x204</c> of its faced cell (<c>0x005297a4</c>), the verdict in mode 4, as a body cell does
+	/// (<see cref="BodyCellRefusal"/>). <b>Any other end</b> - the entrance of a thing with no queue
+	/// (<c>0x005298b9</c>) or a queued thing's exit (<c>0x00529a2f</c>) - asks <c>0x201</c>, mode 1
+	/// (<see cref="EndBlocked"/>). <c>docs/exe/park-engine.md</c>, "What the placer builds in front of a thing".
 	/// </remarks>
 	internal static string? EndRefusal( ParkState state, ParkItemCatalogue.Item item, int cellX, int cellY, int angle )
 	{
@@ -886,42 +895,80 @@ public static class ParkBuilding
 
 		var faced = Step( cellX + entryX, cellY + entryY, CellEdge.Opposite( heading ) );
 
-		if ( (item.HasQueue ? QueueEndBlocked( state, faced ) : EndBlocked( state, faced )) is { } why )
-			return $"its entrance would face ({faced.X},{faced.Y}), which {why}";
+		if ( (item.HasQueue ? QueueEndBlocked( state, faced, item.OverwritePriority )
+			: EndBlocked( state, faced, item.OverwritePriority )) is { } why )
+			return $"its entrance would face a cell that refuses it: {why}";
 
 		if ( !item.HasQueue || (entryX == exitX && entryY == exitY) )
 			return null;
 
 		var exitFaced = Step( cellX + exitX, cellY + exitY, exitHeading );
 
-		return EndBlocked( state, exitFaced ) is { } exitWhy
-			? $"its exit would face ({exitFaced.X},{exitFaced.Y}), which {exitWhy}"
+		return EndBlocked( state, exitFaced, item.OverwritePriority ) is { } exitWhy
+			? $"its exit would face a cell that refuses it: {exitWhy}"
 			: null;
 	}
 
-	/// <summary>The op-4 verdict on the cell before a queued entrance: bare ground, or a path that is not NOMODIFY.</summary>
-	private static string? QueueEndBlocked( ParkState state, (int X, int Y) cell )
+	/// <summary>The mode-4 verdict on the cell before a queued entrance (<c>0x005297a4</c>): a body cell's.</summary>
+	internal static string? QueueEndBlocked( ParkState state, (int X, int Y) cell, int priority )
+		=> !ParkState.OnMap( cell.X, cell.Y ) ? $"({cell.X},{cell.Y}) is off the map"
+			: BodyCellRefusal( state, cell.X, cell.Y, priority );
+
+	/// <summary>
+	/// The mode-1 verdict on the cell before any other end (<c>FUN_00535670</c>, <c>0x005298b9</c> and <c>0x00529a2f</c>), in
+	/// its order, or null where it passes: in-park bare ground or path, NOMODIFY or not, track under it or not; a queue cell
+	/// with one link, to another queue cell (<c>0x00535cdb</c>..<c>0x00535d0b</c>). Land outside the park, another thing's cell,
+	/// a boundary piece, type <c>0x15</c>, a track bend or crossing and every other type (rock, water) refuse.
+	/// </summary>
+	internal static string? EndBlocked( ParkState state, (int X, int Y) at, int priority )
 	{
-		if ( !ParkState.OnMap( cell.X, cell.Y ) )
-			return "is off the map";
+		var (x, y) = at;
 
-		var record = state.Record( cell.X, cell.Y );
+		if ( !ParkState.OnMap( x, y ) )
+			return $"({x},{y}) is off the map";
 
-		if ( record.Type == CellEdge.Nothing || (record.Type == CellEdge.Path && (record.Flags & ParkPathBuilding.NoModify) == 0) )
+		var cell = state.Record( x, y );
+
+		if ( (cell.Flags & ParkPathBuilding.OutsideThePark) != 0 )
+			return $"({x},{y}) is outside the park";
+
+		if ( ParkObjects.CoversGround( cell ) )
+		{
+			// Blue where that thing's priority is below the held item's (0x00535d66), as for a body cell: refused and counted.
+			if ( ParkTrackTool.OverwritePriorityOf( state, cell.ParentId ) is { } other && other < priority )
+				Unimplemented.Report( "PLACEMENT_OVER_SCENERY" );
+
+			return $"({x},{y}) already has something built on it";
+		}
+
+		var track = ParkTrackAddOn.Head( state, x, y );
+
+		if ( track.TrackType == ParkTrackPieces.Boundary )
+			return $"({x},{y}) is the boundary's";
+
+		if ( cell.Type == 0x15 )
+			return $"({x},{y}) is part of a track";
+
+		if ( ParkPathBuilding.TrackCornerOrJunction( track ) )
+			return $"({x},{y}) is a track corner or junction";
+
+		// Mode 1 passes path (0x00535bf5) and bare ground (0x00535c4c) whatever their flags; track itself is asked only in mode 4.
+		if ( cell.Type is CellEdge.Nothing or CellEdge.Path )
 			return null;
 
-		return ParkObjects.CoversGround( record ) ? "has something built on it"
-			: record.Type == CellEdge.Path ? "is marked NOMODIFY"
-			: $"is type {record.Type}, which a queue may not start on";
-	}
+		if ( cell.Type == ParkRideChoice.QueueCellType )
+		{
+			// FUN_00522790 counts all eight link bits; a lone side link is stepped (FUN_004d97e0), a lone corner one is not
+			// stepped here and refuses.
+			(int X, int Y) linked = System.Numerics.BitOperations.PopCount( (uint)cell.Neighbours ) == 1 ? Step( x, y, cell.Neighbours ) : (x, y);
 
-	/// <summary>The op-1 verdict on the cell before any other end: anything but another thing's cells.</summary>
-	private static string? EndBlocked( ParkState state, (int X, int Y) cell )
-	{
-		if ( !ParkState.OnMap( cell.X, cell.Y ) )
-			return "is off the map";
+			return linked != (x, y) && ParkState.OnMap( linked.X, linked.Y )
+				&& state.Record( linked.X, linked.Y ).Type == ParkRideChoice.QueueCellType
+				? null
+				: $"({x},{y}) is a queue";
+		}
 
-		return ParkObjects.CoversGround( state.Record( cell.X, cell.Y ) ) ? "has something built on it" : null;
+		return $"({x},{y}) is type {cell.Type}, which no end faces";
 	}
 
 	/// <summary>

@@ -2900,12 +2900,18 @@ among them, until the commit's `FUN_0052a050` puts that bit back.
 
 **The placer's test pass refuses the whole placement** (every marker red) in three cases. An end
 facing off the map makes it return null (`0x00529744`..`0x00529757` for the entrance,
-`0x005299e2`..`0x005299f5` for the exit). A queued entrance's faced cell is tested as op 4
-(`FUN_00532fc0( 0x204, 3, … )`), whose verdict passes only bare ground or a path without NOMODIFY — so
-another queue, another thing's placer cell, water or rock all refuse. Every other end — a queued exit,
-or the entrance of a thing with no queue — is tested as op 1 (`0x201`), which accepts a NOMODIFY path and
-refuses another thing's cells, red unless that thing's `+0x54` (`Info.OverwritePriority`) is below the placed item's (strictly: `0x00535d66` to
-`0x00535d73`). The category files all declare 5; an item's own `.sam` overrides it only for features, 45 of the
+`0x005299e2`..`0x005299f5` for the exit). **A queued entrance's faced cell** is tested as op 4
+(`FUN_00532fc0( 0x204, 3, … )`, `0x005297a4`), the verdict's mode 4, a body cell's ("Where a thing may stand"): it
+passes only in-park bare ground or path, not NOMODIFY, with no track, boundary piece, type `0x15` or bend under it.
+**Every other end** — the entrance of a thing with no queue (`0x005298b9`) or a queued exit (`0x00529a2f`) — is tested
+as op 1 (`0x201`), mode 1, which passes bare ground (`0x00535c4c`) and path (`0x00535bf5`), NOMODIFY or not and track
+under them or not (mode 1 asks neither), and a queue cell with exactly one link (`FUN_00522790` counts all eight bits)
+whose linked cell is a queue (`0x00535cdb`..`0x00535d0b`, answer 8). It refuses land outside the park (`0x005357c7`), a
+boundary piece after the redirect (`0x005358b5`), type `0x15` (`0x00535b9f`), a track bend or crossing (`0x00535bd9`,
+`0x00535be8`), every other type (rock, water: `0x00535d5d`), and another thing's cells, red unless that thing's `+0x54`
+(`Info.OverwritePriority`) is below the placed item's (strictly: `0x00535d66` to
+`0x00535d73`). In the stock park, of the pairs of a cell mode 4 passes and a side neighbour, 268 face in-park bare ground under the
+boundary's pieces (e.g. (3,3) facing (2,3)) and 14 face in-park rock (e.g. (45,19) facing (45,18)). The category files all declare 5; an item's own `.sam` overrides it only for features, 45 of the
 shipped item files setting 1 and 48 setting 0 (FileFormats `sam.md`; fork watch 2026-10-16, `verify-world.md` C2).
 
 **A thing without one** gets a single path cell in front of its entrance (`0x005298d5`..`0x005299aa`),
@@ -3287,8 +3293,10 @@ track add-on alike:
   `FUN_00532fc0( 0x204 )`: the `0x200` arm calls the verdict with mode `op & 0xff` and third argument nought and answers
   whether it was not red (`0x00533000`). Kinds 1 (`@`), 3 (`Q`), 4 (`*`), the ends 9 and 10 and every other ask mode 4;
   `+` and `#` ask `0x20b` and `0x210` (modes `0xb`, `0x10`), and are then refused on a thing's cell (`FUN_00536380`, map
-  type 4); a station cell (`0x17`) asks mode 4 too (twice where its facing byte is set), and refuses where the cell its
-  facing points to is off the map. Any refusal returns null and sets `g_PlacerFailed`.
+  type 4); a station cell (`0x17`) asks mode 4 of itself where its facing byte is set (`0x0052953d`), then of the cell its
+  facing points to (`0x0052965c`; refused off the map, `0x005295aa`, and a station cell with no facing byte steps nowhere,
+  `FUN_004d97e0` answering null for 0, and is refused), which the build pass types `0x15` (`0x005295f7`..`0x0052963f`);
+  ours does not judge that cell. Any refusal returns null and sets `g_PlacerFailed`.
 - **The draw pass** asks `0x104` (mode 4; `0x10b`, `0x110` for `+`, `#`) of the same cells, and any red square, or every
   square under `g_PlacerFailed`, sets `DAT_00816d48` (`0x00533933`).
 - **The click** (`BuildTool_Click`) reaches its tool-4 arm (`0x00524b45`) and its move arm (`0x005253e7`) only with `d48`
@@ -3302,7 +3310,7 @@ track add-on alike:
 |---|---|---|
 | 1 | NOMODIFY (`+0xe & 0x20`), any type (modes 4, 9, 10 only, `0x005356aa`) | red, no latch |
 | 2 | outside the park (`+0xe & 0x40`, `0x005357c7`) | red, no latch |
-| 3 | map type 4, 9 or 10 | blue where that thing's `Info.OverwritePriority` (`DAT_00818c14`) is below the held item's (`DAT_00818c10`, `0x005239a9`), else red and latch (`0x00535d66`) |
+| 3 | map type 4, 9 or 10 | blue where that thing's `Info.OverwritePriority` (`DAT_00818c14`) is below the held item's (`DAT_00818c10`, written by the purchase at `0x005236a4` and the move at `0x005239a9`), the mode is not `0x15` or `0x16` (`0x00535d75`, `0x00535d7a`), and neither `d58` nor the latch `d50` is set (`0x00535d7f`, `0x00535d88`); else red and latch `d50` (`0x00535d66`, `0x00535d95`) |
 | 4 | an earlier latch (third argument nought) | red |
 | 5 | track `0x19` after the 12/17 redirect | red, latch |
 | 6 | the run's total above the balance: the item's price, which the pass sets (`0x005235e6`.. for a purchase, nought for a mystery ride; `0x0052398b` for a move) | red, `c_cash` |
@@ -3322,8 +3330,11 @@ Measured in the stock park's file (`celltypes.py -s`): of the 2,506 in-park cell
 them NOMODIFY), 18 rock; 288 of the bare cells carry the boundary's pieces (215 of track kind 12 parented to 73 of kind
 `0x19`), so mode 4 offers a ride 2,134 cells. Type 7 is 9,059 of the 13,878 cells outside the park.
 
-**OpenTPW** (Q37): `ParkBuilding.BodyCellRefusal` is mode 4 for every picture cell (`ParkTrackAddOn.Refusal` keeps the add-on's
-`+` and `#` cells), and `Build` clears a path under the body with `ParkPathBuilding.ClearPathCell` before the stamp. Row 3's
+**OpenTPW** (Q37): `ParkBuilding.BodyCellRefusal` is mode 4 for every picture cell of a thing that is not a track add-on, and
+for the faced cell of a queued entrance; `ParkBuilding.EndBlocked` is mode 1 for the other ends' faced cells.
+`ParkTrackAddOn.Refusal` keeps an add-on's `+` and `#` cells, and judges a `*` cell over track by NOMODIFY, the verdict's
+first answers and type `0x15` only (the add-on's blue over track, `0x00535bc3`); a `*` cell elsewhere is mode 4. `Build`
+clears a path under every marked cell, an add-on's too, with `ParkPathBuilding.ClearPathCell` before the stamp. Row 3's
 blue, a ride over scenery, is refused and counted (`PLACEMENT_OVER_SCENERY`, Q449). Not read: what the people on a path taken up
 by a build do (Q1508; counted here, `BUILD_OVER_PEOPLE_ON_A_PATH`).
 

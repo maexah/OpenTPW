@@ -621,10 +621,7 @@ filed the items that cite it.
   original: the evidence is the log (`hoarding N ground gx,gy=h/...`, one line a hoarding as it is made). On the desk: in the stock
   Lost Kingdom park, `buy 1100 57 50 0` (a Belly Bounce on the slope covering (57,50)..(59,53); it is bought closed), photograph it
   with `hoardings`, and the same buy in the original under Proton: the panels' heights, which rises first, where the sign sits.
-- [ ] **Q1525. `FUN_00454050`'s turned arms, read in Ghidra (Q210's leftover).** Q210 ported the rectangle at no turn from the
-  decode (`x0 + trunc( gx * (w - 1) / w + 0.1 )`) and, at 90, 180 and 270, carried the endpoint between the turned rectangle's
-  first and last cells the same way (`ParkRideHoarding.Ground`); the turned arms were not read (no Ghidra in that lane). Read
-  `FUN_00454050` for each quarter turn and fix the test's turned expectations to it. While there: `FUN_00466d70` (a placed
+- [ ] **Q1525. `FUN_00466d70`'s corners (Q210's leftover).** `FUN_00466d70` (a placed
   object's base height) carries its cell corners through the same function, and `ParkObjects.FootprintHeights` reads them
   uncompressed (`x0 + column + 1` for a far corner); say whether the original's corners are compressed into the rectangle too.
 - [ ] **Q1035. The bolt's shape is the PC's own, and OpenTPW draws one quad.** From Q152's note (fork review 2, 2026-10-16, `verify-audio-lips-video.md` lead 3): the constructor (`0x0057d2ab`..`0x0057d2e9`) sets roughness 0.6, a stop test of 6 ± 2, a ribbon half-width of 1.3 /
@@ -1976,7 +1973,7 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   and opens nothing (`Level.cs`, the object click's UI type 2). Walk the stream `0x00755e80` (`FUN_004b2430`, handler
   `FUN_004b2150`; `lib/uistream.py`, needing `testme.exe`) and read the labels (vtable `+0xc`, likely `FUN_004b1040`)
   and which control letters which of `FUN_004b16c0`'s figures, and how (the shop's: a bar is `(x << 10) / 100`); read
-  what `FUN_004e1f20` answers over no customer (counted `SIDESHOW_WINNERS_NO_CUSTOMERS`) and the scrap row. Then build
+  the scrap row (`0xa0a0`, `FUN_004e2400`; `Figures` leaves it out). Then build
   the window on `ParkSideshowSettings` as `ParkShopWindow` is built (the bars `0xa094`, `0xa096`, `0xa099`, `0xa09e`
   inset (0, 10), Q31b's note; the advisor's message, if the builder posts one, read first), and open it from the click.
   The `UsageInfo.NonWinnableSideshow` branch is dead by content and not read (`ParkSideshowSettings.Applied`'s remarks).

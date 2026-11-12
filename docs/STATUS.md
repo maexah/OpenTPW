@@ -46,6 +46,7 @@ Only the item just landed is here. Every earlier item's account is in `docs/hist
 
 ## Numbers (take counts fresh; these go stale within a day)
 
+- Linux, 2026-11-12, review fixes group P (`capped.sh`; two tests added on balance, needing the game; after Q991): with the game, 5740 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5742; with no game named, 2478 passed, 0 failed, 3264 skipped.
 - Linux, 2026-11-12, Q991 (`capped.sh`; the coaster demolish preview's marks decoded; three tests added, needing the game; built in lane B, merged here after the review fixes of group N): with the game, 5738 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5740; with no game named, 2478 passed, 0 failed, 3262 skipped.
 - Linux, 2026-11-12, review fixes group N (`capped.sh`; six tests added, three needing the game; after Q1116): with the game, 5735 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5737; with no game named, 2478 passed, 0 failed, 3259 skipped.
 - Linux, 2026-11-12, Q1116 (`capped.sh`; seven tests added, needing the game; built on the desk on Q1112, merged here after the review fixes of group O, then Q1200): with the game, 5729 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5731; with no game named, 2475 passed, 0 failed, 3256 skipped.

@@ -169,8 +169,9 @@ public static class ParkTrackAddOn
 	/// Why an add-on will not go down anchored at a cell, turned that far, for a ride (none named: every track cell refuses), or
 	/// null where it will: the placer's test pass, cell by cell. A track cell asks <see cref="TrackCellRefusal"/> and is then
 	/// refused where it is a thing's cell (map type 4, <c>FUN_00536380</c> after op <c>0x20b</c>, <c>0x005294e2</c>); any other
-	/// kind is judged as any thing's body cell is (<paramref name="bodyRefusal"/>), but a body cell over track passes past the
-	/// verdict's first answers (<see cref="Early"/>; <c>0x00535bc3</c>: op 4 over track answers blue only for an add-on).
+	/// kind is judged as any thing's body cell is (<paramref name="bodyRefusal"/>), but a body cell over track passes where NOMODIFY,
+	/// the verdict's first answers (<see cref="Early"/>) and type <c>0x15</c> do not refuse it (<c>0x00535bc3</c>: op 4 over track
+	/// answers blue only for an add-on).
 	/// </summary>
 	internal static string? Refusal( ParkState state, ParkItemCatalogue.Item item, ParkWorld.CatalogueObject? ride,
 		int anchorX, int anchorY, int angle, Func<int, int, string?> bodyRefusal )
@@ -193,8 +194,17 @@ public static class ParkTrackAddOn
 
 			if ( IsTrack( Head( state, x, y ).TrackType ) )
 			{
-				if ( Early( state, item.OverwritePriority, x, y ).Why is { } early )
+				// Mode 4 answers NOMODIFY red before anything (0x005356aa), and type 0x15 red (0x00535b9f) before its blue over track.
+				if ( (state.Record( x, y ).Flags & ParkPathBuilding.NoModify) != 0 )
+					return $"({x},{y}) is marked NOMODIFY";
+
+				var (early, decided) = Early( state, item.OverwritePriority, x, y );
+
+				if ( early is not null )
 					return $"({x},{y}) {early}";
+
+				if ( !decided && state.Record( x, y ).Type == 0x15 )
+					return $"({x},{y}) is part of a track";
 
 				continue;
 			}

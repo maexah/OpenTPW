@@ -134,12 +134,15 @@ stable, matching `FUN_00470630`'s left-first equality branch. This order drives 
 
 `FUN_00454050` maps unadjusted grid endpoints into the rotated terrain rectangle, adds `0.1` before
 integer truncation, then `FUN_00454190` uses half the height difference from the model's origin.
-The rectangle is inclusive: model `+0xc0` is the first cell and `+0xc4` the last, `x0 + w - 1` and `y0 + d - 1`
-(`FUN_00467030`, `0x004670c1`..`0x004670f3`), so the original samples `x0 + trunc( gx * (w - 1) / w + 0.1 )`: the last grid
+The rectangle is inclusive: model `+0xc0` is the first cell and `+0xc4` the last. The first cell is the turned footprint's
+low corner (`FUN_00466f90`, `0x0046328d`..`0x00463298`: at 90 y + 1 - w, at 180 x + 1 - w and y + 1 - d, at 270 x + 1 - d) and the
+last that plus the footprint's `Info.Shape` width and depth (model `+0xf0`/`+0xf4`, `0x00462c3e`/`0x00462c4b`), swapped at 90 and
+270, less one (`FUN_00467030`, `0x004670ca` and `0x004670be`, to `0x004670f3`), so the original samples `x0 + trunc( gx * (w - 1) / w + 0.1 )`: the last grid
 line reads the last cell's near vertex, never the one past it. OpenTPW does the same (`ParkRideHoarding.Ground`, Q210;
-`TerrainEndpointsSampleTheOriginalsInclusiveRectangle`, `TheGroundIsReadATenthOfACellOn`). At a quarter turn it carries the
-endpoint between the turned rectangle's first and last cells the same way; that reading of `FUN_00454050`'s turned arms is not
-checked against the disassembly (`QUEUE.md` Q1525). The outline's size is the footprint's in all 129 shipped outlines, so the
+`TerrainEndpointsSampleTheOriginalsInclusiveRectangle`, `TheGroundIsReadATenthOfACellOn`). At a quarter turn the endpoint is
+carried between the turned rectangle's first and last cells by `FUN_00454050`'s arms (`0x004540a9` at 90: col = (1-v) x0 + v x1,
+row = u y0 + (1-u) y1; `0x00454130` at 180; `0x004540f1` at 270), each value taking the `0.1` and `_ftol` (`0x6fe47c`); u and v
+divide by the outline's size (`[+0xb0]+4`, `+8`), w and d are `Info.Shape`'s, and OpenTPW uses the outline's size for both. The outline's size is the footprint's in all 129 shipped outlines, so the
 rectangle is taken from the outline's turned corners. Corner corrections affect X/Y placement, not the terrain probe.
 
 Explicit deviations and limits:

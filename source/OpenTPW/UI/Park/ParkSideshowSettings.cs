@@ -100,23 +100,23 @@ internal static class ParkSideshowSettings
 		=> ParkObjectWindow.Siblings( state, catalogue, UiType );
 
 	/// <summary>
-	/// The figures the refresh (<c>FUN_004b16c0</c>) reads, in their own units, not yet as its controls letter them:
+	/// The figures the refresh (<c>FUN_004b16c0</c>) reads, in their own units, not yet as its controls letter them (its scrap
+	/// row, <c>0xa0a0</c> from <c>FUN_004e2400</c>, is left to Q1520):
 	/// the customers of the last thirty finished days "of" those plus the walk-aways (C of M); the thirty days' takings
 	/// (<c>0xa093</c>) and profit (<c>FUN_004e1c70</c>, <c>0xa092</c>); the satisfaction (<c>FUN_004e1e30</c>, the gauge
-	/// <c>0xa094</c>); the winners last month as a percentage (<c>0xa096</c>), null with no customer; the excitement at
+	/// <c>0xa094</c>); the winners last month as a percentage (<c>0xa096</c>), 0 with no customer (<c>0x004e1fca</c>); the excitement at
 	/// the window's buffered settings (<c>FUN_004e0560</c>, <c>0xa099</c>); and the local happiness
 	/// (<c>FUN_004cd880( cell, 1 )</c>).
 	/// </summary>
 	internal readonly record struct Figures( int Customers, int Asked, int Takings, int Profit, int Satisfaction,
-		int? WinnersPercent, int Excitement, int LocalHappiness );
+		int WinnersPercent, int Excitement, int LocalHappiness );
 
 	/// <summary>
 	/// <see cref="Figures"/> for <paramref name="sideshow"/> with the window's buffered <paramref name="pending"/>.
 	/// </summary>
 	/// <remarks>
 	/// <b>Winners last month</b> is <c>FUN_004e1f20</c>: the served ring's thirty days times a hundred over the customers
-	/// ring's (<c>ride-operation.md</c>, the settle-up's step 7). What it answers over no customer is not read, so that
-	/// case is counted (<c>SIDESHOW_WINNERS_NO_CUSTOMERS</c>) and given as null.
+	/// ring's (<c>ride-operation.md</c>, the settle-up's step 7); over no customer it answers 0 (<c>0x004e1fca</c>).
 	/// </remarks>
 	internal static Figures FiguresOf( ParkState state, ParkWorld.CatalogueObject sideshow, ParkItemCatalogue.Item item,
 		Settings pending, Func<int, float?> happinessOf )
@@ -125,12 +125,7 @@ internal static class ParkSideshowSettings
 		var customers = rings.Customers.LastDays( MonthDays );
 		var asked = unchecked(customers + rings.WalkAways.LastDays( MonthDays ));
 
-		int? winners = null;
-
-		if ( customers != 0 )
-			winners = (int)(rings.Served.SumOfLastDays( MonthDays ) * 100 / customers);
-		else
-			Unimplemented.Report( "SIDESHOW_WINNERS_NO_CUSTOMERS" );
+		var winners = customers == 0 ? 0 : (int)(rings.Served.SumOfLastDays( MonthDays ) * 100 / customers);
 
 		return new Figures( customers, asked, rings.Takings.LastDays( MonthDays ), rings.ProfitOfLastDays( MonthDays ),
 			rings.SatisfactionOfLastDays( MonthDays ), winners,
@@ -147,7 +142,7 @@ internal static class ParkSideshowSettings
 
 		return $"thing {sideshow.ThingId} '{item.Name}' item {item.Id} chance {pending.Chance} prize {pending.Prize} price {pending.Price}"
 			+ $" | customers {figures.Customers} of {figures.Asked} takings {figures.Takings} profit {figures.Profit}"
-			+ $" satisfaction {figures.Satisfaction} winners {(figures.WinnersPercent is { } won ? $"{won}%" : "none")}"
+			+ $" satisfaction {figures.Satisfaction} winners {figures.WinnersPercent}%"
 			+ $" excitement {figures.Excitement} local {figures.LocalHappiness}"
 			+ $" | arrows {arrows} same item [{string.Join( ", ", OfItem( state.Objects, catalogue, sideshow.CatalogueId ) )}] (not drawn: Q1520)";
 	}

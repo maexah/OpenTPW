@@ -78,7 +78,8 @@ internal sealed class ParkRideHoarding : ModelEntity
 		var depth = MathF.Round( MathF.Max( MathF.Max( a.Y, b.Y ), MathF.Max( c.Y, d.Y ) ) ) - top;
 		var p = Cells( grid.X, grid.Y );
 		// Across the rectangle from its first cell to its last, not to the cell past it: x0 + (x - x0) * (w - 1) / w.
-		// The turned arms are read as the same carry into the turned rectangle (not checked against FUN_00454050, Q1525).
+		// The turned arms are FUN_00454050's (0x004540a9, 0x00454130, 0x004540f1), the rectangle's first cell FUN_00466f90's and its
+		// last FUN_00467030's (docs/exe/ride-hoardings.md).
 		var x = width > 0 ? left + (p.X - left) * (width - 1) / width : left;
 		var y = depth > 0 ? top + (p.Y - top) * (depth - 1) / depth : top;
 		return (field.HeightAt( (int)(x + 0.1f), (int)(y + 0.1f) ) - origin.Z) * 0.5f;

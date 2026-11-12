@@ -876,6 +876,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00522ea0` | Hoarding pieces' loader FUN_00522e40: a named row's model made as item `0x4394` (17300) plus its row | OpenTPW/World/Park/ParkBoundaryHoarding.cs  |
 | `0x00522ed2` | Hoarding pieces' loader FUN_00522e40: a row with no name takes the row before's model | OpenTPW/World/Park/ParkBoundaryHoarding.cs OpenTPW.Tests/ParkBoundaryHoardingTests.cs  |
 | `0x005234f2` | Tool pass `FUN_005234d0`: clears the refusal latch `DAT_00816d50` at its start (with `d48`, `d58`), which its verdicts then set | OpenTPW/World/Park/ParkBuildMarkers.cs OpenTPW/World/Park/ParkBuildMode.cs  |
+| `0x005236a4` | Preview pass, the purchase's arm: the held item's `Info.OverwritePriority` into `DAT_00818c10`, which the verdict's modes 1 and 4 compare | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x005239a9` | Preview pass, the move's arm: the held item's `Info.OverwritePriority` into `DAT_00818c10`, which the verdict's mode 4 compares | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x00523dd3` | Tool pass, the patrol arm: the rectangle's test `FUN_00532a50` into the refusal latch `DAT_00816d50` | OpenTPW/World/Park/ParkPatrolTool.cs OpenTPW.Tests/ParkStaffWindowTests.cs  |
 | `0x00524a63` | Build commit: a red preview (`DAT_00816d48`) lays nothing, sound `0xaf` | OpenTPW/World/Park/ParkPathBuilding.cs  |

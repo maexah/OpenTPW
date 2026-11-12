@@ -115,9 +115,12 @@ public class ParkSideshowSettingsTests
 	/// <b>The figures are the finished days', the excitement the buffered settings'</b> (<c>FUN_004b16c0</c>): a day of four
 	/// customers, three served, a walk-away, 80 taken and 50 spent reads "4 of 5", takings 80, profit 30, winners 75%; the
 	/// excitement at the loaded chance 25 is 30 and at a buffered chance of 100 is 63, the placed sideshow still 25. With no
-	/// finished day the winners are none and counted.
+	/// finished day the winners are 0 (<c>0x004e1fca</c>), the satisfaction 50 and nothing is counted. A day's satisfaction of 300
+	/// (over the thirty days of the saved ring) reads 60, not the bar's units; a guest of happiness 60 on the next cell reads 60 as the local happiness.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> winners over the asked; the excitement read from the placed sideshow; the walk-aways left out of M.</remarks>
+	/// <remarks><b>Mutations:</b> winners over the asked; the excitement read from the placed sideshow; the walk-aways left out of M;
+	/// winners null or counted over no customer; the satisfaction in the bar's units or without its 50; the local happiness read at
+	/// another cell or not at all.</remarks>
 	[TestMethod]
 	public void TheFiguresAreTheFinishedDaysAndTheExcitementTheBufferedSettings()
 	{
@@ -126,8 +129,8 @@ public class ParkSideshowSettingsTests
 		var spray = Spray( state );
 
 		var fresh = ParkSideshowSettings.FiguresOf( state, spray, item, ParkSideshowSettings.Loaded( spray ), Nobody );
-		Assert.AreEqual( (0, 0, (int?)null, 30), (fresh.Customers, fresh.Asked, fresh.WinnersPercent, fresh.Excitement) );
-		Assert.AreEqual( 1, Unimplemented.Summary.FirstOrDefault( gap => gap.What == "SIDESHOW_WINNERS_NO_CUSTOMERS" ).Times );
+		Assert.AreEqual( (0, 0, 0, 30, 50), (fresh.Customers, fresh.Asked, fresh.WinnersPercent, fresh.Excitement, fresh.Satisfaction) );
+		Assert.AreEqual( 0, Unimplemented.Summary.Count( gap => gap.What == "SIDESHOW_WINNERS_NO_CUSTOMERS" ), "nothing is counted" );
 
 		var rings = state.RingsFor( JungleSpray );
 
@@ -138,11 +141,20 @@ public class ParkSideshowSettingsTests
 		rings.Served.Today = 3;
 		rings.Takings.Today = 80;
 		rings.Costs.Today = 50;
+		rings.Satisfaction.Today = 300;
 		rings.Roll();
 
-		var month = ParkSideshowSettings.FiguresOf( state, spray, item, new( 100, 50, 20 ), Nobody );
+		// A guest of happiness 60 on the cell east of the sideshow, and nobody else.
+		const int guest = 9999;
+		state.EnterCell( spray.CellX + 1, spray.CellY, guest );
+		float? Guest( int thing ) => thing == guest ? 60f : null;
 
-		Assert.AreEqual( (4, 5, 80, 30, (int?)75, 63), (month.Customers, month.Asked, month.Takings, month.Profit, month.WinnersPercent, month.Excitement) );
+		var month = ParkSideshowSettings.FiguresOf( state, spray, item, new( 100, 50, 20 ), Guest );
+
+		Assert.AreEqual( (4, 5, 80, 30, 75, 63), (month.Customers, month.Asked, month.Takings, month.Profit, month.WinnersPercent, month.Excitement) );
+		Assert.AreEqual( 60, month.Satisfaction, "the finished day's 300 over the saved ring's thirty days, on the 50 (0x004e1ef8), in no bar's units" );
+		Assert.AreEqual( 60, month.LocalHappiness, "the guest on the neighbouring cell" );
+		Assert.AreEqual( ParkShopWindow.LocalHappiness( state, spray.CellX, spray.CellY, Guest ), month.LocalHappiness );
 		Assert.AreEqual( 25, Spray( state ).ChanceOfWinning, "the buffered chance is not the sideshow's" );
 	}
 }
