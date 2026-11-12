@@ -565,6 +565,7 @@ public static class DebugConsole
 					+ (control is UI.UiList scrolled ? $" list: {scrolled.ScrollCensus()}" : "")
 					+ (Hidden( control ) ? " hidden" : "")
 					+ (control is UI.UiButton { Enabled: false } ? " disabled" : "")
+					+ (control is UI.UiButton { IsDown: true } ? " down" : "")
 					+ (control.Text is { Length: > 0 } && control is not UI.UiEdit
 						? $" lettered font {control.Font} in ({control.Lettering.Colour.R}, {control.Lettering.Colour.G}, {control.Lettering.Colour.B}) "
 							+ (control.TextShadow ? "with" : "without") + " the edge"

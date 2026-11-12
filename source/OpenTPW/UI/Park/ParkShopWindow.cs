@@ -487,7 +487,7 @@ internal sealed class ParkShopWindow : UiWindow, IStatusBox, IObjectWindowSteps
 		{
 			_shownStatus = status;
 			_status.Visible = status != 0;
-			_status.Text = status == 0 ? null : Localization.Text( 365 );
+			_status.Text = status == 0 ? null : Localization.Text( ParkClosedStatus.Row( status ) );
 			_status.TextColour = ParkClosedStatus.Colour( status );
 		}
 	}

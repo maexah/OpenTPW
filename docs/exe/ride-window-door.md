@@ -76,11 +76,13 @@ The callback stays unguarded, while `WindowStack.Release` refuses a disabled but
 The door and warning refresh immediately after a click or a change of selected ride,
 and each frame, including queue changes that leave `CanLoad` unchanged.
 
-`ParkClosedStatus` supplies ordinary non-track status 1/23 and its colour; the ride window letters
-every status in font 8, black, and leaves the colour to the all-items rows (Q213). Known
-states 1/2/4 and track rides remain counted as `OBJECT_WINDOW_HIGHER_PRIORITY_STATUS`,
-retaining their previous display rather than incorrectly labelling them CLOSED.
-The pre-existing script `VAR_BROKEN` warning takes precedence in the ride window.
+`ParkClosedStatus` answers `FUN_00485f60`'s arms in its order down to the queue's (Q1112): condemned 3, the kart and
+water rides' `0x19`, the upgrade's 5..9, the call's `0xb`..`0xf` and `0x11`..`0x15`, broken down 2 or `0x15`, then 22,
+23 and 1, each lettered in its row (`0x0074fbc0`, which `FUN_004861e0` letters) and colour, in font slot 8 (Q213). "At work" and "assigned"
+are asked as `FUN_004e02f0` and `FUN_004e0220` ask them, but a lapsed assignment is not forgotten there (said at the
+site). A coaster's `0x19`/`0x1a` needs its track record, which is not built: a coaster is taken as complete,
+counted `OBJECT_STATUS_COASTER_TRACK_RECORD`. Where the status is nought and the script already reads `VAR_BROKEN`,
+the ride window still shows BROKEN DOWN (a deviation of a sweep, said at the site).
 `UiList.Row` carries an optional colour; every reused text cell resets to that colour
 or white. The all-items screen applies it when constructing its rows.
 
@@ -90,11 +92,10 @@ all the CLOSED lettering. The existing model-preview pass can still draw a cover
 ride over another window; Q92 does not repair that broader preview layering issue.
 The ordinary closed row was photographed after dismissing the ride window.
 
-The existing coaster-opening guard remains incomplete and counted. Detailed
-maintenance/track messages and exit-disconnected status 24 remain outside this
-implementation; `ParkClosedStatus` answers 1, 22 and 23. The unresolved exit check is counted
-as `OBJECT_WINDOW_EXIT_CONNECTION_STATUS`; ordinary CLOSED is the fallback.
-No complete status parity is claimed.
+The existing coaster-opening guard remains incomplete and counted. Exit-disconnected status 24 remains outside this
+implementation; the unresolved exit check is counted as `OBJECT_WINDOW_EXIT_CONNECTION_STATUS`, and ordinary CLOSED is
+the fallback. Of the statuses answered, 3, `0x12` and `0x19` are seen in both games (Q1112, `park-engine.md`, "The
+ride window's verbs, shown and hidden"); the rest are tested only (Q212).
 All-items rows are refreshed on opening/changing tab, not continuously.
 
 ## Verification

@@ -84,8 +84,9 @@ public class ParkRideWindowDoorTests
 		Assert.AreEqual( 12, Door.HelpText );
 		Assert.IsTrue( Status.Visible );
 		Assert.AreEqual( Localization.Text( 365 ), Status.Text );
-		// FUN_004ade40 sets the label's text only: it keeps the black and font slot 8 FUN_004ad720 gave it, whatever the status.
-		Assert.AreEqual( (UiColour.Black, 8), (Status.TextColour, Status.Font) );
+		// FUN_004ade40's slot +0x24 (0x0048d160) colours the label from 0x0074fb50 through FUN_004861e0 before its text, in the
+		// font slot 8 FUN_004ad720 gave it: status 1 is grey.
+		Assert.AreEqual( (new UiColour( 128, 128, 128 ), 8), (Status.TextColour, Status.Font) );
 		Assert.IsTrue( state.Objects.Where( r => r.ThingId != 13 ).All( r => r.CanLoad == 1 ) );
 		ClickDoor();
 		Assert.AreEqual( 1, Ride.CanLoad );
@@ -104,7 +105,7 @@ public class ParkRideWindowDoorTests
 		Assert.IsTrue( Door.IsDown );
 		Assert.IsFalse( Door.Enabled );
 		Assert.AreEqual( Localization.Text( 389 ), Status.Text );
-		Assert.AreEqual( (UiColour.Black, 8), (Status.TextColour, Status.Font) );
+		Assert.AreEqual( (new UiColour( 255, 150, 30 ), 8), (Status.TextColour, Status.Font) );
 		ClickDoor();
 		Assert.AreEqual( 0, Ride.CanLoad, "disabled release cannot reopen" );
 		state.SetRecord( 49, 22, back );
@@ -116,18 +117,17 @@ public class ParkRideWindowDoorTests
 	}
 
 	[TestMethod]
-	[DataRow( 1, 0 )]
-	[DataRow( 2, 0 )]
-	[DataRow( 4, 0 )]
-	[DataRow( 0, 1 )]
-	public void ClosedDoorFollowsTheExistingRefusalGuard( int objectState, int service )
+	[DataRow( 1, 0, 366 )]
+	[DataRow( 2, 0, 370 )]
+	[DataRow( 0, 1, 382 )]
+	public void ClosedDoorFollowsTheExistingRefusalGuard( int objectState, int service, int row )
 	{
 		ClickDoor();
 		state.ReplaceObject( Ride with { State = objectState, RequestedService = service } );
 		window.Update();
 		Assert.IsFalse( Door.Enabled );
-		if ( objectState != 0 )
-			Assert.IsFalse( Status.Visible, "do not mislabel higher-priority maintenance statuses as CLOSED" );
+		// The stock park's mechanic stands unassigned: broken down, waiting for a mechanic to upgrade, or to repair.
+		Assert.AreEqual( Localization.Text( row ), Status.Text );
 		ClickDoor();
 		Assert.AreEqual( 0, Ride.CanLoad );
 		state.ReplaceObject( Ride with { State = 0, RequestedService = 0 } );

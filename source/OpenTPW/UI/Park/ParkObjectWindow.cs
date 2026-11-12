@@ -174,6 +174,9 @@ internal sealed class ParkObjectWindow : UiWindow, IStatusBox, IObjectWindowStep
 	/// <summary>Show the track, <c>b_track</c> (<c>0x3e2a</c>): shown only for a ride that runs on a track (<see cref="ShowsTheTrack"/>).</summary>
 	private readonly UiButton? _track;
 
+	/// <summary>The bottom row's verbs by id, for <c>FUN_004ad4e0</c>'s settings (<see cref="ShowTheVerbs"/>).</summary>
+	private readonly Dictionary<int, UiButton> _verbs = [];
+
 	/// <summary>Move, <c>b_move</c> (<c>0x3e2c</c>): greyed for a kart or water ride once track runs from a mouth (<see cref="MayMove"/>).</summary>
 	private readonly UiButton? _move;
 
@@ -308,6 +311,8 @@ internal sealed class ParkObjectWindow : UiWindow, IStatusBox, IObjectWindowStep
 				Clicked = () => Verb( id, what )
 			} );
 
+			_verbs[id] = verb;
+
 			if ( id == 0x3e38 )
 				_door = verb;
 			else if ( id == 0x3e2a )
@@ -405,9 +410,6 @@ internal sealed class ParkObjectWindow : UiWindow, IStatusBox, IObjectWindowStep
 		ShowSettings();
 		FillStats();
 		ShowTheDoor();
-
-		if ( _track != null )
-			_track.Visible = ShowsTheTrack( TrackTypeOfItem() );
 
 		if ( _move != null )
 			_move.Enabled = MayMove();
@@ -1029,9 +1031,14 @@ internal sealed class ParkObjectWindow : UiWindow, IStatusBox, IObjectWindowStep
 	}
 
 	/// <summary>
-	/// The door switch follows the ride's <c>mCanLoad</c>: <c>FUN_004ad4e0</c> sets it down for a closed ride
-	/// (<c>Button_SetDown</c>, <c>0x004ad606</c>..<c>0x004ad622</c>) whenever the ride's status changes.
+	/// The status box, the door and the verbs from the ride's status (<see cref="ParkClosedStatus.For"/>). Where the
+	/// door is enabled its switch follows the ride's <c>mCanLoad</c>: <c>FUN_004ad4e0</c> sets it down for a closed
+	/// ride (<c>Button_SetDown</c>, <c>0x004ad606</c>..<c>0x004ad622</c>).
 	/// </summary>
+	/// <remarks>
+	/// The original sets the verbs when the window is given a thing and when its status changes
+	/// (<c>0x004ae0e0</c>..<c>0x004ae0fb</c>); this sets them every frame, which lands on the same settings.
+	/// </remarks>
 	private void ShowTheDoor()
 	{
 		if ( _door == null || Level.Current is not { ParkState: { } state } level
@@ -1041,18 +1048,63 @@ internal sealed class ParkObjectWindow : UiWindow, IStatusBox, IObjectWindowStep
 		var closed = placed.CanLoad == 0;
 		var trackType = level.Catalogue is { } catalogue && catalogue.TryGet( placed.CatalogueId, out var item )
 			? item.TrackType : 0;
-
-		_door.IsDown = closed;
-		_door.HelpText = closed ? 12 : 13;
-		_door.Enabled = !closed || ParkRideOperation.MayOpen( level.Park, placed, trackType );
-
 		var status = ParkClosedStatus.For( level.Park, placed, trackType );
-		// Breakdown already precedes the closed status in FUN_00485f60. Other maintenance/track
-		// statuses remain outside this closed-door implementation (docs/exe/ride-window-door.md).
-		var broken = IsBroken();
+
+		// A closed ride the open guard refuses has its door disabled and its position left as it stands; any other is
+		// enabled and set to mCanLoad (0x004ad5c6..0x004ad632).
+		if ( ShowTheVerbs( status, trackType ) )
+		{
+			_door.Enabled = !closed || ParkRideOperation.MayOpen( level.Park, placed, trackType );
+
+			if ( _door.Enabled )
+				_door.IsDown = closed;
+		}
+
+		_door.HelpText = _door.IsDown ? 12 : 13;
+
+		// DEVIATION: a ride whose script reads VAR_BROKEN before its turn sets state 1 shows the broken sign, where the
+		// original's status is still nought (docs/exe/ride-window-door.md, "The statuses behind Q212").
+		var broken = status == 0 && IsBroken();
 		_broken.Visible = status != 0 || broken;
 		_broken.Text = broken ? Localization.Text( 366 ) : status == 0 ? null
-			: Localization.Text( status switch { 22 => 388, 23 => 389, _ => 365 } );
+			: Localization.Text( ParkClosedStatus.Row( status ) );
+		_broken.TextColour = broken ? new UiColour( 255, 50, 30 ) : ParkClosedStatus.Colour( status );
+	}
+
+	/// <summary>
+	/// <c>FUN_004ad4e0</c>'s verbs for a status. Condemned (3, <c>0x004ad509</c>..<c>0x004ad5a8</c>): every verb but
+	/// <c>b_erase</c> hidden and nothing else set. Otherwise all shown but <c>b_track</c>, shown only for a ride with
+	/// a track (<see cref="ShowsTheTrack"/>); the door disabled at the track's statuses <c>0x19</c> and <c>0x1a</c>, its
+	/// position left as it stands (<c>0x004ad5bc</c>..<c>0x004ad5c4</c>); and <c>b_callmech</c> down at the mechanic's
+	/// <c>0x11</c> to <c>0x15</c> (<c>0x004ad684</c>..<c>0x004ad6ac</c>).
+	/// </summary>
+	/// <returns>Whether the door's position and enabling follow <c>mCanLoad</c> and the open guard.</returns>
+	private bool ShowTheVerbs( int status, int trackType )
+	{
+		var condemned = status == ParkClosedStatus.Condemned;
+
+		foreach ( var (id, verb) in _verbs )
+		{
+			if ( id != 0x3e2b )
+				verb.Visible = !condemned;
+		}
+
+		if ( condemned )
+			return false;
+
+		if ( _track != null )
+			_track.Visible = ShowsTheTrack( trackType );
+
+		if ( _verbs.TryGetValue( 0x3e36, out var callMechanic ) )
+			callMechanic.IsDown = ParkClosedStatus.CallsTheMechanic( status );
+
+		if ( status is ParkClosedStatus.TrackIncomplete or ParkClosedStatus.TrackInvalid )
+		{
+			_door!.Enabled = false;
+			return false;
+		}
+
+		return true;
 	}
 
 	/// <summary>Whether the ride being shown has broken down - <c>VAR_BROKEN</c> on its own script.</summary>

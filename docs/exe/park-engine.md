@@ -4477,7 +4477,7 @@ The ride-window door and its ordinary closed warning are implemented in Q92; see
 
 ### The ride window's verbs, shown and hidden
 
-Read 2026-11-12 (Q1105) in `testme.objdump`. **`FUN_004ad4e0` sets which verbs are shown** (`UI_SetVisible`,
+Read 2026-11-12 (Q1105) in `testme.objdump`, and whole in Ghidra (Q1112: named `RideWindow_SetVerbs`). **`FUN_004ad4e0` sets which verbs are shown** (`UI_SetVisible`,
 `0x0065d9dd`, flag `+0x48` bit 0). The window's thing is `[0x007c2658]` and its item is `FUN_004dd4e0`, the descriptor
 found by the thing's word `+0xe`. It runs each time the window is given a thing, on opening and on each arrow (`FUN_004ae940`, vtable `+4`, `0x004ae975`; the arrows call it at `0x0048cca5`), and whenever the window's status `+8` changes. That status is
 `FUN_00485f60( thing, 2 )`, compared and stored at `0x004ae0e0`..`0x004ae0fb` (the statuses are in
@@ -4489,9 +4489,16 @@ found by the thing's word `+0xe`. It runs each time the window is given a thing,
   - **`b_track` (`0x3e2a`)** is shown only when the item's `Bumper.WhichTrackType` (`+0x9c`) is not nought
     (`0x004ad648`..`0x004ad667`). In the jungle that is Dino Karts (1), Splish Splash (2) and the three coasters (3).
     A flat ride's window keeps the control but does not draw it, and it takes no click.
-  - The door is disabled at statuses `0x19` and `0x1a`, the track's (`0x004ad5bc`..`0x004ad5c4`); otherwise it follows
-    `mCanLoad` as [ride-window-door.md](ride-window-door.md) says.
-  - `b_callmech` is set down (`0x00668bec`) at statuses `0x11`..`0x15`, the mechanic's (`0x004ad684`..`0x004ad6ac`).
+  - The door (`0x004ad5bc`..`0x004ad632`) is disabled (vtable `+0x14( 0 )`) at statuses `0x19` and `0x1a`, the track's,
+    and for a closed ride (`Object_CannotLoad`) the open guard `FUN_004df290` refuses; **in both cases its position is
+    left as it stands**. Otherwise it is enabled (`FUN_00424ec0`, the other test, answers 1 always) and set down for a
+    closed ride, up for an open one (`Button_SetDown( closed, 1 )`). So a disabled door is up unless it was down
+    before: a closed kart ride's and a bare water ride's read ` disabled` and not ` down` in the original's tree (Q1112).
+  - `b_callmech` is set down at statuses `0x11`..`0x15`, the mechanic's, and up at any other (`0x004ad684`..`0x004ad6ac`).
+    **`Button_SetDown`** (`0x00668bec`, `this`, the state, a flag) stores the state in the button's byte `+0x138`; when it
+    changes and the flag is set, and `DAT_00faa5d4` is not nought, it also queues the button's own message
+    (`UI_QueueMessage( this, 1, 0, 0 )`), which reaches the window's handler as a click would. What the handler then
+    does for `b_callmech` and the door was not read (Q1116).
   - `b_move` (`0x3e2c`) is set through the control's vtable `+0x14`, the slot that disables the door, to the answer of
     **`TrackRide_MayMove`** (`FUN_0052c2b0( thing )`, `0x004ad6df`..`0x004ad6fd`; read whole, Q1111). It answers 1 for any
     item whose `WhichTrackType` is not 1 or 2. For a kart or water ride it reads the thing's cell from bytes `+5` (x) and
@@ -4518,8 +4525,7 @@ Dino Karts (1150) bought, saved, and loaded in the original. The original's tree
 only hidden node of 42. Ours' `control 3e2a` ends ` hidden` and ` mesh b_track` alone. Both games draw the same thing:
 the third place is empty for the TV Sim and holds the button for the karts (`q1105/orig/b-2-tvwindow.png`,
 `c-2-kartwindow.png`; `q1105/run1/window-tvsim.png`, `window-karts.png`). The original also draws the karts' `b_move`
-greyed, and ours did not then. Ours hides `b_track` (`ParkObjectWindow.ShowsTheTrack`). It does not yet have the
-condemned hide, the door's track statuses or the call-mechanic's down state (Q1112).
+greyed, and ours did not then. Ours hides `b_track` (`ParkObjectWindow.ShowsTheTrack`).
 
 **The move greyed, in both games on two files** (Q1111, `q1111/`): ours' stock park with a Dino Karts (1150) bought at
 (32,25) with its loop and a Splish Splash (1160) at (20,20) bare, saved (`run2/q1111-a.TPWS`), then the Splish
@@ -4531,6 +4537,20 @@ bare one, on the same files. Both draw the looped rides' move grey and the bare 
 either: the window stays, ours' hand is empty and the original's frame carries nothing. The original's pointer passes over the disabled button (its help line
 reads another control under it, no help row); ours keeps it and shows the move's help row (Q66). Ours enables it by
 `ParkTrackPieces.MayMove`.
+
+**The condemned hide, the door at the track's status and the call button down, in both games on one file** (Q1112,
+`q1112/`). The original loaded Q1111's file a; the Belly Bounce's (13) remaining life `+0x48` was written once to 0.5
+(`thingpoke.py`; its byte nought), and on tick 977, six after the write, the game's own turn condemned it (`object.py`:
+`mState` 4, `mCanLoad` 0); a click on the Dino Karts' (43) `b_callmech` set its `+0x64` to 1 on tick 1318; the park was
+saved by the original's menu (`orig/q1112-c.TPWS`) and the same file loaded in ours. In the original's tree
+(`uitree.py PID 0x007c24c8 down`) the condemned ride's seven nodes read ` hidden` and `b_erase` not; the karts'
+(1114,800) reads ` down` after the click and not before; the bare Splish Splash's (44) door (1430,784) ` disabled`.
+Ours' `control` replies read the same on the same file: seven ` hidden`, `3e36` ` down`, `3e38` ` disabled`, and neither
+door ` down`. Both draw the bomb alone under red CONDEMNED, the call button as its red cross under blue "REPAIR: Waiting
+for an available mechanic" (status `0x12`, a mechanic in the park and none assigned), and the greyed door under orange
+TRACK INCOMPLETE (`orig/b-2-bouncewindow.png`, `c-3-callmech.png`, `d-2-splashwindow.png`; `run2/window-condemned.png`,
+`window-called.png`, `window-trackincomplete.png`). Ours sets them in `ParkObjectWindow.ShowTheVerbs` on
+`ParkClosedStatus.For`, every frame where the original sets them on a change.
 
 **The shared base's three ids.** `FUN_0048cea0( stream, handler, a, b, c )` is called here as
 `(0x00755150, FUN_004af600, 0x3e24, 0x3e15, 0x3e25)`: `a` is the preview panel, kept at `this[6]` and

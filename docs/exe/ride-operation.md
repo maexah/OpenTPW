@@ -1020,7 +1020,7 @@ which for 0 is the store alone; the nominee is left. It asks the guard first and
 `FUN_00441970` answers nought, in that order. Its callers that ask it first: the park's door (`0x0051a013`) and the
 four in the build dispatcher `FUN_00524960`; those that do not: the ride window's door (`FUN_0048ccf0(0)`, `0x0048cd06`),
 the track editor on leaving (`0x00447748`) and `FUN_004d73c0`. The ride window greys its door for a closed ride the
-guard refuses (`FUN_004ad4e0`, `0x004ad5c6`..`0x004ad5e2`), and sets its position from `mCanLoad`.
+guard refuses (`FUN_004ad4e0`, `0x004ad5c6`..`0x004ad5e2`), leaving its position as it stands, and sets the position from `mCanLoad` only where it enables the door (Q1112).
 
 **`FUN_004de4a0`, the back of the queue connected.** With the queue-path bit (`+0x32 & 8`) it takes the back cell
 from `FUN_004de130` (`mBackOfQueue` as it stands, walked only when nought); nought is not connected, and otherwise it
@@ -3473,7 +3473,7 @@ does (`0x004e24bc`..`0x004e252a`).
 | The clean's region effects | 6 unstamped, 1 stamped | built, `ParkRideOperation.Clean` (Q257e) |
 | The hurry speed on the walk to a toilet | `+0xc2` = 25 | the same, one of the three words `Staff.Pace` sums; taken off on going idle |
 | A mechanic assigned to a thing | kept while his `+0x218` names it | the same (`Staff.ObjectToRepair`; "The mechanic's repair") |
-| The request for service | shuts the object and calls a member | the search and the clean read and clear a saved `+0x64`; no control here sets one on a toilet (the ride window's `b_callmech` draws and reports itself) |
+| The request for service | shuts the object and calls a member | the search and the clean read and clear a saved `+0x64`; no control here sets one on a toilet; the ride window holds `b_callmech` down while one is set on a ride (Q1112), and its click reports itself (Q1116) |
 | Loaded in state 8 or 9 | carries on (the load keeps the state, `+0x218` and `+0x214`, `FUN_004d6d60`): 8 decides at once when the cell's saved `mLitterCollector` is not his (`0x004d75a5`), 9 waits `mTimeStartedCleaning + WorkDuration` (`0x004d76c9`), cleans his own cell's litter (`FUN_004d9620`, not read) and decides | counted (`HANDYMAN_LITTER_STATE_8`, `_9`), falls to idle (Q1154, Q1316) |
 
 ### The clean, in both games

@@ -334,10 +334,18 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004acca0` | Buy screen opener FUN_004acc70: with the screen already up it picks the tab again and returns | OpenTPW.Tests/ParkScreenTests.cs OpenTPW/UI/Park/ParkGadget.cs  |
 | `0x004acd62` | Buy screen FUN_004acc70: UI_LoadTree onto the park's layer 0, not modal | OpenTPW.Tests/ParkHandTests.cs OpenTPW/UI/Park/ParkBuyScreen.cs OpenTPW/UI/UiWindow.cs  |
 | `0x004acdae` | Buy screen opener FUN_004acc70: letters control 0x200 with the balance as the screen is made, as the timer's tick does | OpenTPW/UI/Park/ParkBuyScreen.cs  |
+| `0x004ad509` | The ride window, status 3 (condemned): every verb but `b_erase` hidden (from here; `park-engine.md`, "The ride window's verbs, shown and hidden") | OpenTPW/UI/Park/ParkObjectWindow.cs  |
+| `0x004ad5a8` | The condemned hide (to here) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
+| `0x004ad5bc` | The ride window disables its door at statuses `0x19` and `0x1a`, the track's, its position left (from here) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
+| `0x004ad5c4` | The door's track statuses (to here) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
+| `0x004ad5c6` | The ride window's door: a closed ride the open guard refuses has it disabled, its position left; otherwise enabled and set to `mCanLoad` (from here) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004ad606` | The ride window sets its door down while `mCanLoad` is nought (`Button_SetDown`, from here) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004ad622` | The ride window's door position (to here) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
+| `0x004ad632` | The door's enabling and position (to here) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004ad648` | The ride window shows `b_track` only when the item's `Bumper.WhichTrackType` is not nought (from here; `park-engine.md`, "The ride window's verbs, shown and hidden") | OpenTPW.Tests/ParkRideWindowTrackTests.cs OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004ad667` | The ride window's `b_track` visibility (to here) | OpenTPW.Tests/ParkRideWindowTrackTests.cs OpenTPW/UI/Park/ParkObjectWindow.cs  |
+| `0x004ad684` | The ride window sets `b_callmech` down at the mechanic's statuses `0x11`..`0x15` (`Button_SetDown`, from here) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
+| `0x004ad6ac` | `b_callmech` down (to here) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004ad6df` | The ride window enables `b_move` by `TrackRide_MayMove` (from here; `park-engine.md`, "The ride window's verbs, shown and hidden") | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004ad6fd` | The ride window's `b_move` enable (to here) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004ad890` | The ride window's own stats fill (ride vtable `0x006ffbe8` `+0xc`; the shared opener `0x0048cea0` calls it at `0x0048cf55`): fills the stats table's labels and insets its four gauges (0, 10) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
@@ -349,6 +357,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004adf28` | FUN_004ade40: Users last month handed to its painter as a number through +0x1c | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004adf40` | FUN_004ade40, the object window: its Age is FUN_004dd670, printed signed | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004ae0da` | FUN_004ade40: Scrap value handed to its painter as a number through +0x1c | OpenTPW/UI/Park/ParkObjectWindow.cs  |
+| `0x004ae0e0` | The ride window's update: the status `FUN_00485f60( thing, 2 )` compared with `+8` and stored, the verbs set again on a change (from here) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
+| `0x004ae0fb` | The status compare (to here) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004af440` | The object windows' shared base, vtable `+0x3c`: writes the three buffered values onto the ride | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004af63b` | Ride window handler FUN_004af600: message 0x10 with 0x80080, the 4000 ms timer's tick, refills the figures (FUN_004ade40) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004af67b` | Ride window handler FUN_004af600, message 0x15: timer 0x80080 armed at 4000 ms | OpenTPW.Tests/ParkCameraToThingTests.cs OpenTPW/UI/Park/ParkObjectWindow.cs  |
@@ -1377,6 +1387,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0074f920` | | OpenTPW/UI/Screens/MessageBox.cs  |
 | `0x0074fa98` | | OpenTPW/UI/Park/ParkGadget.cs OpenTPW/UI/Park/ParkViewfinder.cs  |
 | `0x0074fb50` | Status code to colour, for the object windows and the all-items rows (`FUN_00485f60`'s codes) | OpenTPW/UI/Park/ParkClosedStatus.cs  |
+| `0x0074fbc0` | Status code to UITEXT row, which `FUN_004861e0` letters with the colour beside it (`FUN_00485f60`'s codes; rows 365..390) | OpenTPW/UI/Park/ParkClosedStatus.cs  |
 | `0x007501a0` | | OpenTPW/UI/Park/ParkGadget.cs  |
 | `0x007506c8` | Layout stream of the allpeeps (visitors) screen | OpenTPW/UI/Park/ParkFrontEnd.cs OpenTPW/UI/Park/ParkVisitorsScreen.cs  |
 | `0x007508e0` | Layout stream of the allitems screen's frame | OpenTPW/UI/Park/ParkFrontEnd.cs OpenTPW/UI/Park/ParkItemsScreen.cs  |

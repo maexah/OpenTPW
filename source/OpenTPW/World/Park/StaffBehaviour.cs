@@ -1113,12 +1113,7 @@ public sealed class StaffBehaviour
 		if ( thing.AssignedStaff == 0 )
 			return 0;
 
-		if ( (uint)(thing.TimeMarkedForMaintenance + AssignmentKept) >= (uint)tick )
-			return thing.AssignedStaff;
-
-		if ( StaffById?.Invoke( thing.AssignedStaff ) is { } member
-			&& ((member.Model == HandymanModel && member.ToiletToClean == thing.ThingId)
-				|| (member.Model == MechanicModel && member.ObjectToRepair == thing.ThingId)) )
+		if ( KeepsAssignment( thing, tick, StaffById ) )
 			return thing.AssignedStaff;
 
 		Log.Info( $"Object {thing.ThingId}: removing staff member {thing.AssignedStaff} from it, "
@@ -1128,6 +1123,16 @@ public sealed class StaffBehaviour
 
 		return 0;
 	}
+
+	/// <summary>
+	/// Whether <c>FUN_004e0220</c> keeps a thing's assigned member: assigned no more than <see cref="AssignmentKept"/>
+	/// sweeps ago, or still aiming at this thing (<c>FUN_00506580</c>). Asks only; <see cref="AssignedTo"/> forgets.
+	/// </summary>
+	internal static bool KeepsAssignment( ParkWorld.CatalogueObject thing, int tick, Func<int, Staff?>? staffById )
+		=> (uint)(thing.TimeMarkedForMaintenance + AssignmentKept) >= (uint)tick
+			|| (staffById?.Invoke( thing.AssignedStaff ) is { } member
+				&& ((member.Model == HandymanModel && member.ToiletToClean == thing.ThingId)
+					|| (member.Model == MechanicModel && member.ObjectToRepair == thing.ThingId)));
 
 	/// <summary>
 	/// The end of a handyman's walk to a toilet - <c>FUN_004d7790</c>: standing on the toilet's entry cell
@@ -1391,10 +1396,10 @@ public sealed class StaffBehaviour
 	}
 
 	/// <summary>The mechanic's thing model.</summary>
-	private const int MechanicModel = 4;
+	internal const int MechanicModel = 4;
 
 	/// <summary>The handyman's thing model.</summary>
-	private const int HandymanModel = 5;
+	internal const int HandymanModel = 5;
 
 	/// <summary>The entertainer's thing model.</summary>
 	private const int EntertainerModel = 6;
