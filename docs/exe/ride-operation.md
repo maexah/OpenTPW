@@ -1797,7 +1797,10 @@ longer counted. Predicted and read off-screen in a cloud lane (`lib/consolerun.p
 `happy 90` every 5 s for 150 s; the output was not kept): 47 deciding turns played animation 5 from `Deciding`, among 26
 guests; all 47 returned to `Deciding` 11 sweeps later; of the 28 that came after an earlier spot animation of the same
 guest, the fewest sweeps since it was 101 (guest 41: animation 4 at tick 1179, then 5 at 1280); the count read nought.
-What it looks like is not checked here (no display to photograph; Q1340).
+Photographed on the desk (Q1340): ours' jumper reads `set 12` frames 0 to 3 under `step 1`, both arms raised in 0 to 2;
+the original's, filmed at 30 frames a second, raises both arms for four frames about 0.45 s after its JUMP
+(`tools/harness/original/jumpwatch.py`; `q1340/q1340/side-by-side.png`), and every one read returned 11 ticks after its
+stamp to state 6.
 
 **Q111: the arms either side of the leave test are counted**, none built, the listing re-read first-hand
 (`0x004fecb9`..`0x004ff3ae`; the corrections are in the list above). `PeepBehaviour.CountBeforeLeaving` counts

@@ -660,12 +660,6 @@ filed the items that cite it.
 - [ ] **Q1053. A sideshow's or feature's window, when built, must not offer the queue button (Q1038's tail).** The queue button is the ride window's (`FUN_004af200( 0 )`,
   `park-engine.md`, "Editing a queue"). Not checked in the original: the stock park holds no sideshow to open, and the windows are unbuilt (Q31b, Q1520, Q961). When one is
   built, open a bought sideshow's window in the original and read whether it has the button.
-- [ ] **Q1344. The scrap row's figure photographed beside the original's (Q1054's split piece).** Since Q1054 the object window
-  (`ParkObjectWindow`, `0x3e23`) and the shop window (`ParkShopWindow`, `0xc07d`) letter `FUN_004e2400`, the build price at
-  `ParkScrap.Percent`, and tests pin the stock Belly Bounce's "$ 500" and a new unused thing's "$ 1000". Not photographed: Q1054
-  ran in a cloud container with no display to look at and no original. Open the same file's Mumbo window with 8 users and 19 days
-  (the original's `Scrap value $ 500`, `q1052/orig/run3/21-window.png`) and with none and 4 days (`$ 1000`, `run4/09-window.png`)
-  and photograph ours beside them; then a stock shop's window beside the original's.
 - [ ] **Q1018. The original's bolt is updated a second time in some frames, 4 to 6 ms after the first.** Found by Q1044's poll (`q1044/orig/run1/a-load.log`, `run2/a-load.log`): of the poll lines, 197 (run 1) and 150 (run 2) show `FUN_0057ff60` called again with `dt` at `+0x9d9c` of 4 to 6 ms, after 997 and 567 of 25 ms or more: about one frame in five. Each call takes the clock's ms since the last call off every bolt, packs a fresh grey and builds the bolt (`0x0057ec50`). Not decoded: who calls it a second time (`0x00576dab`'s caller, or another), and whether the second call draws the bolt again, an additive second quad in the same frame that would make such a frame brighter than its one polled grey says. Ours draws one grey a frame and ages a bolt once. Decode first (`watch.sh` on `+0x9d9c`'s writers; `boltpoll.py`, `boltaim.py`), then film with `record.sh` and read whether a frame with a short second call is brighter.
 - [ ] **Q212. The ride window's other statuses. Decode first.** Found by the 2026-10-04 review (`u7-ride-door-6`,
   `-7`, `-9`, `-10`). `FUN_00485f60` answers (80/100/255) 5..9 for a ride waiting for an upgrade, `0xb`..`0xf` for a toilet's
@@ -777,11 +771,6 @@ filed the items that cite it.
   offer gate refuses it, and a load called on that sweep is 4, not 12 (one run of two, `q26b/gate`); the original's
   passed the gate on every sweep of two runs.
 
-- [ ] **Q1340. The deciding guest's happy jump, photographed.** Split from Q224, built in a cloud lane with no display
-  (`docs/exe/ride-operation.md`, "Q224"). A guest at happiness 90 deciding in Lost Kingdom plays spot animation 5 for
-  eleven sweeps (the log's `Person N: spot animation 5 from Deciding at tick T` then `spot animation over at tick
-  T+11, back to Deciding`). Confirm on a desk: a screenshot of that guest's jump (set 12, both arms up), beside the
-  original's at the same point; `happy 90` in the console makes one within a few seconds.
 - [ ] **Q1504. The litter drawn, photographed (the photograph of Q1288).** Split from Q1288, built in cloud lane c96 with no
   display. Confirm on a desk: the litter drawn flat on the ground beside a frame the original draws of the same file
   (`q253/orig/sold-by-the-original.TPWS`, its four littered cells (41,21) and (39,22) to (39,24), kind 7: set 6's picture, a
@@ -1280,10 +1269,6 @@ filed the items that cite it.
   `WindowStack` flips the radio button up and `Put` returns before setting it down; the original's group with style
   0x10 sets it down again (`0x0066a455`..`0x0066a468`; frames `q364/orig/b-*.png`). `ParkLocator` already works round
   it. Read each screen group's style first.
-- [ ] **Q1356. The entry price screen's disabled Loans button, photographed.** Split from Q456 (built in a cloud lane with no
-  display). `ParkEntryPriceScreen` disables `0x4f3ac` in Instant Action, so it draws `b_loans`'s disabled frame. Confirm on a
-  desk: `park jungle`, `screen 10` in an Instant Action player's park, a screenshot of the button beside the staff costs
-  screen's (`screen 9`, `0x2dd`, already disabled there), and the same in a Full Simulation player's park, enabled.
 - [ ] **Q457. The satisfaction bar is masked to a byte.** From the week-end audit (D6, `VERIFY-16a.md` Q367/Q368).
   `ParkItemsScreen` runs satisfaction through `Bar()`'s `& 0xff`; the original does not (`0x00494031`, `0x00494199`,
   `0x00495888`, `0x00495959`) and the setter clamps 0..0x400 (`0x0066d885`). A test with -1 and 256.
@@ -1347,12 +1332,6 @@ filed the items that cite it.
     `0x005dd04c`); the lobby camera's init `FUN_005d8b50` leaves it off (50 / 300 with bit `0x2000` clear, saved and restored at
     `0x005d8da8`..`0x005d8dca`). So wherever fog is on it runs 50 to 250; the fork's 300 exists only with the bit clear. The
     remaining work is the photograph and the build.
-- [ ] **Q1432. The low-detail build squares photographed beside the original.** Q503 loads the markers from
-  `generic/dynamic/stexture` at texture quality 0 and 1 (`ParkBuildMarkers.FolderFor`); blue and red are smaller files
-  there (211 against 493 bytes, 122 against 340), so a build square at low detail should look coarser than at medium.
-  Photograph a path tool's blue and red squares in this game at low detail (quality 0 in `save/Config.tcf`,
-  `docs/TOOLING.md`, "This game at another graphics quality") and at medium, and the original's at low detail beside
-  them, and say whether ours match. Built in a cloud lane with no display, so nothing was photographed.
 - [ ] **Q505. The picker stands still in first person, a ride's view and the view of `0x10`.** From the review of Q472b (`handoff/review3/VERIFY-13.md`, q472b 1): the original skips the picker and the packer while
   `[0x790ab0] & 0x16` is set (`0x0054e2c0` `test al,0x16`, then `jne`; first person is `0x202`), so its cell stays where it
   was. Ours runs `ParkPicking.Update` every park frame, counted `PICK_IN_FIRST_PERSON` in `Level.Update` in first
@@ -1535,11 +1514,6 @@ filed the items that cite it.
   `q528/orig/e-rain-film.png`; ours should draw none either, `ParkWeather.StepRain` handing the rain a level only on a
   step) and the delivery on 17097 read in both; and a hallow file saved in snow, loaded (the record holds no particle
   mode, so ours loads it as not snowing).
-- [ ] **Q1388. The gadget's date, both gadgets on one date.** Split from Q527, whose lettering is built
-  (`ParkGadget.DateOf`, UITEXT 448 by tokens 16, 17 and 18; `docs/exe/hud.md`, "The date's lettering"). Not
-  photographed: no display, no original in that lane. Confirm by both gadgets on one date, as `q526/side-by-side.png`
-  does: predict "1.10.2002" in both on 10 January 2002 (ours reads the american row 448 for the gadget alone). Look too at the lettering's fit in the text rect
-  (182, 1061)-(383, 1103) for the longest date, "12.31.2002", which no frame has shown.
 - [ ] **Q712. The television static on entering or leaving first person.** From the fork watch of 2026-10-19
   (verify-advisor-ui.md L4; `park-engine.md`, "Entering or leaving first person shows 300 ms of television static"),
   with Q485's first person. On either edge of the camera flags `& 0x16` (a ride's view, first person) the original's
@@ -1963,6 +1937,14 @@ filed the items that cite it.
   account falls by 6.9 to 8.6 MB from 108.8 MB, VmHWM falls by about as much, `mem vulkan` (204.5 MB) falls by less or not at all
   (the pool may reuse the space); the second park loads in about 4.8 to 5.0 s against 3.1 s. Add `memmap.drm` vram on the desk if
   wanted. Decide the keep or release in `docs/DECISIONS.md` from the figures (about 1.75 s a re-entry against the saving). (Filed by the Sentinel from the run 15 review of Q832, VERIFY-2.)
+- [ ] **Q1544. The path tool's refused square on a queue cell is drawn only now and then (from Q1432).** With the path
+  tool anchored on (49,24) of the stock park and the pointer on the Belly Bounce's queue end (49,22) (`camera 495 225 70
+  0`, the pointer mid-frame), ours drew the red square on (49,22) in one frame of seven over four runs, at low and medium,
+  `tool` reading `1 pending ... latch 1` each time; the original at low draws it (`squares.py`: texture 1 on (49,22),
+  texture 0 on (49,23) and (49,24)). Pairs: `~/.cache/tpw-harnesses/q1340/q1432/side-by-side-red.png` (`probe2/` drew it,
+  `r3-q0`, `r3-q1`, `r4-q0` did not; the original `orig/runG/v3-red.png`). Find what decides that square here (the
+  verdict's latch, the pending run, the pointer's way in), then photograph it at low and medium beside the original's.
+  (Filed by a11, 2026-11-12.)
 - [ ] **Q1121. One sweep walks one list of every thing, newest first (from Q150, Q238's note).** Inside one sweep the
   original visits one list holding every kind of thing, the newest first (`FUN_00516380`, `FUN_00516270`;
   `ride-operation.md`, "Where a ride's turn comes from"). `ParkPeople.Sweep` takes the guests, then the staff, then the

@@ -14347,3 +14347,56 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
     in `ParkBumperCars.Break` or `Fix`, labelled dead by content. The FileFormats half was the wrong fields: its masks
     (`+0x18`, `+0x1c`) are right but for "alone" (the speech variations' second mask of 100); that word is put right on
     FileFormats branch `fix-R` (`1cf5c41`), and `audio.md` says which field is which.
+- [x] **Q1344. The scrap row's figure photographed beside the original's (Q1054's split piece).** Since Q1054 the object window
+  (`ParkObjectWindow`, `0x3e23`) and the shop window (`ParkShopWindow`, `0xc07d`) letter `FUN_004e2400`, the build price at
+  `ParkScrap.Percent`, and tests pin the stock Belly Bounce's "$ 500" and a new unused thing's "$ 1000". Not photographed: Q1054
+  ran in a cloud container with no display to look at and no original. Open the same file's Mumbo window with 8 users and 19 days
+  (the original's `Scrap value $ 500`, `q1052/orig/run3/21-window.png`) and with none and 4 days (`$ 1000`, `run4/09-window.png`)
+  and photograph ours beside them; then a stock shop's window beside the original's.
+  **Done 2026-11-12** (a11, `alexah/929-photo-pack`; `~/.cache/tpw-harnesses/q1340/`). Q1052C (unjoined): ours users 0, age 0, "$ 1000" on
+  its load; the original Users 0, Age 5 days (its clock runs through the load), "$ 1000". Q1052B (joined), the window
+  left open: ours "$ 1000" to age 7, "$ 500" from age 8, users 5 at age 9 (tick 978); the original "$ 1000" at 5 and 7
+  days, "$ 500" with 5 users at 9 days (tick 986). The stock Drinks Shop: "$ 325" in both (`q1344/run1/`,
+  `orig/runB/o6-*`, `orig/runC/o5-shop.png`).
+- [x] **Q1340. The deciding guest's happy jump, photographed.** Split from Q224, built in a cloud lane with no display
+  (`docs/exe/ride-operation.md`, "Q224"). A guest at happiness 90 deciding in Lost Kingdom plays spot animation 5 for
+  eleven sweeps (the log's `Person N: spot animation 5 from Deciding at tick T` then `spot animation over at tick
+  T+11, back to Deciding`). Confirm on a desk: a screenshot of that guest's jump (set 12, both arms up), beside the
+  original's at the same point; `happy 90` in the console makes one within a few seconds.
+  **Done 2026-11-12** (a11, `alexah/929-photo-pack`; `~/.cache/tpw-harnesses/q1340/q1340/side-by-side.png`). Ours, paused on the log line and
+  stepped a frame at a time: persons 37 and 35 read `set 12` frames 0 to 3, both arms raised in 0 to 2, over at T+11
+  back to Deciding; a third (person 38) showed no `set 12` in 60 steps though it returned on T+11 (not found why). The
+  original (`tools/harness/original/jumpwatch.py`, happiness written 90, filmed at 30 frames a second): thing 55 raises
+  both arms for four frames about 0.45 s after its JUMP; every JUMP read (anim 5 from 6) returned 11 ticks after its
+  stamp to state 6.
+- [x] **Q1356. The entry price screen's disabled Loans button, photographed.** Split from Q456 (built in a cloud lane with no
+  display). `ParkEntryPriceScreen` disables `0x4f3ac` in Instant Action, so it draws `b_loans`'s disabled frame. Confirm on a
+  desk: `park jungle`, `screen 10` in an Instant Action player's park, a screenshot of the button beside the staff costs
+  screen's (`screen 9`, `0x2dd`, already disabled there), and the same in a Full Simulation player's park, enabled.
+  **Done 2026-11-12** (a11, lane A, the desk, `alexah/929-photo-pack`; evidence `~/.cache/tpw-harnesses/q1340/`). Ours, Instant Action: `screen 10`
+  logs `Entry price: opened, fee 25 closed 0 loans off`, `control 4f3ac` `mesh b_loans frame 0 disabled`, drawn grey;
+  `screen 9` `0x2dd` the same, the same grey; Full Simulation (`fsplayer.py`) `loans on`, no `disabled`, drawn gold
+  (`q1356/ours-buttons.png`). The original, stock park, Instant Action, off-screen: the Money button's entry price
+  screen and its staff-costs screen show both loans buttons grey (`orig/runA/o1-entry.png`, `o2-staff.png`). Its Full
+  Simulation screen was not photographed.
+- [x] **Q1432. The low-detail build squares photographed beside the original.** Q503 loads the markers from
+  `generic/dynamic/stexture` at texture quality 0 and 1 (`ParkBuildMarkers.FolderFor`); blue and red are smaller files
+  there (211 against 493 bytes, 122 against 340), so a build square at low detail should look coarser than at medium.
+  Photograph a path tool's blue and red squares in this game at low detail (quality 0 in `save/Config.tcf`,
+  `docs/TOOLING.md`, "This game at another graphics quality") and at medium, and the original's at low detail beside
+  them, and say whether ours match. Built in a cloud lane with no display, so nothing was photographed.
+  **Done 2026-11-12** (a11, `alexah/929-photo-pack`; `~/.cache/tpw-harnesses/q1340/q1432/side-by-side.png`, `side-by-side-red.png`). The log
+  reads `Build markers: 9 textures from stexture` at quality 0, `from textures` at 1. Ours at low matches the original
+  at low: a blue square's patch (15,117,91) spread about 7 against the original's (10,117,83) about 5, and the red on
+  the queue end (49,22) (125,48,18) against (128,52,12); ours at medium is redder and mottled (43,112,95), spread 19.
+  Over the Belly Bounce (51,24) both hide the refused square under the ride. Ours drew that queue cell's red square in
+  only one frame of seven, at low and medium, where the original draws it: Q1544.
+- [x] **Q1388. The gadget's date, both gadgets on one date.** Split from Q527, whose lettering is built
+  (`ParkGadget.DateOf`, UITEXT 448 by tokens 16, 17 and 18; `docs/exe/hud.md`, "The date's lettering"). Not
+  photographed: no display, no original in that lane. Confirm by both gadgets on one date, as `q526/side-by-side.png`
+  does: predict "1.10.2002" in both on 10 January 2002 (ours reads the american row 448 for the gadget alone). Look too at the lettering's fit in the text rect
+  (182, 1061)-(383, 1103) for the longest date, "12.31.2002", which no frame has shown.
+  **Done 2026-11-12** (a11, `alexah/929-photo-pack`; `~/.cache/tpw-harnesses/q1340/q1388/side-by-side.png`). Ours paused at tick 17053 read
+  '1.10.2002' (`control 20`); the file it saved, loaded in the original, read "1.10.2002" at ticks 17063 and 17069 and
+  "1.11.2002" from 17073. "12.31.2002" (ours tick 25233, the original 25236..25248): ours' census `101 x 22 in a box 94 x
+  20 ... OVER`, and both games cut it the same way, the leading "1"'s flag lost at the box's left end, the rest whole.

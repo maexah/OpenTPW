@@ -3150,6 +3150,14 @@ squares also brighten and dim as they wave (at medium and high: low's `LIGHTING`
 scale changes no colour there, Q516). Alexah, who played the original: *"they were translucent.
 They waved like a flag/water."*
 
+**At low detail the squares are the `STexture` copies** (`TEXTUREQUALITY` 1, `FUN_0054dcc0`), smaller files, drawn flat:
+in the original at low, a blue square on the stock park reads (10, 117, 83) with a spread of about 5 a channel, and the
+red one on the Belly Bounce's queue end (49,22) (128, 52, 12); at medium ours' blue is (43, 112, 95) and mottled, its red
+channel's spread 19 (Q1432, `q1340/q1432/patch.txt` and `patch-red.txt`, the original's run at low in `q1340/orig/runF`, `runG`).
+**OpenTPW** (Q503): `ParkBuildMarkers.FolderFor` takes `stexture` at 0 and 1, and its low squares read (15, 117, 91) and
+(125, 48, 18) in the same boxes. Its refused square on that queue cell is drawn in only one frame of seven, where the
+original's run at low drew it (Q1544).
+
 **Over a built cell the square is lifted** (`FUN_00532fc0`, `0x005330ca` and its siblings; a kart or water piece's cell answers its own `.hmp`, Q776, `park.md`, "A track square's lift and walls"). The record's height is
 `ceil10(trunc(FUN_00452ae0(x, y, null)))` + 1.5, where ceil10 is `(t + 9) / 10 * 10.0` in integer division. It is
 lifted only over a cell of mType 4, 9, 10, 7 or `0x1e`, or of track kind 11, 12, 16, 17 or 25; elsewhere the lift is
@@ -3455,8 +3463,9 @@ player sells, which is UITEXT 23 **"Scrap value"**.
 named here calls them: the sale's refund (`ParkBuilding.Sell`, read before the thing leaves the state), a bare kart or water
 station's two pieces on a sale (`ParkTrackPieces.SellBareStation`: each piece `cost * % / 100`, then `2 * cost * % / 100`
 withdrawn, `0x00528179`), the queue drain's one-cell debit (`ParkPathBuilding.DrainQueue`, `0x00527fe8`), the track tool's per-piece refund (`ParkTrackTool.TakeBack`), the queue cell's
-(`ParkPathBuilding.QueueRefund`) and the object and shop windows' scrap row (`FUN_004e2400`). The windows' figure is not
-yet photographed beside the original's (Q1344).
+(`ParkPathBuilding.QueueRefund`) and the object and shop windows' scrap row (`FUN_004e2400`). Photographed beside the original's
+(Q1344): Q1052's unjoined Mumbo reads "$ 1000" in both, the joined one "$ 500" from its first customers (5 users at 9 days in
+each), the stock Drinks Shop "$ 325" in both.
 
 **Delete does NOT go through the interaction-mode system** - `FUN_0048cd10` calls `FUN_0052f200(0x33,1)`
 and then the map-click apply directly. Of the window's sell and move, only MOVE builds a mode (the ride window's

@@ -315,6 +315,9 @@ The executable imports no `GetDateFormat`, so the layout is the table's, never t
 "8.11.2000" at `mGameTick` 5000 (`saves.md`, "The container takes another deflate"); its day against ours is Q1557's.
 Off-screen in a cloud lane (Q158, the run's output not kept), the stock park paused on tick 1567 read `date=2000-02-08` in
 `state` and '8.2.2000' in `control 20`, font 3 in (0, 0, 0), on the English row before Q527 moved the gadget to the american one.
+Photographed in both on one date (Q1388): "1.10.2002" in each. The longest, "12.31.2002", is wider than the text rect
+(ours' census: 101 x 22 in a box of 94 x 20) and both games cut it the same way: the leading "1" loses its flag at the box's
+left end, the rest whole (`q1340/q1388/side-by-side.png`).
 
 ### The happiness gauge's two quads (Q244; fork watch 2026-10-19, verify-advisor-ui.md L3, verify-other-b.md M3)
 
@@ -582,7 +585,8 @@ and sideshows in each other's places while looking correct.
 spinner: they resolve to `b_staffcost`, `b_loans` and `b_finance`, and `FUN_00498c60` sends them to
 `FUN_004b2750`, `FUN_0049fb30` and `FUN_0049ac60` — this category's other three screens. The loans button `0x4f3ac`
 is **disabled in game type 2**, Instant Action (`0x00499008`..`0x00499030`), as the staff costs screen's is; OpenTPW
-disables it there too and logs `Entry price: opened, fee N closed 0|1 loans on|off` (Q456). The spinner
+disables it there too and logs `Entry price: opened, fee N closed 0|1 loans on|off` (Q456); photographed (Q1356):
+grey in both games' Instant Action entry price and staff costs screens, gold in ours' Full Simulation one. The spinner
 is `0x4f3ae`, control **type 12**, whose `op 0x0f` child is `b_minus` (left) and `op 0x0e` child is
 `b_plus` (right); `FUN_0066a5c4(&0,&10000)` gives it a range of **0–10000** and `FUN_0066a68d(&1)` a
 step of **1**. `0x4f3b0` is the black "Ticket Price" label (UITEXT 160), and `0x4f3b1` is `b_door`,
