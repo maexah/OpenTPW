@@ -13368,3 +13368,15 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   list holds it, and read back the park's own chain, object list and slots are the same. A read back does not change.
   Two put-backs (oldest first; by id alone) each fail it. Two off-screen runs wrote ferry, seaplane, then the bus or
   the lights first, down to thing 1.
+- [x] **Q277. Starting a clip binds every other channel's clip again.** From the week-end audit (stage 4; read
+  twice from the listing). `FUN_00472f60` takes the outgoing clip's marks off (`FUN_00472310`, `0x004730a9`) and
+  binds the new one (`FUN_00472d70`, `0x00473117`), nothing else. `ParkModelTables`' `Running.Started` also binds
+  every other channel's clip again, so a track bit two channels' clips share stays set here where the original
+  drops it; its summary gives the rebinding as the original's. Confirm: a model with two channels sharing a track,
+  its node words after one clip is replaced, against the original's save. **Done 2026-11-12** (cloud lane c39,
+  `alexah/1018-clip-start-binds-only-new`): `Running.Started` binds only the new clip where the channel's last clip
+  is named; the rebinding stays only where it is not (a file's idle channel, or a first start), as the deviation that
+  puts back what the blanket clear took. `ATrackTwoChannelsShareGoesWithTheClipTakenOff` (the totem's `(5,0)` and
+  `(9,1)`, sharing nodes 5 and 6) and the changed shared-clip case of `AClipStartedOnOneLaneLeavesTheOthers` fail with
+  the rebinding put back. Not checked against the original's save (no original here); the shared case was not
+  reached in a running park (Q1276).

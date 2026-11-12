@@ -226,15 +226,16 @@ public static class ParkModelTables
 		/// <summary>
 		/// <paramref name="clip"/> is started on <paramref name="channel"/> and bound (a start without the
 		/// caller's <c>0x8</c>; <c>FUN_00472f60</c>): the clip the channel last ran is taken off
-		/// (<see cref="Unbind"/>), its visibility tracks first laid down as they stood at
-		/// <paramref name="outgoingFrame"/>, which is what a transform-only node keeps of them; the other
-		/// channels' clips mark their nodes again; and the new clip is bound, its hide list applied.
+		/// (<see cref="Unbind"/>, <c>0x004730a9</c>), its visibility tracks first laid down as they stood at
+		/// <paramref name="outgoingFrame"/>, which is what a transform-only node keeps of them; and the new clip is
+		/// bound, its hide list applied (<c>0x00473117</c>). Nothing else: the other channels' clips do not mark
+		/// their nodes again, so a track bit the outgoing clip shares with another channel's goes with it.
 		///
 		/// <para>
-		/// Where the channel has no clip to take off (nothing was started on it, or the file had it idle and does
-		/// not name its last clip), every track bit and every mesh's hidden bit is taken off in its place, and the
-		/// other channels' clips put their track bits back; marks another idle channel's unnamed clip left go
-		/// with them.
+		/// Deviation: where the channel has no clip to take off (nothing was started on it, or the file had it idle
+		/// and does not name its last clip), every track bit and every mesh's hidden bit is taken off in its place,
+		/// and the other channels' clips put their track bits back; marks another idle channel's unnamed clip left
+		/// go with them.
 		/// </para>
 		/// </summary>
 		public void Started( int channel, AnimationFile clip, float outgoingFrame )
@@ -253,15 +254,15 @@ public static class ParkModelTables
 			{
 				for ( var node = 0; node < _words.Length; ++node )
 					_words[node] &= ~((_words[node] & TransformOnly) != 0 ? TrackBits : TrackBits | Hidden);
+
+				for ( var other = 0; other < _bound.Length; ++other )
+				{
+					if ( other != channel && _bound[other] is { } standing )
+						Bind( _words, standing, hide: false );
+				}
 			}
 
 			_bound[channel] = clip;
-
-			for ( var other = 0; other < _bound.Length; ++other )
-			{
-				if ( other != channel && _bound[other] is { } standing )
-					Bind( _words, standing, hide: false );
-			}
 
 			Bind( _words, clip, hide: true );
 		}

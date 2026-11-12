@@ -1052,12 +1052,12 @@ filed the items that cite it.
   the rider's own bank in every case. Confirm: a park with no costume bank loaded, a rider's head bank read in
   both games.
 
-- [ ] **Q277. Starting a clip binds every other channel's clip again.** From the week-end audit (stage 4; read
-  twice from the listing). `FUN_00472f60` takes the outgoing clip's marks off (`FUN_00472310`, `0x004730a9`) and
-  binds the new one (`FUN_00472d70`, `0x00473117`), nothing else. `ParkModelTables`' `Running.Started` also binds
-  every other channel's clip again, so a track bit two channels' clips share stays set here where the original
-  drops it; its summary gives the rebinding as the original's. Confirm: a model with two channels sharing a track,
-  its node words after one clip is replaced, against the original's save.
+- [ ] **Q1276. Q277's shared track bit, in a running park and against the original's save.** Q277 made a clip's start
+  bind only the new clip (`ParkModelTables.Running.Started`), checked by tests alone. Of the jungle items only the Inca
+  Totem (1110), of four channels, has two clips that share some nodes and not others (`(5,0)` nodes 2, 5, 6; `(9,1)` nodes 5, 6, 8,
+  10); bought in the stock park under a cloud lane it stayed on its build clip for 150 s (channels `0/0`, `12/0` x3),
+  so the case was not reached; which channels its script puts those clips on was not read. Confirm: the totem operating with riders until one channel's clip is replaced while
+  another's shares its nodes, saved, its node words read (`parkfile.models`) beside the original's save of the same.
 - [ ] **Q572. An additive model's rotation key (`ANIM_ADDITIVE_ROTATION`).** From the run 6 review of Q554 (`handoff/review6/VERIFY-13.md`,
   Q554 5). On a model whose header word `0x30` carries `0x4` the engine composes a rotation key with the node's own turn
   (`FUN_00470d10`) rather than replacing it. Ours counts it, `ANIM_ADDITIVE_ROTATION`, in two places: `NodePoser.Pose`
