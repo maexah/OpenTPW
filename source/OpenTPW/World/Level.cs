@@ -3117,16 +3117,9 @@ public class Level
 		if ( ParkBuildMode.IsTrack( ParkBuildMode.Current ) )
 			return ParkTrackTool.Run( cellX, cellY, !UI.WindowStack.ParkScreenOpen );
 
-		if ( ParkBuildMode.Anchored )
-			return ParkPathBuilding.RunQueue( cellX, cellY, !UI.WindowStack.ParkScreenOpen );
-
-		// An unanchored queue click plays the laying sound too, as mode 3 does before its anchor test (0x005271ea, then
-		// 0x00527222). Dead by CONTENT in Lost Kingdom: only EDIT_QUEUE_WITH_NO_ENTRANCE and the console's `tool queue` arm
-		// the queue tool with no anchor.
-		ParkPathBuilding.LayingSound( "queue", cellX, cellY );
-		ParkBuildMode.AnchorAt( cellX, cellY );
-
-		return $"anchored a queue run at ({cellX},{cellY}) - click again to lay it";
+		// Its unanchored click is dead by CONTENT in Lost Kingdom: only EDIT_QUEUE_WITH_NO_ENTRANCE and the console's
+		// `tool queue` arm the queue tool with no anchor.
+		return ParkPathBuilding.RunQueue( cellX, cellY, !UI.WindowStack.ParkScreenOpen );
 	}
 
 	/// <summary>

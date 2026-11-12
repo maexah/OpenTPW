@@ -649,17 +649,16 @@ filed the items that cite it.
   counts `STAFF_PICKED_UP_PREVIEW` (ParkPeople.cs) and keeps the plain arrow. Counted since Q432, never queued. Decode first whether type 6 shares the carried
   figure's sprite path (`0x0046c480` / `0x0046c730`, Q40's fork-watch note H2, which is `STAFF_CARRY_PREVIEW`'s item) or has its own; fold into Q40 if it does.
   Listed in `docs/DOES-NOT.md` beside `STAFF_CARRY_PREVIEW`.
-- [ ] **Q1046. The queue tool's unanchored click (Q860's second read).** In the original an unanchored click in mode 3 first asks
-  `FUN_00535670( 3 )` of the cell (`0x00527297`..`0x005272a5`; anchors nothing when it answers 1, not decoded), then empties
-  the pending list (`0x005272be` `FUN_0052fbd0`), pushes the click (`0x005272cd` `FUN_0052fbf0`), anchors, resets the click
-  counter (`0x00527316`) and lays nothing. `ParkPathBuilding.RunQueue` has no such arm: `ParkBuildMode.Arm` sets the anchor to
-  (-1,-1) but leaves the list, so the console's `tool queue` and EditQueue's EDIT_QUEUE_WITH_NO_ENTRANCE arm push the first
-  click onto a stale list, and a later Backspace can pop into it and clear a line between unrelated cells. Decode
-  `FUN_00535670( 3 )` at `0x00527297` first, then build the arm as RunPath's (lines ~900-910) and test it.
 - [ ] **Q1047. The queue tool's third-click advisor `0xd6` (pre-existing).** The click counter `[0x8186dc]` is shared by modes 1 and 3
   (`0x0052732f`..`0x0052736d`): it counts every anchored click and posts advisor `0xd6` at the third; its only reset is the
   unanchored first click. `RunQueue` now counts `QUEUE_TOOL_ADVISOR_MESSAGE_0xD6` at the third click (rule 4); build the advisor
-  post itself with the path tool's `PATH_TOOL_ADVISOR_MESSAGE_0xD6`, and the reset with the unanchored arm above. A refused run's click is not counted (the latch, `0x00524a63`; built). **Also a deviation:** ours zeroes the counter and the pending list at a park unload (`Level.ForgetPark` -> `ParkBuildMode.Forget()`); the original keeps both across a load (`q1038` run2 b3 3 to run3 c0 3, c5 6 to run4 d0 6), which moves the counted `0xd6` after a reload whose next arming is an edit.
+  post itself with the path tool's `PATH_TOOL_ADVISOR_MESSAGE_0xD6`; the reset at the unanchored click is built (Q1046, `FirstQueueClick`). A refused run's click is not counted (the latch, `0x00524a63`; built). **Also a deviation:** ours zeroes the counter and the pending list at a park unload (`Level.ForgetPark` -> `ParkBuildMode.Forget()`); the original keeps both across a load (`q1038` run2 b3 3 to run3 c0 3, c5 6 to run4 d0 6), which moves the counted `0xd6` after a reload whose next arming is an edit.
+- [ ] **Q1124. The path tool's unanchored click asks the verdict itself too (Q1046's tail).** Mode 1's arm asks
+  `FUN_00535670( cell, 1, 0 )` before it anchors (`0x0052726e`..`0x00527283`; `park-engine.md`, "The unanchored click"):
+  with the last-square flag nought it charges bare ground a second time onto the run's total and refuses on a balance
+  below it, and on red anchors nothing and keeps the tool (`0x0052765b`). `ParkPathBuilding.RunPath` anchors on the
+  preview's answer alone, so on a balance from 20 to 39 its first click on bare ground anchors where the original's does
+  not. Build it as `FirstQueueClick`, and read the original's first click on a balance of 30.
 - [ ] **Q1053. A sideshow's or feature's window, when built, must not offer the queue button (Q1038's tail).** The queue button is the ride window's (`FUN_004af200( 0 )`,
   `park-engine.md`, "Editing a queue"). Not checked in the original: the stock park holds no sideshow to open, and the windows are unbuilt (Q31b, Q960, Q961). When one is
   built, open a bought sideshow's window in the original and read whether it has the button.

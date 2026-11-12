@@ -303,7 +303,7 @@ public static class ParkPathBuilding
 	/// <summary>
 	/// One click of the armed queue tool: a straight run from the anchor to the clicked cell, snapped to
 	/// its longer axis - the original's mode-3 arm of the apply dispatcher (<c>0x00527222</c>..
-	/// <c>0x005275f2</c>).
+	/// <c>0x005275f2</c>). With no anchor the click only anchors (<see cref="FirstQueueClick"/>).
 	/// </summary>
 	/// <remarks>
 	/// <b>The tool puts itself away</b> in the original's four cases (each through
@@ -329,13 +329,28 @@ public static class ParkPathBuilding
 		if ( Level.Current is not { } level || level.ParkState is not { } state || level.Park is not { } park )
 			return "queue: a park has to be loaded";
 
+		// Unanchored, the preview's one square is the gate (a red one refuses as a run's would), then the laying sound
+		// (0x005271ea) and the click's own verdict (FirstQueueClick).
+		if ( !ParkBuildMode.Anchored )
+		{
+			if ( QueueStrip( clickX, clickY ) is not [var square] )
+				return "queue: the queue tool is not armed";
+
+			if ( square is { Marker: MarkerRed, Why: var refusedWhy } )
+			{
+				ParkBuildMode.Disarm();
+
+				return $"queue: nothing anchored - ({clickX},{clickY}) {refusedWhy}, so the queue tool is put away - {ParkBuildMode.RefusedSound( pressReachedTheTool )}";
+			}
+
+			LayingSound( "queue", clickX, clickY );
+
+			return FirstQueueClick( state, park, square, QueueCost( level ) );
+		}
+
 		var serves = ParkBuildMode.Serves;
 		var (fromX, fromY) = ParkBuildMode.Anchor;
 		var (toX, toY) = ParkBuildMode.SnapToAxis( clickX, clickY );
-
-		// Not built: the original's unanchored click (0x005272be..0x00527316) asks FUN_00535670( 3 ) of the cell, empties the
-		// pending list, pushes the click and resets the counter; here an unanchored click goes on to push onto whatever list
-		// an earlier session left, so a later Backspace can pop into it.
 
 		// Clicking the anchor lays its one cell (re-stamped, +1) only while the list holds the tool's first cell alone
 		// (0x005273c7..0x005273cf; the target is pushed first, 0x005273df). After a run, or the queue button's walk, the
@@ -429,6 +444,39 @@ public static class ParkPathBuilding
 	}
 
 	/// <summary>
+	/// The queue tool's unanchored click once the preview's square let it through: the original asks the verdict
+	/// <c>FUN_00535670( cell, 3, 0 )</c> again (<c>0x00527297</c>..<c>0x005272a5</c>) and on red anchors nothing and keeps the
+	/// tool (<c>0x0052765b</c>); otherwise it anchors, empties the pending list (<c>FUN_0052fbd0</c>), pushes the cell
+	/// (<c>FUN_0052fbf0</c>) and zeroes the click counter (<c>0x00527316</c>). It lays nothing.
+	/// </summary>
+	/// <remarks>
+	/// <b>The second verdict refuses a path.</b> The pass has put its last-square flag <c>DAT_00820ab8</c> back to nought
+	/// (<c>FUN_00536100</c>) but left <c>d58</c>, which only the join sets of an unrefused square, and the verdict copies it into
+	/// the latch and answers red before the cell's type is read. Past that it charges bare ground a second time onto the run's
+	/// total (<c>FUN_0052fba0</c>) and asks the money again, so a balance below the square's total and one cell more refuses
+	/// too. Its own end of this ride's queue answers blue, and is anchored on. docs/exe/park-engine.md, "The unanchored click".
+	/// </remarks>
+	internal static string FirstQueueClick( ParkState state, IParkInitialState park, QueueSquare square, int price )
+	{
+		var (x, y) = (square.X, square.Y);
+
+		if ( square.Marker == MarkerLink )
+			return $"queue: ({x},{y}) is a path, which the click's own verdict refuses - nothing anchored, the queue tool stays out";
+
+		var owed = square.Owed + (ParkState.CellFor( park, x, y ).Type == NothingType ? price : 0);
+
+		if ( owed != 0 && state.Balance < owed )
+			return $"queue: ({x},{y}) would bring the run to {owed} against a balance of {state.Balance} - nothing anchored, the queue tool stays out";
+
+		ParkBuildMode.AnchorAt( x, y );
+		ParkBuildMode.ClearPending();
+		ParkBuildMode.Push( x, y );
+		ParkBuildMode.Clicks = 0;
+
+		return $"queue: anchored at ({x},{y}) - click again to lay a run";
+	}
+
+	/// <summary>
 	/// One square of the queue tool's preview: where it is, the marker it wears, why it is red, and
 	/// whether it is red because the run cannot be paid for - which the original shows with its own
 	/// cursor, <c>c_cash</c> (<c>DAT_00816d5c</c>, <c>FUN_0052f950</c>) - and what the run owes once the square is judged
@@ -469,7 +517,7 @@ public static class ParkPathBuilding
 	/// The squares the armed queue tool shows from its anchor to a cell, snapped to the longer axis -
 	/// the original's hover pass, <c>FUN_00536100( 0x103, anchor, target )</c> with the per-cell verdict
 	/// <c>FUN_00535670( 3 )</c> - and so also what a click there would do. Empty when the queue tool is
-	/// not armed and anchored.
+	/// not armed. Unanchored it is one square, the pointer's cell, judged as the run's last (<c>0x0052460a</c>).
 	/// </summary>
 	/// <remarks>
 	/// <b>After a square that latches every later square is red</b> (<see cref="Latches"/>); land outside the park and a
@@ -483,7 +531,7 @@ public static class ParkPathBuilding
 	{
 		latched = false;
 
-		if ( ParkBuildMode.Current != ParkBuildMode.Queue || !ParkBuildMode.Anchored
+		if ( ParkBuildMode.Current != ParkBuildMode.Queue
 			|| Level.Current is not { } level || level.ParkState is not { } state || level.Park is not { } park )
 			return [];
 
@@ -495,7 +543,7 @@ public static class ParkPathBuilding
 	{
 		var strip = new List<QueueSquare>();
 		var serves = ParkBuildMode.Serves;
-		var (fromX, fromY) = ParkBuildMode.Anchor;
+		var (fromX, fromY) = ParkBuildMode.Anchored ? ParkBuildMode.Anchor : (toX, toY);
 		var (endX, endY) = ParkBuildMode.SnapToAxis( toX, toY );
 
 		var steps = Math.Max( Math.Abs( endX - fromX ), Math.Abs( endY - fromY ) );

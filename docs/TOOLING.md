@@ -1321,7 +1321,9 @@ after its poller starts**, so a key meant inside either line cannot be sent afte
   the turn**: `thingwords.py %PID% <secs> 29:0x8:H 35:0x8:H` (two guests' places) beside `advisor.py` stamps
   the log as they walk (`q325/confirm.py fix|control|open`, `q325/orig/run.sh <file>` with `EXTRA=`; Q325).
 - **Open a bought ride:** `buy <item> <x> <y> 0` answers the thing's id and its queue node's cell; then
-  `tool queue <thing>`, `worldclick <the node's cell>`, `worldclick <a path cell beside it>`, `tool off`. For a Hot
+  `tool queue <thing>`, `worldclick <the node's cell>`, `worldclick <a path cell beside it>`, `tool off` (that first click
+  anchors only where the original's does, on the ride's own queue end or bare ground: on a path it anchors nothing, on the
+  middle of a queue or another ride's it puts the tool away, Q1046). For a Hot
   Pot on (41,23): `buy 1140 41 23 0`, node (43,22), path (43,21); four boats are out six seconds on (Q257r).
 - **Fill a ride:** `admit <x> <y>` on a path cell answers a new guest's id, `send <guest> <thing>` sends them; poll
   the ride's census (`bumpers`, `rides`) until it counts them (Q179d, Q257r).

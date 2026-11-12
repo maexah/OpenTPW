@@ -697,6 +697,99 @@ public class ParkPathToolTests
 		Assert.AreEqual( 8590 + 3, unrefused, "an m_end, then bare ground and the join" );
 	}
 
+	/// <summary>
+	/// <b>The unanchored queue tool's preview is one square, the pointer's cell, judged as the run's last</b>
+	/// (<c>0x0052460a</c>, <c>FUN_00536100</c> with <c>DAT_00820ab8</c> set for its one cell): bare ground blue, a path
+	/// <c>m_link</c>, the ride's own queue end <c>m_end</c>, another ride's queue red.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the square not judged last (a path and the queue end go blue); the strip empty unanchored.</remarks>
+	[TestMethod]
+	public void AnUnanchoredQueueStripIsOneSquareJudgedAsTheLast()
+	{
+		var park = World();
+		var state = new ParkState( park );
+		var ride = state.Objects[0];
+		var rideCell = (ushort)((ride.CellY * 128) + ride.CellX + 1);
+		ParkBuildMode.Arm( ParkBuildMode.Queue, ride.ThingId );
+
+		string Strip() => Describe( ParkPathBuilding.QueueStrip( state, park, 11, 10, Price, out _ ) );
+
+		Assert.AreEqual( "(11,10):0", Strip(), "bare ground" );
+
+		state.SetRecord( 11, 10, ParkState.CellFor( park, 11, 10 ) with { Type = CellEdge.Path, Flags = 0 } );
+		Assert.AreEqual( "(11,10):8", Strip(), "a path: the join" );
+
+		state.SetRecord( 11, 10, ParkState.CellFor( park, 11, 10 ) with { Type = ParkRideChoice.QueueCellType, Neighbours = 0x01, ParentId = rideCell } );
+		Assert.AreEqual( "(11,10):11", Strip(), "its own queue's end" );
+
+		state.SetRecord( 11, 10, ParkState.CellFor( park, 11, 10 ) with { Type = ParkRideChoice.QueueCellType, Neighbours = 0x01, ParentId = 0 } );
+		Assert.AreEqual( "(11,10):1", Strip(), "another ride's queue" );
+	}
+
+	/// <summary>
+	/// <b>The unanchored queue click anchors on a fresh list and zeroes the counter</b> (<c>0x005272ab</c>..<c>0x00527316</c>),
+	/// so Backspace has nothing of an earlier tool's runs to pop; <b>its own verdict refuses a path and a second cell's
+	/// price</b> (<c>0x0052729d</c>), and then nothing changes. Its own queue end is not charged and is anchored on.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the list not emptied; the counter not zeroed; the path anchored on; the second charge
+	/// dropped (39 anchors); the money test at or below (40 refuses); the queue end charged (a balance of 0 refuses).</remarks>
+	[TestMethod]
+	public void AnUnanchoredQueueClickAnchorsOnAFreshListAndRefusesWhatItsOwnVerdictRefuses()
+	{
+		var park = World();
+		var state = new ParkState( park );
+		var ride = state.Objects[0];
+		var rideCell = (ushort)((ride.CellY * 128) + ride.CellX + 1);
+
+		void Stale()
+		{
+			ParkBuildMode.Forget();
+			ParkBuildMode.Push( 40, 20 );
+			ParkBuildMode.Push( 44, 20 );
+			ParkBuildMode.Clicks = 2;
+			ParkBuildMode.Arm( ParkBuildMode.Queue, ride.ThingId );
+		}
+
+		string Click() => ParkPathBuilding.FirstQueueClick( state, park, ParkPathBuilding.QueueStrip( state, park, 11, 10, Price, out _ )[0], Price );
+
+		void BalanceAt( int balance ) => state.Spend( state.Balance - balance );
+
+		void Untouched( string because )
+		{
+			Assert.IsFalse( ParkBuildMode.Anchored, because );
+			CollectionAssert.AreEqual( new[] { (40, 20), (44, 20) }, ParkBuildMode.Pending.ToArray(), because );
+			Assert.AreEqual( 2, ParkBuildMode.Clicks, because );
+			Assert.AreEqual( ParkBuildMode.Queue, ParkBuildMode.Current, "the tool stays out: " + because );
+		}
+
+		Stale();
+		StringAssert.Contains( Click(), "anchored at (11,10)" );
+		Assert.AreEqual( (11, 10), ParkBuildMode.Anchor );
+		CollectionAssert.AreEqual( new[] { (11, 10) }, ParkBuildMode.Pending.ToArray() );
+		Assert.AreEqual( 0, ParkBuildMode.Clicks );
+		Assert.IsFalse( ParkBuildMode.TryPopRun( out _, out _ ), "Backspace has nothing to pop" );
+
+		Stale();
+		BalanceAt( (2 * Price) - 1 );
+		StringAssert.Contains( Click(), "would bring the run to 40 against a balance of 39" );
+		Untouched( "one cell is paid for, not two" );
+
+		Stale();
+		BalanceAt( 2 * Price );
+		StringAssert.Contains( Click(), "anchored at (11,10)" );
+
+		Stale();
+		state.SetRecord( 11, 10, ParkState.CellFor( park, 11, 10 ) with { Type = CellEdge.Path, Flags = 0 } );
+		StringAssert.Contains( Click(), "is a path" );
+		Untouched( "a path" );
+
+		Stale();
+		BalanceAt( 0 );
+		state.SetRecord( 11, 10, ParkState.CellFor( park, 11, 10 ) with { Type = ParkRideChoice.QueueCellType, Neighbours = 0x01, ParentId = rideCell } );
+		StringAssert.Contains( Click(), "anchored at (11,10)" );
+		CollectionAssert.AreEqual( new[] { (11, 10) }, ParkBuildMode.Pending.ToArray() );
+	}
+
 	private static string Describe( IEnumerable<ParkPathBuilding.QueueSquare> strip )
 		=> string.Join( " ", strip.Select( square => $"({square.X},{square.Y}):{square.Marker}" ) );
 }

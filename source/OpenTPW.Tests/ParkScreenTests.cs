@@ -427,7 +427,7 @@ public class ParkScreenTests
 	/// <summary>
 	/// <b>The park's own frame joins the two</b>: after the stack's update the level reads the left button. With no
 	/// screen open a press on the park is a world click; with one open and nothing held it is none, on the screen's bare
-	/// frame or beside it; with a tool armed beside the screen it is the tool's, and anchors its run.
+	/// frame or beside it; with a tool armed beside the screen it is the tool's, which answers it (here with no park loaded).
 	/// </summary>
 	/// <remarks>
 	/// <b>Mutations:</b> the level's frame not asking whether a screen is open clicks the park beside it; not asking
@@ -445,7 +445,15 @@ public class ParkScreenTests
 		cell.SetValue( null, (20 * ParkWorld.MapSize) + 47 + 1 );
 
 		var clicks = 0;
-		Logger.LogDelegate count = ( _, text ) => clicks += text.Contains( "world click:" ) ? 1 : 0;
+		var said = "";
+		Logger.LogDelegate count = ( _, text ) =>
+		{
+			if ( !text.Contains( "world click:" ) )
+				return;
+
+			++clicks;
+			said = text;
+		};
 		Logger.OnLog += count;
 
 		try
@@ -465,7 +473,7 @@ public class ParkScreenTests
 			ParkBuildMode.Arm( ParkBuildMode.Queue );
 			WorldPress( stack, park, Grass );
 			Assert.AreEqual( 2, clicks, "beside the screen with a tool armed: the tool's" );
-			Assert.IsTrue( ParkBuildMode.Anchored, "and it anchored its run" );
+			StringAssert.Contains( said, "world click: queue: a park has to be loaded", "and the queue tool answered it" );
 
 			WorldPress( stack, park, new Vector2( 800, 450 ) );
 			Assert.AreEqual( 2, clicks, "the frame still takes its own, tool or no tool" );

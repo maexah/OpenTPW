@@ -13596,3 +13596,17 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   made a `PlayerSlots`-in-front test. Off-screen run, nobody playing: two Escapes by xdotool each logged that line and
   `windows` read `PlayerSlots` before and after both. Not taken: the screenshot (no display in the lane); not observed
   in the original (no original in the lane). **Done 2026-11-12** (cloud lane c70, `alexah/1049-escape-over-player-slots`).
+- [x] **Q1046. The queue tool's unanchored click (Q860's second read).** In the original an unanchored click in mode 3 first asks
+  `FUN_00535670( 3 )` of the cell (`0x00527297`..`0x005272a5`; anchors nothing when it answers 1, not decoded), then empties
+  the pending list (`0x005272be` `FUN_0052fbd0`), pushes the click (`0x005272cd` `FUN_0052fbf0`), anchors, resets the click
+  counter (`0x00527316`) and lays nothing. `ParkPathBuilding.RunQueue` has no such arm: `ParkBuildMode.Arm` sets the anchor to
+  (-1,-1) but leaves the list, so the console's `tool queue` and EditQueue's EDIT_QUEUE_WITH_NO_ENTRANCE arm push the first
+  click onto a stale list, and a later Backspace can pop into it and clear a line between unrelated cells. Decode
+  `FUN_00535670( 3 )` at `0x00527297` first, then build the arm as RunPath's (lines ~900-910) and test it.
+  **Done (lane B, 2026-11-12):** decoded (`park-engine.md`, "The unanchored click": the preview is one square judged last,
+  the click's own `FUN_00535670( cell, 3, 0 )` refuses a path and a second cell's price) and built
+  (`ParkPathBuilding.FirstQueueClick`). Off-screen on the stock park (`q1046/run1-fixed`, 12 of 12): with the path tool's
+  2 entries pending, `tool queue 13` then a click on (12,10), a path, `nothing anchored`, 2 pending; on (12,12)
+  `anchored at (12,12)`, `1 pending, 0 clicks`; a run and two Backspaces end `nothing laid since the queue tool anchored`
+  with (11..13,10) still path. Main's binary (`run2-control`) anchored on the path, laid queue over it and popped the path
+  tool's entry (`took up the queue run from (13,10) to (12,12)`).

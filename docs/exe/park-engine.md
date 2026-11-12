@@ -2960,6 +2960,39 @@ right-button slots are bare `RET 8`. Escape (`0x0040c180`, which calls `FUN_0052
 Delete (`FUN_0040c5e0`, Clear Land) put it away too - see "The hand's ways out". Otherwise the anchor
 moves to the snapped target, so an L is laid a click at a time.
 
+#### The unanchored click
+
+Mode 3 is unanchored when the heavy setter `FUN_0052f200` arms it, which clears the anchor. Of the image's 56 direct
+calls of the two setters, one pushes the constant 3 to it, the demolisher's drain (`0x00527fa5`, `FUN_0052f200( 3, 0 )`); whether a
+sale leaves the tool so for a click was not read. In OpenTPW an edit of a thing with no entrance cell and the console's
+`tool queue` arm it so; every other way in anchors. Decoded from the private copy for Q1046 (`q1046/gd/`):
+
+- **The preview is one square, the pointer's cell, judged as the run's last.** With the anchor at (-1,-1) `FUN_005234d0`
+  passes the pointer's cell as both ends (`0x0052460a`, `FUN_0052f840`, then `FUN_00536100( op | 0x100, … )`), and the pass
+  raises `DAT_00820ab8`, the last-square flag, for its one cell; after any on-map last cell the pass puts it and
+  `DAT_00820aa4` back to nought. So a path answers `m_link` (setting `d58` and `DAT_00816d60`, `0x00535c78`), this ride's
+  own queue end `m_end`, bare ground blue, and the reds are the anchored run's. A red square refuses the click through
+  `DAT_00816d48` before the dispatcher runs (`0x00524a63`): nothing is anchored, sound `0xaf`, the tool put away.
+- **The click asks the verdict itself** (`0x00527297`..`0x005272a5`): `FUN_00535670( cell, 3, 0 )`, the cell being
+  `[0x7cf83c] + 0x294 + 0x44 × (y·128 + x + 1)`, after the laying sound `0x65` (`0x005271ea`) and the tool's overwrite
+  priority 3 into `DAT_00818c10` (`0x00527218`). With the last-square flag nought, and `d58` copied into the latch
+  before the cell's type is read, it answers **red for a path** (the preview's join left `d58`), and past that charges
+  bare ground a second time onto the run's total `DAT_0081af4c` (`FUN_0052fba0`) and refuses when the balance is below
+  it (`0x005358fc`, `d50`, `d48`, `DAT_00816d5c` set). This ride's own queue end answers blue (`DAT_00820ab8` nought,
+  `0x00535ad8`). Mode 1's arm asks `FUN_00535670( cell, 1, 0 )` the same way (`0x0052727b`); it differs from mode 1's
+  preview only in that second charge (Q1124).
+- **Red: nothing changes** (`0x0052765b`): the anchor, the pending list and the click counter stay, the tool stays out,
+  `0x8186d8` is cleared. **Otherwise** it anchors on the cell (`0x005272b3`), empties the pending list (`FUN_0052fbd0`,
+  count `DAT_00820a8c` to nought), pushes the cell (`FUN_0052fbf0`), posts advisor `0xb8` in mode 1 only (`0x005272d5`),
+  and zeroes the click counter `DAT_008186dc` and `0x8186d8` (`0x00527316`, `0x00527320`). It lays nothing.
+
+**OpenTPW** (`ParkPathBuilding.RunQueue`, `FirstQueueClick`; `QueueStrip` answers the one square unanchored): the same,
+with the run's total the strip's own (`Owed`, as for the anchored run; how often the original zeroes it is Q541's), so
+the click refuses bare ground on a balance below twice the queue price. Tests:
+`ParkPathToolTests.AnUnanchoredQueueStripIsOneSquareJudgedAsTheLast`,
+`AnUnanchoredQueueClickAnchorsOnAFreshListAndRefusesWhatItsOwnVerdictRefuses`, and
+`ParkStaffWindowTests.EveryUnrefusedPathAndQueueClickPlaysTheLayingSound` for the sound and the red square.
+
 ### Editing a queue: mode `0x14`, and the ride window's queue button
 
 **The ride window's queue button is `FUN_004af200( 0 )`** — `FUN_004af600`, the ride window's handler,

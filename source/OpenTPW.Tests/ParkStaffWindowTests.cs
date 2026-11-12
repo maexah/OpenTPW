@@ -937,8 +937,9 @@ public class ParkStaffWindowTests
 	/// runs and wherever the press went (<c>0x005271ea</c>): the path tool's arming click on (62,18) and its run to (66,18),
 	/// the queue tool's run from the Belly Bounce's (49,22) that joins the path at (47,22), and a click on its anchor. The
 	/// click on the queue that hands the queue tool back is no click of either tool, and a refused click plays <c>0xaf</c> alone.
+	/// The unanchored queue tool sounds before its own verdict (<c>0x0052729d</c>), on a path it refuses too.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> the sound dropped from either tool or from the unanchored queue click, gated on the press (the path's call, the queue run's, the anchor click's), played on a refusal or another effect, played twice.</remarks>
+	/// <remarks><b>Mutations:</b> the sound dropped from either tool or from the unanchored queue click, gated on the press (the path's call, the queue run's, the anchor click's), played on a refusal or another effect, played twice; the unanchored click's red square let through; its preview empty.</remarks>
 	[TestMethod]
 	public void EveryUnrefusedPathAndQueueClickPlaysTheLayingSound()
 	{
@@ -988,12 +989,24 @@ public class ParkStaffWindowTests
 			var run = Level.Current!.ClickWorldAt( 47, 22, 0 );
 			Assert.AreEqual( (0x65, 1), (UiSounds.LastAsked, UiSounds.AskedCount), $"a queue run, once ({run})" );
 
-			// The queue tool armed with no anchor (the console's `tool queue`): the click anchors and sounds all the same,
-			// the original playing before its anchor test (0x005271ea, then 0x00527222).
+			// The queue tool armed with no anchor (the console's `tool queue`): the click sounds before its anchor test
+			// (0x005271ea, then 0x00527222), on a path its own verdict refuses as on bare ground it anchors.
+			// Its one square red, the middle of the queue, refuses as a run does and puts the tool away.
+			ParkBuildMode.Arm( ParkBuildMode.Queue, 13 );
+			UiSounds.LastAsked = null;
+			StringAssert.Contains( Level.Current!.ClickWorldAt( 48, 22, 0 ), "queue: nothing anchored - (48,22) is the middle of this ride's queue" );
+			Assert.AreEqual( screen ? null : 0xaf, UiSounds.LastAsked, "a refused unanchored queue click" );
+			Assert.AreEqual( ParkBuildMode.None, ParkBuildMode.Current );
+
 			ParkBuildMode.Arm( ParkBuildMode.Queue, 13 );
 			UiSounds.LastAsked = null;
 			UiSounds.AskedCount = 0;
-			StringAssert.Contains( Level.Current!.ClickWorldAt( 48, 22, 0 ), "anchored a queue run at (48,22)" );
+			StringAssert.Contains( Level.Current!.ClickWorldAt( 47, 22, 0 ), "queue: (47,22) is a path" );
+			Assert.AreEqual( (0x65, 1), (UiSounds.LastAsked, UiSounds.AskedCount), "an unanchored queue click on a path, once" );
+
+			UiSounds.LastAsked = null;
+			UiSounds.AskedCount = 0;
+			StringAssert.Contains( Level.Current!.ClickWorldAt( 11, 10, 0 ), "queue: anchored at (11,10)" );
 			Assert.AreEqual( (0x65, 1), (UiSounds.LastAsked, UiSounds.AskedCount), "an unanchored queue click, once" );
 			ParkBuildMode.Disarm();
 		}
