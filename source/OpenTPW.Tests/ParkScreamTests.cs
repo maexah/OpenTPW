@@ -23,13 +23,15 @@ public class ParkScreamTests
 {
 	/// <summary>
 	/// The four held scream effects and their bands, read off the engine's own comparisons: nought screams
-	/// not at all, then 1, 2-3, 4-7, and 8 upwards.
+	/// not at all, then 1, 2-3, 4-7, and 8 upwards. A negative band is caught by the signed <c>&lt; 4</c> with 2 and 3
+	/// (<c>FUN_00551130</c>), so it plays <c>0x48</c>; only nought is silent.
 	/// </summary>
 	[TestMethod]
 	public void TheBandChoosesWhichScreamIsPlayed()
 	{
 		Assert.AreEqual( 0, ParkAudio.ScreamEffectFor( 0 ), "band nought screams not at all" );
-		Assert.AreEqual( 0, ParkAudio.ScreamEffectFor( -1 ), "nor does a negative one" );
+		Assert.AreEqual( 0x48, ParkAudio.ScreamEffectFor( -1 ), "a negative band plays 2 and 3's sample" );
+		Assert.AreEqual( 0x48, ParkAudio.ScreamEffectFor( -32768 ), "however far below nought" );
 
 		Assert.AreEqual( 0x47, ParkAudio.ScreamEffectFor( 1 ) );
 

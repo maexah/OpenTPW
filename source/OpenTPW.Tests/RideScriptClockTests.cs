@@ -206,6 +206,21 @@ public class RideScriptClockTests
 	}
 
 	/// <summary>
+	/// <b>Only a bound of -1 divides by nought</b> (<c>0x00553994</c>). Below it the span is negative and the engine's
+	/// <c>IDIV</c> still answers: the remainder of a non-negative draw by -4 is nought to three, so a bound of -5 draws
+	/// those. A rule that silenced every span at or below nought would answer nought every time.
+	/// </summary>
+	[TestMethod]
+	public void ABoundBelowMinusOneStillDrawsAndMinusOneAnswersNought()
+	{
+		var draws = Draw( bound: Lit( -5 ), turns: 200 );
+
+		Assert.IsTrue( draws.All( value => value >= 0 && value <= 3 ), "a span of -4 leaves nought to three" );
+		Assert.IsTrue( draws.Contains( 3 ), "and three comes up" );
+		Assert.IsTrue( Draw( bound: Lit( -1 ), turns: 20 ).All( value => value == 0 ), "the span of nought answers nought" );
+	}
+
+	/// <summary>
 	/// The same script drawn twice from a fresh machine gives the same numbers. The generator is the
 	/// engine's own arithmetic and the seed is ours, so a run is repeatable even though the numbers are
 	/// not the ones the original would have produced.

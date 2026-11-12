@@ -776,6 +776,7 @@ filed the items that cite it.
   18 may be 19 (the shop window's amount slider now sets an amount off the steps of 50, Q31). (8) Two docs lines not yet re-measured: `park.md`'s selector table rows 8 and 9 leave out the
   `0x4000` and type gates of `FUN_00544c80` and `FUN_00544e50`; FileFormats `sound-categories.md` says the masks use
   bits 1, 2 and 4 beside 645 speech variations holding 100.
+  - **Piece taken (2026-11-12, lane c2):** (1), (3) and (4) are Q1147, done; (2), (5), (6), (7) and (8) stay here.
   - **Note on (7) (fork watch 2026-10-18, `verify-world-a.md` H2; `park-engine.md`, "Which rounding is live is not
     settled"):** the cause of the 24-bit reading is not settled, and our own 53-bit reading stands beside it: a breakpoint
     at `0x0059e17b` in the running original read the control word `0x27f` on ticks 970 and 1125

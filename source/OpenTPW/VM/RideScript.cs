@@ -4259,9 +4259,10 @@ public sealed class RideScript
 		var drawn = NextDraw();
 		var span = bound + 1;
 
-		// The engine would divide by zero here. No shipped script asks for it - every bound in the
-		// corpus is between 1 and 5000 - so this answers nought rather than inventing a behaviour.
-		if ( span <= 0 )
+		// A bound of -1 is the one the engine divides by zero on (0x00553994). No shipped script asks for it - every
+		// bound in the corpus is between 1 and 5000 - so this answers nought rather than inventing a behaviour. A bound
+		// below -1 divides as the engine's IDIV does: the remainder keeps the draw's sign, and its absolute value is taken.
+		if ( span == 0 )
 			return 0;
 
 		return Math.Abs( drawn % span );

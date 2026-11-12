@@ -1,6 +1,6 @@
 # Status
 
-Last updated: 2026-11-05. **This header names no branch and no sha, deliberately**: a line in the commit that moves the tip cannot name it. Read the current state from the repository, which cannot lag: `git log --oneline -1`. **`docs/QUEUE.md` is the work queue**, one item per session, taken from the top unless Alexah reorders.
+Last updated: 2026-11-12. **This header names no branch and no sha, deliberately**: a line in the commit that moves the tip cannot name it. Read the current state from the repository, which cannot lag: `git log --oneline -1`. **`docs/QUEUE.md` is the work queue**, one item per session, taken from the top unless Alexah reorders.
 
 ## Works
 
@@ -42,10 +42,11 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the maintainer's pre-commit hook: grep it by Q-number.
 
-- **Q758 (a click on the mouth while the anchor is the mouth walks back towards the other mouth; predicted 1 section with the fix and 2 on main's binary, both `+0x2c 0`):** seen off-screen only (cloud lane c1, `xvfb-run`, `tools/harness/lib/consolerun.py` with the Q762 clicks), **no desk photograph** (nothing drawn changes: the claim is the `track` census's sections) and **the original not run** (no Proton or Ghidra here); a Dino Karts bought on (32,25) in the stock jungle park, the tool armed on the mouth (34,25) and the mouth clicked again: the final build's `track` read `+0x2c 0 ... sections 1`, section 0 type 9 flags 0x1 at (30,25), and main's binary (the control) `sections 2`, (30,25) and (32,25). The original's 1 section rests on `docs/exe/park.md`, "The walk" (Q763's read of `0x0052c791`, `0x0052cd48`), not checked again here. Not run: the same click on a water ride (the same code path), and a click on the mouth from the mouth where the loop from the mouth is closed (the walk then keeps the turn's way, a reading of the docs, not seen).
+- **Q1147 (Q221 (1), (3) and (4): a short script header, a negative scream band, a `RAND` bound below -1; cloud lane c2):**
 
 ## Numbers (take counts fresh; these go stale within a day)
 
+- Linux, 2026-11-12, Q1147 (`capped.sh`; four tests added, needing no game; after the fork watch filing; built in a cloud container, re-gated here): with the game, 5300 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5302; with no game named, 2287 passed, 0 failed, 3015 skipped.
 - Linux, 2026-11-12, Q758 (`capped.sh`; two tests added, needing no game; after Q275; built in a cloud container, re-gated here): with the game, 5296 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5298; with no game named, 2283 passed, 0 failed, 3015 skipped.
 - Linux, 2026-11-12, Q275 (`capped.sh`; one test added, needing the game; after Q944; built in a cloud container, re-gated here): with the game, 5294 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5296; with no game named, 2281 passed, 0 failed, 3015 skipped.
 - Linux, 2026-11-12, Q944 (`capped.sh`; three tests added, needing the game; after review fixes group R): with the game, 5293 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5295; with no game named, 2281 passed, 0 failed, 3014 skipped.

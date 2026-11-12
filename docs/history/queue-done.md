@@ -12797,3 +12797,15 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `WalkCircuit` the heading as a parameter and pass `CellEdge.Opposite( HeadingOf( angle ) )` from `RunOn` when
   `anchor == target && mouth == target` and the circuit from the mouth does not close; keep the turn's way everywhere
   else (the finder's "opposite on every open no-move close" is wrong). Test it with a bought ride closed at once.
+- [x] **Q1147. Q221 (1), (3) and (4): a short script header, a negative scream band, a RAND bound below -1.** Split from
+  Q221 (the 2026-10-04 effort audit's reading of the listing; not re-read in Ghidra here, none in the container). (1)
+  `ParkScriptStates` reads the tick and next handle only where the header block holds the whole dword,
+  `>= (dword + 1) * 4` (`ParkScriptStateHeaderTests`: blocks of 7, 11 and 12 bytes). (3) `ParkAudio.ScreamEffectFor`
+  plays `0x48` for a negative band, which falls through `FUN_00551130`'s signed `< 4` with 2 and 3; only nought is
+  silent (`ParkScreamTests.TheBandChoosesWhichScreamIsPlayed`). (4) `RideScript.NextRandom` answers nought only for a
+  bound of -1 (`0x00553994` divides by nought); a bound below it divides as `IDIV` does (`RideScriptClockTests.
+  ABoundBelowMinusOneStillDrawsAndMinusOneAnswersNought`: -5 draws nought to three). Measured over the 308 scripts
+  (a throwaway walk, not kept): all 56 `RAND` bounds are literals from 1 to 5000, so (4) is dead by content; all 40
+  `STARTSCREAM` bands are variables (index 5 in 35, 12 in 4, 2 in 1), so a negative one is a run-time question, and the
+  stock park run off-screen screamed bands 1 and 2 only (effects 71 and 72, as before). (1): the stock park's block is
+  whole, and all 14 of its scripts resumed.
