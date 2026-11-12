@@ -355,14 +355,12 @@ public class ParkStaffBehaviourTests
 	}
 
 	/// <summary>
-	/// A handyman loaded in state 8 or 9 (the walk to litter and the sweep, <c>FUN_004d73c0</c>'s cases 8 and 9) has
-	/// no arm here: he stands where he is in that state and is counted on every turn, by name; any other member in a
-	/// state with no arm is counted by its number, and a carried member (state 7, an empty arm in the original) is not.
+	/// A member in a state with no arm here stands where they are in that state and is counted on every turn by its
+	/// number, a mechanic in the handyman's state 8 among them; a carried member (state 7, an empty arm in the
+	/// original) is not counted.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> the default arm counting nothing; Held counted as a state with no arm; a mechanic in state 8 counted as a handyman's litter job.</remarks>
+	/// <remarks><b>Mutations:</b> the default arm counting nothing; Held counted as a state with no arm; a mechanic in state 8 taken for a handyman's litter job.</remarks>
 	[DataTestMethod]
-	[DataRow( Handyman, 8, "HANDYMAN_LITTER_STATE_8" )]
-	[DataRow( Handyman, 9, "HANDYMAN_LITTER_STATE_9" )]
 	[DataRow( Mechanic, 8, "STAFF_STATE_0x8" )]
 	[DataRow( Handyman, 0x12, "STAFF_STATE_0x12" )]
 	[DataRow( Handyman, 7, null )]
@@ -381,6 +379,41 @@ public class ParkStaffBehaviourTests
 			gaps.Select( ( name, index ) => Counted( name ) - before[index] ).ToArray(), "each turn counted, under its own name" );
 		Assert.AreEqual( (StaffActivity)state, member.Activity, "the state is kept" );
 		Assert.AreEqual( at, member.Navigator.Position, "and nobody moves" );
+	}
+
+	/// <summary>
+	/// A handyman loaded in state 8 or 9 (the walk to litter and the sweep, <c>FUN_004d73c0</c>'s cases 8 and 9, not
+	/// built) is counted by name and falls to idle where he stands, with the stamp cleared whatever the save held, so
+	/// on the next sweep he decides: the litter search counted, then a random walk. A deviation: the original carries
+	/// on with the job (<c>0x004d741f</c>, <c>0x004d742a</c>).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the state kept (the arm as it was); the decide made on the falling turn; the save's stamp kept, or the clock taken, so the wait runs on past the next sweep.</remarks>
+	[DataTestMethod]
+	[DataRow( 8, "HANDYMAN_LITTER_STATE_8" )]
+	[DataRow( 9, "HANDYMAN_LITTER_STATE_9" )]
+	public void AHandymanLoadedInALitterStateFallsToIdleAndDecidesOnTheNextSweep( int state, string gap )
+	{
+		// Stamped at the falling turn's clock: a stamp kept, or the clock taken, holds him idle on the next sweep.
+		var (member, walk, park) = OnThePath( Handyman, stamp: 1001, activity: (StaffActivity)state );
+		var behaviour = new StaffBehaviour( Balance(), new ConstantDraw(), park );
+		var before = (Gap: Counted( gap ), Search: Counted( "HANDYMAN_LITTER_SEARCH" ));
+		var at = member.Navigator.Position;
+
+		// Neither 1001 nor 1002 divides by any grade's idle duration, so the idle pre-step's litter look is not counted.
+		behaviour.Step( member, walk, playing: null, tick: 1001 );
+
+		Assert.AreEqual( StaffActivity.Idle, member.Activity, "he falls to idle on the turn he is first stepped" );
+		Assert.AreEqual( 0, member.TimeStartedIdling, "with the stamp cleared, as an idle entered from anything but a walk" );
+		Assert.AreEqual( at, member.Navigator.Position, "where he stands" );
+		Assert.AreEqual( 1, Counted( gap ) - before.Gap, "counted once, by name" );
+		Assert.AreEqual( 0, Counted( "HANDYMAN_LITTER_SEARCH" ) - before.Search, "and no decide on that turn" );
+
+		behaviour.Step( member, walk, playing: null, tick: 1002 );
+
+		Assert.AreEqual( StaffActivity.Walking, member.Activity, "the next sweep's decide sends him walking" );
+		Assert.AreNotEqual( (48, 22), member.Navigator.Target.Cell, "somewhere else" );
+		Assert.AreEqual( 1, Counted( "HANDYMAN_LITTER_SEARCH" ) - before.Search, "after the litter search, counted" );
+		Assert.AreEqual( 1, Counted( gap ) - before.Gap, "and the litter state is not counted again" );
 	}
 
 	/// <summary>

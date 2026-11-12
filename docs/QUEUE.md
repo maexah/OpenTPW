@@ -1144,14 +1144,14 @@ filed the items that cite it.
   three draws on would show it From the week-end audit (stage 6, the second reading of commit `d490bc90`; read
   from the code, not reproduced in the game). `OpenTPW.Files/Formats/Save/ParkParticles.cs`, line 376.
 
-- [ ] **Q1154. A handyman loaded walking to litter or sweeping falls to idle (from Q285).** A handyman loaded from a park
-  file in state 8 or 9 (FUN_004d73c0's cases 8 and 9) takes `StaffBehaviour.Step`'s default arm, is counted
-  (`HANDYMAN_LITTER_STATE_8`, `_9`) and stands in that state for the rest of the session. Until the litter job is built he
-  should fall to idle (a deviation, said at the site: the original carries on with the walk or the sweep, `0x004d741f`,
-  `0x004d742a`) (`Staff.SetActivity( StaffActivity.Idle, tick )`, which clears the stamp so he decides on the next
-  sweep), as Q285's bullet asked; left out of Q285 because it changes what is drawn (he walks off) and that lane could not
-  photograph. Confirm: Alexah's `jungle/New Save.TPWS` (four such handymen) loaded, the `staff` census read before and
-  after a few seconds, predicted first; a photograph of one walking off.
+- [ ] **Q1316. The handyman loaded walking to litter or sweeping: his walk off photographed, and the job itself (from Q1154).**
+  Q1154 made one loaded in state 8 or 9 fall to idle (`StaffBehaviour.Step`'s default arm, counted as
+  `HANDYMAN_LITTER_STATE_8` and `_9`, a deviation said at the site) and confirmed it by census only, off-screen in a cloud
+  container. Left: (1) a photograph of him walking off, on the desk: Alexah's `jungle/New Save.TPWS` (four such
+  handymen) loaded, the `staff` census before and after a few seconds, one of them photographed as he sets off; (2) the
+  original's own arms, which carry on with the walk or the sweep (`FUN_004d73c0`'s cases 8 and 9, `0x004d741f`,
+  `0x004d742a`) from the saved `mTargetLitterCell` (+503, read by nothing yet), built with the litter search
+  (`HANDYMAN_LITTER_SEARCH`), which they need; decode them in Ghidra first.
 
 - [ ] **Q287. ParkHireScreen.Selected previews a highlighted candidate's wage with ShowMoney( person.Wage ), and
   Update() calls ShowMoney() with no wage on every frame (WindowStack.OnUpdate).** So the staff-costs preview is

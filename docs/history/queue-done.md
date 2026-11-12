@@ -12145,6 +12145,14 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q1154. A handyman loaded walking to litter or sweeping falls to idle (from Q285).** A handyman loaded from a park
+  file in state 8 or 9 (FUN_004d73c0's cases 8 and 9) takes `StaffBehaviour.Step`'s default arm, is counted
+  (`HANDYMAN_LITTER_STATE_8`, `_9`) and stands in that state for the rest of the session. Until the litter job is built he
+  should fall to idle (a deviation, said at the site: the original carries on with the walk or the sweep, `0x004d741f`,
+  `0x004d742a`) (`Staff.SetActivity( StaffActivity.Idle, tick )`, which clears the stamp so he decides on the next
+  sweep), as Q285's bullet asked; left out of Q285 because it changes what is drawn (he walks off) and that lane could not
+  photograph. Confirm: Alexah's `jungle/New Save.TPWS` (four such handymen) loaded, the `staff` census read before and
+  after a few seconds, predicted first; a photograph of one walking off.
 
 ## B. Docs and comments
 
