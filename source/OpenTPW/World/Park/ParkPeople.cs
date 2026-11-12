@@ -2495,25 +2495,13 @@ public sealed partial class ParkPeople : Entity
 		foreach ( var leaver in _peeps.Where( peep => peep.State is PeepState.Leaving ).Select( peep => peep.ThingId ).ToList() )
 			Depart( leaver );
 
-		StepArrivals();
-
-		// After the load, and on every sweep rather than only while one is running - the original
-		// reaches its own tail the same way, from every arm above. Without this the vehicle is
-		// released once and parks at the next of its three spins for ever.
-		StepVehicle();
-		LogVehicleStatuses();
-
-		// The staff pool's turn follows the arrival manager's in the sweep's tail (0x004d7b30).
-		ParkStaffPool.Current?.Sweep( State.GameTick,
-			kind => _staff.Count( member => ParkStaffPool.KindFor( member.Model ) == kind ),
-			StaffNamed );
-
 		TakeTheRidesTurns( thingTick );
 		RetryGateClose();
 
-		// The advisor's turn is the sweep's last: he is a thing (model 11, FUN_0050b360's arm 0xb), the list is
+		// The advisor's turn is the walk's last: he is a thing (model 11, FUN_0050b360's arm 0xb), the list is
 		// swept newest first, and the two things made before him have no arm, so a message posted on any
-		// other thing's turn is said on the same tick (docs/exe/advisor-park.md, "The advisor's turn in the sweep").
+		// other thing's turn is said on the same tick; the arrivals and the staff pool come after him, in the
+		// sweep's tail (docs/exe/advisor-park.md, "The advisor's turn in the sweep").
 		// Catch-up sweeps share a frame timestamp here; the native running clock may query the OS per call.
 		// GameClock.Now keeps the engine's clamped-frame timing deviation (docs/exe/advisor-park.md).
 		State.AdvisorMessages?.Tick( State.GameTick, (long)(GameClock.Now * 1000),
@@ -2530,7 +2518,21 @@ public sealed partial class ParkPeople : Entity
 		// The sweep's end: the ids of the things deleted in it go back on the free list (0x00516654..0x00516685), before the tail.
 		State.FreeDeletedThings();
 
-		// Then the sweep's tail, after every thing's turn and so after the advisor's (FUN_00516380 turns the things at
+		// The sweep's tail (FUN_004d7b20, called at 0x00516695), after the advisor's turn and the free list: the arrival
+		// manager (0x004d7b29), so a guest it makes may take an id freed in this sweep, then the staff pool (0x004d7b30).
+		StepArrivals();
+
+		// After the load, and on every sweep rather than only while one is running - the original
+		// reaches its own tail the same way, from every arm above. Without this the vehicle is
+		// released once and parks at the next of its three spins for ever.
+		StepVehicle();
+		LogVehicleStatuses();
+
+		ParkStaffPool.Current?.Sweep( State.GameTick,
+			kind => _staff.Count( member => ParkStaffPool.KindFor( member.Model ) == kind ),
+			StaffNamed );
+
+		// The rest of the tail, after every thing's turn and so after the advisor's (FUN_00516380 turns the things at
 		// 0x005163fb and calls the tail at 0x00516695): the golden tickets on every hundredth tick (0x004d7b60) are
 		// owed here and tested by Level.TurnTheCalendar, which ParkLoop runs after this sweep once the calendar has
 		// turned, as the original's tail has them (0x004d7b20), so a ticket's line waits for the next sweep's turn.

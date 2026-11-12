@@ -12145,6 +12145,13 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q462. The advisor's turn comes before the sweep's tail.** From the week-end audit (D11, `VERIFY-8b.md` Q318 1).
+  The original walks every thing (his turn inside the walk), then `0x004d7b20` (`0x00516695`): arrivals, staff pool,
+  calendar. Ours runs the arrivals and the pool before his `Tick`, so row 0x11 can be said a poll round early or late.
+  **Done 2026-11-12** (cloud lane c48, `alexah/1027-advisor-before-sweep-tail`; off-screen, `consolerun.py`; no original,
+  no Ghidra here): `ParkPeople.Sweep` runs the arrivals, the vehicle and the staff pool after the advisor's `Tick` and the
+  free list; `ParkAdvisorBeforeTailTests` holds row 17 both ways on the shipped pool, and the off-screen run logged the
+  poll on 1083 (`candidates=0`) before the pool's top-up, main's build the other way. The gate's retry is Q1312.
 
 ## B. Docs and comments
 

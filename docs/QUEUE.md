@@ -1381,9 +1381,12 @@ filed the items that cite it.
   `TIEBREAK-Q311.md`). A type-0 tag's second button and a decline's erase button are shown and disabled (vtable +0x14
   with 0 at `0x0048e991`, `0x0048e43c`); the hit test skips a disabled control (`0x0065db3b`). Q427 made them take the
   pointer (`ParkGadget.cs`, `hud.md`, two tests). Needs Q66 (`HitTest` reads no `Enabled`) first, or the difference said.
-- [ ] **Q462. The advisor's turn comes before the sweep's tail.** From the week-end audit (D11, `VERIFY-8b.md` Q318 1).
-  The original walks every thing (his turn inside the walk), then `0x004d7b20` (`0x00516695`): arrivals, staff pool,
-  calendar. Ours runs the arrivals and the pool before his `Tick`, so row 0x11 can be said a poll round early or late.
+- [ ] **Q1312. The gate's retry comes after the advisor's turn.** From Q462. `FUN_00516380` walks the things (the
+  advisor, thing 3, among the last) and only then tries the delayed close (`0x0051643b`..`0x00516639`, every 30 ticks;
+  `docs/exe/park-gate.md`, "The later close check"); `ParkPeople.Sweep` calls `RetryGateClose` before the advisor's
+  `Tick`. No row the advisor reads is known to follow the gate's command on the same tick, so first find what (if
+  anything) the order changes; then move it after his turn and before `FreeDeletedThings`, with a test whose values
+  the old order gets wrong, or say at the call that nothing can tell the two apart.
 - [ ] **Q464. A written corner cell's made vehicles run newest first.** From the week-end audit (D13, `VERIFY-2b.md`
   Q342 1). With ferry and seaplane both made, `ParkWorld.People.cs` writes cell (0,0)'s chain oldest first; the
   original's file (`q257x/orig/fixed-by-the-original.TPWS`) and our running list run newest first. No effect on reading
