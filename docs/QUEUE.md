@@ -2277,18 +2277,11 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   or make the world fresh (entering). Said at the site (`Level.CreatePark`). A copied or damaged file, a short one the original left
   (`0x00414c37`) or an online one (`SaveReader.cs:95`) reaches it; not a file this game writes. The Restart Park comment at
   `ParkFrontEnd.cs:587-590` (S-M3, Q997) belongs with it. Confirm: a truncated copy in each of the three routes, in both games.
-- [ ] **Q995. One copy at a time, keyed per game folder.** From the week-end audit 2026-10-31 (ST-F1). The original lets one copy run:
-  `WinMain_Main` calls `0x0045f640` first (`0x0045a97f`) and leaves unless it answers 1 (`0x0045a988`); that calls `CreateMutexA`
-  (`0x0045f666`), tests `GetLastError` against `0xb7`, ERROR_ALREADY_EXISTS (`0x0045f675`, `0x0045f67b`), and closes the handle
-  (`0x0045f699`). `docs/exe/boot.md:7`, `:266`. OpenTPW has no lock (`Program.cs:8-23` goes to `Game.Run`), so two copies share one
-  `save/`: the last `Player.Save` wins (`Players.cs:129`); both write through the one `<file>.tmp` (`BaseFileSystem.cs:138-140`), so one
-  copy's move can find the other's file gone and say PARK NOT SAVED over "The save folder cannot be written" (`SaveTrouble.Failed`, an
-  `IOException`); and the second start rotates the first's live `console.log` to `console-prev.log` (`ConsoleLog.cs:131`, `:170`).
-  Build it **keyed per game folder, never machine-wide** (the second reader's constraint): `docs/WORKFLOW.md:324` and the harness run lanes side by
-  side on separate game folders, and a machine-wide lock would make the second lane quit silently. It must be taken **before
-  `ConsoleLog.Open`** (`Game.cs:49`), so the game folder is the key. The mutex's name is not established (`0x7a2508` is outside the file's
-  bytes). Until it is built the deviation is said at the site (`Program.cs`; the goal's line, "a deviation from the original is said at the site"). The box in Confirm is itself unsaid, since the original quits silently: say so there when it is built.
-  Confirm: two starts on one folder, the second refused with a box; two on different folders, both run.
+- [ ] **Q1174. One copy: a second path to one game folder through a link takes a second lock.** From Q995. `OneCopy.Name`
+  keys the folder's full path as spelled, so a copy started through a symbolic link (or a junction, or a subst drive) to
+  a folder another copy runs on is not refused, and the two share one `save/`. Resolve the path's links before hashing
+  (every component, not only the last, which is all `Directory.ResolveLinkTarget` does), with a test that makes a link
+  to a temporary folder. Not measured: whether anyone starts the game that way.
 - [ ] **Q996. A failed route is not revived; a binding read on its press is rebuilt as the frame ends.** From the week-end audit 2026-10-31
   (D1, D2 of the docs sweep). (1) The original's walker revives a failed route when the ground near the guest has changed since the last plan
   and walks them to the loser's back of queue (`0x0050ed79`); `PeepBehaviour.cs:2459` says so, `docs/exe/ride-operation.md:4557` and STATUS

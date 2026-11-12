@@ -16,8 +16,6 @@ public class Program
 		// Before anything can open a native library - see NativeLibraries.
 		NativeLibraries.Register();
 
-		// A gap, said at the site (Q995): the original lets one copy run (a named mutex, 0x0045f640 from 0x0045a97f, which leaves
-		// when it exists already) and this game starts as many as are asked for, which then share one save folder and one console.log.
 		try
 		{
 			Game.Run( args );

@@ -13000,3 +13000,25 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `DecodedSize` outside the tests is `SoundBank.cs:91`'s memory estimate. Confirm: a clip's frame count against the
   played length for the five MPEG-1 entries and a sample of MPEG-2 ones; `docs/exe/audio.md` (the decode, ~line 1444)
   says nothing of the tail and should.
+- [x] **Q995. One copy at a time, keyed per game folder.** From the week-end audit 2026-10-31 (ST-F1). The original lets one copy run:
+  `WinMain_Main` calls `0x0045f640` first (`0x0045a97f`) and leaves unless it answers 1 (`0x0045a988`); that calls `CreateMutexA`
+  (`0x0045f666`), tests `GetLastError` against `0xb7`, ERROR_ALREADY_EXISTS (`0x0045f675`, `0x0045f67b`), and closes the handle
+  (`0x0045f699`). `docs/exe/boot.md:7`, `:266`. OpenTPW has no lock (`Program.cs:8-23` goes to `Game.Run`), so two copies share one
+  `save/`: the last `Player.Save` wins (`Players.cs:129`); both write through the one `<file>.tmp` (`BaseFileSystem.cs:138-140`), so one
+  copy's move can find the other's file gone and say PARK NOT SAVED over "The save folder cannot be written" (`SaveTrouble.Failed`, an
+  `IOException`); and the second start rotates the first's live `console.log` to `console-prev.log` (`ConsoleLog.cs:131`, `:170`).
+  Build it **keyed per game folder, never machine-wide** (the second reader's constraint): `docs/WORKFLOW.md:324` and the harness run lanes side by
+  side on separate game folders, and a machine-wide lock would make the second lane quit silently. It must be taken **before
+  `ConsoleLog.Open`** (`Game.cs:49`), so the game folder is the key. The mutex's name is not established (`0x7a2508` is outside the file's
+  bytes). Until it is built the deviation is said at the site (`Program.cs`; the goal's line, "a deviation from the original is said at the site"). The box in Confirm is itself unsaid, since the original quits silently: say so there when it is built.
+  Confirm: two starts on one folder, the second refused with a box; two on different folders, both run.
+  **Done 2026-11-12 (cloud lane c16):** `OneCopy` (`Client/OneCopy.cs`), taken in `Game.Run` after `GameDir.Find` and
+  before `ConsoleLog.Open`: a named mutex, `Global\OpenTPW.OneCopy.` and 32 hex of the SHA-256 of the folder's full path
+  (closing separator trimmed, upper-cased on Windows and macOS), made with `new Mutex( false, name, out createdNew )`, kept
+  for the run; `createdNew` false is the original's `0xb7` test, and that handle is closed. `Global\` because a plain name
+  is kept per terminal session on Linux (`consolerun.py` starts each run in a session of its own). A refused copy logs two
+  `One copy:` lines, keeps no console.log (the box says `Log: none`), shows the Q978 box and exits 1; the box is a deviation,
+  said at the site (the original quits silently, its exit code not traced). A mutex that cannot be made or opened is logged
+  and the copy runs. `OneCopyTests` (8, no game). Off-screen in a cloud container: two starts on one folder, the second
+  refused, the first's log not rotated; two on different folders, both to the lobby (STATUS). Not run on Windows or
+  macOS; a second path to one folder through a link is a second lock (Q1174).

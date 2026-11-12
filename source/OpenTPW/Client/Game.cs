@@ -45,6 +45,22 @@ internal static class Game
 			return;
 		}
 
+		// One copy at a time on one game folder, as the original's 0x0045f640 lets one copy run (Q995). Before the log opens, so
+		// a refused copy leaves the running copy's console.log alone: it keeps no file, and says why on the terminal and in a box.
+		if ( !OneCopy.Take( GameDir.Root ) )
+		{
+			var refusal = OneCopy.Refusal( GameDir.Root ).ToList();
+
+			foreach ( var line in refusal )
+				Log.Warning( $"One copy: {line}" );
+
+			// The original quits without a word; the box is a deviation (Q995), as a start that vanishes looks broken.
+			StartFailure.Show( StartFailure.Compose( StartFailure.Head, refusal, string.Empty ) );
+
+			Environment.ExitCode = 1;
+			return;
+		}
+
 		// Now there is a folder to keep the console's log in, and what was printed so far goes into it.
 		ConsoleLog.Open( GameDir.Root );
 
