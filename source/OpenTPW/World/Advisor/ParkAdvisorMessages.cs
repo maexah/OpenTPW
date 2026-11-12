@@ -1771,12 +1771,28 @@ internal sealed class ParkAdvisorMessages
 		_playing = pending.Topic.Id;
 		++Attempts;
 		// The helper then sends an event of type 0x18 carrying the response's group and the record's subject
-		// (FUN_0059b620, FUN_0040f740, FUN_0040fb10); its one hearer is the tag system (FUN_00509bf0). For a polled
-		// record the original first writes the thing its score callback left into the record (0x0059b6cf), so row 113's
-		// tag is about the unjoined ride; ours sends the posted subject, nought (docs/QUEUE.md Q1160).
-		said?.Invoke( ResponseOf( posted )?.Group ?? pending.Topic.Group, pending.Subject, pending.Secondary );
-		Log.Info( $"Park advisor: attempt={Attempts} message={pending.Topic.Id} subject={pending.Subject} score={score} threshold={Threshold} response={response} sample={sample} line={line} tick={gameTick} duration={duration} waitUntil={WaitUntil}" );
+		// (FUN_0059b620, FUN_0040f740, FUN_0040fb10); its one hearer is the tag system (FUN_00509bf0). First it writes
+		// the thing the score callback leaves into the record's thing where that is not nought (0x0059b6cf), so row
+		// 113's tag is about the unjoined ride. The record's second word stays as posted: the poll posts about thing
+		// nought with second word nought (0x0059a5fd), and row 113's score leaves no dword
+		// (docs/exe/advisor-park.md, "A queue not joined to a path").
+		var subject = pending.Subject;
+		var secondary = pending.Secondary;
+		if ( ThingOf( pending.Topic ) is var thing and not 0 )
+		{
+			subject = thing;
+			secondary ??= 0;
+		}
+		said?.Invoke( ResponseOf( posted )?.Group ?? pending.Topic.Group, subject, secondary );
+		Log.Info( $"Park advisor: attempt={Attempts} message={pending.Topic.Id} subject={subject} score={score} threshold={Threshold} response={response} sample={sample} line={line} tick={gameTick} duration={duration} waitUntil={WaitUntil}" );
 	}
+
+	/// <summary>
+	/// The thing a row's score leaves in the balance object's +4 (FUN_0059c0a0 copies it out at 0x0059c217), which the
+	/// speech writes into the record (0x0059b6cf): row 113's is the ride whose queue is not joined (0x0059ef60). Nought
+	/// for every other built row; rows 86-89, 140 and 141 leave one too and are not built (docs/QUEUE.md Q1264).
+	/// </summary>
+	private int ThingOf( Topic topic ) => topic.QueueNotJoined ? _park?.Invoke().UnjoinedQueue ?? 0 : 0;
 
 	internal string Census() => $"park advisor: pending={PendingCount} attempts={Attempts} threshold={Threshold} "
 		+ string.Concat( _slots.Where( slot => slot != null ).Select( slot => $"slot={slot!.Topic.Id}/subject={slot.Subject} " ) )

@@ -4725,7 +4725,14 @@ a queue path and whose back is not connected (`ParkRideOperation.BackOfQueueConn
 key's value where it names one. Its poll line ends ` unjoined=N`, the thing. **A deviation:** the object passed
 over is the one the queue tool is armed for (`ParkBuildMode.Serves`), from the tool's arming to its putting
 away; the original's word is also set from the interface's selected thing and may outlast the tool, which is not
-read. The console's `buy` arms no tool, as a load in the original leaves the word nought.
+read. The console's `buy` arms no tool, as a load in the original leaves the word nought. **The line is about the
+ride** (Q1160): at the speech `ParkAdvisorMessages.Tick` asks the score's thing again (`ThingOf`, the facts'
+`UnjoinedQueue`) and, where it is not nought, sends it as the said event's subject, with the second word nought as the
+poll posted it, so tag 135 is about that ride and its type-3 button puts the camera on it. The run (Q1160, a cloud
+container, off-screen, the Mayhem bought with no pause after the park's first poll of 113 on tick 841; the output was
+not kept): `attempt=1 message=113 subject=43 ... tick=996`, `Park tags: tag 135 picture 0 subject 43`, the tag
+clicked, `message bar: tag 135 subject 43 item 0 ... first=mb_locate/help=516`, the first button clicked, `Camera: to
+thing 43 on cell (57,23), point of interest (570,230)`. The original's click is not checked (read only).
 
 **The scene.** The stock park, open; under a pause on the first tick at or past 893 an Aztec Mayhem is bought
 and left as bought (`buy 1104 57 23`, thing 43), its queue of one cell joined to nothing, and the park saved.
@@ -4762,10 +4769,10 @@ in 75 s.
 | | The original | OpenTPW |
 |---|---|---|
 | Row 113 | polled; `QueueUnconnected.Score` where a choosable thing's queue is not joined at its back | the same |
-| A ride bought and its queue left unjoined | said on tick 996, line 0, no prop, tag 135 about the ride (read) | said on tick 996, line 0, no prop, tag 135 about no thing |
+| A ride bought and its queue left unjoined | said on tick 996, line 0, no prop, tag 135 about the ride (read) | said on tick 996, line 0, no prop, tag 135 about the ride (Q1160) |
 | Every queue joined | not said | not said |
 | The tag's words | the american folder's, "a line" | the English folder's, "a queue" |
-| The tag's camera button | goes to the ride (read, not clicked) | does nothing |
+| The tag's camera button | goes to the ride (read, not clicked) | goes to the ride, cell (57,23) (Q1160) |
 | The object passed over | the builder's object, `DAT_008186ac` | the queue tool's thing while the tool is armed |
 
 **Not built or not seen.** When the builder's object goes back to nought (the nineteen callers of

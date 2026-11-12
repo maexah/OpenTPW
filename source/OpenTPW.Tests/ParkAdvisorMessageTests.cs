@@ -4815,13 +4815,14 @@ public class ParkAdvisorMessageTests
 	/// <summary>
 	/// Row 113, message 0x71, is polled and scored by a queue not joined to a path (0x0059ef60):
 	/// QueueUnconnected.Score where the park hands in a ride whose queue is unjoined, and nought with none,
-	/// whatever the door and the counts. It is two lines with no prop, said on its poll's sweep about no thing,
-	/// which leaves tag 135; refused inside its cooldown and saying its second line past it.
+	/// whatever the door and the counts. It is two lines with no prop, said on its poll's sweep about the ride
+	/// whose queue is unjoined with second word nought, which leaves tag 135; refused inside its cooldown and saying
+	/// its second line past it.
 	/// </summary>
 	/// <remarks>
 	/// <b>Mutations:</b> the score given with no queue unjoined, or refused with one; the door or the rides
 	/// asked; the row's key, response, sample, lines, copies, prop or group another's; the row not polled; the
-	/// thing handed on as the line's subject.
+	/// thing not handed on as the line's subject; the second word left for the subject's item.
 	/// </remarks>
 	[TestMethod]
 	public void AQueueNotJoinedToAPathIsPolledAndSpokenOf()
@@ -4831,10 +4832,10 @@ public class ParkAdvisorMessageTests
 		var messages = new ParkAdvisorMessages( settings, cursor: cursor );
 		var facts = new ParkAdvisorMessages.ParkFacts( Closed: false, Rides: 2, Sideshows: 1, WaitingToOpen: 0 );
 		var said = new List<(int Tick, int Response, int Sample)>();
-		var groups = new List<(int, int)>();
+		var groups = new List<(int, int, int?)>();
 		void Sweep( int at, long milliseconds )
 			=> messages.Tick( at, milliseconds, ( response, sample ) => { said.Add( (at, response, sample) ); return 5000; },
-				( group, subject ) => groups.Add( (group, subject) ), () => facts );
+				( group, subject, second ) => groups.Add( (group, subject, second) ), () => facts );
 
 		var queue = ParkAdvisorMessages.ParkTopics.Single( one => one.Id == ParkAdvisorMessages.QueueUnconnected );
 		Assert.AreEqual( (113, 288, 312, 2, 255, 0, true, 135, 0, -1),
@@ -4870,12 +4871,13 @@ public class ParkAdvisorMessageTests
 		Set( settings, "QueueUnconnected.Score", 87 );
 		Set( settings, "RidesClosed.Score", 80 );
 
-		// A ride's queue unjoined: the line is said on its poll's sweep, about no thing, and leaves tag 135.
+		// A ride's queue unjoined: the line is said on its poll's sweep, about that ride with second word nought,
+		// and leaves tag 135.
 		facts = joined with { UnjoinedQueue = 44 };
 		cursor.Row = 113;
 		Sweep( 996, 100_000 );
 		CollectionAssert.AreEqual( new[] { (996, 288, 312) }, said );
-		CollectionAssert.AreEqual( new[] { (135, 0) }, groups );
+		CollectionAssert.AreEqual( new (int, int, int?)[] { (135, 44, 0) }, groups );
 		Assert.AreEqual( ("post", 114, 0), (messages.PollAnswer( 113 ), cursor.Row, messages.PendingCount) );
 		StringAssert.Contains( messages.Census(), "message=113/score=87/line=0/lastTick=996/said=1/slaps=0" );
 
@@ -4896,6 +4898,43 @@ public class ParkAdvisorMessageTests
 		cursor.Row = 113;
 		Sweep( 3000, 900_000 );
 		Assert.AreEqual( ("no-score", 3), (messages.PollAnswer( 113 ), said.Count) );
+	}
+
+	/// <summary>
+	/// Row 113's line is about the ride its score finds when it is said, not when it is polled: the poll posts it
+	/// about thing nought (0x0059a5fd), and the speech asks the score again and writes the thing it leaves into the
+	/// record (FUN_0059b620, 0x0059b6cf), so the tag's locate button goes to the ride unjoined at that moment.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> the thing taken at the poll; the posted subject sent; the second word left for the
+	/// subject's item.
+	/// </remarks>
+	[TestMethod]
+	public void AnUnjoinedQueuesLineIsAboutTheRideItsScoreFindsWhenSaid()
+	{
+		var cursor = new ParkAdvisorMessages.PollCursor { Row = 113 };
+		var messages = new ParkAdvisorMessages( Settings(), cursor: cursor );
+		var facts = new ParkAdvisorMessages.ParkFacts( Closed: false, Rides: 2, Sideshows: 1, WaitingToOpen: 0, UnjoinedQueue: 44 );
+		var groups = new List<(int, int, int?)>();
+		void Sweep( int at, long milliseconds )
+			=> messages.Tick( at, milliseconds, ( _, _ ) => 5000,
+				( group, subject, second ) => groups.Add( (group, subject, second) ), () => facts );
+
+		Sweep( 996, 100_000 );
+		CollectionAssert.AreEqual( new (int, int, int?)[] { (135, 44, 0) }, groups );
+
+		// Past its cooldown and inside the line's wait: posted about no thing, and waiting.
+		facts = facts with { UnjoinedQueue = 45 };
+		cursor.Row = 113;
+		Sweep( 1600, 101_000 );
+		Assert.AreEqual( ("post", 1, 1), (messages.PollAnswer( 113 ), messages.PendingCount, groups.Count) );
+		StringAssert.Contains( messages.Census(), "slot=113/subject=0 " );
+
+		// Another ride's queue is the one unjoined when the wait is over: the line is about that one.
+		facts = facts with { UnjoinedQueue = 46 };
+		Sweep( 1601, 107_000 );
+		CollectionAssert.AreEqual( new (int, int, int?)[] { (135, 44, 0), (135, 46, 0) }, groups );
+		Assert.AreEqual( 0, messages.PendingCount );
 	}
 
 	/// <summary>

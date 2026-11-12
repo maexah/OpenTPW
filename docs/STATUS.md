@@ -42,10 +42,20 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the maintainer's pre-commit hook: grep it by Q-number.
 
-- **Q80 (the first piece: `LobbyScript` over the four shipped island scripts):** in a cloud container (no Ghidra, no original, no display; the run's output was not kept), `LobbyScriptIslandsTests` (five tests, needing the game) passes on the four files `lobby.wad` ships, and four bugs put back by hand in `LobbyScript.Read` each failed it. A test only: nothing the game does changed, so no game run was made. Not checked: that the original's parser `FUN_005e3210` takes the same fields from the same columns (taken from `docs/exe/lobby.md` and the reader's comments, not read in Ghidra), Windows and macOS. Filed: Q1212 (the save round trip, the rest of Q80).
+- **Q1160 (row 113's tag is about the unjoined ride):** in a cloud container (no Ghidra, no original, no display; the
+  runs' output was not kept), `AQueueNotJoinedToAPathIsPolledAndSpokenOf` and the new
+  `AnUnjoinedQueuesLineIsAboutTheRideItsScoreFindsWhenSaid` pass, and three bugs put back by hand (the posted subject
+  sent, the second word left for the subject's item, the thing taken at the poll) each failed them. Off-screen
+  (`consolerun.py`, the Mayhem bought with no pause): `attempt=1 message=113 subject=43 ... tick=996`, `Park tags: tag
+  135 picture 0 subject 43`, the tag clicked (xdotool), `message bar: tag 135 subject 43 item 0 ... first=mb_locate`,
+  the first button clicked (`barclick.sh`), `Camera: to thing 43 on cell (57,23), point of interest (570,230)`. Not
+  checked: the original's click on the button (no original here; `advisor-park.md` reads it, not clicked), and no
+  screenshot of the camera's move (nothing new is drawn; the move is the existing `GoToThing`). Rows 86-89, 140 and
+  141 are not built: Q1264.
 
 ## Numbers (take counts fresh; these go stale within a day)
 
+- Linux, 2026-11-12, Q1160 (run as user `tester` on a copy of the tree it owns; one test added, needing no game; after Q80's first piece; built in a cloud container): with the game, 5369 passed, 1 failed (`AnExceptionBeforeTheMainLoopIsLoggedAndEndsTheRunWithExit1`, no libEGL in the container), 2 skipped (the macOS and Windows folder tests) of 5372; with no game named, 2315 passed, 1 failed (the same), 3056 skipped.
 - Linux, 2026-11-12, Q80's first piece (`capped.sh`; five tests added, needing the game; after Q161; built in a cloud container, re-gated here): with the game, 5369 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5371; with no game named, 2315 passed, 0 failed, 3056 skipped.
 - Linux, 2026-11-12, Q161 (`capped.sh`; no test added; after Q994; built in a cloud container, re-gated here): with the game, 5364 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5366; with no game named, 2315 passed, 0 failed, 3051 skipped.
 - Linux, 2026-11-12, Q994 (`capped.sh`; three tests added, needing the game; after Q79; built in a cloud container, re-gated here): with the game, 5364 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5366; with no game named, 2315 passed, 0 failed, 3051 skipped.
