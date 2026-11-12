@@ -13852,3 +13852,11 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `moved (0, 0) by state 0`, pointer on it `(1, 1) by state 2`, held `(2, 1) by state 3`, the release sorting (`sort -1`),
   all in (255, 239, 0). Not seen: the picture in either game (no display, no original in the lane: Q1456); the offset's
   units (taken as font pixels). **Done 2026-11-12** (cloud lane c84, `alexah/1063-text-button-lettering`).
+- [x] **Q295. An object window's preview starts from the angle the last one left.** From Q291. The first angle is
+  `fmod( [0x007afd50], 6.2831855 )` (`0x00468e2f`; `park-engine.md`, the object window's preview): the record is
+  static and its angle nought in the image, so only the first panel of a run starts from nought. The preview here
+  starts every one from nought and counts it (`OBJECT_PREVIEW_START_ANGLE`, `ParkObjectPreview`). Build: keep the
+  last panel's angle for the session and start the next from it. Confirm: two ride windows opened one after the
+  other in both games, the second's first frame photographed, and the angle in the log.
+  Done (c86, 2026-11-12): `ParkObjectPreview.LastAngle` keeps the session's angle and `StartAngle` wraps it by fmod;
+  the log line `Object preview: thing N starts at angle A, the last panel left L` reads it. The photographs: Q1464.
