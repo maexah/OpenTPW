@@ -42,10 +42,17 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the maintainer's pre-commit hook: grep it by Q-number.
 
-- **Q1154 (a handyman loaded walking to litter or sweeping falls to idle):** in a cloud container (no Ghidra, no original, no photograph; the run's output was not kept), `AHandymanLoadedInALitterStateFallsToIdleAndDecidesOnTheNextSweep` (two rows, needing the game) passes, and three bugs put back by hand (the state kept, the decide made on the falling turn, the clock taken as the stamp) each failed it. Off-screen, the stock park with handyman 25 written to state 9 (`parkfile.thing_set`) loaded as a player's newest file: paused on mGameTick 755 the census read him `9`, `st 0x9`, with no `HANDYMAN_LITTER_STATE_9` counted; resumed, the log said he fell to idle on 756 and left idle for Walking on 757, idle since 0, the census `Walking`; the park saved on 775 and that file loaded read him `Walking`, `st 0x1`, and he walked on with the count still 1. A file saved paused before his first sweep kept `mState` 9 (its `mTargetLitterCell` read nought, as in the file it came from, so that field was not tested). Not checked: a photograph of him walking off (no display here, Q1316), Alexah's `New Save.TPWS` (not in this container; the stock park's one handyman stood in), and the original's walk and sweep, which this deviates from (`0x004d741f`, `0x004d742a`, taken from the item and `docs/exe/ride-operation.md`, not read in Ghidra).
+- **Q457 (the all-items satisfaction bar is not masked to a byte):** in a cloud container (no Ghidra, no original, no
+  photograph; the run's output was not kept), `ParkItemsSatisfactionBarTests` passes (two tests, one needing the game),
+  and two bugs put back by hand (the `& 0xff` in `SatisfactionBar`; `NumbersOf` back on `Bar`) each fail it with
+  "Expected:<-10>. Actual:<2611>". An off-screen run of the final build (`consolerun.py`, `park jungle`, `screen 5`) filled
+  the list (`Items list: tab 0, row 13 Belly Bounce: 0 409 1003 1013`), but the fresh park holds no shop and the console
+  cannot write a ring, so no satisfaction column past its ends was seen running: the bar at -1 and 256 beside the
+  original's is Q1612. The addresses are `docs/exe/hud.md`'s, not checked in Ghidra.
 
 ## Numbers (take counts fresh; these go stale within a day)
 
+- Linux, 2026-11-12, Q457 (a cloud container, as user `tester` on a copy of the tree; two tests added, one needing the game; to be re-gated on a desk): with the game, 5487 passed, 2 failed (`ACopyStartedOnAFolderAnotherProcessHoldsIsRefused` and `AnExceptionBeforeTheMainLoopIsLoggedAndEndsTheRunWithExit1`, which fail in this container on `main` too), 2 skipped of 5491; with no game named, 2378 passed, the same 2 failed, 3111 skipped.
 - Linux, 2026-11-12, Q1154 (`capped.sh`; no test added (tests changed); built in a cloud container, re-gated here after Q282): with the game, 5484 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5486; with no game named, 2379 passed, 0 failed, 3107 skipped.
 - Linux, 2026-11-12, Q282 (`capped.sh`; one test added, needing the game; built in a cloud container, re-gated here after Q272): with the game, 5484 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5486; with no game named, 2379 passed, 0 failed, 3107 skipped.
 - Linux, 2026-11-12, Q272 (`capped.sh`; three tests added, needing the game; built in a cloud container, re-gated here after Q225): with the game, 5483 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5485; with no game named, 2379 passed, 0 failed, 3106 skipped.

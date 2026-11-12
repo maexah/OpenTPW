@@ -1315,9 +1315,13 @@ filed the items that cite it.
   display). `ParkEntryPriceScreen` disables `0x4f3ac` in Instant Action, so it draws `b_loans`'s disabled frame. Confirm on a
   desk: `park jungle`, `screen 10` in an Instant Action player's park, a screenshot of the button beside the staff costs
   screen's (`screen 9`, `0x2dd`, already disabled there), and the same in a Full Simulation player's park, enabled.
-- [ ] **Q457. The satisfaction bar is masked to a byte.** From the week-end audit (D6, `VERIFY-16a.md` Q367/Q368).
-  `ParkItemsScreen` runs satisfaction through `Bar()`'s `& 0xff`; the original does not (`0x00494031`, `0x00494199`,
-  `0x00495888`, `0x00495959`) and the setter clamps 0..0x400 (`0x0066d885`). A test with -1 and 256.
+- [ ] **Q1612. The all-items satisfaction bar past its ends, photographed.** Split from Q457 (built in a cloud lane with no
+  display and no original). `ParkItemsScreen.SatisfactionBar` hands the bar `(value << 10) / 100` unmasked and
+  `UiStatBar.Units` holds it to 0..0x400, so a satisfaction of -1 is an empty bar and 256 a full one (the masked rule drew
+  them full and empty). Confirm on a desk: `parkfile.py`'s `ring_set` writes a shop's thirty satisfaction days to -51 and
+  another's to 206 (fifty plus the mean: -1 and 256), and both games load the file, the all-items screen (`screen 5` in
+  ours, the key `a` in the original) on the shops' tab: the log's `Items list: tab 1, row N ...` ends `-10` and `2621`,
+  and each bar is photographed beside the original's.
 - [ ] **Q458. The staff screen's meters average as the original's.** From the week-end audit (D7, `VERIFY-16b.md`
   Q369 1). The original averages each member's `ftol(h) & 0xff`: the kind's meter an integer mean then
   `(m << 10) / 100` (`0x004c9cc0`), the all-staff meter a float mean times 1024 times 0.01f (`0x004c7cc0`, `0x00496a7b`),
