@@ -345,6 +345,35 @@ public class ParkResearchTests
 	}
 
 	/// <summary>
+	/// <b>The buy list leaves out a ride's upgrade</b> (<c>AddOn.UpgradesId</c>, <c>+0x284</c>, not nought; the skip at
+	/// <c>0x004aaffc</c>), however researched: with every Lost Kingdom item marked researched, as a Full Simulation park
+	/// with 1500 and 1501 finished holds them, the rides tab lists DinoKarts but not the Dino Karts Jump (750) or
+	/// Tunnel (900), and no tab lists any add-on.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the <c>+0x284</c> test dropped (the Jump and Tunnel listed).</remarks>
+	[TestMethod]
+	public void TheBuyListLeavesOutAResearchedRideUpgrade()
+	{
+		var data = GameData.Required();
+		var catalogue = new ParkItemCatalogue( "jungle", data );
+		var research = new ParkResearch( catalogue.All.Select( item => new ParkWorld.ObjectControl( item.Id, Researched: true, TierResearched: 2 ) ), catalogue );
+
+		var addOns = catalogue.All.Where( item => item.AddOnUpgradesId != 0 ).ToArray();
+		CollectionAssert.IsSubsetOf( new[] { (1500, 750), (1501, 900) }, addOns.Select( item => (item.Id, item.BuildPrice) ).ToArray(),
+			"the Jump and the Tunnel are the add-ons this proves on, researched" );
+		Assert.IsTrue( addOns.All( item => research.IsResearched( item.Id ) && item.UiType == ItemDescriptionFile.Ride ),
+			"every add-on researched and on the rides tab, so only the +0x284 test keeps it off" );
+
+		var rides = ParkBuyScreen.Listed( catalogue, research, ItemDescriptionFile.Ride ).Select( item => item.Id ).ToArray();
+		CollectionAssert.DoesNotContain( rides, 1500 );
+		CollectionAssert.DoesNotContain( rides, 1501 );
+		Assert.IsTrue( rides.Any( id => catalogue.TryGet( id, out var item ) && ParkObjectNames.NameOf( item ) == "DinoKarts" ), "the ride they fit is listed" );
+
+		for ( var tab = 0; tab < 4; ++tab )
+			Assert.IsFalse( ParkBuyScreen.Listed( catalogue, research, tab ).Any( item => item.AddOnUpgradesId != 0 ), $"tab {tab}" );
+	}
+
+	/// <summary>
 	/// <b>An item's name is its two <c>OBJECT_NAMES</c> lines joined</b> (<c>0x004146b0</c>): a space between, none
 	/// where the second is empty, and a first line's closing hyphen cut with the second joined straight on.
 	/// </summary>

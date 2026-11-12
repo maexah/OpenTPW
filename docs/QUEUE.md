@@ -1320,11 +1320,6 @@ filed the items that cite it.
   choose, the pending deletes flushed, the gate closed; the clock and the bank go on. The path tests no game type, so
   Lost Kingdom's Easymode reaches it. Confirm: a park held in the red to its end, beside the original.
 
-- [ ] **Q452. Buy Rides lists a researched ride upgrade.** From the week-end audit, 2026-10-17 (`LEDGER.md` D1,
-  `VERIFY-13a.md` Q349 1; `CLAUDE.local.md` says where). `ParkBuyScreen.Listed` lacks the original's `+0x284` skip
-  (`0x004aaffc`), so a Full Simulation park with 1500 or 1501 researched lists Dino Karts Jump (750) and Dino Karts
-  Tunnel (900), and a row puts one in the hand. Seen in the game on a copy of Alexah's Full Simulation autosave
-  (`gp-fs.out`). It is Q221 (2), no longer dead by content since Q349. Confirm: the list without them, beside the original.
 - [ ] **Q454. A new Instant Action player's first park clears the advisor's records.** From the week-end audit (D3,
   `VERIFY-1b.md` Q313 1). Event 10 (`RESET_FOR_EASY_MODE`, sent `0x0054f24e`, handled `0x0059af63`) sets every record's
   line to -1 and its said and slaps to nought, keeping the tick, on the player's first park only (the gms.dat byte

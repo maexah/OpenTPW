@@ -374,11 +374,12 @@ internal sealed class ParkBuyScreen : UiWindow
 	private void LogOrder() => Log.Info( $"Buy list: tab {_tab}, {_list.Census()}" );
 
 	/// <summary>
-	/// The items one tab lists, in the catalogue's order: its kind, and <b>only a researched item</b>
-	/// (<c>0x004ab023</c>), the park's flag - see <see cref="ParkResearch"/>.
+	/// The items one tab lists, in the catalogue's order: its kind, <b>no ride's upgrade</b> (<c>AddOn.UpgradesId</c>,
+	/// <c>+0x284</c>, nought, <c>0x004aaffc</c>: the Dino Karts Jump and Tunnel are bought from their ride's window), and
+	/// <b>only a researched item</b> (<c>0x004ab023</c>), the park's flag - see <see cref="ParkResearch"/>.
 	/// </summary>
 	internal static IEnumerable<ParkItemCatalogue.Item> Listed( ParkItemCatalogue catalogue, ParkResearch research, int tab )
-		=> catalogue.All.Where( item => item.UiType == tab && research.IsResearched( item.Id ) );
+		=> catalogue.All.Where( item => item.UiType == tab && item.AddOnUpgradesId == 0 && research.IsResearched( item.Id ) );
 
 	/// <summary>
 	/// A row with its price lettered by the price cell's skin (<see cref="PriceText"/>) and sorted on the number. A mystery

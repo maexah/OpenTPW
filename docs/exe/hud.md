@@ -4473,6 +4473,12 @@ four filter fields, as **byte** offsets:
     +0x284  AddOn.UpgradesId      (must be 0 - a standalone item, not a ride's upgrade)
     desc+0x10  researched/available
 
+**The `+0x284` skip is built** (Q452, 2026-11-12, `ParkBuyScreen.Listed`, the test at `0x004aaffc` as the item and the list above
+name it; not re-read in Ghidra): a ride's upgrade is never a buy row, however researched. Only Full Simulation reaches it: Instant
+Action's catalogue holds no add-on. Run off-screen (a fresh Full Simulation player on `Easymode.TPWI` with records for 1500 and
+1501 added, researched, and DinoKarts marked researched): the rides tab lists DinoKarts and not the Dino Karts Jump (750) or
+Tunnel (900), where the build without the test listed both. Not run beside the original. The `+0x508` test is still Q221 (2).
+
 `desc+0x10` is not a static "is this listed" flag - it is the **researched** flag, and at a park load it is the
 **save's**, not the item file's (Q201). The record array is `CControlManager`'s, 150 records of 0x20 bytes looked up by
 `FUN_004d3d10`, and it is saved and loaded raw as `mObjectControls[150]` (`FUN_004d3aa0`). Its writers, in the order a
