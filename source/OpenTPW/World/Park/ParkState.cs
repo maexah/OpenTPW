@@ -1444,6 +1444,25 @@ public sealed class ParkState
 	}
 
 	/// <summary>
+	/// Message <c>0x17</c>, the staff HQ's look at a kind's dispute (<see cref="ParkStrikes.Post"/>), as the advisor
+	/// hears it: FUN_0059afc0 makes it advisor message <see cref="ParkAdvisorMessages.StrikeMessageOf"/>, 0x21 to 0x25
+	/// for a warning, 0x2b to 0x2f for a strike, 0x30 to 0x34 for a calling-off. Those fifteen rows of the metadata
+	/// table (their score key, category, copies, lines, props and group) and the rest of FUN_0059afc0's post were not
+	/// read (docs/exe/ride-operation.md, "The strike"), so the message is logged and counted, and the advisor says nothing.
+	/// </summary>
+	internal void HearStrike( int kind, int what, int tick )
+	{
+		if ( ParkAdvisorMessages.StrikeMessageOf( kind, what ) is not { } message )
+		{
+			Log.Warning( $"Strikes: message 0x17 for kind {kind}, which the advisor has no line for" );
+			return;
+		}
+
+		Log.Info( $"Park advisor: strike message=0x{message:x} kind={kind} what={what} tick={tick}: its row is not read" );
+		Unimplemented.Report( "ADVISOR_STRIKE_ROW_NOT_READ" );
+	}
+
+	/// <summary>
 	/// A kind's highest group raised with work left (<see cref="ParkResearch.GroupOpened"/>): advisor message
 	/// <c>0x85</c> + kind about no thing (<c>0x00503c8e</c>), which Instant Action slots at -1 and never says.
 	/// </summary>

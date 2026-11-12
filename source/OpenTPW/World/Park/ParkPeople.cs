@@ -322,7 +322,7 @@ public sealed partial class ParkPeople : Entity
 		// Staff take the balance stack alone: every constant they run on is a per-grade entry in it, and
 		// none of what a guest needs - the fee, the gate - means anything to them.
 		_staff = StaffIn( park );
-		Strikes = new ParkStrikes( park?.StaffHq );
+		Strikes = new ParkStrikes( park?.StaffHq ) { Post = State.HearStrike };
 		_staffBehaviour = new StaffBehaviour( balance, staffRandom, State )
 		{
 			Lab = _research,

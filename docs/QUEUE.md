@@ -1111,7 +1111,6 @@ filed the items that cite it.
   starts on animation 0, which its remarks give as a deviation no shipped bank reaches. Dead by content today:
   build it as the original's or leave the count, on Alexah's word.
 
-
 - [ ] **Q1316. The handyman loaded walking to litter or sweeping: his walk off photographed, and the job itself (from Q1154).**
   Q1154 made one loaded in state 8 or 9 fall to idle (`StaffBehaviour.Step`'s default arm, counted as
   `HANDYMAN_LITTER_STATE_8` and `_9`, a deviation said at the site) and confirmed it by census only, off-screen in a cloud
@@ -3306,7 +3305,7 @@ Back to the advisor in a park; saving a fresh park is Q783, in section A. Also l
   - `DOOR_PRICE_ANALYSER_SAMPLE` (`PeepPriceOpinion.cs`; `ride-operation.md`)
   - `NEEDS_THOUGHT_4_SOUND` (`Thoughts.cs`; `ride-operation.md`)
   - `NEEDS_THOUGHT_LITTER_SHARE` (`Thoughts.cs`; `ride-operation.md`)
-- [ ] **Q1192. Counted, not built, and owned by no item: staff, strikes, research and the advisor's posts (14 names, from Q243).** Filed by Q243's census,
+- [ ] **Q1192. Counted, not built, and owned by no item: staff, strikes, research and the advisor's posts (11 names, from Q243; the three strike posts taken by Q1660).** Filed by Q243's census,
   2026-11-12: `python3 tools/gap_census.py` found each name below counted by `Unimplemented.Report` and named by no other item
   here. A session takes one name or a few: read the site and the `docs/exe/` page given, classify the path (`AGENTS.md`
   rule 3; only a site's own "dead by" words were read, given below, and the rest are not classified), then build it or
@@ -3319,13 +3318,19 @@ Back to the advisor in a park; saving a fresh park is Q783, in section A. Also l
   - `SAVED_STAFF_CANDIDATE_ON_POINTER` (`ParkStaffPool.cs`)
   - `ROLLED_STAFF_COSTUME` (`ParkStaffPool.cs`; `park-engine.md`)
   - `ADVISOR_PARK_ENDED_IN_THE_RED` (`ParkState.cs`; `ride-operation.md`)
-  - `STRIKE_CALLED_OFF_TO_THE_ADVISOR` (`ParkStrikes.cs`; `ride-operation.md`)
-  - `STRIKE_WARNING_TO_THE_ADVISOR` (`ParkStrikes.cs`; `ride-operation.md`)
-  - `STRIKE_TO_THE_ADVISOR` (`ParkStrikes.cs`; `ride-operation.md`)
   - `STRIKE_HANDYMEN_CELL_RATIO` (`ParkStrikes.cs`; `ride-operation.md`)
   - `HANDYMAN_LITTER_SEARCH` (`StaffBehaviour.cs`; `staff-wandering.md`, `ride-operation.md`, `advisor-park.md`)
   - `HANDYMAN_TOILET_AIM_LEFT_ON_A_LATER_TOILET` (`StaffBehaviour.cs`; `ride-operation.md`)
   - `STAFF_TRAINING_NO_POINT_COST` (`ParkPeople.cs`; `ride-operation.md`)
+- [ ] **Q1661. The advisor's fifteen strike lines (from Q1660).** Message `0x17` reaches `ParkState.HearStrike` as advisor
+  message `0x21` to `0x25` (a warning), `0x2b` to `0x2f` (a strike) or `0x30` to `0x34` (a calling-off), and is counted,
+  `ADVISOR_STRIKE_ROW_NOT_READ`, because those rows of the metadata table (`0x0076e300`: posted only, category, mode,
+  score function and its `Advisor.sam` key, copies, first response, lines) and the rest of `FUN_0059afc0`'s post (the
+  record's subject and second word, any line asked) were never read (`ride-operation.md`, "The strike": "The message ids'
+  own rows in the metadata table were not read"). Read them in Ghidra (`tools/harness/lib/advisorrow.py 0x21 ... 0x34`
+  and the responses' rows; the transcripts already tie the lines to the kinds), build them as `Topic`s, and post them
+  from `HearStrike` in place of the count. Confirm: a forced strike (`forcestrike 1`, `clock 16836`) said on the same ticks
+  as the original's (`q138/orig`), and a photograph of the tag each leaves (a change to what is drawn).
 - [ ] **Q1193. Counted, not built, and owned by no item: paths, queues, building, markers and hoardings (30 names, from Q243).** Filed by Q243's census,
   2026-11-12: `python3 tools/gap_census.py` found each name below counted by `Unimplemented.Report` and named by no other item
   here. A session takes one name or a few: read the site and the `docs/exe/` page given, classify the path (`AGENTS.md`

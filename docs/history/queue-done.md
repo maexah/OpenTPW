@@ -12346,6 +12346,13 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   (Alexah's answer). Dry runs: `weekly-test-1` refused the Mac zips (MoltenVK's manifest, then allowed);
   `weekly-test-2` published four zips and the sums, the Linux zip downloaded passed `zipsmoke.py`; both deleted.
   Not run: the Windows and macOS zips themselves.
+- [x] **Q1660. A strike's three posts reach the advisor (split from Q1192).** `FUN_00508f70`'s message `0x17` (a warning, a
+  strike, a calling-off) was counted where it is made (`STRIKE_WARNING_TO_THE_ADVISOR`, `STRIKE_TO_THE_ADVISOR`,
+  `STRIKE_CALLED_OFF_TO_THE_ADVISOR`). Now `ParkStrikes.Post` sends it, the park's people hand it to
+  `ParkState.HearStrike`, and `ParkAdvisorMessages.StrikeMessageOf` makes it the advisor's message as `FUN_0059afc0` does
+  (`ride-operation.md`, "The strike": `0x22`, `0x21`, `0x24`, `0x23`, `0x25` for kinds 0 to 4, plus five times the second
+  word). The fifteen rows are not read, so each is logged and counted, `ADVISOR_STRIKE_ROW_NOT_READ` (Q1661). Done in a
+  cloud container with no Ghidra and no original: tests, and a forced-strike run off-screen.
 
 ## G. The lobby plan's open items
 

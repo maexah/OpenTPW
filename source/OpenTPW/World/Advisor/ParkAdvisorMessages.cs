@@ -310,6 +310,30 @@ internal sealed class ParkAdvisorMessages
 		_ => null
 	};
 
+	/// <summary>
+	/// Messages <c>0x21</c> to <c>0x25</c>, the first of a strike's rows for each kind in FUN_0059afc0's order: mechanics
+	/// <c>0x21</c>, handymen <c>0x22</c>, guards <c>0x23</c>, entertainers <c>0x24</c>, researchers <c>0x25</c>. Rows 33 to 57 are
+	/// posted only (<see cref="PolledRanges"/>).
+	/// </summary>
+	internal const int StrikeMechanics = 0x21, StrikeHandymen = 0x22, StrikeGuards = 0x23, StrikeEntertainers = 0x24,
+		StrikeResearchers = 0x25;
+
+	/// <summary>
+	/// The advisor message that message <c>0x17</c> becomes (FUN_0059afc0; docs/exe/ride-operation.md, "The strike"): the
+	/// kind's first row, in <see cref="ParkStaffPool"/>'s order (handyman, mechanic, entertainer, guard, researcher), plus
+	/// five times <paramref name="what"/> (<see cref="ParkStrikes.Warning"/>, <see cref="ParkStrikes.Strike"/>,
+	/// <see cref="ParkStrikes.CalledOff"/>). Null for a kind past 4, which <see cref="ParkStrikes"/> never posts.
+	/// </summary>
+	internal static int? StrikeMessageOf( int kind, int what ) => kind switch
+	{
+		0 => StrikeHandymen,
+		1 => StrikeMechanics,
+		2 => StrikeEntertainers,
+		3 => StrikeGuards,
+		4 => StrikeResearchers,
+		_ => null
+	} + (5 * what);
+
 	/// <summary>The tutorial messages' category (a row's +0x08): MessageGroups[1], refused while the Tutorial option is off (FUN_0059c610).</summary>
 	internal const int Tutorial = 1;
 

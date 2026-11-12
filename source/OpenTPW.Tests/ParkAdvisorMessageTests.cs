@@ -5709,4 +5709,20 @@ public class ParkAdvisorMessageTests
 		Assert.AreEqual( "post", messages.PollAnswer( 0x13c ) );
 		CollectionAssert.AreEqual( new[] { (613, 541, 558), (9200, 576, 599) }, said );
 	}
+
+	/// <summary>
+	/// Message <c>0x17</c> becomes the kind's advisor row (FUN_0059afc0): handymen 0x22, mechanics 0x21, entertainers 0x24,
+	/// guards 0x23, researchers 0x25, plus five times the post's second word; no row for a kind past the five.
+	/// </summary>
+	[DataTestMethod]
+	[DataRow( 0, ParkStrikes.Warning, 0x22 )]
+	[DataRow( 1, ParkStrikes.Strike, 0x2b )]
+	[DataRow( 2, ParkStrikes.CalledOff, 0x33 )]
+	[DataRow( 3, ParkStrikes.Warning, 0x23 )]
+	[DataRow( 4, ParkStrikes.Strike, 0x2f )]
+	[DataRow( 0, ParkStrikes.CalledOff, 0x31 )]
+	[DataRow( 5, ParkStrikes.Warning, -1 )]
+	[DataRow( -1, ParkStrikes.Strike, -1 )]
+	public void AStrikePostIsTheKindsRowAndFiveAWord( int kind, int what, int message )
+		=> Assert.AreEqual( message, ParkAdvisorMessages.StrikeMessageOf( kind, what ) ?? -1 );
 }

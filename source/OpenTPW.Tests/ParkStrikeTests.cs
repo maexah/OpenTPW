@@ -72,6 +72,12 @@ public class ParkStrikeTests
 		} ).ToArray();
 	}
 
+	/// <summary>A look whose message <c>0x17</c> posts are kept, each as "kind,what".</summary>
+	private static ParkStrikes Heard( ParkWorld.StaffHqState? hq, List<string> posts, bool force = false )
+		=> new( hq ) { Force = force, Post = ( kind, what, _ ) => posts.Add( $"{kind},{what}" ) };
+
+	private static string Each( int what ) => string.Join( " ", Enumerable.Range( 0, ParkStrikes.Kinds ).Select( kind => $"{kind},{what}" ) );
+
 	private static string Records( ParkStrikes strikes )
 		=> string.Join( " ", Enumerable.Range( 0, ParkStrikes.Kinds )
 			.Select( kind => $"{strikes.LevelOf( kind )},{(strikes.IsOnStrike( kind ) ? 1 : 0)},{strikes.StampOf( kind )}" ) );
@@ -181,32 +187,34 @@ public class ParkStrikeTests
 	{
 		var world = Park();
 		var staff = OneOfEach( world );
-		var strikes = new ParkStrikes( world.StaffHq ) { Force = true };
-		var warned = Times( "STRIKE_WARNING_TO_THE_ADVISOR" );
+		var posts = new List<string>();
+		var strikes = Heard( world.StaffHq, posts, force: true );
 
 		strikes.Look( 2097, false, 8, staff );
 		Assert.AreEqual( All( 0, 0, 2097 ), Records( strikes ) );
 
 		strikes.Look( FirstTickOfMonth24 - 1, false, 8, staff );
 		Assert.AreEqual( All( 0, 0, FirstTickOfMonth24 - 1 ), Records( strikes ) );
-		Assert.AreEqual( warned, Times( "STRIKE_WARNING_TO_THE_ADVISOR" ) );
+		Assert.AreEqual( "", string.Join( " ", posts ) );
 
 		strikes.Look( FirstTickOfMonth24, false, 8, staff );
 		Assert.AreEqual( All( 1, 0, FirstTickOfMonth24 ), Records( strikes ) );
-		Assert.AreEqual( warned + 5, Times( "STRIKE_WARNING_TO_THE_ADVISOR" ), "one warning a kind" );
+		Assert.AreEqual( Each( ParkStrikes.Warning ), string.Join( " ", posts ), "one warning a kind" );
 	}
 
 	/// <summary>
 	/// The original's run, month by month (<c>q138/orig/a.log</c>): a warning, a strike, the month off, the next
-	/// strike a level up, and on to the top level, where it stays. Each strike is posted, counted here.
+	/// strike a level up, and on to the top level, where it stays. The warning and each strike are posted; the
+	/// month off posts nothing.
 	/// </summary>
 	[TestMethod]
 	public void AForcedDisputeWarnsStrikesRestsAMonthAndClimbsToFour()
 	{
 		var world = Park();
 		var staff = OneOfEach( world );
-		var strikes = new ParkStrikes( world.StaffHq ) { Force = true };
-		var posted = Times( "STRIKE_TO_THE_ADVISOR" );
+		var posts = new List<string>();
+		var strikes = Heard( world.StaffHq, posts, force: true );
+		var each = new List<string>();
 
 		(int Tick, int Level, int Flag)[] months =
 		[
@@ -219,9 +227,14 @@ public class ParkStrikeTests
 			strikes.Look( tick, false, 8, staff );
 
 			Assert.AreEqual( All( level, flag, tick ), Records( strikes ), $"tick {tick}" );
+			each.Add( string.Join( " ", posts ) );
+			posts.Clear();
 		}
 
-		Assert.AreEqual( posted + (4 * 5), Times( "STRIKE_TO_THE_ADVISOR" ), "four strikes, five kinds" );
+		var warning = Each( ParkStrikes.Warning );
+		var strike = Each( ParkStrikes.Strike );
+
+		CollectionAssert.AreEqual( new[] { warning, strike, "", strike, "", strike, "", strike }, each );
 	}
 
 	/// <summary>A kind already stamped with this tick is passed over, and a kind with no member is never stamped.</summary>
@@ -296,14 +309,14 @@ public class ParkStrikeTests
 	public void WithNoCauseTheDisputeIsOverAndAWarningIsCalledOff( int level, int flag, int calledOff )
 	{
 		var world = Park();
-		var strikes = new ParkStrikes( new ParkWorld.StaffHqState( new int[5], 0,
-			Enumerable.Repeat( new ParkWorld.StrikeRecord( level, flag, 715 ), 5 ).ToArray() ) );
-		var before = Times( "STRIKE_CALLED_OFF_TO_THE_ADVISOR" );
+		var posts = new List<string>();
+		var strikes = Heard( new ParkWorld.StaffHqState( new int[5], 0,
+			Enumerable.Repeat( new ParkWorld.StrikeRecord( level, flag, 715 ), 5 ).ToArray() ), posts );
 
 		strikes.Look( 16837, false, 0, OneOfEach( world ) );
 
 		Assert.AreEqual( All( 0, 0, 16837 ), Records( strikes ) );
-		Assert.AreEqual( before + (calledOff * 5), Times( "STRIKE_CALLED_OFF_TO_THE_ADVISOR" ) );
+		Assert.AreEqual( calledOff == 1 ? Each( ParkStrikes.CalledOff ) : "", string.Join( " ", posts ) );
 	}
 
 	/// <summary>The handymen's own cause, the cell ratio, is counted each time it would be asked, and never with the force.</summary>
@@ -331,6 +344,29 @@ public class ParkStrikeTests
 		strikes.EndStrike( 2 );
 
 		Assert.AreEqual( "3,1,715 3,1,715 3,0,715 3,1,715 3,1,715", Records( strikes ) );
+	}
+
+	/// <summary>
+	/// The park's people hand message <c>0x17</c> to the advisor (<see cref="ParkState.HearStrike"/>), whose fifteen rows
+	/// are not read: a forced month past the 24 counts one post a kind, and a month with no post counts none.
+	/// </summary>
+	[TestMethod]
+	public void TheParksStrikePostsReachTheAdvisorAndAreCounted()
+	{
+		var world = Park();
+		var state = new ParkState( world );
+		var people = new ParkPeople( world, Balance(), null, state );
+		var before = Times( "ADVISOR_STRIKE_ROW_NOT_READ" );
+
+		state.SetGameTick( 2097 );
+		people.Strikes.Force = true;
+		people.TrainTheStaff();
+		Assert.AreEqual( before, Times( "ADVISOR_STRIKE_ROW_NOT_READ" ), "under 24 months nothing is posted" );
+
+		state.SetGameTick( 16837 );
+		people.TrainTheStaff();
+		Assert.AreEqual( All( 1, 0, 16837 ), Records( people.Strikes ) );
+		Assert.AreEqual( before + 5, Times( "ADVISOR_STRIKE_ROW_NOT_READ" ), "a warning a kind" );
 	}
 
 	/// <summary>

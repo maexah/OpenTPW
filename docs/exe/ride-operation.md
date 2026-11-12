@@ -3170,9 +3170,18 @@ in `PeepWalk.Heading`, the end by a shut and empty park, and
 the walk to `EntranceA`. `Staff.SettingOffForTheStrike` is `+0x188`. A saved park carries the force and the five
 records (Q523; `saves.md`, "OpenTPW's writer, the strike records").
 
-**Counted, not built.** The three posts, where `FUN_00508f70` makes them: `STRIKE_WARNING_TO_THE_ADVISOR`,
-`STRIKE_TO_THE_ADVISOR`, `STRIKE_CALLED_OFF_TO_THE_ADVISOR` (the park's advisor
-says none of these three). The handymen's cell ratio, `STRIKE_HANDYMEN_CELL_RATIO`, which answers as no cause (Q225).
+**The three posts (Q1660).** `Consider` sends message `0x17` where `FUN_00508f70` makes it, as `ParkStrikes.Post`
+(kind, then `Warning` 0, `Strike` 2 or `CalledOff` 3, then the tick); the park's people hand it to
+`ParkState.HearStrike`, which turns it into the advisor's message as `FUN_0059afc0` does
+(`ParkAdvisorMessages.StrikeMessageOf`: `0x22`, `0x21`, `0x24`, `0x23`, `0x25` for kinds 0 to 4, plus five times the second
+word), rows 33 to 57 being posted only. Those fifteen rows of the metadata table and the rest of `FUN_0059afc0`'s post
+are not read, so each post is logged (`Park advisor: strike message=0x22 kind=0 what=0 tick=16837: its row is not
+read`) and counted, `ADVISOR_STRIKE_ROW_NOT_READ`, and the advisor says none of them (Q1661). Measured off-screen
+(Q1660, the stock park, forced, no Ghidra or original): the clock written 16,836 posted `0x22`, `0x21`, `0x24`,
+`0x23`, `0x25` on 16837; the force cleared, the clock written 16,842, the park open with nobody inside, the
+calling-offs `0x31`, `0x30`, `0x33`, `0x32`, `0x34` on 16843; forced again, `0x2c`, `0x2b`, `0x2e`, `0x2d`, `0x2f` on 18196.
+
+**Counted, not built.** The handymen's cell ratio, `STRIKE_HANDYMEN_CELL_RATIO`, which answers as no cause (Q225).
 `STAFF_HQ_MONTHLY_STRIKE_CHECK` is gone. The ride window's three strike statuses (`FUN_00485f60`) are Q212's.
 
 **Differences, each said at its site.** The look's guest count is taken as the month turns, where the
@@ -3220,7 +3229,7 @@ park, a walk that fails (tested only).
 | The patrol roll | path cells only | path cells only (Q206) | verified in `staff-wandering.md` |
 | Speed by rest | `+0xc0`, 60 to 140, one of `FUN_004fa870`'s three terms | the same: `Staff.Pace` every sweep, the base set by a decide that finds the member not tired | every decide |
 | Thoughts `0x12` to `0x16` | shown | `0x14`, `0x13`, `0x12` at every kind's decide (`StaffBehaviour.TiredOrCarryingOn`, the last with its one draw) and `0x16` where the patrol roll fails, and `0x15` on every turn of the strike walk, each a pink bubble (Q110b, Q138b) | tired, unhappy, very happy staff; a failed roll; a strike ("Thoughts and their pictures") |
-| Strikes | `mStaffHQ`'s monthly look, the levels, the strike walk, state 5's end ("The strike") | built (`ParkStrikes`, `StaffBehaviour.GoOnStrike`, `Picket`; "The strike, in both games"); the three posts to the advisor and the handymen's cell ratio counted | an open park with no guest inside as a month turns, 24 thirty-day months past its first sweep |
+| Strikes | `mStaffHQ`'s monthly look, the levels, the strike walk, state 5's end ("The strike") | built (`ParkStrikes`, `StaffBehaviour.GoOnStrike`, `Picket`; "The strike, in both games"); the three posts reach the advisor, whose rows for them are counted (Q1661), and the handymen's cell ratio counted | an open park with no guest inside as a month turns, 24 thirty-day months past its first sweep |
 
 ## A toilet's dirt - `FUN_004e2440`, `FUN_004e0390` and the handyman's `FUN_004d7880`
 

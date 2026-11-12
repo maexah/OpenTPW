@@ -15,9 +15,10 @@ namespace OpenTPW;
 /// <see cref="StaffBehaviour"/>'s, which asks <see cref="IsOnStrike"/> and calls <see cref="EndStrike"/>.
 /// </para>
 /// <para>
-/// <b>Counted, not built.</b> The three posts to the advisor (message <c>0x17</c>: a warning, a strike, a
-/// calling-off), who posts only the park's door here (<see cref="ParkAdvisorMessages"/>), and the handymen's own cause, the share of the park's
-/// cells with their dword set, which nothing here reads.
+/// The three posts, message <c>0x17</c> with the kind and a warning, a strike or a calling-off, go to
+/// <see cref="Post"/>, which the park hands to the advisor (<see cref="ParkState.HearStrike"/>).
+/// <b>Counted, not built:</b> the handymen's own cause, the share of the park's cells with their dword set, which
+/// nothing here reads.
 /// </para>
 /// </summary>
 public sealed class ParkStrikes
@@ -30,6 +31,9 @@ public sealed class ParkStrikes
 
 	/// <summary>A month as the look measures it: thirty days in seconds, the span of the divisor <c>0x1792F8648000</c>, which is in 100-nanosecond units.</summary>
 	public const long SecondsAMonth = 30L * 24 * 60 * 60;
+
+	/// <summary>Message <c>0x17</c>'s second word: a warning, a strike, a dispute called off (<c>FUN_00508f70</c>; 1 is never sent).</summary>
+	public const int Warning = 0, Strike = 2, CalledOff = 3;
 
 	/// <summary>The level a dispute stops rising at.</summary>
 	public const int TopLevel = 4;
@@ -45,6 +49,13 @@ public sealed class ParkStrikes
 	private readonly int[] _stamp = new int[Kinds];
 
 	private int _force;
+
+	/// <summary>
+	/// Message <c>0x17</c>, posted by <c>FUN_00508f70</c> (<c>FUN_0040f6f0</c>, <c>FUN_0040fb10</c>): the kind, then
+	/// <see cref="Warning"/>, <see cref="Strike"/> or <see cref="CalledOff"/>, then the tick of the look. Its one
+	/// receiver in the original is the advisor (<c>FUN_00599e70</c> joins set <c>0x17</c>); null hears nothing.
+	/// </summary>
+	public Action<int, int, int>? Post { get; init; }
 
 	/// <summary>
 	/// <c>mForceStrike</c>: set, the month's look skips its gate and every kind has a cause. Only a save sets it
@@ -169,9 +180,8 @@ public sealed class ParkStrikes
 
 		if ( !HasCause( kind, members ) )
 		{
-			// Message 0x17 with (kind, 3), which the advisor alone hears (FUN_0059afc0).
 			if ( _level[kind] == 1 )
-				Unimplemented.Report( "STRIKE_CALLED_OFF_TO_THE_ADVISOR" );
+				Send( kind, CalledOff, tick );
 
 			_level[kind] = 0;
 			_onStrike[kind] = false;
@@ -183,8 +193,7 @@ public sealed class ParkStrikes
 		{
 			_level[kind] = 1;
 
-			// Message 0x17 with (kind, 0).
-			Unimplemented.Report( "STRIKE_WARNING_TO_THE_ADVISOR" );
+			Send( kind, Warning, tick );
 
 			return;
 		}
@@ -196,8 +205,14 @@ public sealed class ParkStrikes
 		_level[kind] = Math.Min( _level[kind] + 1, TopLevel );
 		_onStrike[kind] = true;
 
-		// Message 0x17 with (kind, 2).
-		Unimplemented.Report( "STRIKE_TO_THE_ADVISOR" );
+		Send( kind, Strike, tick );
+	}
+
+	private void Send( int kind, int what, int tick )
+	{
+		Log.Info( $"Strikes: message 0x17 posted for kind {kind}, {what switch { Warning => "a warning", Strike => "a strike", _ => "a calling-off" }} ({what}), on mGameTick {tick}" );
+
+		Post?.Invoke( kind, what, tick );
 	}
 
 	/// <summary>
