@@ -42,7 +42,7 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the maintainer's pre-commit hook: grep it by Q-number.
 
-- **Q404 (a park six months in the red ends):** in a cloud container (no Ghidra, no original, no display; the run's
+- **Q40 (the place-staff cell rule and the carry cursor, first piece):** in a cloud container (no Ghidra, no original, no display; the run's output was not kept), the rule's tests (`TheCellRuleOverLostKingdom`, `EachRefusalOfTheCellRule`, `ATrackRecordNamingNoParentIsCounted`, `ACarriedCandidateIsRefusedACellOfTypeFourAndHiredOnAPath`, `ACarriedCandidateWearsTheCarryCursor`, 15 needing the game) pass, and six bugs put back by hand each failed one. An off-screen run carried candidate 1, read `cursor Carry`, was refused at (59,15), (2,2) and (0,0) with the log's reason each time, and hired on (47,21). Not seen: the carry cursor on screen (Q1468); the figure and the red square are not built (Q1469).
   output was not kept), six tests pass (one changed, five added: `SixMonthsInTheRedEndThePark`, `AParkClimbedOutOnDepositsDoesNotEnd`,
   `AnEndedParksStateIsWrittenAndReadBack`, `TheEndBreaksTheRidesGuestsChooseAndCommandsTheGateTwo`,
   `InAnEndedParkNobodyTakesATurnAndTheClockGoesOn`, `TheWeatherTurnsInNoSweepOfAnEndedPark`; the two music and crowd tests
@@ -54,6 +54,7 @@ Only the item just landed is here. Every earlier item's account is in `docs/hist
 
 ## Numbers (take counts fresh; these go stale within a day)
 
+- Linux, 2026-11-12, Q40 (`capped.sh`; the staff placing cell rule; fifteen tests added, all needing the game; built in a cloud container, re-gated here after Q404): with the game, 5568 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5570; with no game named, 2405 passed, 0 failed, 3165 skipped.
 - Linux, 2026-11-12, Q404 (`capped.sh`; five tests added, four needing the game; built in a cloud container, re-gated here after Q232): with the game, 5553 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5555; with no game named, 2405 passed, 0 failed, 3150 skipped.
 - Linux, 2026-11-12, Q232 (`capped.sh`; three tests added, needing the game; built in a cloud container, re-gated here after Q295): with the game, 5548 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5550; with no game named, 2404 passed, 0 failed, 3146 skipped.
 - Linux, 2026-11-12, Q295 (`capped.sh`; two tests added, needing no game; built in a cloud container, re-gated here after Q1163): with the game, 5545 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5547; with no game named, 2404 passed, 0 failed, 3143 skipped.

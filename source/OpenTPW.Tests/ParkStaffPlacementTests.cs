@@ -11,10 +11,9 @@ namespace OpenTPW.Tests;
 /// is no installation - see <see cref="GameData"/>.
 ///
 /// <para>
-/// <b>Off the map is the one refusal a cell earns here</b>, so that is the refusal these use; the
-/// original's cell rule is counted, not built (<c>STAFF_PLACEMENT_CELL_RULE</c>). The cell a worker goes
-/// up on is one that rule accepts too, so these hold once it is built. The hand and the pool are static,
-/// and each test empties the hand after itself.
+/// <b>The cell rule is the original's</b> (<see cref="ParkStaffPool.RefusesStaff"/>), and off the map is a refusal of
+/// this park's own besides. The cell a worker goes up on is a path cell the rule accepts. The hand and the pool are
+/// static, and each test empties the hand after itself.
 /// </para>
 /// </summary>
 [TestClass]
@@ -526,5 +525,172 @@ public class ParkStaffPlacementTests
 		}
 
 		Assert.AreEqual( first, people.State.NextOnCell( second ), "the newest is the head, the one before it behind" );
+	}
+
+	/// <summary>
+	/// <b>The place-staff cell rule over every cell of Lost Kingdom's save</b> (<c>FUN_0046c8e0</c>,
+	/// <c>0x0046c928</c>..<c>0x0046c974</c>): 2,164 cells take a worker, all of them type 0, 1, 3 or 9; 572 are
+	/// refused by their track record (429 of type 12 deferring to a type 25, 143 of type 25), 13,596 as outside the
+	/// park, and 52 by their type (35 of type 4, 16 of type 7, one of type 10). Every one of the 78 path cells takes one.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> the track test dropped moves the 572 to the other counts; the <c>0x40</c>
+	/// test dropped moves 4,233 type-0 cells to accepted; type 9 left out of the accepted kinds refuses the 8 ride ends.
+	/// </remarks>
+	[TestMethod]
+	public void TheCellRuleOverLostKingdom()
+	{
+		var (people, _) = Park();
+		var state = people.State;
+		var accepted = new System.Collections.Generic.Dictionary<int, int>();
+		int track = 0, outside = 0, type = 0;
+
+		for ( var y = 0; y < ParkWorld.MapSize; ++y )
+		{
+			for ( var x = 0; x < ParkWorld.MapSize; ++x )
+			{
+				var refusal = ParkStaffPool.RefusesStaff( state, x, y );
+
+				if ( refusal == null )
+				{
+					var kind = state.Record( x, y ).Type;
+					accepted[kind] = (accepted.TryGetValue( kind, out var n ) ? n : 0) + 1;
+				}
+				else if ( refusal.StartsWith( "its track record" ) )
+					++track;
+				else if ( refusal.StartsWith( "the cell is outside" ) )
+					++outside;
+				else
+					++type;
+			}
+		}
+
+		System.Console.WriteLine( $"staff cell rule: accepted {string.Join( ", ", accepted.OrderBy( a => a.Key ).Select( a => $"type {a.Key} {a.Value}" ) )}; "
+			+ $"refused track {track}, outside {outside}, type {type}" );
+
+		Assert.AreEqual( "0:2074 1:78 3:4 9:8", string.Join( " ", accepted.OrderBy( a => a.Key ).Select( a => $"{a.Key}:{a.Value}" ) ) );
+		Assert.AreEqual( (572, 13596, 52), (track, outside, type) );
+	}
+
+	/// <summary>
+	/// <b>Each of the rule's refusals, on a path cell made into what it tests</b>, with values a near miss gets wrong:
+	/// a type 25 record refuses even with its flags' low nibble set (the click asks the type alone, <c>FUN_005363f0</c>,
+	/// not <c>CellEdge.TrackCloses</c>); a type 12 record refuses by its parent's type 25 and is taken where its parent
+	/// is plain; <c>0x40</c> refuses and <c>0x20</c> does not; type 9 is taken and type 2 refused.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> the rule reading <c>CellEdge.TrackCloses</c> takes the flagged type 25; a rule not following
+	/// the parent takes the type 12; a mask of <c>0x60</c> refuses the <c>0x20</c> cell; type 9 left out refuses it.
+	/// </remarks>
+	[DataTestMethod]
+	[DataRow( 1, 0x00, 25, 0xf, 0, false, "its track record is type 25" )]
+	[DataRow( 1, 0x00, 13, 0, 0, false, "its track record is type 13" )]
+	[DataRow( 1, 0x00, 12, 0, 1, false, "its track record is type 25" )]
+	[DataRow( 1, 0x00, 17, 0, 2, true, null )]
+	[DataRow( 1, 0x40, 0, 0, 0, false, "the cell is outside the park" )]
+	[DataRow( 1, 0x20, 0, 0, 0, true, null )]
+	[DataRow( 9, 0x00, 0, 0, 0, true, null )]
+	[DataRow( 3, 0x00, 0, 0, 0, true, null )]
+	[DataRow( 0, 0x00, 0, 0, 0, true, null )]
+	[DataRow( 2, 0x00, 0, 0, 0, false, "the cell is of type 2" )]
+	[DataRow( 4, 0x00, 0, 0, 0, false, "the cell is of type 4" )]
+	public void EachRefusalOfTheCellRule( int cellType, int flags, int trackType, int trackFlags, int parent, bool takes, string? why )
+	{
+		var (people, _) = Park();
+		var state = people.State;
+
+		// Parent 1 is (25,3), a type 25 record of the save; parent 2 is (25,4), made plain here.
+		state.SetRecord( 25, 3, state.Record( 25, 3 ) with { TrackType = 25 } );
+		state.SetRecord( 25, 4, state.Record( 25, 4 ) with { TrackType = 0 } );
+
+		var parentId = parent switch { 1 => MapStep.CellId( 25, 3 ), 2 => MapStep.CellId( 25, 4 ), _ => 0 };
+
+		state.SetRecord( OnMapX, OnMapY, state.Record( OnMapX, OnMapY ) with
+		{
+			Type = cellType, Flags = (ushort)flags, TrackType = trackType, TrackFlags = (ushort)trackFlags, TrackParentId = (ushort)parentId
+		} );
+
+		var refusal = ParkStaffPool.RefusesStaff( state, OnMapX, OnMapY );
+
+		Assert.AreEqual( takes ? null : why, refusal );
+	}
+
+	/// <summary>
+	/// <b>A type 12 or 17 record naming no parent is counted</b> (<c>STAFF_PLACEMENT_TRACK_PARENT_UNNAMED</c>): the
+	/// original's type-25 test reads past the map there, which is not decoded. The rule's other tests still answer.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the count left out leaves it at nought.</remarks>
+	[TestMethod]
+	public void ATrackRecordNamingNoParentIsCounted()
+	{
+		var (people, _) = Park();
+		var state = people.State;
+
+		Unimplemented.Forget();
+		state.SetRecord( OnMapX, OnMapY, state.Record( OnMapX, OnMapY ) with { TrackType = 12, TrackParentId = 0 } );
+
+		Assert.IsNull( ParkStaffPool.RefusesStaff( state, OnMapX, OnMapY ), "a path cell, by the tests that are decoded" );
+		Assert.AreEqual( 1, Unimplemented.Summary.FirstOrDefault( gap => gap.What == "STAFF_PLACEMENT_TRACK_PARENT_UNNAMED" ).Times );
+		Unimplemented.Forget();
+	}
+
+	/// <summary>
+	/// <b>The item's own check: carry a candidate over a cell the rule refuses, click, and they are still in the hand
+	/// and in the pool; then a path cell, and they are hired.</b> (59,15) is a type 4 cell inside the park, under a
+	/// placed object, which the old rule (any cell on the map) took.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the rule not asked by <c>Hire</c> hires them on (59,15).</remarks>
+	[TestMethod]
+	public void ACarriedCandidateIsRefusedACellOfTypeFourAndHiredOnAPath()
+	{
+		var (people, pool) = Park();
+		var candidate = pool.Candidates[0];
+		var staff = people.Staff.Count;
+
+		Assert.AreEqual( (CellEdge.Footprint, 0), (people.State.Record( 59, 15 ).Type, people.State.Record( 59, 15 ).Flags & ParkPathBuilding.OutsideThePark) );
+
+		ParkStaffPool.Carry( candidate.Id );
+
+		var refused = ParkStaffPool.PlaceCarried( 59, 15 );
+
+		StringAssert.Contains( refused, "cannot be put down at (59,15)" );
+		Assert.AreEqual( candidate.Id, ParkStaffPool.Carrying, "still in the hand" );
+		Assert.AreEqual( candidate, pool.Find( candidate.Id ), "still in the pool" );
+		Assert.AreEqual( staff, people.Staff.Count, "nobody hired" );
+
+		StringAssert.Contains( ParkStaffPool.PlaceCarried( OnMapX, OnMapY ), $"hired {candidate.Name}" );
+		Assert.AreEqual( staff + 1, people.Staff.Count );
+		Assert.AreEqual( 0, ParkStaffPool.Carrying );
+	}
+
+	/// <summary>
+	/// <b>A carried candidate wears cursor 9, <c>c_carry</c></b>, which the place-staff mode's install sets
+	/// (<c>0x0046c730</c>), and the hand let go of gives the idle pointer back.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the carry line left out of <c>Level.WantedCursor</c> gives the plain pointer.</remarks>
+	[TestMethod]
+	public void ACarriedCandidateWearsTheCarryCursor()
+	{
+		var (_, pool) = Park();
+		var before = Level.Current;
+		var level = (Level)System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject( typeof( Level ) );
+
+		try
+		{
+			Level.Current = level;
+			ParkBuildMode.Forget();
+
+			Assert.AreEqual( Input.CursorTypes.Normal, level.WantedCursor(), "nothing in the hand" );
+
+			ParkStaffPool.Carry( pool.Candidates[0].Id );
+			Assert.AreEqual( Input.CursorTypes.Carry, level.WantedCursor(), "a candidate in the hand" );
+
+			ParkStaffPool.Drop();
+			Assert.AreEqual( Input.CursorTypes.Normal, level.WantedCursor(), "let go of" );
+		}
+		finally
+		{
+			Level.Current = before!;
+		}
 	}
 }

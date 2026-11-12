@@ -2019,6 +2019,9 @@ public class Level
 				ParkBuildMode.Patrol => ParkPicking.TryCell( out var x, out var y ) ? PatrolCursor( x, y ) : PatrolCursor(),
 				ParkBuildMode.KartTrack or ParkBuildMode.WaterTrack => ParkPicking.TryCell( out var tx, out var ty )
 					? ParkTrackTool.CursorOver( tx, ty ) : Input.CursorTypes.Track,
+				// A candidate from the hire list: the place-staff mode's install sets cursor 9, c_carry (0x0046c730); the
+				// decode names no other cursor for the mode (docs/exe/park-engine.md, "Putting a candidate down").
+				_ when ParkStaffPool.Carrying != 0 => Input.CursorTypes.Carry,
 				_ when ParkBuilding.Carrying != 0 => CarryCursor(),
 				_ => IdleCursor()
 			};

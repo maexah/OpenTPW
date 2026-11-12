@@ -13884,3 +13884,30 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   kept): V's visitors list read `selected index 0 (row 38), sprite on slot 0`, 38 sorted first and 42 logged first;
   the buy screen's `footprint` read `row 1104 shown, none waiting, list selection 1104` and `help item 1104` with no
   pointer on the rows; no `LIST_FIRST_ROW_SELECTED`. Left: (2) Q1428, (3) Q1429, the photographs Q1430.
+- [x] **Q40. The place-staff mode's cell rule and its carry preview.** Found by Q6's decode (`park-engine.md`,
+  "Putting a candidate down: the type-5 mode"), so this is a build. The original takes a worker only on a
+  cell of `mType` 0, 1, 3 or 9, not flagged `0x40`, whose track record after the 12/17 parent redirect is
+  not track type 11, 13, 16, 18 or 25; here any cell on the map takes one (`STAFF_PLACEMENT_CELL_RULE`).
+  While a candidate is carried the original shows cursor 9 (`c_carry.ani`), hangs a sprite of their kind
+  in their costume under the pointer and puts a red square on a cell the click would refuse; here the
+  pointer is plain (`STAFF_CARRY_PREVIEW`). Confirm: carry a candidate over a cell the rule refuses, click,
+  still in the hand and the red square photographed; then a path cell, hired.
+  - **Note (play test 2026-10-31):** still no figure at the pointer while placing a hired member (`STAFF_CARRY_PREVIEW` reached). Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
+  - **Note (fork watch 2026-10-31, verify-other H2):** the carried figure: `0x0046c480` takes the point `0x007a1c90`, height
+    less -5.0, heading 4, into `0x00475480`; `0x0046c730` maps type 4 to 8 to kinds 6, 5, 4, 7, 8 (`0x0046c87c`); the sprite
+    script (`0x004766d0`..`0x00476940`, entry `0x15` of `0x0075a418`) stores `0x1200`, sets 6 and plays frames 0 to 3.
+    `0x00542010` adds the terrain (`0x004527f0`) to a hit height that is already absolute, so the original counts the ground
+    twice and the sprite stands at terrain + height + 5: where that lands on screen is unproven, so capture before building
+    and do not "fix" it unseen. Our gap is not the `.FPC` (we pick it only in first person; the preview is simply unbuilt,
+    `ParkStaffPool.cs`); set 6 of 16 `.FPC` banks is a clear 2 x 2 placeholder (FileFormats `sprites.md`).
+  - **Built (first piece, 2026-11-12):** the cell rule, `ParkStaffPool.RefusesStaff`, asked by `ParkStaffPool.Hire` (the click
+    and the console's `hire`): a track record of type 11, 13, 16, 18 or 25 (its parent's for 12 and 17, `ParkValue.TrackCounts`),
+    flags `0x40`, then `mType` not 0, 1, 3 or 9; a refusal logs `Staff: cannot place ...` and leaves the candidate in the hand
+    and the pool. A 12/17 record naming no parent is counted (`STAFF_PLACEMENT_TRACK_PARENT_UNNAMED`). Cursor 9: a carried
+    candidate wears `c_carry` (`Level.WantedCursor`). New console verb `carrystaff <candidate>`. Census over Lost Kingdom's
+    save (`TheCellRuleOverLostKingdom`): 2,164 cells take a worker (type 0 2,074, 1 78, 3 4, 9 8), 572 refused by track,
+    13,596 outside the park, 52 by type. Off-screen run (cloud lane c87, output not kept): `carrystaff 1`, `pointer` cursor
+    Carry, `worldclick 59 15` refused (type 4), `2 2` refused (track 25), `0 0` refused (outside), `47 21` hired as thing 43,
+    `pointer` cursor Normal. Six bugs put back by hand each failed a test. Not built: the carried figure and the red square
+    (`STAFF_CARRY_PREVIEW` still counted), Q1469; the cursor not photographed, Q1468. Not observed in the original (no
+    original, no Ghidra in the lane). **Done 2026-11-12** (cloud lane c87, `alexah/1066-place-staff-cell-rule`).
