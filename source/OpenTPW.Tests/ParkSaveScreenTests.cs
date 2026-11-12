@@ -613,7 +613,8 @@ public class ParkSaveScreenTests
 	/// <remarks>
 	/// <b>Mutations:</b> the park entered again from the newest file (the menu's restart before <c>restart.INTS</c>) asks
 	/// for no file; the fresh park's case taken for every missing file asks for one there too; the missing file not
-	/// looked for asks for nothing at all; the quiet stop dropped leaves his line to come.
+	/// looked for asks for nothing at all; the quiet stop dropped leaves his line to come; the fresh park asked for as a
+	/// plain entry (<c>RequestParkLoad</c>) enters the newest file, the autosave.
 	/// </remarks>
 	[TestMethod]
 	public void RestartParkLoadsRestartIntsAndNotTheNewestFile()
@@ -655,6 +656,7 @@ public class ParkSaveScreenTests
 		typeof( Level ).GetProperty( nameof( Level.Park ) )!.SetValue( Level.Current, null );
 		Restart( stack );
 		Assert.AreEqual( ("jungle", null), WhatWasAsked(), "a park made fresh is made again" );
+		Assert.IsTrue( (bool)Asked( "_parkFreshAsked" ).GetValue( null )!, "fresh, not entered again from the newest file, the autosave (Q994, S-M3)" );
 	}
 
 	/// <summary>The game menu's third row, Restart Park, and its question's tick.</summary>
@@ -890,8 +892,9 @@ public class ParkSaveScreenTests
 
 		void Leave() => Game.ChangeSceneIfAsked(
 			() => done.Add( File.Exists( autosave ) ? "unload, the autosave written" : "unload" ),
-			( theme, file ) => done.Add( $"park {theme} {file ?? "as entered"}" ),
-			() => done.Add( "lobby" ) );
+			( theme, start ) => done.Add( $"park {theme} {start.File ?? "as entered"}" ),
+			() => done.Add( "lobby" ),
+			( _, _ ) => (ParkWorld?)Level.Current!.Park );
 
 		Leave();
 		Assert.AreEqual( "", string.Join( ", ", done ), "nothing asked for" );
@@ -927,7 +930,7 @@ public class ParkSaveScreenTests
 		var restart = Path.Combine( Jungle, "restart.INTS" );
 		var tick = 755;
 
-		void Change() => Game.ChangeSceneIfAsked( () => { }, ( _, _ ) => RunningPark( tick ), () => { } );
+		void Change() => Game.ChangeSceneIfAsked( () => { }, ( _, _ ) => RunningPark( tick ), () => { }, ( _, _ ) => (ParkWorld?)Level.Current!.Park );
 
 		Game.RequestParkLoad( "jungle" );
 		Change();
@@ -976,6 +979,7 @@ public class ParkSaveScreenTests
 	{
 		Asked( "_parkAsked" ).SetValue( null, null );
 		Asked( "_parkFileAsked" ).SetValue( null, null );
+		Asked( "_parkFreshAsked" ).SetValue( null, false );
 	}
 
 	private static FieldInfo Asked( string field ) => typeof( Game ).GetField( field, BindingFlags.Static | BindingFlags.NonPublic )!;

@@ -2,9 +2,11 @@
 """consolerun.py <outdir> <bin> <game> <script>: OpenTPW run off-screen under xvfb-run with the debug console, fed a script.
 
 A bare feeder for a machine without python-xlib (a cloud lane): needs only xvfb-run and the build, and no private game
-folder or `ref` player. Where those are set up, prefer parkrun.py with OFFSCREEN = True (README.md). <bin> is the build's
 folder (OpenTPW.dll), <game> the game folder, <script> a text file of lines `SECS COMMAND`: each command is written to the
-console's stdin, then the run waits SECS seconds; `#` starts a comment. The run first waits 25 s for the lobby.
+console's stdin, then the run waits SECS seconds; `#` starts a comment. The run first waits 25 s for the lobby. A command
+that starts with `!` is not the console's: the rest is run in a shell with DISPLAY set to the run's own X server, its output
+in stdout.txt after `!!! ` (Q994: a real key press where the console has none; focus the window first,
+`xdotool windowfocus --sync`, docs/TOOLING.md has the line).
 
 The game never runs on <game> itself: it runs on <outdir>/game, links to <game>'s entries with a COPY of its save/ (empty
 where it has none), and XDG_DATA_HOME is <outdir>/xdg, so nothing of the player's is written (AGENTS.md rule 12); <game>'s
@@ -54,6 +56,20 @@ def pump():
         log.write(line); log.flush()
 
 threading.Thread(target=pump, daemon=True).start()
+
+def xenv():
+    """The X display xvfb-run gave the run, DISPLAY and XAUTHORITY, from a process of the run that has them."""
+    for pid in filter(str.isdigit, os.listdir("/proc")):
+        try:
+            if os.getsid(int(pid)) != p.pid:
+                continue
+            found = dict(v.decode().split("=", 1) for v in open(f"/proc/{pid}/environ", "rb").read().split(b"\0")
+                         if v.startswith((b"DISPLAY=", b"XAUTHORITY=")))
+            if "DISPLAY" in found:
+                return found
+        except (OSError, ProcessLookupError, ValueError):
+            pass
+    return {}
 time.sleep(25)
 for line in open(script):
     line = line.split("#", 1)[0].strip()
@@ -61,6 +77,12 @@ for line in open(script):
         continue
     secs, cmd = line.split(" ", 1)
     log.write(f">>> {cmd}\n"); log.flush()
+    if cmd.startswith("!"):
+        shell = subprocess.run(cmd[1:], shell=True, env=dict(env, **xenv()), stdout=subprocess.PIPE,
+                               stderr=subprocess.STDOUT, text=True)
+        log.write("".join(f"!!! {l}\n" for l in shell.stdout.splitlines()) + f"!!! exit {shell.returncode}\n"); log.flush()
+        time.sleep(float(secs))
+        continue
     try:
         p.stdin.write(cmd + "\n"); p.stdin.flush()
     except BrokenPipeError:

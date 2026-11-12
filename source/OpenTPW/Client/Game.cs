@@ -227,7 +227,15 @@ internal static class Game
 	/// <see cref="ReloadLobbyIfAsked"/> with the scene's unload and the two loads handed in, apart only so a test can
 	/// reach which way of leaving writes the autosave.
 	/// </summary>
-	internal static void ChangeSceneIfAsked( Action unload, Action<string, string?> loadPark, Action loadLobby )
+	/// <remarks>
+	/// <b>A park file asked for is read before anything is taken down</b>, as the original's load fails before its
+	/// teardown (<c>FUN_00414d40</c>, <c>0x0041501d</c>; <c>docs/exe/saves.md</c>, "The load"): one that will not read leaves
+	/// the running scene as it is, its clock, its calendar and its screens untouched, and the park is built from the
+	/// file read here, never a second read. <b>A deviation, the original's undefined case filled</b>: a body that will
+	/// not inflate passes the original's checks and its teardown and ends in failure 6; here it keeps the park too.
+	/// </remarks>
+	internal static void ChangeSceneIfAsked( Action unload, Action<string, Level.ParkStart> loadPark, Action loadLobby,
+		Func<string, string, ParkWorld?>? readAhead = null )
 	{
 		// A park first, because asking for one supersedes asking for the lobby again.
 		if ( _parkAsked is { } themeName )
@@ -237,6 +245,20 @@ internal static class Game
 			var parkFile = _parkFileAsked;
 			_parkFileAsked = null;
 
+			var start = _parkFreshAsked ? Level.ParkStart.MadeFresh : Level.ParkStart.Entered;
+			_parkFreshAsked = false;
+
+			if ( parkFile != null )
+			{
+				if ( (readAhead ?? Level.ReadParkAhead)( themeName, parkFile ) is not { } read )
+				{
+					Log.Warning( $"Load: {parkFile} will not read, so nothing is taken down and the running scene goes on" );
+					return;
+				}
+
+				start = new Level.ParkStart( parkFile, read, false );
+			}
+
 			var fromAPark = Level.Current?.Kind == Level.Scene.Park;
 			UI.ParkCategoryScreens.ParkAsked( fromAPark );
 
@@ -245,7 +267,7 @@ internal static class Game
 				GameCalendar.CarryTheYear();
 
 			unload();
-			loadPark( themeName, parkFile );
+			loadPark( themeName, start );
 
 			// State 9 goes on to 0xf, which writes restart.INTS when the folder has none (0x0054f3f7). A park built again
 			// from a park here (Load Park's row, Alt+L, Restart Park) is loaded in place there and never passes it.
@@ -287,10 +309,24 @@ internal static class Game
 	{
 		_parkAsked = themeName.ToLowerInvariant();
 		_parkFileAsked = parkFile;
+		_parkFreshAsked = false;
+	}
+
+	/// <summary>
+	/// Asks for the park to be built again on a world made fresh, whatever the player's folder holds: Restart Park on a
+	/// park made fresh whose <c>restart.INTS</c> could not be written (<see cref="UI.ParkFrontEnd"/>).
+	/// </summary>
+	internal static void RequestFreshPark( string themeName )
+	{
+		RequestParkLoad( themeName );
+		_parkFreshAsked = true;
 	}
 
 	/// <summary>The park file asked for with <see cref="_parkAsked"/>, or null for the one the park is entered with.</summary>
 	private static string? _parkFileAsked;
+
+	/// <summary>Whether <see cref="_parkAsked"/> is for a world made fresh (<see cref="RequestFreshPark"/>).</summary>
+	private static bool _parkFreshAsked;
 
 	/// <summary>
 	/// What the loading bar expects a park to take on a <b>first-ever run</b>.
@@ -315,11 +351,11 @@ internal static class Game
 	private const int ParkLoadSteps = 918;
 
 	/// <summary>Builds a park behind the loading screen, the way <see cref="LoadLobby"/> builds the lobby.</summary>
-	private static void LoadPark( string themeName, string? parkFile = null )
+	private static void LoadPark( string themeName, Level.ParkStart start )
 	{
 		using ( var loading = new LoadingScreen( themeName, ParkLoadSteps ) )
 		{
-			_ = new Level( themeName, Level.Scene.Park, parkFile );
+			_ = new Level( themeName, Level.Scene.Park, start );
 
 			loading.Finished();
 		}

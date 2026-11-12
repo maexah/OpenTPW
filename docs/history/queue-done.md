@@ -12145,6 +12145,30 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q994. A file that will not load keeps the running park, as the original does.** From the week-end audit 2026-10-31 (S-D3).
+  `FUN_00414d40` leaves before its first teardown call (`0x0041501d`) on a failed open (`0x00414dc2`), version read (`0x00414e09`), a version
+  above 500 (`0x00414e3c`, mode 2 only), preamble (`0x00414e76`), length (`0x00414ec1`), read (`0x00414eef`), block size (`0x00414f2f`) and
+  memory file (`0x00414f96`); the inflate (`0x00414f5d`) is unchecked, so a file whose header reads but whose body is cut goes on to the
+  teardown and failure 6 (the only undefined case). Entering: `FUN_005accf0` drops the load's answer (`0x005ad054`, next `0x005ad059`) and
+  state 9 goes on (`0x0054f12b`, `0x0054f130`), so the new world stands and state 0xf writes `restart.INTS` from it. Ours: `Game.cs:244-245`
+  ends the scene first, so Load Park on a bad `.TPWS`, Alt+L, or Restart Park on a bad `restart.INTS` drops the running park for an empty
+  one, and entering with a bad file gives `Park` null (`Level.cs:676-681`): nothing placed, no gate, and `Level.cs:864-868` refuses every
+  save. The fresh-park arm is `Level.cs:622-625`. Build: read and check the file before the scene ends (no in-place build is needed: Q247's choice does not change this); on a failure keep the park (loading)
+  or make the world fresh (entering). Said at the site (`Level.CreatePark`). A copied or damaged file, a short one the original left
+  (`0x00414c37`) or an online one (`SaveReader.cs:95`) reaches it; not a file this game writes. The Restart Park comment at
+  `ParkFrontEnd.cs:587-590` (S-M3, Q997) belongs with it. Confirm: a truncated copy in each of the three routes, in both games. **Done 2026-11-12** (cloud lane c17; off-screen, `consolerun.py` with its new `!` line; no original, no Ghidra here):
+  `Game.ChangeSceneIfAsked` reads a file asked for whole (`Level.ReadParkAhead`) before the unload, the carry of the year
+  and the screens' note, and a file that will not read ends the ask with `Load: <path> will not read, so nothing is taken
+  down and the running scene goes on`; the park is built from the file read there (`Level.ParkStart`, no second read).
+  Entering with a newest file that will not read makes the world fresh (`Level.CreatePark`), and `restart.INTS` is written
+  from it where there is none. S-M3: Restart Park's fresh arm asks `Game.RequestFreshPark`, never the newest file. A body
+  that will not inflate keeps the park too: the original's undefined case (failure 6 after its teardown) filled, said at
+  `Game.ChangeSceneIfAsked` and `Level.CreatePark`. Run (`PREDICTION.txt`, six of six once Alt+L's window had the keys): a
+  player with a 4-byte `Bad.TPWS`, an `autosave.TPWS` cut at half, a `jungle.TPWS` spoilt in its body at full length, a
+  `restart.INTS` cut at 1000 bytes and `Good.TPWS` the shipped park: entering made the park fresh (clock 0); the Bad and
+  autosave rows, Alt+L and Restart Park each logged the Load line, the scene's windows stood and the clock ran on (139,
+  171, 195, 216 / 137, 164 / 248), and the Good row loaded at 755. Three tests added, three changed. Not run: the
+  original (none here), Windows and macOS, a picture (no drawing change). Filed Q1179 (the quickload's log line).
 
 ## B. Docs and comments
 

@@ -566,7 +566,7 @@ things too (SPSC's reader `0x00475730` frees every sprite and the table, the par
 `Level.SetupParkEntities`, `Level.Unload` deletes every entity and HUD panel, `Level.Current` has 180 uses in 35 files and 51 files
 under `World/Park` use a `Current`. So an in-place load would be a reset path per system, or a rebuild behind the same picture; how much is unread. **Q994 stands either way**:
 it needs the file read and checked before the scene ends, which the rebuild gets for the same price, and the original's own check does not
-catch a cut body (the inflate at `0x00414f5d` is unchecked). The list's scrollbar and the saved camera did not depend on the choice and are built (Q918).
+catch a cut body (the inflate at `0x00414f5d` is unchecked). Built as Q994 ("OpenTPW's Load Park", below). The list's scrollbar and the saved camera did not depend on the choice and are built (Q918).
 
 **What Alexah needs to decide.** When a player loads from inside a park (Load Park, Alt+L, Restart Park), does OpenTPW keep ending the park and
 building it again, or swap it in place as the original does? The original shows no loading screen and the picture holds for 0.14 to 0.17 s; ours shows one for 1.9 to 2.3 s (Q921, below).
@@ -625,7 +625,14 @@ height of the screen its font set is drawn for, plus 6. The original at 640 by 4
 
 **One deviation, said at the site.** A row's click ends the park's scene and builds it again from the file behind
 the loading screen (`Game.RequestParkLoad( theme, file )`, `Level.CreatePark`'s `parkFile`), where the original
-reads the file over the running park. Row `0x16`, the second Load, is reached by
+reads the file over the running park. **A file that will not read keeps the running park** (Q994): `Game.ChangeSceneIfAsked`
+reads the file asked for whole before anything is taken down (`Level.ReadParkAhead`), and one that will not read ends the ask
+there, logging `Load: <path> will not read, so nothing is taken down and the running scene goes on`: the clock, the calendar's
+year and the screens stand, as the original's load fails before its teardown (`FUN_00414d40`, `0x0041501d`). The park is
+then built from the file read there, never read a second time. This is every load from a park: a Load Park row, Alt+L and
+Restart Park. **A deviation, the original's undefined case filled**: a file whose header reads and whose body will not
+inflate passes the original's checks and its teardown and ends in failure 6 with the state "(possibly) inconsistent"; here
+any failure of the read keeps the park. A file read in part (a module that stops partway) is a park, as before. Row `0x16`, the second Load, is reached by
 nothing here. **The list's scrollbar is built** (Q918; `hud.md`, "The list's scrollbar"): the stream's track, arrows and thumb, shown for a folder
 longer than the window; a park loaded from the list, or entered, opens where its file's camera stood (`TakeSaved`, below, "Loading the modules", Camera).
 
@@ -843,7 +850,7 @@ the write after a park is built from the lobby, and not after one built again fr
 Restart Park), and it is `Level.WritePark( "restart", ".INTS" )`. Restart Park quietens the advisor and asks for the
 player's `restart.INTS`, found in any case, as a Load Park row does, ending the scene and building it again from the
 file where the original reads it over the running park; with no such file it logs and loads nothing. A park made fresh
-writes its `restart.INTS` as it is entered (Q783), so its Restart Park loads that file; only where nothing could be written is it made fresh again.
+writes its `restart.INTS` as it is entered (Q783), so its Restart Park loads that file; only where nothing could be written is it made fresh again (`Game.RequestFreshPark`, never the newest file in the folder; Q994, the week-end audit's S-M3). A `restart.INTS` that will not read keeps the running park, as a missing one does.
 With nobody playing, which only the console's `park` reaches, the copy beside the level is read again.
 
 **Measured (Q248).** In the original under Proton, the reference player's `restart.INTS` moved aside and Lost Kingdom
@@ -890,7 +897,9 @@ showed $ 88112, the save's balance (`q241b/orig/a.log`, `l-entered.png`; predict
 files of one time were not run there.
 
 **OpenTPW** does the same for whoever is playing (`SaveFolder.NewestPark`, `Level.CreatePark`), taking the
-candidates in name order, so a tie goes to the first by name. With nobody playing, which only the debug console's
+candidates in name order, so a tie goes to the first by name. Where the newest will not read, the world is made fresh
+(Q994), as the original's new world stands when the load fails and `FUN_005accf0`'s answer is dropped (`0x005ad054`; state 9
+goes on, `0x0054f12b`), and `restart.INTS` is written from it where there is none; no older file is tried in its place. With nobody playing, which only the debug console's
 `park` reaches, it reads `data/levels/<theme>/Easymode.TPWI`; the original has a player on every entry.
 
 ### Read, not run
