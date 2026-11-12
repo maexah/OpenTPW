@@ -2798,7 +2798,7 @@ public static class DebugConsole
 					? $"money balance {purse.Balance} takings {purse.Takings} " +
 						$"fee {purse.AdmissionFee} gate {(purse.ParkIsClosed ? "shut" : "open")} " +
 						$"profit {purse.ProfitThisYear} last {purse.LastBalance} red {purse.TurnEnteredRed} " +
-						$"withdrawals {purse.WithdrawalsEnabled} " +
+						$"withdrawals {purse.WithdrawalsEnabled} world state {purse.WorldState} months red {purse.MonthsInTheRed()} " +
 						$"month balance {purse.MonthBalance.Newest} slot {purse.MonthBalance.Current} " +
 						$"park value {ParkValue.Of( purse, Level.Current.Catalogue )} ring {purse.MonthParkValue.Newest} slot {purse.MonthParkValue.Current} " +
 						$"lifetime visitors {purse.LifetimeVisitors} ring {purse.MonthVisitors.Newest} slot {purse.MonthVisitors.Current} most paid {purse.MostPaidForTicket} " +

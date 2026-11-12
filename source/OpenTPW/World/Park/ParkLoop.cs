@@ -110,13 +110,17 @@ internal static class ParkLoop
 	/// "The calendar"). But the original's tail reads the turned weather: its arrival manager sizes a load by this sweep's
 	/// drops (<c>0x004cf60e</c>), where ours runs in <see cref="ParkPeople.Sweep"/> before this turn and reads the drops one
 	/// turn behind (Q1165). And the original skips the walk, its weather with it, in world state 4, the park's end
-	/// (<c>0x0051639e</c>), while the tail still runs; ours turns the weather whatever the state: gate it there when Q404
-	/// builds the end.
+	/// (<c>0x0051639e</c>), while the tail still runs; so ours turns no weather in a sweep that began in world state 4, and
+	/// does turn it in the sweep whose tail ends the park, whose walk the original had already run.
 	/// </remarks>
-	private static void Tail( ParkPeople people, Action<ParkPeople>? calendar, ParkWeather? weather )
+	internal static void Tail( ParkPeople people, Action<ParkPeople>? calendar, ParkWeather? weather )
 	{
+		var ended = people.State.Ended;
+
 		calendar?.Invoke( people );
-		weather?.Turn();
+
+		if ( !ended )
+			weather?.Turn();
 	}
 
 	/// <summary>

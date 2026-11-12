@@ -655,10 +655,7 @@ public class ParkScreamChainTests
 				Assert.AreEqual( 6, park.LevelNow, "thirteen guests again: level 6" );
 
 				// World state 4: the level is nought, and the music is the first variation's, not silence.
-				var level = (Level)System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject( typeof( Level ) );
-
-				typeof( Level ).GetProperty( nameof( Level.Park ) )!.SetValue( level, new InWorldStateFour( world ) );
-				Level.Current = level;
+				people.State.SetWorldState( ParkState.EndedWorldState );
 
 				ToTheBeat();
 				Assert.AreEqual( 0, park.LevelNow, "world state 4: nought" );
@@ -992,10 +989,7 @@ public class ParkScreamChainTests
 				Assert.AreEqual( Gain( 22 ), Crowd()!.Volume, 0.00001f );
 
 				// World state 4: nought, the voice faded and let go.
-				var level = (Level)System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject( typeof( Level ) );
-
-				typeof( Level ).GetProperty( nameof( Level.Park ) )!.SetValue( level, new InWorldStateFour( world ) );
-				Level.Current = level;
+				people.State.SetWorldState( ParkState.EndedWorldState );
 
 				var last6 = Crowd()!;
 				var starts = park.CrowdVoicePlays;
@@ -1010,7 +1004,7 @@ public class ParkScreamChainTests
 				Assert.AreEqual( starts, park.CrowdVoicePlays, "and nothing follows it" );
 
 				// Out of state 4 it is started again, from the first variation whatever the level.
-				Level.Current = levelBefore!;
+				people.State.SetWorldState( 0 );
 				ToTheBeat();
 				Assert.AreEqual( (100, true, 0), (park.CrowdVoiceLevelNow, park.CrowdVoiceHeld, park.CrowdVoiceVariation) );
 				Assert.AreEqual( (starts.Samples + 1, starts.Starts + 1), park.CrowdVoicePlays );
@@ -1029,41 +1023,6 @@ public class ParkScreamChainTests
 			people.Delete();
 			Entity.ApplyDeletions();
 		}
-	}
-
-	/// <summary>Lost Kingdom's save with its world state read as 4, and nothing else changed.</summary>
-	private sealed class InWorldStateFour( ParkWorld source ) : IParkInitialState
-	{
-		public ParkWorld? Save => source;
-		public IReadOnlyList<ParkThingIdentity> Things => source.Things;
-		public IReadOnlyList<ParkWorld.CatalogueObject> Objects => source.Objects;
-		public ParkWorld.EconomyState? Economy => source.Economy;
-		public ParkWorld.StaffHqState? StaffHq => source.StaffHq;
-		public IReadOnlyList<ParkWorld.Person> People => source.People;
-		public IReadOnlyList<ParkWorld.Sprite> Sprites => source.Sprites;
-		public IReadOnlyList<ParkWorld.MapCell> Cells => source.Cells;
-		public ParkWorld.MapCell CellAt( int x, int y ) => source.CellAt( x, y );
-		public int ParkGates => source.ParkGates;
-		public int TrafficLights => source.TrafficLights;
-		public int FirstObject => source.FirstObject;
-		public int RandomSeed => source.RandomSeed;
-		public int Weather => source.Weather;
-		public int ParkClosed => source.ParkClosed;
-		public int GameTick => source.GameTick;
-		public int BankAccount => source.BankAccount;
-		public int NumberOfVisitorsToDate => source.NumberOfVisitorsToDate;
-		public int WorldState => ParkAudio.SilentWorldState;
-		public int ThingCount => source.ThingCount;
-		public int ArrivalVehicleForSmallCrowd => source.ArrivalVehicleForSmallCrowd;
-		public int ArrivalVehicleForMediumCrowd => source.ArrivalVehicleForMediumCrowd;
-		public int ArrivalVehicleForLargeCrowd => source.ArrivalVehicleForLargeCrowd;
-		public int CurrentArrivalVehicle => source.CurrentArrivalVehicle;
-		public ParkWorld.ArrivalBlock Arrival => source.Arrival;
-		public IReadOnlyList<ParkWorld.ObjectControl> ObjectControlRecords => source.ObjectControlRecords;
-		public IReadOnlyList<ParkWorld.ResearchProject> ResearchProjects => source.ResearchProjects;
-		public IReadOnlyList<ParkWorld.ResearchKind> ResearchKinds => source.ResearchKinds;
-		public int ResearchWorkLoad => source.ResearchWorkLoad;
-		public int ResearchMostExpensiveProject => source.ResearchMostExpensiveProject;
 	}
 
 	/// <summary>

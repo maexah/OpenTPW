@@ -4446,6 +4446,24 @@ buys one point and loses 10. Only the withdrawal is gated, so with withdrawals o
   takes a turn (`park-gate.md`), but the clock and the bank go on, so every member of staff is still paid in the
   ended park. A park that spends past nought and stays there reaches it.
 
+  **OpenTPW** (Q404; `ParkState.EndThePark`, `ParkPeople.EndThePark`): the bank's month ends the park at six such months
+  unless its state is already 4 or the End feature stands (`ParkEndFeature.Current`); `ParkState.WorldState` is the
+  running state, the file's at the load and written back by the save (`ParkFileWriter.Running.WorldState`). The end sets
+  4, counts the end screen (`PARK_END_SCREEN`, Q1424) and the render flag (`PARK_END_RENDER_FLAG`), writes `VAR_BREAKSTAT`
+  1 through the script of every object a guest may be offered (`+0x32 & 4`, the door's set: this page's "every live ride
+  guests can choose" read so, not checked in the disassembly, Q1425), counts a pending delete it finds
+  (`PARK_END_PENDING_DELETES`: ours are freed at each sweep's end, before the tail that turns the month, so none is
+  pending), and writes the gate's `VAR_COMMAND` 2, the door left as it was. In state 4 the sweep gives no guest, member of
+  staff, ride or the advisor a turn and the weather does not turn (its walk's turn, `ParkLoop.Tail`), while `mGameTick`,
+  the arrival manager's tail, the staff pool, the gate's retry, the free list, the calendar and the bank go on; the music
+  and the crowd's voice read the running state. The advisor's record `0x6a` is counted on every month that finds the park
+  six months red (`ADVISOR_PARK_ENDED_IN_THE_RED`, Q1425). Measured off-screen in a cloud lane (`consolerun.py`, the stock
+  park: `money balance 100` and `clock 1378`, the wages took it red on 1.3.2000 at tick 1383; `money balance -100000` and
+  `clock 5610`, the month's change on tick 5611): `Bank: 6 months in the red - the park ends`, world state 4, the six
+  visitable objects 23, 22, 21, 16, 14 and 13 given `VAR_BREAKSTAT` 1, the gate's command 2 with `closed 0`, the five wages
+  withdrawn after it, `mGameTick` 5614 to 5618 with the thirteen guests' turns and idle stamps unchanged; the gate's
+  script then started `fail.mp2` and a ride's `breakdown1.mp2`. Not photographed, and not run beside the original.
+
 **The wage, `FUN_00504c70`**: `PerTypeStaffConsts[type].PayMultiplier` × `PerGradeStaffConsts[grade].BaseWage`
 (`0x00504ca4`; the type is 0 to 4 for the handyman, mechanic, entertainer, guard and researcher, `FUN_00506490`),
 `Easy_Standard.sam`'s numbers in Instant Action (game type 2, which Lost Kingdom's Easymode is; the full game's
@@ -4481,8 +4499,9 @@ the budgets read from the save's staff HQ, `ParkWorld.StaffHq`; each kind's budg
 the rest counted `ANALYSER_MONTH_CLOSE`; the
 batch deposited, the bought loans paid with the unsigned division, and `MonthsInTheRed` as `FUN_004f88b0` and the
 thirty-day divisor count it), then `ParkPeople.PayTheWages` (`ParkStaffPool.WageFrom` through `ParkState.Spend`, in
-ascending thing id). The strike look thing 1 makes after the training is built (`ParkStrikes.Look`, Q138b). Counted, not built: the end of a park six months in the red with the advisor's record `0x6a`
-(`BANK_PARK_ENDS_IN_THE_RED`, `ADVISOR_PARK_ENDED_IN_THE_RED`). A grade with no `PoundsPerTrainingPoint`, which the
+ascending thing id). The strike look thing 1 makes after the training is built (`ParkStrikes.Look`, Q138b). The end of a park six months in
+the red is built but for its screen (Q404, "The end of the park" above); the advisor's record `0x6a` is counted
+(`ADVISOR_PARK_ENDED_IN_THE_RED`). A grade with no `PoundsPerTrainingPoint`, which the
 original divides by unguarded and no shipped file has below grade 4, is counted (`STAFF_TRAINING_NO_POINT_COST`) and
 buys nothing. The Staff Training Budgets screen sets the budgets (Q352; `hud.md`); no screen buys a loan yet, so the loans keep what the save holds. OpenTPW's calendar
 is the date of `mGameTick` (Q149): its first month's change after the same load is 1 March on tick 1383, as the

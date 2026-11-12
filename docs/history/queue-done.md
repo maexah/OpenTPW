@@ -12145,6 +12145,17 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q404. A park six months in the red ends.** From the fork review 2, 2026-10-16
+  (`verify-economy-guests-paths.md` L4, M2). Counted, `BANK_PARK_ENDS_IN_THE_RED`. What the end does is
+  `ride-operation.md`, "The end of the park": world state 4, the end screen, `VAR_BREAKSTAT` 1 on every ride guests
+  choose, the pending deletes flushed, the gate closed; the clock and the bank go on. The path tests no game type, so
+  Lost Kingdom's Easymode reaches it. Confirm: a park held in the red to its end, beside the original.
+  **Outcome, 2026-11-12:** built but for its screen on `alexah/1055-park-bankruptcy-ends` (cloud lane c76; no Ghidra,
+  no original, no display): `ParkState.EndThePark`, `ParkPeople.EndThePark`, the running `ParkState.WorldState` (read
+  from the file, written by the save), the sweep's thing turns and the weather stopped in state 4, the music and crowd
+  reading the running state. Six tests pass, each failing with its bug put back; an off-screen run ended the stock park
+  on tick 5611 (`ride-operation.md`, "The end of the park"). The screen is Q1424; the advisor's record and the
+  unchecked readings are Q1425. Not run beside the original.
 
 ## B. Docs and comments
 

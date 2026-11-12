@@ -893,6 +893,7 @@ public sealed class ParkState
 
 		VisitorsToDate = park?.NumberOfVisitorsToDate ?? 0;
 		ParkIsClosed = park is not null && park.ParkClosed != 0;
+		WorldState = park?.WorldState ?? 0;
 		GameTick = park?.GameTick ?? 0;
 		RandomSeed = unchecked((uint)(park?.RandomSeed ?? 0));
 
@@ -1147,6 +1148,9 @@ public sealed class ParkState
 
 	/// <summary>Writes the bank's balance and nothing else: the debug console's <c>money balance</c>, an instrument.</summary>
 	internal void SetBalance( int balance ) => Balance = balance;
+
+	/// <summary>Writes the world's state and nothing else: an instrument for the tests of what state 4 silences.</summary>
+	internal void SetWorldState( int state ) => WorldState = state;
 
 	/// <summary>
 	/// Now on the park's own calendar - <c>FUN_004f8690</c>: <c>mFunnyTimeStart</c> plus <c>mGameTick ×
@@ -1832,7 +1836,7 @@ public sealed class ParkState
 	/// instalment withdrawn, its months repaid counted, <see cref="ProfitThisYear"/> given the principal's share back
 	/// by the original's unsigned division, and the loan closed at its period; then, with the balance and
 	/// <see cref="LastBalance"/> both below nought, the whole thirty-day months since <see cref="TurnEnteredRed"/> -
-	/// at six the park ends, counted.
+	/// at six the park ends (<see cref="EndThePark"/>) unless it has ended or the End feature stands.
 	/// </summary>
 	/// <param name="guestsInside">
 	/// The guests on a counting cell (<c>FUN_004c7fa0</c> asked with nought, so counted afresh unless the same quarter tick
@@ -1900,12 +1904,71 @@ public sealed class ParkState
 				+ $"bought {loan.Bought}, profit {ProfitThisYear}" );
 		}
 
+		// The bank broadcasts message 0x13 with 2 (0x004d054c..0x004d05b2); its own handler ends the park (FUN_004d02d0) and the
+		// advisor raises record 0x6a (0x0059aee7), which is not built.
 		if ( Balance < 0 && MonthsInTheRed() >= MonthsInTheRedToEnd )
 		{
 			Log.Info( $"Bank: {MonthsInTheRed()} months in the red - the park ends" );
-			Unimplemented.Report( "BANK_PARK_ENDS_IN_THE_RED" );
 			Unimplemented.Report( "ADVISOR_PARK_ENDED_IN_THE_RED" );
+
+			if ( WorldState == EndedWorldState || ParkEndFeature.Current != null )
+				Log.Info( $"Bank: the park is not ended again, world state {WorldState}, End feature "
+					+ (ParkEndFeature.Current != null ? "standing" : "none") );
+			else
+				EndThePark();
 		}
+	}
+
+	/// <summary>The world's state, <c>mWorldState</c> (<c>+0x1da738</c>): the file's at the load, <see cref="EndedWorldState"/> once the park has ended.</summary>
+	public int WorldState { get; private set; }
+
+	/// <summary>The world state of a park that has ended (<c>FUN_005168f0</c>): no thing takes a turn, the clock and the bank go on.</summary>
+	public const int EndedWorldState = 4;
+
+	/// <summary>Whether the park has ended, <see cref="WorldState"/> <see cref="EndedWorldState"/>.</summary>
+	public bool Ended => WorldState == EndedWorldState;
+
+	/// <summary>
+	/// What the park's people do as it ends - the rides told they are broken and the gate commanded 2 (<c>ParkPeople.EndThePark</c>);
+	/// with nobody set, only the world's state changes and the deleted ids are looked at.
+	/// </summary>
+	internal Action? ParkEnded { get; set; }
+
+	/// <summary>
+	/// The end of the park, <c>FUN_005168f0</c> (<c>docs/exe/ride-operation.md</c>, "The end of the park"): world state 4; the end
+	/// screen and a render flag, counted; then the people's part (<see cref="ParkEnded"/>): <c>VAR_BREAKSTAT</c> 1 on the rides,
+	/// the pending deletes (<see cref="EmptyPendingDeletes"/>) and the gate's <c>VAR_COMMAND</c> 2. <see cref="ParkIsClosed"/>
+	/// is not moved: the gate's end path writes the command alone (<c>FUN_00519ef0( 0, 1 )</c>, <c>0x00519f17</c>).
+	/// </summary>
+	internal void EndThePark()
+	{
+		WorldState = EndedWorldState;
+		Log.Info( $"Park: the park ends, world state {WorldState} on mGameTick {GameTick}, balance {Balance}, last {LastBalance}, "
+			+ $"red {TurnEnteredRed}" );
+
+		// The end screen, FUN_00481b50 to FUN_0048ac40 (docs/exe/park-engine.md, the full-screen view's table): Q1424.
+		Unimplemented.Report( "PARK_END_SCREEN" );
+		// The render flag 0x00763f84 cleared: what reads it is not decoded.
+		Unimplemented.Report( "PARK_END_RENDER_FLAG" );
+
+		if ( ParkEnded is { } ended )
+			ended();
+		else
+			EmptyPendingDeletes();
+	}
+
+	/// <summary>
+	/// The end's emptying of the pending-delete list. Ours frees a sweep's deleted ids at that sweep's end
+	/// (<see cref="FreeDeletedThings"/>), before the tail that turns the month, so the list is empty whenever the bank ends
+	/// the park; one that is not is counted, <c>PARK_END_PENDING_DELETES</c>, and left as it is.
+	/// </summary>
+	internal void EmptyPendingDeletes()
+	{
+		if ( _deletedIds.Count == 0 )
+			return;
+
+		Log.Info( $"Park: {_deletedIds.Count} deleted ids pending as the park ends" );
+		Unimplemented.Report( "PARK_END_PENDING_DELETES" );
 	}
 
 	/// <summary>

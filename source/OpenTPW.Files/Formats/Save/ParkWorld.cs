@@ -1618,6 +1618,9 @@ public sealed partial class ParkWorld : IParkInitialState
 	/// <summary>Where <c>mParkClosed</c> sits past <see cref="HeaderAt"/>.</summary>
 	internal static int ParkClosedAt => HeaderFieldAt( ParkClosedField );
 
+	/// <summary>Where <c>mWorldState</c> sits past <see cref="HeaderAt"/>.</summary>
+	internal static int WorldStateAt => HeaderFieldAt( WorldStateField );
+
 	/// <summary>Where <c>mNumberOfVisitorsToDate</c> sits past <see cref="HeaderAt"/>.</summary>
 	internal static int NumberOfVisitorsToDateAt => HeaderFieldAt( NumberOfVisitorsToDateField );
 

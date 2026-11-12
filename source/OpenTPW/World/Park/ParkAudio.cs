@@ -1496,7 +1496,7 @@ public sealed partial class ParkAudio : Entity
 		// park's loop, where the original asks in the 32nd tick's own step: a later sweep in the same frame is counted (Q1120).
 		if ( SetsMusicLevel( GameClock.Ticks, GameClock.TicksDue ) )
 		{
-			var worldState = Level.Current?.Park?.WorldState ?? 0;
+			var worldState = ParkPeople.Current?.State.WorldState ?? 0;
 
 			if ( _music is { IsValid: true } )
 			{

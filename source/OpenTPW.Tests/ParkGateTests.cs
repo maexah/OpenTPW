@@ -67,7 +67,7 @@ public class ParkGateTests
 		public ParkWorld.MapCell CellAt( int x, int y ) => source.CellAt( x, y );
 	}
 
-	private (ParkPeople People, ParkState State, RideScript Gate) Park( bool empty = true )
+	private (ParkPeople People, ParkState State, RideScript Gate) Park( bool empty = true, Dictionary<int, RideScript>? others = null )
 	{
 		var world = new Seed( World(), closed: false, saved: false, empty );
 		var state = new ParkState( world );
@@ -78,7 +78,7 @@ public class ParkGateTests
 		};
 		gate.Set( "VAR_COMMAND", 1 );
 		gate.Set( "VAR_STATUS", 1 );
-		var people = new ParkPeople( world, state: state, scriptFor: id => id == world.ParkGates ? gate : null );
+		var people = new ParkPeople( world, state: state, scriptFor: id => id == world.ParkGates ? gate : others?.GetValueOrDefault( id ) );
 		made.Add( people );
 		return (people, state, gate);
 	}
@@ -375,6 +375,94 @@ public class ParkGateTests
 		{
 			subject.Navigator.Position = FixedVector.AtCell( x, y );
 			Assert.AreEqual( 0, people.GateGuestCensus, $"cell ({x}, {y}) is off the map" );
+		}
+	}
+
+	/// <summary>
+	/// <b>The end of the park</b> (<c>FUN_005168f0</c>): world state 4, <c>VAR_BREAKSTAT</c> 1 on every object a guest may be
+	/// offered and on nothing else, and the gate's <c>VAR_COMMAND</c> 2 (<c>FUN_00519ef0( 0, 1 )</c>), the door itself not moved.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the gate given 0 (the door's close); the door shut; every object broken; none.</remarks>
+	[TestMethod]
+	public void TheEndBreaksTheRidesGuestsChooseAndCommandsTheGateTwo()
+	{
+		var world = World();
+		var others = new Dictionary<int, RideScript>();
+
+		foreach ( var thing in world.Objects.Where( o => o.ThingId != world.ParkGates ) )
+		{
+			using var rse = data.OpenRead( "levels/jungle/rides/bouncy/bouncy.RSE" );
+			others[thing.ThingId] = new RideScript( new RideScriptFile( rse ) );
+		}
+
+		var (people, state, gate) = Park( others: others );
+		var visitable = state.ObjectsInChainOrder().Where( o => o.IsVisitable ).Select( o => o.ThingId ).ToHashSet();
+		var other = others.Keys.Where( id => !visitable.Contains( id ) ).ToArray();
+
+		Assert.IsTrue( visitable.Count > 0 && other.Length > 0, $"{visitable.Count} visitable, {other.Length} not" );
+		Assert.IsTrue( others.Values.All( script => script[ParkRideOperation.BreakStatVariable] == 0 ) );
+
+		state.EndThePark();
+
+		Assert.AreEqual( (ParkState.EndedWorldState, 2, false), (state.WorldState, gate["VAR_COMMAND"], state.ParkIsClosed) );
+		Assert.IsTrue( visitable.All( id => others[id][ParkRideOperation.BreakStatVariable] == 1 ), "every object a guest may be offered" );
+		Assert.IsTrue( other.All( id => others[id][ParkRideOperation.BreakStatVariable] == 0 ), "and nothing else" );
+	}
+
+	/// <summary>
+	/// <b>In world state 4 no thing takes a turn, and the clock goes on</b> (<c>0x0051639e</c>): the stock park's guests,
+	/// who walk in when it runs, stand where they were over twenty sweeps while <c>mGameTick</c> counts twenty.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the guests' turns not skipped; the clock skipped with them.</remarks>
+	[TestMethod]
+	public void InAnEndedParkNobodyTakesATurnAndTheClockGoesOn()
+	{
+		foreach ( var ended in new[] { false, true } )
+		{
+			var (people, state, _) = Park( empty: false );
+
+			if ( ended )
+				state.EndThePark();
+
+			var before = people.Peeps.Select( peep => peep.Navigator.Position ).ToArray();
+			var tick = state.GameTick;
+
+			for ( var i = 1; i <= 20; ++i )
+				people.Sweep( i * ParkPeople.ThingTickEvery );
+
+			var moved = people.Peeps.Select( peep => peep.Navigator.Position ).Zip( before ).Count( pair => pair.First != pair.Second );
+
+			Assert.AreEqual( tick + 20, state.GameTick, $"ended {ended}: the clock" );
+			Assert.AreEqual( ended, moved == 0, $"ended {ended}: {moved} of {before.Length} guests moved" );
+
+			people.Delete();
+			Entity.ApplyDeletions();
+		}
+	}
+
+	/// <summary>
+	/// <b>The weather turns in no sweep that began in world state 4</b>, and does in the sweep whose tail ends the park,
+	/// whose walk had turned it already (<c>0x0051639e</c>; <see cref="ParkLoop.Tail"/>).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the weather turned whatever the state; the state read after the calendar.</remarks>
+	[TestMethod]
+	public void TheWeatherTurnsInNoSweepOfAnEndedPark()
+	{
+		var (people, state, _) = Park();
+		var weather = new ParkWeather( null, drawn: false );
+
+		try
+		{
+			ParkLoop.Tail( people, null, weather );
+			ParkLoop.Tail( people, _ => state.EndThePark(), weather );
+			Assert.AreEqual( 2, weather.Turns, "the sweep whose tail ends the park turns it" );
+
+			ParkLoop.Tail( people, null, weather );
+			Assert.AreEqual( 2, weather.Turns, "an ended park's does not" );
+		}
+		finally
+		{
+			weather.Delete();
 		}
 	}
 }

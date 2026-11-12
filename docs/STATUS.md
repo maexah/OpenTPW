@@ -42,10 +42,23 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the maintainer's pre-commit hook: grep it by Q-number.
 
-- **Q732 (a moved ticket ride meets the money test):** in a cloud container (no Ghidra, no original, no display; the run's output was not kept), `AMovedTicketRideIsRefusedWhereTheBankIsBelowItsPrice` (needing the game) passes, and four bugs put back by hand (the pickup not marking the hand, `PlaceCarried` not telling `Build`, the test made `<=`, the exemption dropped for the carry too) each failed it. An off-screen run (`consolerun.py`, a fresh Full Simulation player with no tickets, paused) stood Jurassic Tours unbought with `buy 1170 20 60`; at a bank of -10000 `move 13 40 70` answered "costs 3000 and the park has -7000 - sound 0xaf" and left it in the hand, marked moved; at 100000 `put 40 70` built it. Not checked: the original's move of an unbought ticket ride (no original here; the rule is from `docs/exe/hud.md`'s listing read), which refusal latch the move's click honours (`0x816d50` or `0x81b604`, not read), and the red squares and cash cursor on screen (no display; the squares are checked by the test's marker list only). Filed: none.
+- **Q404 (a park six months in the red ends):** in a cloud container (no Ghidra, no original, no display; the run's
+  output was not kept), six tests pass (one changed, five added: `SixMonthsInTheRedEndThePark`, `AParkClimbedOutOnDepositsDoesNotEnd`,
+  `AnEndedParksStateIsWrittenAndReadBack`, `TheEndBreaksTheRidesGuestsChooseAndCommandsTheGateTwo`,
+  `InAnEndedParkNobodyTakesATurnAndTheClockGoesOn`, `TheWeatherTurnsInNoSweepOfAnEndedPark`; the two music and crowd tests
+  now set the running state), and ten bugs put back by hand each failed one. An off-screen run (`consolerun.py`, the
+  recipe in `docs/TOOLING.md`) ended the stock park on tick 5611: world state 4, `VAR_BREAKSTAT` 1 on objects 23, 22, 21,
+  16, 14 and 13, the gate's command 2 with the door open, the wages paid after, the clock 5614 to 5618 with the guests'
+  turns unchanged. Not seen: the end screen (Q1424, counted), and nothing run beside the original; what the end's set,
+  the advisor's record `0x6a`, the render flag and the delete list are in the disassembly is Q1425.
 
 ## Numbers (take counts fresh; these go stale within a day)
 
+- Linux, 2026-11-12, Q404 (five tests added, four needing the game (two changed); built in a cloud container as the
+  user `tester`, not re-gated here): with the game, 5418 passed, 2 failed, 2 skipped of 5422; with no game named, 2346
+  passed, 2 failed, 3074 skipped. The two failures are the container's, and main (`e4084fe`) fails both there too:
+  `AnExceptionBeforeTheMainLoopIsLoggedAndEndsTheRunWithExit1` (no libEGL) and `ACopyStartedOnAFolderAnotherProcessHoldsIsRefused`
+  (the one-copy lock's named mutex will not open).
 - Linux, 2026-11-12, review fixes group F (`capped.sh`; three tests added, one needing the game; after group E): with the game, 5415 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5417; with no game named, 2347 passed, 0 failed, 3070 skipped.
 - Linux, 2026-11-12, review fixes group E (`capped.sh`; four tests added, one needing the game; after group D): with the game, 5412 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5414; with no game named, 2345 passed, 0 failed, 3069 skipped.
 - Linux, 2026-11-12, review fixes group D (`capped.sh`; three tests added, one needing the game; after Q732): with the game, 5408 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5410; with no game named, 2342 passed, 0 failed, 3068 skipped.
