@@ -72,6 +72,12 @@ Evidence: tick and guards `0x0051643b`..`0x00516503`; staff scan
 `0x005166f2`. The period is 30 world sweeps, not 30 script ticks or rendered frames.
 No elapsed-time measurement was made.
 
+**OpenTPW** (Q1312): `ParkPeople.Sweep` calls `RetryGateClose` where the original tries it, after the walk, so after the
+advisor's turn (he is among the walk's last; `advisor-park.md`, "The advisor's turn in the sweep"), and before the
+deleted things' ids are freed (`0x00516654`). Neither turn reads a word the other writes: the retry writes the gate's
+command, which the gate's own script reads on its next turn, and his turn writes his records, the tags and the speech.
+The order shows in the console's lines alone (`ParkGateTests.TheRetryIsLoggedAfterTheAdvisorSpeaksOnTheSameSweep`).
+
 ## What 0 and 2 mean to the script
 
 The shipped script-content reference is **FileFormats `vm/park-gates.md`**, checked against

@@ -1111,7 +1111,6 @@ filed the items that cite it.
   starts on animation 0, which its remarks give as a deviation no shipped bank reaches. Dead by content today:
   build it as the original's or leave the count, on Alexah's word.
 
-
 - [ ] **Q1316. The handyman loaded walking to litter or sweeping: his walk off photographed, and the job itself (from Q1154).**
   Q1154 made one loaded in state 8 or 9 fall to idle (`StaffBehaviour.Step`'s default arm, counted as
   `HANDYMAN_LITTER_STATE_8` and `_9`, a deviation said at the site) and confirmed it by census only, off-screen in a cloud
@@ -1341,12 +1340,6 @@ filed the items that cite it.
   `TIEBREAK-Q311.md`). A type-0 tag's second button and a decline's erase button are shown and disabled (vtable +0x14
   with 0 at `0x0048e991`, `0x0048e43c`); the hit test skips a disabled control (`0x0065db3b`). Q427 made them take the
   pointer (`ParkGadget.cs`, `hud.md`, two tests). Needs Q66 (`HitTest` reads no `Enabled`) first, or the difference said.
-- [ ] **Q1312. The gate's retry comes after the advisor's turn.** From Q462. `FUN_00516380` walks the things (the
-  advisor, thing 3, among the last) and only then tries the delayed close (`0x0051643b`..`0x00516639`, every 30 ticks;
-  `docs/exe/park-gate.md`, "The later close check"); `ParkPeople.Sweep` calls `RetryGateClose` before the advisor's
-  `Tick`. No row the advisor reads is known to follow the gate's command on the same tick, so first find what (if
-  anything) the order changes; then move it after his turn and before `FreeDeletedThings`, with a test whose values
-  the old order gets wrong, or say at the call that nothing can tell the two apart.
 - [ ] **Q1170. A purchase's advisor post, `0xc9` or `0xce`: decode which, then build.** From Q465, which counts it
   (`BUY_SCREEN_PURCHASE_ADVISOR_POST` in `ParkBuyScreen.Chose`, once a click that puts the item in the hand). The
   original posts `0xc9` where the item's `+0x4c` is nought and `FUN_004824d0( 0x80, 0 )` answers nought, else `0xce`

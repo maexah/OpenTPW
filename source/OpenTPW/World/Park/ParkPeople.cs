@@ -2523,12 +2523,11 @@ public sealed partial class ParkPeople : Entity
 			Depart( leaver );
 
 		TakeTheRidesTurns( thingTick );
-		RetryGateClose();
 
 		// The advisor's turn is the walk's last: he is a thing (model 11, FUN_0050b360's arm 0xb), the list is
 		// swept newest first, and the two things made before him have no arm, so a message posted on any
-		// other thing's turn is said on the same tick; the arrivals and the staff pool come after him, in the
-		// sweep's tail (docs/exe/advisor-park.md, "The advisor's turn in the sweep").
+		// other thing's turn is said on the same tick; the gate's retry, the arrivals and the staff pool come
+		// after him (docs/exe/advisor-park.md, "The advisor's turn in the sweep").
 		// Catch-up sweeps share a frame timestamp here; the native running clock may query the OS per call.
 		// GameClock.Now keeps the engine's clamped-frame timing deviation (docs/exe/advisor-park.md).
 		State.AdvisorMessages?.Tick( State.GameTick, (long)(GameClock.Now * 1000),
@@ -2541,6 +2540,13 @@ public sealed partial class ParkPeople : Entity
 				State.Tags.Said( group, subject, Time.WallMilliseconds, item, name );
 			},
 			AdvisorFacts );
+
+		// The gate's delayed close comes after the walk, so after his turn, and before the free list (FUN_00516380,
+		// 0x0051643b..0x00516639; docs/exe/park-gate.md, "The later close check"). Nothing in the game tells this from
+		// the order before it: no word either turn reads is written by the other (his turn writes his own records, the
+		// tags and the speech; the retry writes the gate's command, which the gate's script reads on its next turn), so
+		// only the log's order shows it (ParkGateTests.TheRetryIsLoggedAfterTheAdvisorSpeaksOnTheSameSweep).
+		RetryGateClose();
 
 		// The sweep's end: the ids of the things deleted in it go back on the free list (0x00516654..0x00516685), before the tail.
 		State.FreeDeletedThings();
