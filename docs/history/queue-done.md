@@ -12131,6 +12131,18 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   non-null where the entities step starts), or confirm it in a running game off-screen: the log's particle line before the
   catalogue's effects line, with the swap put back and the order seen to flip.
 - [x] **Q1036. The lobby bolt's brightness over its life. Decode first.** Folded into Q1044 (filed by the Sentinel the same hour from VERIFY-13, which decoded the envelope). From Q1034 and the Sentinel's second reading of Q152's fork review. OpenTPW dims the bolt over its whole life (`Lightning.OnUpdate`: opacity = life^2 x stutter, measured exact in Q1034: the lift in the frame is 78, 32, 13, 4.6 and 2.5 grey levels at 0.1, 0.2, 0.35, 0.4 and 0.45 s of a 0.5 s bolt, so it is out of sight by about 0.4 s), where the original is suspected to hold its bolt at 192 to 255 grey in saw-teeth for the whole 500 ms and cut at the end (the colour pulse `0x0057ee30` in Q1035; a second reading, neither decoded nor run). Decode the pulse's value over a bolt's life for the lobby's arguments (lifetime 500, argument 8), run the original's lobby bolt under Proton (`record.sh`, the island pinned) and write the figures in `docs/exe/weather.md`, "The bolt"; build the envelope only after that, in `Lightning.OnUpdate` and the `Flash` that lifts the lobby's sun and sky (`LobbyWeather`), and read it back with `q1034/confirm2.py` (`stepsweep`). Q1034 changed nothing in `Lightning.cs`.
+- [x] **Q1147. Q221 (1), (3) and (4): a short script header, a negative scream band, a RAND bound below -1.** Split from
+  Q221 (the 2026-10-04 effort audit's reading of the listing; not re-read in Ghidra here, none in the container). (1)
+  `ParkScriptStates` reads the tick and next handle only where the header block holds the whole dword,
+  `>= (dword + 1) * 4` (`ParkScriptStateHeaderTests`: blocks of 7, 11 and 12 bytes). (3) `ParkAudio.ScreamEffectFor`
+  plays `0x48` for a negative band, which falls through `FUN_00551130`'s signed `< 4` with 2 and 3; only nought is
+  silent (`ParkScreamTests.TheBandChoosesWhichScreamIsPlayed`). (4) `RideScript.NextRandom` answers nought only for a
+  bound of -1 (`0x00553994` divides by nought); a bound below it divides as `IDIV` does (`RideScriptClockTests.
+  ABoundBelowMinusOneStillDrawsAndMinusOneAnswersNought`: -5 draws nought to three). Measured over the 308 scripts
+  (a throwaway walk, not kept): all 56 `RAND` bounds are literals from 1 to 5000, so (4) is dead by content; all 40
+  `STARTSCREAM` bands are variables (index 5 in 35, 12 in 4, 2 in 1), so a negative one is a run-time question, and the
+  stock park run off-screen screamed bands 1 and 2 only (effects 71 and 72, as before). (1): the stock park's block is
+  whole, and all 14 of its scripts resumed.
 
 ## B. Docs and comments
 

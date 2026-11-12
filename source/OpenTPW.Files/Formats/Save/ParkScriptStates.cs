@@ -400,8 +400,9 @@ public sealed partial class ParkScriptStates
 
 		Skip( header );
 
-		var tick = header > TickDword * 4 ? ReadInt32At( headerAt + (TickDword * 4) ) : 0;
-		var nextHandle = header > NextHandleDword * 4 ? ReadInt32At( headerAt + (NextHandleDword * 4) ) : 0;
+		// A dword is read only where the block holds all four of its bytes.
+		var tick = header >= (TickDword + 1) * 4 ? ReadInt32At( headerAt + (TickDword * 4) ) : 0;
+		var nextHandle = header >= (NextHandleDword + 1) * 4 ? ReadInt32At( headerAt + (NextHandleDword * 4) ) : 0;
 		Skip( DiscardedDwords * 4 );
 
 		_countAt = _at;

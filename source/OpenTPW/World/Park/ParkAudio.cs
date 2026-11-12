@@ -459,7 +459,8 @@ public sealed partial class ParkAudio : Entity
 
 	/// <summary>
 	/// The four held scream effects, chosen by <c>STARTSCREAM</c>'s first operand -
-	/// <c>FUN_00551130</c>'s bands: nought screams not at all, 1, 2-3, 4-7, then 8 and over.
+	/// <c>FUN_00551130</c>'s bands: nought screams not at all, 1, 2-3, 4-7, then 8 and over. A negative band
+	/// falls through the signed <c>&lt; 4</c> test with 2 and 3 and plays <c>0x48</c>.
 	/// </summary>
 	private static readonly int[] ScreamEffects = [0x47, 0x48, 0x49, 0x4a];
 
@@ -480,7 +481,7 @@ public sealed partial class ParkAudio : Entity
 	/// <summary>Which sample a band asks for, or nought when the band is silent.</summary>
 	public static int ScreamEffectFor( int band ) => band switch
 	{
-		<= 0 => 0,
+		0 => 0,
 		1 => ScreamEffects[0],
 		< 4 => ScreamEffects[1],
 		< 8 => ScreamEffects[2],
@@ -759,7 +760,7 @@ public sealed partial class ParkAudio : Entity
 	/// </para>
 	/// </summary>
 	/// <param name="scriptId">Whose scream this is, so <see cref="StopScream"/> can find it again.</param>
-	/// <param name="band">The first operand: nought is silent, then 1, 2-3, 4-7, 8 and over.</param>
+	/// <param name="band">The first operand: nought is silent, then 1, 2-3 (and any negative), 4-7, 8 and over.</param>
 	/// <param name="level">The second operand, averaged with the script speed - see <see cref="ScreamVolume"/>.</param>
 	/// <param name="at">Where the ride stands. The engine takes this from the script's own thing.</param>
 	/// <returns>Whether anything started, which is what the script holds afterwards.</returns>

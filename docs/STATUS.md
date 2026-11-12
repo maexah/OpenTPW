@@ -1,6 +1,6 @@
 # Status
 
-Last updated: 2026-11-05. **This header names no branch and no sha, deliberately**: a line in the commit that moves the tip cannot name it. Read the current state from the repository, which cannot lag: `git log --oneline -1`. **`docs/QUEUE.md` is the work queue**, one item per session, taken from the top unless Alexah reorders.
+Last updated: 2026-11-12. **This header names no branch and no sha, deliberately**: a line in the commit that moves the tip cannot name it. Read the current state from the repository, which cannot lag: `git log --oneline -1`. **`docs/QUEUE.md` is the work queue**, one item per session, taken from the top unless Alexah reorders.
 
 ## Works
 
@@ -42,10 +42,18 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the maintainer's pre-commit hook: grep it by Q-number.
 
-- **Q1063 (a load puts the file's queued speed back for a channel with nothing queued; `q1063/PREDICTION.txt`: one prediction missed in its wording, the stock park's script count, 14 where 16 was written (Q1062's channel count), corrected before the final run):** seen off-screen only (lane B), **no desk photograph** (the claim is a number the `scripts` census reads) and **the original not run**; a copy of the stock jungle park with the Belly Bounce's channel 0 given queued speed 0.7 (its role nought, its script word 60, divisor 1.1; `parkfile.channel_set`) was Loaded from the Load list and read paused at the load's own tick (`mGameTick` 763 before and after the read): the Belly Bounce read `queued 0.700` and the other 13 scripts `queued 1.000`, the file's values (the control, main's binary without the change: `queued 0.000` for all 14), and 1.5 s after `resume` the Belly Bounce read `queued 1.100`, the visit's write (`q1063/run2/`, the final binary `aa92e2a5`; `run1/` on `7ec7cddd` read the same, the two builds differing by a comment; control `run-ctl/`, main's binary). Beside it: no original's file was read for this item, so the claim that the engine copies `+0x30` for every channel rests on the disassembly alone (read this session in `testme.objdump`, no Ghidra: `0x00464bcb`..`0x00464c17` copy the channel's dwords `+0x00` to `+0x30` with no test on the channel's role or queue; the only tests before them are the loop's count and a check of `[edi+4]` against 12 that calls a reporter), not on a run of the original. Not run: a loop that replays before the first visit read through its rate (the census reads the queued speed, not a replay's start); a Full Simulation save (the same loader). Unbuilt and filed: the writer's nought for a loaded channel after a promotion, still the file's (Q1064).
+- **Q1147 (Q221 (1), (3) and (4): a short script header, a negative scream band, a `RAND` bound below -1; cloud lane c2):**
+  three rules changed, each with a test that fails with the old rule put back by hand. Seen off-screen only (`xvfb-run`, the
+  stock park: 14 scripts resumed, the Belly Bounce screamed bands 1 and 2 as effects 71 and 72, the census 21 names, none these paths'); **no
+  photograph** (nothing drawn changes), **the original not run** and **no Ghidra in the container**: the three engine rules
+  are the 2026-10-04 effort audit's reading (Q221), not re-read here. None of the three paths is reached by the stock park.
 
 ## Numbers (take counts fresh; these go stale within a day)
 
+- Linux (cloud container, run as the `tester` user), 2026-11-12, Q1147 (no `capped.sh`; four tests added, needing no game; after review fixes group R):
+  with the game, 5293 passed, 1 failed, 2 skipped (the macOS and Windows folder tests) of 5296; with no game named, 2284 passed, 1
+  failed, 3011 skipped. The one failure is `AnExceptionBeforeTheMainLoopIsLoggedAndEndsTheRunWithExit1`, the container's: it has
+  no EGL library, so SDL fails before the swapchain the test expects; `origin/main` fails it the same way there.
 - Linux, 2026-11-05, review fixes group R (`capped.sh`; one test added, needing the game, four renamed; after Q1063): with the game, 5290 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5292; with no game named, 2281 passed, 0 failed, 3011 skipped.
 - Linux, 2026-11-05, Q1063 (`capped.sh`; two tests added, needing the game; after Q1052): with the game, 5289 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5291; with no game named, 2281 passed, 0 failed, 3010 skipped.
 - Linux, 2026-11-05, Q1052 (`capped.sh`; six tests added, needing the game; after review fixes group P): with the game, 5287 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5289; with no game named, 2281 passed, 0 failed, 3008 skipped.
