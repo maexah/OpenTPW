@@ -636,14 +636,16 @@ public class ParkSaveScreenTests
 
 	/// <summary>
 	/// <b>Restart Park loads <c>restart.INTS</c></b> (state 0xe, <c>0x0055036c</c>), found in any case, however much
-	/// newer an autosave or a saved park is. With no such file a loaded park loads nothing; a park made fresh is made
-	/// fresh again. The advisor is quietened first, file or none (state 0xe, <c>Advisor_StopQuietly(1)</c>).
+	/// newer an autosave or a saved park is. With no such file a loaded park loads nothing, nor does one that did not read; a
+	/// park made fresh is made fresh again, never entered from the folder's newest file. The advisor is quietened first, file or none (state 0xe, <c>Advisor_StopQuietly(1)</c>).
 	/// </summary>
 	/// <remarks>
 	/// <b>Mutations:</b> the park entered again from the newest file (the menu's restart before <c>restart.INTS</c>) asks
 	/// for no file; the fresh park's case taken for every missing file asks for one there too; the missing file not
 	/// looked for asks for nothing at all; the quiet stop dropped leaves his line to come; the fresh park asked for as a
-	/// plain entry (<c>RequestParkLoad</c>) enters the newest file, the autosave.
+	/// plain entry (<c>RequestParkLoad</c>) enters the newest file, the autosave; asked for by an empty file name
+	/// (<c>RequestParkLoad( theme, "" )</c>) it asks for that file, which the read-ahead will not read, so nothing is built;
+	/// the fresh park's case taken for every park with no save (<c>Park?.Save is null</c>) makes a park that did not read fresh.
 	/// </remarks>
 	[TestMethod]
 	public void RestartParkLoadsRestartIntsAndNotTheNewestFile()
@@ -680,12 +682,32 @@ public class ParkSaveScreenTests
 		Restart( stack );
 		Assert.AreEqual( ("jungle", "users/1Test/jungle/RESTART.ints"), WhatWasAsked() );
 
+		// The autosave, newer than any restart file, stays in the folder: a park made fresh is made again, not entered from it.
 		ForgetWhatWasAsked();
 		File.Delete( Path.Combine( Jungle, "RESTART.ints" ) );
-		typeof( Level ).GetProperty( nameof( Level.Park ) )!.SetValue( Level.Current, null );
+		var park = typeof( Level ).GetProperty( nameof( Level.Park ) )!;
+		// Only its kind is asked, so it is made without its constructor, which wants the theme's whole catalogue.
+		park.SetValue( Level.Current, RuntimeHelpers.GetUninitializedObject( typeof( FreshPark ) ) );
 		Restart( stack );
-		Assert.AreEqual( ("jungle", null), WhatWasAsked(), "a park made fresh is made again" );
+		Assert.AreEqual( ("jungle", null), WhatWasAsked(), "a park made fresh is made again, never from a file" );
 		Assert.IsTrue( (bool)Asked( "_parkFreshAsked" ).GetValue( null )!, "fresh, not entered again from the newest file, the autosave (Q994, S-M3)" );
+		Assert.AreSame( Level.ParkStart.MadeFresh, Built(), "and between frames the scene is built on a world made fresh" );
+
+		// A park that did not read: nothing is loaded, as the original's open fails (0x0055036c).
+		ForgetWhatWasAsked();
+		park.SetValue( Level.Current, null );
+		Restart( stack );
+		Assert.AreEqual( (null, null), WhatWasAsked(), "with no park running nothing is loaded" );
+		Assert.IsFalse( (bool)Asked( "_parkFreshAsked" ).GetValue( null )!, "nor is one made fresh" );
+		Assert.IsNull( Built(), "and nothing is built between frames" );
+
+		// The scene change between frames, the game's own read-ahead with it: what the park would be built from, or null.
+		static Level.ParkStart? Built()
+		{
+			Level.ParkStart? handed = null;
+			Game.ChangeSceneIfAsked( () => { }, ( _, start ) => handed = start, () => { } );
+			return handed;
+		}
 	}
 
 	/// <summary>The game menu's third row, Restart Park, and its question's tick.</summary>

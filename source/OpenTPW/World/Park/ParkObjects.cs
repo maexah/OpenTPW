@@ -360,8 +360,8 @@ public sealed class ParkObjects : Entity
 	}
 
 	/// <summary>
-	/// Takes something sold back out of the park: its model stops being drawn and its sign is let go
-	/// of. Answers whether anything was standing there.
+	/// Takes something sold back out of the park: its model stops being drawn. Its sign (two 128 x 128
+	/// textures) stays on the card until the park ends; see the remarks. Answers whether anything was standing there.
 	/// </summary>
 	/// <remarks>
 	/// <b><see cref="LobbyModel"/> has no teardown of its own</b>, so this deletes the entities it owns

@@ -2288,28 +2288,25 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   not measured. (2) `Input.cs:228`: a binding read on its press or as a held state is rebuilt as the frame ends; Q120's decode covers
   key-ups only, so whether a press-time reading differs from the original at all is not established. Decode it first. Confirm: (1) a route
   blocked and cleared, in both games; (2) two events in one frame, both games.
-- [ ] **Q997. The small findings of the week-end audit 2026-10-31.** Each by reading, none run. S-M1: `ParkFileWriter.cs:491-492` puts
-  `loaded.PutControls( body, built )` inside the `if` of `:366`, so an item bought and sold since a load, with nothing else structural, leaves
-  no stamp, where the original's stays (`0x004dd0e1`; `ParkState.cs:292-300`); the next build takes a later one and `ParkWorth.cs:52`, `:59`
-  ages by it. S-M2: a park read in part refuses every save (`ParkFileWriter.cs:236-240`) with a log line and no `SaveTrouble.Failed`
-  (`Level.cs:1065-1069`), so Save Park, Alt+S and the autosave lose the play in silence; the original has no such refusal. S-M3 (built with Q994, `Game.RequestFreshPark`): Restart Park
-  on a fresh park with no `restart.INTS` calls `Game.RequestParkLoad` (`ParkFrontEnd.cs:587-590`, `:562-564`) through `Level.cs:619`
-  `NewestPark`, so any `*.TPW*` from an Alt+S since loads; with `Park` null it reads the same bad file again; the original loads nothing
-  (`0x0055036c`, the open fails). S-M4: `SaveFolder`'s deletes use raw `File` and `Directory` calls (`DeletePlayer`, at `:634` and `:672`), so
-  `BaseFileSystem`'s listing is not dropped (`Resolve`, `RealName`, `Listing`, `BaseFileSystem.cs:322-388`); delete "Kim" from slot 1,
-  make "KIM": the folder is made as `1Kim`, the case lost. ST-F5: the log's head and `Display.cs:155` read the window's size before the
-  event is pumped (`console.log:53814`: `FullScreen at 2560 x 1440, window 2560x1359`); the `LaunchReport` line (`Game.cs:122-125`,
-  `LaunchReport.cs:171`) is inferred. ST-F8: `--game` as the last argument is ignored (`GameDir.cs:250`, `i + 1 < args.Length`) and falls
-  through to the search, where `GameDir.cs:80` says a named folder never does; a bare `--game` names no folder, so say so in a box. ST-F9:
-  `Renderer.cs:35` reads `Settings.Default` unguarded, against `GameDir.cs:226-227`'s "not a reason to stop"; a damaged `user.config`
-  stops the start in Q978's box (inferred). L-F3: a sold thing's name board stays on the card until the park ends (`ParkObjects.cs:316-318`,
-  `:361-364`, `:1062-1068`), two 128 x 128 textures per place of a signed item; said at the site; waits for `ParkObjectPreview`'s sign.
-  Also the gaps DOES-NOT filed under the finished Q420 and Q443 that no open item carries: the theme's advisor's golden-ticket clips are
-  not built; a rider standing on a node a clip moves faces as it does at rest; his lines that wait thirty days from the newest build
-  still come before the original's; and the line about an unjoined queue passes over the ride the queue tool is armed for and no other,
-  where the original's passes over the builder's object, whose life is not read. Another: a leftover `*.TPWS.tmp` is not taken for a park here
-  (Q997's S-D2 fix), but the original's own `.TPW*` search would take it, the folder being shared, and nothing deletes it.
-  Build or close each with a note.
+- [ ] **Q1200. A park read in part says PARK NOT SAVED; the display line reads the window after its resize.** From Q997 (S-M2, ST-F5 of
+  the week-end audit 2026-10-31), not built there because each is seen only on a screen. (1) S-M2: a park read in part is refused by the
+  writer (`ParkFileWriter.Body`, "was not read whole") and `Level.WritePark` logs a warning only (`catch ( InvalidOperationException )`),
+  with no `SaveTrouble.Failed`, so Save Park, Alt+S and the autosave lose the play in silence; the original has no such refusal. Tell it
+  in the game's own box (rule 11; a text of its own, not "The save folder cannot be written"), Asked or once a visit as `SaveTrouble`
+  does. Confirm: a truncated copy loaded, Save Park, the box photographed. (2) ST-F5: `Display.Apply`'s line and the log's head read the
+  window's size before SDL's resize event is pumped (`console.log:53814`: `FullScreen at 2560 x 1440, window 2560x1359`); the
+  `LaunchReport` line (`LaunchReport.LogGraphics`, after `Display.Apply` in `Game.cs`) is inferred to do the same. Read the size after a
+  pump, or say in the line that it is the size asked for. Confirm: a full-screen start on a real display, the two lines against the
+  screen's size.
+- [ ] **Q1201. The advisor gaps left by Q420 and Q443, and the save folder's `.TPWS.tmp`.** From Q997 (the week-end audit 2026-10-31),
+  not built there because each needs the original or Ghidra (none in a cloud lane). (1) The theme's advisor's golden-ticket clips are not
+  built. (2) A rider standing on a node a clip moves faces as it does at rest. (3) The advisor's lines that wait thirty days from the newest build
+  still come before the original's. (4) The line about an unjoined queue passes over the ride the queue tool is armed for and no other,
+  where the original's passes over the builder's object, whose life is not read (Q1160 is the same line's tag, not this). Count each
+  (`Unimplemented.Report`) where placed content reaches it, then decode and build. (5) A leftover `*.TPWS.tmp` (a kill during
+  `BaseFileSystem.WriteAllBytes`) is not taken for a park here, but the original's own `.TPW*` search would take it, the folder being
+  shared, and nothing deletes it: decide whether the next start deletes it (it is ours, never the player's park) and say so in the log.
+  Confirm: (1) to (4) in both games; (5) a planted `.tmp`, a start, and the original's Load list after.
 - [ ] **Q1160. The unjoined queue's tag is about the ride, and a polled line's thing reaches its tag.** From the fork watch
   2026-11-12 (`verify-advisor.md` A1). In the original a polled record's speech (`FUN_0059b620`) asks the score callback again
   through `FUN_0059c0a0` and writes the thing it left (the balance object's `+4` and `+8`) into the record where not nought

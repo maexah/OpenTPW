@@ -794,6 +794,12 @@ internal static class SaveFolder
 		{
 			Log.Warning( $"Saves: the player '{name}' could not be deleted - {e.Message}" );
 		}
+		finally
+		{
+			// Deleted by raw calls, so the save folder's remembered names are dropped: a name made again with another
+			// case ("KIM" after "Kim") is then made as asked, not as the folder that has gone.
+			SaveFileSystem.Changed( PlayerFolder( slot, name ) );
+		}
 	}
 
 	/// <summary>save\users\ and the slot's number, 1 to 4, run straight into the name - 0x005c7de0.</summary>

@@ -81,6 +81,15 @@ public static class GameDir
 			// Carrying on down the list would start the game somewhere the player did not ask for, or bury
 			// the mistake among every other place that was looked.
 			var named = where is PathArgument or PathVariable;
+
+			// A bare --game (the last argument, or "--game=") names no folder: said in Q978's box, never fallen through.
+			if ( where is PathArgument && string.IsNullOrWhiteSpace( path ) )
+			{
+				Fail( $"Game files: {PathArgument} was given with no folder after it." );
+				Fail( $"Game files: name the folder TP.exe was installed in, as {PathArgument} <folder>." );
+				return false;
+			}
+
 			var folder = FullPath( path );
 
 			if ( folder == null )
@@ -239,7 +248,7 @@ public static class GameDir
 		}
 	}
 
-	/// <summary>The folder named by --game, or null if it was not named.</summary>
+	/// <summary>The folder named by --game, empty where --game is the last argument, or null if it was not named.</summary>
 	private static string? Argument( string[] args )
 	{
 		for ( int i = 0; i < args.Length; ++i )
@@ -247,8 +256,8 @@ public static class GameDir
 			if ( args[i].StartsWith( $"{PathArgument}=", StringComparison.OrdinalIgnoreCase ) )
 				return args[i][(PathArgument.Length + 1)..];
 
-			if ( string.Equals( args[i], PathArgument, StringComparison.OrdinalIgnoreCase ) && i + 1 < args.Length )
-				return args[i + 1];
+			if ( string.Equals( args[i], PathArgument, StringComparison.OrdinalIgnoreCase ) )
+				return i + 1 < args.Length ? args[i + 1] : string.Empty;
 		}
 
 		return null;

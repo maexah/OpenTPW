@@ -13119,3 +13119,40 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   ISLAND field the reader takes, so a field read from the wrong column fails; four bugs put back by hand (heading from
   the seventh field, name from the gate field, quotes kept, SKYCOLOUR green and blue swapped) each failed it. Sound
   categories are covered by `SoundCategoryTests`. Done as Q80 in cloud lane c23; the save round trip is Q1212.
+- [x] **Q997. The small findings of the week-end audit 2026-10-31.** Each by reading, none run. S-M1: `ParkFileWriter.cs:491-492` puts
+  `loaded.PutControls( body, built )` inside the `if` of `:366`, so an item bought and sold since a load, with nothing else structural, leaves
+  no stamp, where the original's stays (`0x004dd0e1`; `ParkState.cs:292-300`); the next build takes a later one and `ParkWorth.cs:52`, `:59`
+  ages by it. S-M2: a park read in part refuses every save (`ParkFileWriter.cs:236-240`) with a log line and no `SaveTrouble.Failed`
+  (`Level.cs:1065-1069`), so Save Park, Alt+S and the autosave lose the play in silence; the original has no such refusal. S-M3 (built with Q994, `Game.RequestFreshPark`): Restart Park
+  on a fresh park with no `restart.INTS` calls `Game.RequestParkLoad` (`ParkFrontEnd.cs:587-590`, `:562-564`) through `Level.cs:619`
+  `NewestPark`, so any `*.TPW*` from an Alt+S since loads; with `Park` null it reads the same bad file again; the original loads nothing
+  (`0x0055036c`, the open fails). S-M4: `SaveFolder`'s deletes use raw `File` and `Directory` calls (`DeletePlayer`, at `:634` and `:672`), so
+  `BaseFileSystem`'s listing is not dropped (`Resolve`, `RealName`, `Listing`, `BaseFileSystem.cs:322-388`); delete "Kim" from slot 1,
+  make "KIM": the folder is made as `1Kim`, the case lost. ST-F5: the log's head and `Display.cs:155` read the window's size before the
+  event is pumped (`console.log:53814`: `FullScreen at 2560 x 1440, window 2560x1359`); the `LaunchReport` line (`Game.cs:122-125`,
+  `LaunchReport.cs:171`) is inferred. ST-F8: `--game` as the last argument is ignored (`GameDir.cs:250`, `i + 1 < args.Length`) and falls
+  through to the search, where `GameDir.cs:80` says a named folder never does; a bare `--game` names no folder, so say so in a box. ST-F9:
+  `Renderer.cs:35` reads `Settings.Default` unguarded, against `GameDir.cs:226-227`'s "not a reason to stop"; a damaged `user.config`
+  stops the start in Q978's box (inferred). L-F3: a sold thing's name board stays on the card until the park ends (`ParkObjects.cs:316-318`,
+  `:361-364`, `:1062-1068`), two 128 x 128 textures per place of a signed item; said at the site; waits for `ParkObjectPreview`'s sign.
+  Also the gaps DOES-NOT filed under the finished Q420 and Q443 that no open item carries: the theme's advisor's golden-ticket clips are
+  not built; a rider standing on a node a clip moves faces as it does at rest; his lines that wait thirty days from the newest build
+  still come before the original's; and the line about an unjoined queue passes over the ride the queue tool is armed for and no other,
+  where the original's passes over the builder's object, whose life is not read. Another: a leftover `*.TPWS.tmp` is not taken for a park here
+  (Q997's S-D2 fix), but the original's own `.TPW*` search would take it, the folder being shared, and nothing deletes it.
+  Build or close each with a note.
+  Done in Q997 (lane c20, 2026-11-12; built in a cloud container, no Ghidra, no original, no display). **Built, each by a test that
+  fails with the fix put back:** S-M1, `ParkFileWriter.Body` writes the controls (`PutControls`) whether or not anything structural
+  changed (`ParkFileWriterBoughtAndSoldTests.AControlIsWrittenWhenNothingStructuralChanged`). S-M3, built with Q994 and merged onto it: Restart Park on a park
+  made fresh (`Park is FreshPark`) with no `restart.INTS` asks for a world made fresh (Q994's `Game.RequestFreshPark`), never the folder's
+  newest file; with no park running (one that did not read) nothing is loaded, as the original's failed open
+  (`ParkSaveScreenTests.RestartParkLoadsRestartIntsAndNotTheNewestFile`, through the scene change); the fresh case stays the deviation
+  `ParkFrontEnd.RestartPark` says. Q997's own `Level.MadeFresh` (an empty file name) was dropped at the merge: Q994's read-ahead takes it
+  for a file that will not read and keeps the park. S-M4, `SaveFolder.DeletePlayer` drops the save folder's remembered names (`BaseFileSystem.Changed`), so
+  "KIM" made after "Kim" is `1KIM` (`SaveFolderDeleteTests`). ST-F8, a bare `--game` (last argument, or `--game=`) is refused with its own
+  two reason lines, Q978's box's text, and nothing else is looked in (`GameDataTests.ABareGameArgumentIsRefusedWithItsOwnReason`); a run
+  with `--game` alone logged them and ended 1, no box (no display). ST-F9, `Renderer.StartSize` takes the setting's shipped 1280 x 720 where
+  `user.config` will not read, and logs it (`RendererStartSizeTests`); a damaged `user.config` was not made and started, so the start past it
+  is not seen. **Closed with a note:** L-F3, the board is kept until the park ends by choice (`ParkObjects.Remove`'s remarks; its summary,
+  which said the sign was let go, now says it is kept). **Filed:** S-M2 and ST-F5 as Q1200 (each changes what is on screen or needs a real
+  full-screen display); the four advisor gaps and the `.TPWS.tmp` leftover as Q1201 (each needs the original or Ghidra).
