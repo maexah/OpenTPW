@@ -341,6 +341,14 @@ internal sealed class WindowStack : Panel
 	/// <summary>The open windows, back to front.</summary>
 	public IReadOnlyList<UiWindow> Windows => _windows;
 
+	/// <summary>
+	/// What is drawn under the dimmer: run once, in this frame's draw, just before the first modal window neither hidden
+	/// nor put away (<see cref="UiWindow.Modal"/>: the LOLIGHT backdrop, or the park's map over the whole screen), with
+	/// that window; not run when no such window is drawn. The level hands it the advisor's pass, so the dimmer and the
+	/// window on it cover him (Q18, a deviation at Alexah's request: <c>docs/exe/ui.md</c>, "Pausing him").
+	/// </summary>
+	internal Action<UiWindow>? UnderDimmer { get; set; }
+
 	/// <summary>Whether any open window pauses the game - see <see cref="UiWindow.Pauses"/>.</summary>
 	public bool AnyPausing => _windows.Exists( window => window.Pauses );
 
@@ -623,11 +631,20 @@ internal sealed class WindowStack : Panel
 		if ( Covered )
 			return;
 
+		var under = UnderDimmer;
+
 		// Each window's effects straight after it, so the windows over it cover them.
 		foreach ( var window in _windows )
 		{
 			if ( window.Hidden || window.PutAway )
 				continue;
+
+			// What sits under the dimmer, once, before the first dimmed window.
+			if ( window.Modal && under != null )
+			{
+				under( window );
+				under = null;
+			}
 
 			window.Root.Draw();
 			ScreenParticles.Current?.Draw( window );

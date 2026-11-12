@@ -3404,9 +3404,21 @@ public class Level
 		// The solid geometry, then everything see-through, then the sprites.
 		Entity.RenderWorld();
 
-		RenderOverTheWorld( Hud, () => global::Global.Render.CommandList.ClearDepthStencil( 1 ), DrawPreviews, DrawActiveWarning,
+		RenderOverTheWorld( Hud, _windows, () => global::Global.Render.CommandList.ClearDepthStencil( 1 ), DrawPreviews, DrawActiveWarning,
 			() => Entity.All.ForEach( entity => entity.RenderOverlay() ) );
 	}
+
+	/// <summary>Frames whose overlays (the advisor) were drawn under a dimmed window, and on top of everything; and the last window drawn over them.</summary>
+	private static int _overlaysUnder, _overlaysOnTop;
+
+	private static string? _lastDimmer;
+
+	/// <summary>
+	/// Where the frames' overlays have been drawn since the start (the console's <c>windows</c>): under a dimmed window,
+	/// naming the last one, or on top of the interface.
+	/// </summary>
+	internal static string OverlayCensus()
+		=> $"overlays under a dimmer {_overlaysUnder} frames (last {_lastDimmer ?? "none"}), on top {_overlaysOnTop} frames";
 
 	/// <summary>
 	/// A ride's window shows the ride itself, turning, in a panel. It is drawn HERE rather than with
@@ -3449,11 +3461,34 @@ public class Level
 	/// frame just before the flip (<c>0x00564210</c>; <c>docs/exe/hud.md</c>, "The pointer is drawn last"). The steps are
 	/// handed in so a test can see the order.
 	/// </summary>
-	internal static void RenderOverTheWorld( RootPanel hud, Action clearDepth, Action previews, Action warning, Action overlays )
+	/// <remarks>
+	/// <b>A deviation (Q18, at Alexah's request):</b> while a dimmed window is drawn (the game menu, a message box, the
+	/// options screen, the file screens), the overlays are drawn inside the HUD's pass instead, just before that window
+	/// (<see cref="WindowStack.UnderDimmer"/>, the depth cleared first), so its dimmer covers the advisor as it covers the
+	/// park. The original draws him after the HUD always (<c>docs/exe/ui.md</c>, "The advisor on screen"). The interface
+	/// draws with no depth test, so the clear cannot cut into the windows drawn after him.
+	/// </remarks>
+	internal static void RenderOverTheWorld( RootPanel hud, WindowStack? windows, Action clearDepth, Action previews, Action warning,
+		Action overlays )
 	{
+		string? dimmer = null;
+
+		if ( windows != null )
+		{
+			windows.UnderDimmer = window =>
+			{
+				dimmer = window.GetType().Name;
+				clearDepth();
+				overlays();
+			};
+		}
+
 		// The HUD on the finished world. Nothing in the passes before can reach it, because it is not an entity at all -
 		// see RootPanel.
 		hud.Render();
+
+		if ( windows != null )
+			windows.UnderDimmer = null;
 
 		// Then whatever sits on the screen in front of everything but the pointer, the HUD included - the advisor,
 		// who covers whatever he pops up over. Depth is cleared first so nothing drawn before can
@@ -3462,7 +3497,18 @@ public class Level
 		clearDepth();
 		previews();
 		warning();
-		overlays();
+
+		// Unless a dimmed window already took them under it.
+		if ( dimmer == null )
+		{
+			overlays();
+			++_overlaysOnTop;
+		}
+		else
+		{
+			++_overlaysUnder;
+			_lastDimmer = dimmer;
+		}
 
 		hud.RenderPointer();
 	}

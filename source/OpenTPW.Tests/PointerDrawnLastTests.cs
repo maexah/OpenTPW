@@ -81,7 +81,7 @@ public class PointerDrawnLastTests
 		hud.AddChild( new Recorder( drawn, "interface" ) );
 		hud.Pointer = new Recorder( drawn, "pointer" );
 
-		Level.RenderOverTheWorld( hud, () => drawn.Add( "depth" ), () => drawn.Add( "previews" ), () => drawn.Add( "warning" ),
+		Level.RenderOverTheWorld( hud, null, () => drawn.Add( "depth" ), () => drawn.Add( "previews" ), () => drawn.Add( "warning" ),
 			() => drawn.Add( "overlays" ) );
 
 		CollectionAssert.AreEqual( new[] { "interface", "depth", "previews", "warning", "overlays", "pointer" }, drawn );

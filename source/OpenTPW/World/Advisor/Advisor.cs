@@ -78,7 +78,8 @@ namespace OpenTPW;
 /// which is the pause. So the original holds him mid-gesture behind an open menu, and so does this, in
 /// both scenes. What still takes him away is <see cref="Dismiss"/> clearing <c>_shown</c>, which is
 /// reached by those same two stops - so the options screen, which quietens him, does remove him, exactly
-/// as the original's third caller does.
+/// as the original's third caller does. He is drawn under the dimmer of a dimmed window, though, where the original
+/// draws him over it: a deviation at Alexah's request (<see cref="Level.RenderOverTheWorld"/>).
 /// </para>
 /// </summary>
 public sealed class Advisor : Entity

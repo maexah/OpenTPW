@@ -12284,6 +12284,19 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   Research"). The message box is built; both sites only count (`RESEARCH_BUTTON`, `RESEARCH_SHORTCUT`). Build the two
   boxes at both; the research screen behind them stays counted (blocked: `docs/PLAYER-GAPS.md`). Confirm: R and the
   button in Lost Kingdom, the box photographed beside the original's.
+- [x] **Q18. The advisor draws in front of the dimmed screen.** `Level.Render` draws the HUD, then
+  the overlay pass with the advisor. Pausing does not hide him either; only the options screen's quiet stop takes him off (`ui.md`, "Pausing him"). Draw the
+  dimmer over him, or hide him while such a window is open. Confirm: screenshot with the buy screen open.
+  Built (the dimmer drawn over him, a deviation at Alexah's request, said in `ui.md`, "Pausing him", and at
+  `Level.RenderOverTheWorld`): `WindowStack.UnderDimmer` runs once in the HUD's pass, just before the first shown modal
+  window (the game menu, a message box, the options screen, the file screens and the new-player dialog, each on the LOLIGHT
+  backdrop, and the park's map, which covers the screen and quietens him anyway), and the level hands it the depth clear and the overlays, which are then not drawn again on top; with no
+  such window shown (the interface hidden by F2, the full-screen view) he is drawn on top as before. The buy screen is not
+  modal and draws no dimmer (`ParkBuyScreen`, `UiWindow.ParkScreen`), so over it he stays on top, as the original draws
+  him. `AdvisorUnderDimmerTests` (five, no game) drive a real `WindowStack`; six bugs put back by hand each failed one.
+  The console's `windows` now ends with `Level.OverlayCensus`: an off-screen park run counted frames under a dimmer only
+  while `menu` held the game menu open (`shown=True paused=True`) and on top only once it closed. Not photographed (no
+  display in the lane): Q1460. **Done 2026-11-12** (cloud lane c85, `alexah/1064-dimmer-over-advisor`).
 
 ## D. Alexah's list: decode first, then build (two sessions each)
 
