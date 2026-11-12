@@ -194,6 +194,44 @@ public class ParkTrendArrowTests
 		Assert.AreEqual( 275, UI.ParkGadget.LetteringEnd( 258, 7, 600 ) );
 	}
 
+	/// <summary>
+	/// <b>The balance takes one of six colours by the thousands it holds</b> (<c>Gadget_ShowMoney</c> <c>0x004a0ab0</c>, the
+	/// table at <c>0x00752e30</c>): <c>(balance + 999) / 1000</c> held to 0..5, so nought and any debt are red, 1 to 1000
+	/// orange, and above 4000 white. 500 and 5000 are the item's confirming pair.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the band taken as <c>balance / 1000</c> (500 red, 1000 band 1 but 1 red); <c>+ 1000</c> for
+	/// <c>+ 999</c> (1000 in band 2); no upper hold (a million past the table).</remarks>
+	[TestMethod]
+	public void TheBalanceTakesOneOfSixColoursByItsThousands()
+	{
+		foreach ( var (balance, band) in new[] { (int.MinValue + 1, 0), (-5000, 0), (-1, 0), (0, 0), (1, 1), (500, 1), (1000, 1),
+			(1001, 2), (2000, 2), (2001, 3), (3001, 4), (4000, 4), (4001, 5), (5000, 5), (1000000, 5) } )
+			Assert.AreEqual( band, UI.ParkGadget.BalanceBand( balance ), $"{balance}'s band" );
+
+		CollectionAssert.AreEqual( new[] { new UI.UiColour( 255, 0, 0 ), new UI.UiColour( 250, 90, 0 ), new UI.UiColour( 255, 175, 0 ),
+			new UI.UiColour( 255, 200, 0 ), new UI.UiColour( 255, 255, 150 ), new UI.UiColour( 255, 255, 255 ) }, UI.ParkGadget.BalanceColours );
+	}
+
+	/// <summary>
+	/// <b>The gadget letters the balance in its band's colour, and 0x30 starts hidden</b>: 500 orange (250, 90, 0), 5000
+	/// white, -500 red, with nothing in the hand.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the colour not set (all white); 0x30 shown with an empty hand.</remarks>
+	[TestMethod]
+	public void TheGadgetLettersTheBalanceInItsBandsColour()
+	{
+		var world = Stock();
+
+		foreach ( var (balance, colour) in new[] { (500, new UI.UiColour( 250, 90, 0 )), (5000, UI.UiColour.White), (-500, new UI.UiColour( 255, 0, 0 )) } )
+		{
+			WithAGadget( world, new ParkState( parkIsClosed: false, visitorsToDate: 0, balance: balance ), gadget =>
+			{
+				Assert.AreEqual( colour, Find( gadget.Root, 0x2f ).TextColour, $"{balance}'s colour" );
+				Assert.IsFalse( Find( gadget.Root, 0x30 ).Visible, "nothing in the hand" );
+			} );
+		}
+	}
+
 	// The pen's advances in CASHBIG.bf4, the balance's font in the 768 set, in its pixels: "5", the nine digits 1 to 9, "0", "500".
 	private const int Five = 27;
 	private const int NineDigits = 246;

@@ -218,7 +218,7 @@ advances added (`+0xac`..`+0xb4`, "How a list's cells are aligned"), its pixels 
 toward nought, plus the control's left. So the arrow follows the number's end, not the stream's `(728,109)-(831,211)`.
 The same call puts `0x30`'s right edge at the lettering's right edge. It also sets `0x32`, the `i_dollar` icon, to frame 1
 while the balance is below nought (`0x004a0c23`). Its nodes, in file order, are `i_dollar` and `dollarsignneg`, drawn as
-"-$" (Q674, `q674/orig/O-hold-500-money.png`: -500 lettered "500"). The balance's colour in the same call is Q403's.
+"-$" (Q674, `q674/orig/O-hold-500-money.png`: -500 lettered "500"). The balance's colour and `0x30` in the same call are below, "The balance's colour and the price in hand".
 
 **Measured at two widths** (Q674, `q674/orig/run.sh`, the balance held by `thingpoke.py`): the original runs at 800 x 600
 (its `Resolution.sam`), scaled to the 1024 x 768 capture, so the balance's font is the 600 set's `CASHBIG` at 2.56 units a
@@ -250,6 +250,42 @@ sign and `0x31`'s by the reading, and moves `0x31` to the lettering's end (`Lett
 1536 over the set's screen height, cut toward nought, which is the original's 2048 over the width on a 4:3 screen) every
 frame where the original does it on a change of the balance; the place is the same, as it is worked out from the
 number then lettered.
+
+### The balance's colour and the price in hand (Q403)
+
+**The colour.** `Gadget_ShowMoney` (`0x004a0ab0`) letters the balance `0x2f` in one of six colours, the table at
+`0x00752e30` (six RGBA words, alpha 255), indexed by `(balance + 999) / 1000` (a signed division, cut toward nought) held
+to 0..5. `DAT_00752e2c` keeps the last index (999 before the first) and `DAT_007cb2dc` the last balance.
+
+| Index | Balance | Colour |
+|---|---|---|
+| 0 | nought or below | (255, 0, 0) red |
+| 1 | 1 to 1000 | (250, 90, 0) |
+| 2 | 1001 to 2000 | (255, 175, 0) |
+| 3 | 2001 to 3000 | (255, 200, 0) |
+| 4 | 3001 to 4000 | (255, 255, 150) |
+| 5 | above 4000 | (255, 255, 255) white |
+
+The six words were read out of the image on 2026-09-14 (the plan of that day, `docs/history/current-task-archive.md`,
+"P2"); not read again since.
+
+**The price in hand, `0x30`.** The call's second half (`0x004a0d38`..`0x004a0d94`) reads the run total `DAT_0081af4c`
+(`FUN_0052fbc0`). -9999 hides `0x30` (the patrol tool's `FUN_0052fb90`, and the Clear Area hover `0x00523c18`, mode
+`0x3a`); -999 skips the show; otherwise it is lettered and shown while the interaction mode's type is 3 (the carry and
+build-tool shell, vtable `0x006fe9e0`), or 8 while `[0x0079c658] & 1` (the test for 4 at `0x004a0ce4` is dead: no mode object
+returns 4). Its right edge goes to the balance's lettering's right edge, its size kept. The original letters it "$ 375",
+"$ 0" (`q540/orig/b-1-before-click.png`, `q709/orig/a-place.png`). What sets the total for a carried item: the place mode's
+preview, `FUN_005234d0`, from the item's `+0x1b8` (its price); a mystery ride's preview sets nought (`0x0052360a`); the move
+tool's prices it in full (`0x0052398b`). The build tools' passes add to it and the gadget's message `0x1e` clears it (Q541).
+
+**OpenTPW** (Q403): `ParkGadget.BalanceBand` and `BalanceColours` colour `0x2f` each frame. `ParkGadget.CostInHand` shows
+the carried item's price (nought for an unmoved mystery ride), lettered `"$ {n}"`, yellow, font slot 2, right-aligned
+against the right edge `CostPlace` moves to the lettering's end; the label's own alignment is not read, so right-aligned is
+a choice. A candidate or worker in the hand, or the patrol tool, hides it. The path, queue and track tools' run total is
+counted as `GADGET_RUN_TOTAL` and hidden (Q541). This game shows the price from the first frame of a carry, where the
+original's total is what the tool start (`0x0052f087`, nought) and the first preview pass wrote; and it is set every frame
+where the original letters it on a change of the balance and on every third message `0x1e`. Not yet seen beside the
+original (Q1436).
 
 ### The happiness gauge's two quads (Q244; fork watch 2026-10-19, verify-advisor-ui.md L3, verify-other-b.md M3)
 
