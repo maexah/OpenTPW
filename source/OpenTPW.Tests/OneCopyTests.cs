@@ -55,6 +55,142 @@ public class OneCopyTests
 		Assert.IsNull( dotted, "a path through . and .. is the same folder" );
 	}
 
+	/// <summary>A real folder under a fresh temporary root, made on disk, for the link tests; the root is answered for clean-up.</summary>
+	private static (string Root, string Game) RealFolder()
+	{
+		var root = Folder( string.Empty );
+		var game = Path.Join( root, "real", "game" );
+		Directory.CreateDirectory( game );
+		return (root, game);
+	}
+
+	/// <summary>A symbolic link at <paramref name="at"/> to <paramref name="to"/>; false where this system will not make one.</summary>
+	private static bool Link( string at, string to )
+	{
+		try
+		{
+			Directory.CreateSymbolicLink( at, to );
+			return true;
+		}
+		catch ( Exception e ) when ( e is IOException or UnauthorizedAccessException )
+		{
+			return false;
+		}
+	}
+
+	[TestMethod]
+	public void ALinkToTheFolderIsTheSameLock()
+	{
+		var (root, game) = RealFolder();
+
+		try
+		{
+			var link = Path.Join( root, "link" );
+
+			if ( !Link( link, game ) )
+				Assert.Inconclusive( "this system will not make a symbolic link" );
+
+			using var first = OneCopy.Open( game, out _ );
+			using var second = OneCopy.Open( link, out var unknown );
+
+			Assert.IsNotNull( first );
+			Assert.IsNull( second, "a copy started through a link to the folder must be refused" );
+			Assert.IsNull( unknown );
+			Assert.AreEqual( OneCopy.Name( game ), OneCopy.Name( link + Path.DirectorySeparatorChar ) );
+		}
+		finally
+		{
+			Directory.Delete( root, recursive: true );
+		}
+	}
+
+	[TestMethod]
+	public void ALinkPartWayAlongThePathIsFollowed()
+	{
+		var (root, game) = RealFolder();
+
+		try
+		{
+			// The link is the parent; the last component, "game", is a plain folder, so resolving only the last misses it.
+			var parent = Path.Join( root, "parent" );
+
+			if ( !Link( parent, Path.Join( root, "real" ) ) )
+				Assert.Inconclusive( "this system will not make a symbolic link" );
+
+			Assert.AreEqual( OneCopy.Name( game ), OneCopy.Name( Path.Join( parent, "game" ) ) );
+		}
+		finally
+		{
+			Directory.Delete( root, recursive: true );
+		}
+	}
+
+	[TestMethod]
+	public void ARelativeLinkThroughAnotherLinkIsFollowedToTheEnd()
+	{
+		var (root, game) = RealFolder();
+
+		try
+		{
+			// outer -> "inner" (relative, beside it), inner -> real: two hops, the first one relative.
+			var inner = Path.Join( root, "inner" );
+			var outer = Path.Join( root, "outer" );
+
+			if ( !Link( inner, Path.Join( root, "real" ) ) || !Link( outer, "inner" ) )
+				Assert.Inconclusive( "this system will not make a symbolic link" );
+
+			Assert.AreEqual( game, OneCopy.WithoutLinks( Path.Join( outer, "game" ) ) );
+		}
+		finally
+		{
+			Directory.Delete( root, recursive: true );
+		}
+	}
+
+	[TestMethod]
+	public void AFolderBesideTheLinkedOneIsStillAnotherLock()
+	{
+		var (root, game) = RealFolder();
+
+		try
+		{
+			var other = Path.Join( root, "real", "other" );
+			Directory.CreateDirectory( other );
+			var link = Path.Join( root, "link" );
+
+			if ( !Link( link, game ) )
+				Assert.Inconclusive( "this system will not make a symbolic link" );
+
+			Assert.AreNotEqual( OneCopy.Name( other ), OneCopy.Name( link ) );
+		}
+		finally
+		{
+			Directory.Delete( root, recursive: true );
+		}
+	}
+
+	[TestMethod]
+	public void ALoopOfLinksEndsAndGivesAName()
+	{
+		var root = Folder( string.Empty );
+		Directory.CreateDirectory( root );
+
+		try
+		{
+			var a = Path.Join( root, "a" );
+			var b = Path.Join( root, "b" );
+
+			if ( !Link( a, b ) || !Link( b, a ) )
+				Assert.Inconclusive( "this system will not make a symbolic link" );
+
+			StringAssert.StartsWith( OneCopy.Name( Path.Join( a, "game" ) ), OneCopy.Prefix );
+		}
+		finally
+		{
+			Directory.Delete( root, recursive: true );
+		}
+	}
+
 	[TestMethod]
 	public void OnceTheFirstCopyEndsTheFolderIsFreeAgain()
 	{
