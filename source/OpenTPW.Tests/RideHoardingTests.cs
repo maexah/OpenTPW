@@ -120,7 +120,7 @@ public class RideHoardingTests
 	public void EveryShippedHoardingHasACompleteBaseAndPreservesItsEdgeCount()
 	{
 		var data = GameData.Required();
-		var items = 0; var hoardings = 0; var floors = 0; var minimum = int.MaxValue;
+		var items = 0; var hoardings = 0; var floors = 0; var minimum = int.MaxValue; var fewestBases = int.MaxValue;
 		foreach ( var wad in Directory.GetFiles( Path.Combine( GameDir.Data, "levels" ), "*.wad", SearchOption.AllDirectories ) )
 		{
 			var directory = Path.GetRelativePath( GameDir.Data, Path.ChangeExtension( wad, null ) ).Replace( '\\', '/' );
@@ -137,7 +137,9 @@ public class RideHoardingTests
 			var model = new ModelFile( md2 );
 			Assert.IsTrue( model.Meshes.Count > 0, directory );
 			var grid = new ProceduralBase.Grid( 0f, 0f, 10f, 10f );
-			Assert.AreEqual( 0, ProceduralBase.FloorMesh( model, description.Shape, grid, out _ ), $"{directory}: the mesh with the most base vertices" );
+			Assert.AreEqual( 0, ProceduralBase.FloorMesh( model, description.Shape, grid, out var bases ), $"{directory}: the mesh with the most base vertices" );
+			Assert.IsTrue( bases > 1, $"{directory}: {bases} base vertices, which the gate (more than one, 0x0046a838) refuses" );
+			fewestBases = Math.Min( fewestBases, bases );
 			CollectionAssert.AreEqual( new[] { 0 }, ProceduralBase.BaseVertices( model, description.Shape, grid ).Select( b => b.Mesh ).ToArray(),
 				$"{directory}: the meshes with base vertices, of {model.Meshes.Count}" );
 			++floors;
@@ -150,36 +152,45 @@ public class RideHoardingTests
 			Assert.AreEqual( expected, panels.Length, directory );
 			Assert.IsTrue( panels.All( p => float.IsFinite( p.A.X ) && float.IsFinite( p.A.Y ) && float.IsFinite( p.B.X ) && float.IsFinite( p.B.Y ) ), directory );
 		}
-		Console.WriteLine( $"hoarding corpus: items={items} outlines={hoardings} floorsAtMesh0={floors} minimumBaseVertices={minimum}" );
+		Console.WriteLine( $"hoarding corpus: items={items} outlines={hoardings} floorsAtMesh0={floors} minimumSourceVertices={minimum} fewestBaseVertices={fewestBases}" );
 		Assert.AreEqual( 274, items );
 		Assert.AreEqual( 129, hoardings );
 		Assert.AreEqual( 129, floors );
 	}
 
 	/// <summary>
-	/// <b>A panel endpoint stands on the ground OpenTPW samples, <c>x0 + gx</c> over the cells the turned footprint covers</b>,
-	/// a rectangle one cell longer on each axis than the original's inclusive <c>x0 + trunc( gx * (w - 1) / w + 0.1 )</c>
-	/// (<c>docs/exe/ride-hoardings.md</c>, <c>HOARDING_TERRAIN_RECTANGLE</c>). It checks OpenTPW's rule, not the original's;
-	/// <c>QUEUE.md</c> Q210 ports the original's and writes that test.
+	/// <b>A panel endpoint stands on the ground inside the model's inclusive rectangle</b>, <c>+0xc0</c> its first cell and
+	/// <c>+0xc4</c> its last (<c>FUN_00467030</c>, <c>0x004670c1</c>): the grid line <c>gx</c> of an outline <c>w</c> cells
+	/// across reads <c>x0 + trunc( gx * (w - 1) / w + 0.1 )</c> (<c>FUN_00454050</c>, <c>FUN_00454190</c>;
+	/// <c>docs/exe/ride-hoardings.md</c>). The expected vertex is worked here from that formula, carried between the turned
+	/// rectangle's first and last cells; the ground is a slope whose every vertex differs, and the old rule's <c>x0 + gx</c>
+	/// is shown to read other vertices.
 	/// </summary>
 	[TestMethod]
-	public void TerrainEndpointsSampleOpenTPWsLargerRectangleNotTheOriginals()
+	public void TerrainEndpointsSampleTheOriginalsInclusiveRectangle()
 	{
 		var data = GameData.Required();
 		using var input = data.OpenRead( "levels/jungle/terrain/base.md2" );
 		var field = new HeightfieldFile( input );
+		for ( var y = 0; y <= field.CellsY; ++y )
+		for ( var x = 0; x <= field.CellsX; ++x )
+			field.Heights[y * (field.CellsX + 1) + x] = x * 3 + y * 1000;
+		const int W = 3, D = 4;
+		var differs = 0;
 		foreach ( var angle in new[] { 0, 90, 180, 270 } )
 		{
 			var turn = ParkObjects.Turn( angle );
-			var anchor = new V3( 765, 645, field.HeightAt( 76, 64 ) );
+			var anchor = new V3( 765, 645, 20 );
 			var origin = anchor + V3.Transform( new V3( -5, -5, 0 ), turn );
-			var corners = new[] { new V3( 0, 0, 0 ), new V3( 30, 0, 0 ), new V3( 0, 40, 0 ), new V3( 30, 40, 0 ) }
+			var corners = new[] { new V3( 0, 0, 0 ), new V3( W * 10, 0, 0 ), new V3( 0, D * 10, 0 ), new V3( W * 10, D * 10, 0 ) }
 				.Select( v => V3.Transform( v, turn ) + origin ).ToArray();
-			var x0 = corners.Min( v => v.X ) / 10; var x1 = corners.Max( v => v.X ) / 10;
-			var y0 = corners.Min( v => v.Y ) / 10; var y1 = corners.Max( v => v.Y ) / 10;
-			for ( var y = 0; y <= 4; ++y ) for ( var x = 0; x <= 3; ++x )
+			// The rectangle in cells, its last cell inclusive: one less than the far edge.
+			var x0 = MathF.Round( corners.Min( v => v.X ) / 10 ); var x1 = MathF.Round( corners.Max( v => v.X ) / 10 ) - 1;
+			var y0 = MathF.Round( corners.Min( v => v.Y ) / 10 ); var y1 = MathF.Round( corners.Max( v => v.Y ) / 10 ) - 1;
+			Assert.AreEqual( angle % 180 == 0 ? (W - 1, D - 1) : (D - 1, W - 1), ((int)(x1 - x0), (int)(y1 - y0)), $"angle{angle}: the rectangle" );
+			for ( var gy = 0; gy <= D; ++gy ) for ( var gx = 0; gx <= W; ++gx )
 			{
-				var u = x / 3f; var v = y / 4f;
+				var u = gx / (float)W; var v = gy / (float)D;
 				var (wx, wy) = angle switch
 				{
 					0 => (u * x1 + (1 - u) * x0, v * y1 + (1 - v) * y0),
@@ -187,11 +198,18 @@ public class RideHoardingTests
 					180 => (u * x0 + (1 - u) * x1, v * y0 + (1 - v) * y1),
 					_ => (v * x0 + (1 - v) * x1, u * y1 + (1 - u) * y0)
 				};
-				var expected = (field.HeightAt( (int)(wx + 0.1f), (int)(wy + 0.1f) ) - origin.Z) * 0.5f;
-				Assert.AreEqual( expected, ParkRideHoarding.Ground( field, new( x, y ), (OpenTPW.Vector3)origin, turn ), 0.0001f,
-					$"angle{angle} grid{x},{y}" );
+				var (vx, vy) = ((int)(wx + 0.1f), (int)(wy + 0.1f));
+				if ( angle == 0 )
+					Assert.AreEqual( ((int)x0 + (int)(gx * (W - 1) / (float)W + 0.1f), (int)y0 + (int)(gy * (D - 1) / (float)D + 0.1f)), (vx, vy), $"grid{gx},{gy}: the decoded formula" );
+				var expected = (field.HeightAt( vx, vy ) - origin.Z) * 0.5f;
+				var old = V3.Transform( new V3( gx * 10, gy * 10, 0 ), turn ) + origin;
+				differs += field.HeightAt( (int)(old.X / 10 + 0.1f), (int)(old.Y / 10 + 0.1f) ) != field.HeightAt( vx, vy ) ? 1 : 0;
+				Assert.AreEqual( expected, ParkRideHoarding.Ground( field, new( gx, gy ), new( W, D ), (OpenTPW.Vector3)origin, turn ), 0.0001f,
+					$"angle{angle} grid{gx},{gy}" );
 			}
 		}
+		Assert.IsTrue( differs > 0, "OpenTPW's former x0 + gx reads other vertices on this ground" );
+		Console.WriteLine( $"terrain rectangle: {differs} of {4 * (W + 1) * (D + 1)} endpoints read another vertex than x0 + gx" );
 	}
 
 	[TestMethod]

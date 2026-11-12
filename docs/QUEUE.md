@@ -614,14 +614,17 @@ filed the items that cite it.
     there which of the two owns the buy screen's picture.
   - **Note (play test 2026-10-31):** the buy screens still show no model in the description panel. The model and the kind row are counted (Q865). Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
 
-- [ ] **Q210. Hoardings: the original's terrain rectangle and its base-vertex gate.** Found by the 2026-10-04 review
-  (`u6-hoardings-1`, `-2`, `-4`; `docs/exe/ride-hoardings.md`). `ParkRideHoarding.Ground` samples `x0 + gx` where the
-  original samples `x0 + trunc( gx * (w - 1) / w + 0.1 )` inside the model's inclusive rectangle (`+0xc0`, `+0xc4`,
-  `FUN_00467030` `0x004670c1`, `FUN_00454190`); counted `HOARDING_TERRAIN_RECTANGLE`. `ParkObjects` gates on
-  `Nodes.Count > 1` and reads `Meshes[0]` where the original counts base vertices (`FUN_00469a80`, `0x0046a838`) and
-  reads the mesh with the most (`0x0046a82c`). Port both, and write the test's expected value from the executable's
-  formula, not from the code. Confirm: a ride bought on sloping ground, closed, photographed with `hoardings`; then
-  the same panels beside the original's under Proton (their height, which rises first, where the sign sits).
+- [ ] **Q1524. The hoardings on a slope photographed, and beside the original's (Q210's split piece; desk lane).** Since Q210 a
+  hoarding's ends stand on the original's inclusive rectangle. Q210 ran in a cloud container with no display to look at and no
+  original: the evidence is the log (`hoarding N ground gx,gy=h/...`, one line a hoarding as it is made). On the desk: in the stock
+  Lost Kingdom park, `buy 1100 57 50 0` (a Belly Bounce on the slope covering (57,50)..(59,53); it is bought closed), photograph it
+  with `hoardings`, and the same buy in the original under Proton: the panels' heights, which rises first, where the sign sits.
+- [ ] **Q1525. `FUN_00454050`'s turned arms, read in Ghidra (Q210's leftover).** Q210 ported the rectangle at no turn from the
+  decode (`x0 + trunc( gx * (w - 1) / w + 0.1 )`) and, at 90, 180 and 270, carried the endpoint between the turned rectangle's
+  first and last cells the same way (`ParkRideHoarding.Ground`); the turned arms were not read (no Ghidra in that lane). Read
+  `FUN_00454050` for each quarter turn and fix the test's turned expectations to it. While there: `FUN_00466d70` (a placed
+  object's base height) carries its cell corners through the same function, and `ParkObjects.FootprintHeights` reads them
+  uncompressed (`x0 + column + 1` for a far corner); say whether the original's corners are compressed into the rectangle too.
 - [ ] **Q1035. The bolt's shape is the PC's own, and OpenTPW draws one quad.** From Q152's note (fork review 2, 2026-10-16, `verify-audio-lips-video.md` lead 3): the constructor (`0x0057d2ab`..`0x0057d2e9`) sets roughness 0.6, a stop test of 6 ± 2, a ribbon half-width of 1.3 /
   (depth + 1) in screen units and branch odds of 9 in 512; the midpoint step is `0x0057e4b0` (its offset is not
   perpendicular: it uses |mid|², and its cross term is × 0.0), the branch heading `0x0057e810`, (the colour pulse
