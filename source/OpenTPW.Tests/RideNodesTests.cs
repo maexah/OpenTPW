@@ -595,6 +595,50 @@ public class RideNodesTests
 		Agree( "5 s into Endm3" );
 	}
 
+	/// <summary>
+	/// <b>A node a route carries is followed, and counted nowhere</b> (Q573): the Lost Kingdom bus's sound node 1
+	/// (<c>sound nodetemp</c>, under <c>_fbustemp</c>, the node <c>Busm1</c>'s route moves), the node <c>bus.RSE</c>'s
+	/// <c>ADDOBJ</c> starts its engine sound on, found <c>carried</c> 4 s into <c>Busm1</c> stands where the drawn model
+	/// draws it and is off its rest, and the find reports no <c>RIDE_NODE_ON_A_ROUTE</c>.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the count put back in <c>RideNodes.Stored</c>; a carried find of a routed node reading its rest.</remarks>
+	[TestMethod]
+	[DoNotParallelize]
+	public void ANodeARouteCarriesIsFollowedAndNotCounted()
+	{
+		const string Bus = "levels/jungle/features/bus";
+
+		var players = RideAnimations.Load( Bus, "bus", _data, 1 );
+		var nodes = RideNodes.Load( Bus, "bus", _data, false, players.AllClips )!;
+		var drawn = new Drawn( nodes.Model );
+		var posed = new RideAnimations.Posed[1];
+		var index = nodes.Model.FindNode( 1, RideNodes.SoundSpace );
+
+		Assert.AreEqual( "sound nodetemp", nodes.Model.Nodes[index].Name );
+
+		nodes.PlaceFixed();
+		nodes.Find( 1, RideNodes.SoundSpace, out var rest );
+
+		players.Trigger( 5, 0, 0, 1f, 0 );
+		players.Advance( 4000 );
+		Assert.AreEqual( 0, players.Clip( 5, 0 )!.PathTracks.Single().TargetIndex, "Busm1's route moves _fbustemp" );
+
+		nodes.Follow( players );
+		players.PoseOnto( drawn, posed );
+
+		Unimplemented.Forget();
+
+		Assert.AreEqual( NodeEnd.Posed, nodes.Find( 1, RideNodes.SoundSpace, out var carried, carried: true ) );
+		Assert.AreEqual( 0, Unimplemented.Summary.FirstOrDefault( entry => entry.What == "RIDE_NODE_ON_A_ROUTE" ).Times,
+			"a carried find of a routed node is built, not counted" );
+
+		Assert.IsTrue( System.Numerics.Vector3.Distance( rest, carried ) > 10f, $"the route has carried it: {rest} to {carried}" );
+
+		var at = drawn.Poser.World( index ).Translation;
+
+		Assert.IsTrue( System.Numerics.Vector3.Distance( carried, at ) < 0.01f, $"followed at {carried}, posed at {at}" );
+	}
+
 	/// <summary>A model, or null for a member that is a clip: <see cref="ModelFile"/> refuses one (the clips share the extension).</summary>
 	private static ModelFile? ReadModelOrNull( Stream stream )
 	{
