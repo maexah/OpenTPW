@@ -589,12 +589,21 @@ public sealed class StaffBehaviour
 				break;
 
 			// A handyman's walk to litter and his sweep (FUN_004d73c0's cases 8 and 9, set by FUN_004d7330's table at
-			// 0x004d73a4) are unbuilt: one loaded in either stands where he is, counted on every turn. Any other state
-			// this switch has no arm for is counted by its number.
+			// 0x004d73a4) are unbuilt: one loaded in either is counted and falls to idle with the stamp cleared, so he
+			// decides on the next sweep. A deviation: the original carries on with the walk or the sweep (0x004d741f,
+			// 0x004d742a). Any other state this switch has no arm for is counted by its number and kept.
 			default:
-				Unimplemented.Report( staff.Model == HandymanModel && (int)staff.Activity is 8 or 9
-					? $"HANDYMAN_LITTER_STATE_{(int)staff.Activity}"
-					: $"STAFF_STATE_0x{(int)staff.Activity:x}" );
+				if ( staff.Model == HandymanModel && (int)staff.Activity is 8 or 9 )
+				{
+					Unimplemented.Report( $"HANDYMAN_LITTER_STATE_{(int)staff.Activity}" );
+					Log.Info( $"Staff: handyman {staff.ThingId} loaded in litter state {(int)staff.Activity}, which is "
+						+ $"not built, falls to idle on mGameTick {tick}" );
+					staff.SetActivity( StaffActivity.Idle, tick );
+
+					break;
+				}
+
+				Unimplemented.Report( $"STAFF_STATE_0x{(int)staff.Activity:x}" );
 
 				break;
 		}

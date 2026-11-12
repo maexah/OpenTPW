@@ -13559,3 +13559,11 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   mGameTick U, K sweeps on`; the `staff` census gives `thought` and `bubble`. `AHandymansBubbleGoesOnTheFirstSweepPast
   TwelveAndAGuardsOnHisOwn` gives handyman 25 and guard 28 a bubble on 1001: the handyman's goes on 1014, the guard's on
   1016. Off-screen in a cloud container, the handyman's went 13 sweeps on, the guard's 14; not photographed.
+- [x] **Q1154. A handyman loaded walking to litter or sweeping falls to idle (from Q285).** A handyman loaded from a park
+  file in state 8 or 9 (FUN_004d73c0's cases 8 and 9) takes `StaffBehaviour.Step`'s default arm, is counted
+  (`HANDYMAN_LITTER_STATE_8`, `_9`) and stands in that state for the rest of the session. Until the litter job is built he
+  should fall to idle (a deviation, said at the site: the original carries on with the walk or the sweep, `0x004d741f`,
+  `0x004d742a`) (`Staff.SetActivity( StaffActivity.Idle, tick )`, which clears the stamp so he decides on the next
+  sweep), as Q285's bullet asked; left out of Q285 because it changes what is drawn (he walks off) and that lane could not
+  photograph. Confirm: Alexah's `jungle/New Save.TPWS` (four such handymen) loaded, the `staff` census read before and
+  after a few seconds, predicted first; a photograph of one walking off.
