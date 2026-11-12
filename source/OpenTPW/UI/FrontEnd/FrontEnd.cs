@@ -358,8 +358,12 @@ internal sealed class FrontEnd : Panel
 	/// looks at the player's keys as it comes into view.
 	/// </para>
 	/// <para>
-	/// Over the player slots this opens the game menu. The original's does nothing there: the slots hide the lobby's root
-	/// and take the focus, and they drop keys (<c>docs/QUEUE.md</c> Q64).
+	/// Over the player slots Escape reaches nothing, as in the original: FrontEnd_ShowPlayerSlots hides the lobby's root
+	/// (0x004a65a8) and gives the slots the focus (0x004a65d6), whose callback 0x004a5fc0 drops every key, so the lobby's
+	/// key handler never sees it and no menu opens; the slots' own Quit Game is the way out. A message box closed over
+	/// the slots gives the focus to the hidden root (0x004862a0), which reaches nothing either, so the rule is the root
+	/// being hidden - nobody playing - whatever is in front. <b>OpenTPW differs</b> in one place the original cannot
+	/// reach: a flight the debug console started with nobody playing is still cancelled by Escape.
 	/// </para>
 	/// </summary>
 	private void MenuKey( UiWindow? front )
@@ -380,6 +384,12 @@ internal sealed class FrontEnd : Panel
 			if ( Players.Roster.Current != null )
 				_stack.Open( _islandPanel );
 
+			return;
+		}
+
+		if ( !RootShown )
+		{
+			Log.Info( "Front end: Escape let go over the player slots - they drop every key, so no menu opens" );
 			return;
 		}
 

@@ -710,7 +710,8 @@ over about 42 passes. **Not built** (`LOBBY_FLY_IN_FADE`, `docs/QUEUE.md` Q61).
 - The flight's rates and length are measured (Q670, "The flight measured" above). The rest here was not observed.
 
 **OpenTPW.** `FrontEnd.MenuKey` leaves Escape to the game menu and to a modal window as the focus does, then asks
-`LobbyCameraMode.CancelLeave`, and opens the menu only if it did not answer; a cancel opens the island panel again,
+`LobbyCameraMode.CancelLeave`, and opens the menu only if it did not answer and someone is playing (over the player
+slots the key reaches nothing, next section); a cancel opens the island panel again,
 whose `Shown` looks at the keys. `CancelLeave` shuts the gate from state 2, carries the orbit on from the leave's angle,
 and clears the leave. The gate's M1 is played from `StepLeaving`'s arrival, not at Enter, and `LobbyGate` plays each clip
 once over its declared span, holds its last frame, and keeps one clip queued; the holding, and idling shut
@@ -835,9 +836,10 @@ and Left to the camera while someone is playing and nothing but the island panel
 system sent (`Input.MouseInfo.LeftWentDown`) that no window takes goes to `WindowStack.ViewPressed`, which is
 `FrontEnd.ViewPressed`: Enter this park while someone is playing. `UiControl.Outline` is the polygon region, with
 `0x0066c5a4`'s test, and the island panel's root has the L. `IslandPanel.EnterPark` makes the original's five tests in its
-order, `LobbyIsland.GlobalLoaded` standing for the record, and counts the keys held. Three differences are said at their
-sites: Escape over the player slots opens the game menu here (`docs/QUEUE.md` Q64), Ctrl+H acts on its press (Q65),
-and a disabled button still takes the pointer (Q66). F8 is not built (Q65).
+order, `LobbyIsland.GlobalLoaded` standing for the record, and counts the keys held. Over the player slots, nobody playing, `FrontEnd.MenuKey` drops
+Escape as the slots do (Q64), so no menu opens; only a flight the debug console started with nobody playing, which the
+original cannot have, is still cancelled by it. Two differences are said at their sites: Ctrl+H acts on its press
+(`docs/QUEUE.md` Q65), and a disabled button still takes the pointer (Q66). F8 is not built (Q65).
 
 ### Island sound is one island at a time, and the previous one is stopped
 
