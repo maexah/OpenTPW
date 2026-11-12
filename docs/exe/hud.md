@@ -2126,7 +2126,11 @@ its interior's grid lies over the picture in both games.
 
 Decoded from the listing and the decompiler (`q664/g1`, `g2`, `g3`), measured in the original's stock park (`q664/orig`,
 round a, `mapgrid.py`: every switch and picker pressed in turn, each step's words, records and picture as decoded;
-`q664/PREDICTION.txt`). **Not built here**: counted `MAP_OVERLAY` as the map opens; the build is Q684.
+`q664/PREDICTION.txt`). **Built here: the three words and the buttons that press them** (Q684, `ParkMapOverlay`,
+`ParkMapScreen`; each pick its value as its press puts it down and 0 as it lifts it, the radio group's `0x101` with 1 or 0;
+each button's op 0x12 row while it is down and not held, `0x00669410`). **Not built: the painting** (the code grid, the
+sprite records, the rectangles and the coaster lines), counted `MAP_OVERLAY` as the map opens and on every press; the build
+is Q1572.
 
 **Two layers.** The opener (`Map_Open`, `0x005f0b40`) fills the code grid (`Map_FillCodeGrid`, `FUN_005f2050`, below) and
 makes the sprite records (`Map_MakeSprites`, `FUN_005f3710`, then `Map_MakeRecords`, `FUN_005f3940`); the painter
@@ -2224,7 +2228,7 @@ under the mechanic; a shop's excitement fill is red (nought), a ride at full rep
 
 Decoded from the listing (`Map_ViewportProc`, `0x005f18d0`; `q665/g1`) and measured in the original's stock park
 (`q665/orig`, rounds b and c; `original/mapgrid.py PID hover`, `original/mapptr.py`, `original/maptarget.py`;
-`q665/PREDICTION.txt`). **Not built here**: it waits on the overlay's records and code grid (Q684); its build is Q685.
+`q665/PREDICTION.txt`). **Not built here**: it waits on the overlay's records and code grid (Q1572); its build is Q685.
 
 **The hover** (each move message, `0x10001` and `0x10003`, `0x005f198e`..`0x005f1cfc`):
 

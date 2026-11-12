@@ -185,8 +185,7 @@ internal sealed class ParkBuyScreen : UiWindow
 			Rect = new UiRect( 440, 407, 594, 561 )
 		} );
 
-		// The stats panel, kept as backing art with nothing in it - see the class remarks, and see
-		// ParkMapScreen, which keeps its two bare button panels for the same reason.
+		// The stats panel, kept as backing art with nothing in it - see the class remarks.
 		Root.Add( new UiControl
 		{
 			Id = 0x1ed,

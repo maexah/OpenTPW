@@ -39,6 +39,9 @@ internal class UiControl
 	/// <summary>The row of UIHELPTEXT.str the <see cref="HelpBar"/> shows over it, or -1 for none.</summary>
 	public int HelpText { get; set; } = -1;
 
+	/// <summary>The row the help bar shows over it now: <see cref="HelpText"/>, unless a button's state picks its second row.</summary>
+	internal virtual int HelpRow => HelpText;
+
 	public string? Text { get; set; }
 
 	/// <summary>Which of the <see cref="UiFonts"/> the text is in.</summary>
@@ -400,6 +403,15 @@ internal class UiButton : UiControl
 	/// makes UI_Init's hook play Select3 for its click rather than BUTTON01 (0x00485780).
 	/// </summary>
 	public bool Toggles { get; init; }
+
+	/// <summary>
+	/// The second help row (layout op 0x12), null where none is given here. The button class's help getter
+	/// (<c>0x00669410</c>) answers it while the button's state byte is exactly 1, down and not held, and
+	/// <see cref="UiControl.HelpText"/> (op 0x11) otherwise (<c>docs/exe/hud.md</c>, "The map's overlay").
+	/// </summary>
+	public int? HelpTextOn { get; init; }
+
+	internal override int HelpRow => HelpTextOn is { } on && IsDown && !Pressed ? on : HelpText;
 
 	/// <summary>Whether a click on it tells its parent, and so plays a click - see <see cref="UiSliderThumb"/> for one that does not.</summary>
 	internal virtual bool Clicks => true;

@@ -1212,6 +1212,13 @@ after its poller starts**, so a key meant inside either line cannot be sent afte
   the metrics satisfaction 789, happiness 848, excitement 908; the staff portraits at x 967, handyman y 247, mechanic 321,
   entertainer 395, guard 468. Park the pointer on the text panel (512,740) between clicks so no record is hovered;
   `mapgrid.py PID` after each click.
+  **Ours' switches and pickers, in a cloud lane** (Q684, `lib/consolerun.py`): `40 park jungle`, then
+  `2 !w=$(xdotool search --onlyvisible --name . | head -1); xdotool windowfocus --sync $w key space` opens the map; `control
+  987` and so on give each button's middle (at xvfb's 1280 x 720: switches y 685, rides x 214, sideshows 270, shops 326,
+  miscellaneous 382, tracks 438, visitors 836; satisfaction 899, happiness 955, excitement 1012; the staff at x 1067,
+  handyman y 232, mechanic 301, entertainer 371, guard 439); `click X Y` presses one through the window stack (the log's
+  `Park map: 0x.. pressed, layers 0x.. staff N metric N`), `map` prints the three words, and a pointer put on a button by
+  `xdotool mousemove --window $w X Y` makes `pointer` print its help row. Escape (by `xdotool key`) closes the map.
   **The hover and its click** (Q665, `q665/orig/run.sh`, `runc.sh`): glide onto a point from `maptarget.py`, twice
   (a move message must land there), then `mapgrid.py PID hover` (the record, the word and the label's text) and
   `mapptr.py PID` (the cell the pointer is on). A dot within 5 game pixels wins over the cell, so aim at a cell at

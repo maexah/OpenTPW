@@ -12327,6 +12327,23 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   retail `TP.exe` cannot start under Proton (`exe/boot.md`, "Under Wine and Proton"). Found on the way: the original's
   park clock loses precision with uptime (`exe/park-engine.md`), so timings taken on it need `tpwmem.py clock` first
   (`VERIFYING.md` rule 127).
+- [x] **Q684. The map's six switches and two pickers on the original's three words (Q664's build, its first piece; the
+  painting is Q1572).** From Q664 (`hud.md`, "The map's overlay"). Built (`ParkMapOverlay`, `ParkMapScreen`): the six layer
+  switches (`0x987`, `0x994`, `0x993`, `0x982`, `0x989`, `0x983`; flags `0x11`, each press an XOR of its bit) and the two
+  type-8 pickers (`0x98b`: `0x98e`, `0x98f`, `0x98d`, `0x98c`; `0x996`: `0x999`, `0x998`, `0x997`), each pick its value or 0
+  as its press puts it down or lifts it, on the three words, each starting at 1 and kept across openings; each button's
+  help pair (`UiButton.HelpTextOn`, the op 0x12 row while it is down and not held). `MAP_OVERLAY` counts the opening and
+  each press (the repaint). `ParkMapOverlayTests` (5); off-screen (c107, `consolerun.py`): `layers 0x01 staff 1 metric 1`
+  at the opening, shops then rides `0x02`, the guard twice `staff 0`, excitement `metric 2`, `6x MAP_OVERLAY`, the words
+  the same after Escape and Space again; help rows 268, 267 and 280 under the pointer. Not photographed (Q1573).
+  - **Note (fork watch 2026-10-28, verify-hz-ui-hud L3):** the rule for a toggle's help lives in the button class, not per screen:
+    the base control's vtable slot `+0x2c` returns `+0x90` (op 0x11, `0x0065bc70`), and the button class overrides it
+    (`0x00669410`) with `byte [+0x138] == 1 ? [+0x94] : [+0x90]`; `+0x94` (op 0x12) defaults to -1 and is written by `0x00661850`.
+    `+0x138` is the state byte (press `0x10005` ORs 2, the release `0x10004` of a toggle, flags `0x11`, flips bit 1 and re-asks
+    the help, `0x00669172`, the radio group sets 1 on its pick `0x0066a468`), so a toggle that is on (state exactly 1) shows its
+    op 0x12 row and one held down (3) its op 0x11 row; a row of -1 posts the empty text (`HelpBar_PostControlRow` `0x00492070`).
+    The map's six switches carry two rows each (`hud.md`); `hud.md`'s staff switch (`b_route`, second help 87) was measured NOT shown (`q431/confirm.py`): reconcile that run with this static reading (state byte exactly 1 while on). The new
+    player dialog's own case is Q772.
 
 ## F. Then
 

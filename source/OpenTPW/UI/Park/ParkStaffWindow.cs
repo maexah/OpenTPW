@@ -37,7 +37,8 @@ namespace OpenTPW.UI;
 /// <para>
 /// <b>Counted, not built:</b> the preview's copy of the member's model (<c>FUN_00486530</c>, <c>STAFF_WINDOW_PREVIEW</c>;
 /// the panel stands empty and its click still goes to the member), and the name's edit (<c>FUN_0048d290</c>,
-/// <c>STAFF_WINDOW_NAME_EDIT</c>). The switch's second help row, 87 while it is down, is not shown: a button here has one.
+/// <c>STAFF_WINDOW_NAME_EDIT</c>). The switch's second help row, 87 while it is down, is not given it (<see cref="UiButton.HelpTextOn"/>):
+/// the original was measured not showing it (<c>docs/exe/hud.md</c>), against the button class's reading (Q1573).
 /// </para>
 /// </summary>
 internal sealed class ParkStaffWindow : UiWindow

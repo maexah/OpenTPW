@@ -1571,15 +1571,15 @@ public static class DebugConsole
 					break;
 				}
 
-			// The park map's census: its view (centre, zoom, the picture's source and where it lands) and the help bar's
-			// place; "map zoom Z" sets the kept zoom for a repeatable picture.
+			// The park map's census: its view (centre, zoom, the picture's source and where it lands), the help bar's
+			// place and the overlay's three words; "map zoom Z" sets the kept zoom for a repeatable picture.
 			case "map":
 				if ( parts.Length > 2 && parts[1] == "zoom" )
 					UI.ParkMapView.KeptZoom = Math.Clamp( Argument( 2 ), UI.ParkMapView.MinZoom, UI.ParkMapView.MaxZoom );
 
 				Reply( UI.ParkMapScreen.Current is { } map
-					? $"{map.View} helpbar top {map.HelpBarTop?.ToString() ?? "none"} option {(GameOptions.Current.RightButtonScroll ? "right button" : "pushscroll")}"
-					: $"map: not open, kept zoom {UI.ParkMapView.KeptZoom:0.0}" );
+					? $"{map.View} helpbar top {map.HelpBarTop?.ToString() ?? "none"} option {(GameOptions.Current.RightButtonScroll ? "right button" : "pushscroll")}, {UI.ParkMapOverlay.Census}"
+					: $"map: not open, kept zoom {UI.ParkMapView.KeptZoom:0.0}, {UI.ParkMapOverlay.Census}" );
 				break;
 
 			// Where the park camera is, in world units and in grid cells - the two coordinate systems
