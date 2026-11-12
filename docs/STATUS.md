@@ -46,6 +46,7 @@ Only the item just landed is here. Every earlier item's account is in `docs/hist
 
 ## Numbers (take counts fresh; these go stale within a day)
 
+- Linux, 2026-11-12, run 22's tip (`gate.sh`; Q613 with review fix groups T and U, gated here): with the game, 5810 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5812; with no game named, 2508 passed, 0 failed, 3304 skipped. The rows below from Q221 to Q613 give each commit's expected counts (the chain's count plus that item's own change); only this row was measured.
 - Linux, 2026-11-12, Q613 (`capped.sh`; cull what the original culls; five tests added, four needing no game; built in a cloud container, re-gated here after Q287): with the game, 5807 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5809; with no game named, 2503 passed, 0 failed, 3306 skipped.
 - Linux, 2026-11-12, Q287 (`capped.sh`; the hire screen's wage preview held; one test added, needing the game; built in a cloud container, re-gated here after Q155): with the game, 5802 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5804; with no game named, 2499 passed, 0 failed, 3305 skipped.
 - Linux, 2026-11-12, Q155 (`capped.sh`; the speed word's remaining readers; eight tests added, one needing no game; built in a cloud container, re-gated here after Q457): with the game, 5801 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5803; with no game named, 2499 passed, 0 failed, 3304 skipped.
