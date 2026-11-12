@@ -52,10 +52,9 @@ public sealed class ParkBuildMarkers : ModelEntity
 
 	/// <summary>
 	/// The marker table at <c>0x00763b38</c>, in its own order: an index there is the texture a square
-	/// wears. Loaded from <c>data/generic/dynamic/textures</c> at every texture quality. <b>Deviation:</b> the
-	/// original takes <c>STexture</c> (<c>0x00763ee4</c>) where <c>FUN_0054dcc0</c> answers 1, texture quality 0 or 1
-	/// (<c>FUN_0053d790</c>, <c>0x0053d7b4</c>), as <see cref="ParkSea"/> and <see cref="ParkFlags"/> do; blue and red
-	/// differ between the two folders. Not built: a change to what is drawn is confirmed in the running game.
+	/// wears. Loaded from <c>data/generic/dynamic/stexture</c> where <c>FUN_0054dcc0</c> answers 1, texture quality 0
+	/// or 1, else <c>textures</c> (<c>FUN_0053d790</c>, <c>0x0053d7b4</c>; <see cref="FolderFor"/>), as
+	/// <see cref="ParkSea"/> and <see cref="ParkFlags"/> do; blue and red differ between the two folders.
 	/// </summary>
 	private static readonly string[] MarkerNames =
 	[
@@ -217,25 +216,40 @@ public sealed class ParkBuildMarkers : ModelEntity
 	internal static (float X, float Y) Glide( (float X, float Y) from, (float X, float Y) to, float factor )
 		=> (from.X + ((to.X - from.X) * factor), from.Y + ((to.Y - from.Y) * factor));
 
-	public ParkBuildMarkers()
+	/// <summary>The folder the textures came from: <c>stexture</c> at low texture quality, else <c>textures</c>.</summary>
+	public string Folder { get; }
+
+	/// <summary>The markers, their textures the small copies where <paramref name="textureQuality"/> is 0 or 1, as the sea's.</summary>
+	public ParkBuildMarkers( int textureQuality )
 	{
 		Name = "build markers";
 
-		for ( var slot = 0; slot < _textures.Length; ++slot )
-			_textures[slot] = slot < Drawn.Length ? Load( MarkerNames[Drawn[slot]] ) : Texture.Missing;
+		Folder = FolderFor( textureQuality );
 
+		var paths = TexturePaths( Folder );
+		for ( var slot = 0; slot < _textures.Length; ++slot )
+			_textures[slot] = slot < paths.Length ? Load( paths[slot] ) : Texture.Missing;
+
+		Log.Info( $"Build markers: {paths.Length} textures from {Folder}" );
 		Current = this;
 	}
 
-	private static Texture Load( string name )
+	/// <summary>The folder a texture quality takes the markers from: <c>stexture</c> at 0 or 1 (<see cref="ParkSea.SmallTextures"/>), else <c>textures</c>.</summary>
+	internal static string FolderFor( int textureQuality ) => ParkSea.SmallTextures( textureQuality ) ? "stexture" : "textures";
+
+	/// <summary>The file each material slot loads, in <see cref="Drawn"/>'s order, from <paramref name="folder"/>.</summary>
+	internal static string[] TexturePaths( string folder )
+		=> Drawn.Select( marker => $"generic/dynamic/{folder}/{MarkerNames[marker]}.wct" ).ToArray();
+
+	private static Texture Load( string path )
 	{
 		try
 		{
-			return new Texture( $"generic/dynamic/textures/{name}.wct" );
+			return new Texture( path );
 		}
 		catch ( Exception e )
 		{
-			Log.Warning( $"Build markers: {name}.wct would not load - {e.Message}" );
+			Log.Warning( $"Build markers: {path} would not load - {e.Message}" );
 			return Texture.Missing;
 		}
 	}

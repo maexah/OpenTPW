@@ -442,7 +442,7 @@ public class Level
 		load.Mark( "queues" );
 
 		// The queue tool's squares, drawn over whichever of those three is under them.
-		_ = new ParkBuildMarkers();
+		_ = new ParkBuildMarkers( TextureQuality() );
 
 		_ = new ParkTerrain( ThemeName );
 		load.Mark( "terrain" );
