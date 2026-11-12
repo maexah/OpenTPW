@@ -38,6 +38,10 @@ internal static class ParkCreateEffect
 		var baseHeight = ParkItemHeights.BaseOf( item, placed, field ).Under;
 		var box = Box.Of( ParkObjects.SoundBoxOf( item, placed ), baseHeight, heights, field.CellSizeX, field.CellSizeY );
 
+		// The original goes on to make the thing's sound zone over the same box, its +0xd4, whatever the spawn answered
+		// (0x00558fda, FUN_0051c640): not built.
+		Unimplemented.Report( "CREATE_SOUND_ZONE" );
+
 		return Start( system, item.CreateParticleEffect, box, baseHeight );
 	}
 

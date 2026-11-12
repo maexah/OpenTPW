@@ -138,36 +138,73 @@ public class ParkStandInCountsTests
 	/// <b>The entry-price screen letters the park's name in its heading as <c>UI_SetTitle</c> letters a title</b>
 	/// (<c>0x00498e4c</c>): the stock park's gate thing (11) holds "LOST" and "Kingdom", so the heading reads "LOST Kingdom", in
 	/// font 5 in (234, 239, 102) with its edge, in the stream's rect widened to 513..1457. The name is the file's lines, not
-	/// the gate's item's rows of <c>OBJECT_NAMES</c> (which read the same in the stock park), and nothing is counted for a park with a file.
+	/// the gate's item's rows of <c>OBJECT_NAMES</c>, which read the same in the stock park: the same park with the gate's two
+	/// lines (<c>+60</c>, <c>+62</c>, four bytes a character) rewritten to "Jungle" and "Fever" letters "Jungle Fever" where
+	/// the item's rows still read "LOST Kingdom". Nothing is counted for a park with a file.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> the heading left empty; the gate named by its item's table rows; the lines joined without
-	/// the space; the lines swapped; the white of the stream; the stream's rect unwidened.</remarks>
+	/// <remarks><b>Mutations:</b> the heading left empty; the gate named by its item's table rows (<c>NameOfThing</c> at the call
+	/// site, "LOST Kingdom" for the rewritten park); the lines joined without the space; the lines swapped; the white of the
+	/// stream; the stream's rect unwidened.</remarks>
 	[TestMethod]
 	public void TheEntryPriceScreenLettersTheParksNameInItsHeading()
 	{
-		var counted = Times( "ENTRY_PRICE_TITLE_PARK_NAME" ) + Times( "ENTRY_PRICE_FRESH_PARK_NAME" );
+		var counted = Times( "ENTRY_PRICE_FRESH_PARK_NAME" );
 
 		_stack.Open( new ParkEntryPriceScreen( _stack ) );
 
 		var heading = Find( _stack.Windows.OfType<ParkEntryPriceScreen>().Single().Root, 0x4f3af );
 
 		Assert.AreEqual( "LOST Kingdom", heading.Text );
-		Assert.AreEqual( "LOST Kingdom", ParkEntryPriceScreen.ParkName( Level.Current!.Park, _ => "the item's rows" ), "the file's lines, not the item's rows" );
 		Assert.AreEqual( new UiColour( 234, 239, 102 ), heading.TextColour );
 		Assert.IsTrue( heading.TextShadow );
 		Assert.AreEqual( 5, heading.Font );
 		Assert.AreEqual( new UiRect( 513, 174, 1457, 253 ), heading.Rect );
-		Assert.AreEqual( counted, Times( "ENTRY_PRICE_TITLE_PARK_NAME" ) + Times( "ENTRY_PRICE_FRESH_PARK_NAME" ) );
+
+		byte[] payload;
+
+		using ( var stream = new MemoryStream( FileSystem.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) ) )
+			payload = new SaveReader( stream ).ReadFile();
+
+		var at = Enumerable.Range( 0, payload.Length - 64 ).Where( start => HoldsLines( payload, start, "LOST", "Kingdom" ) ).ToList();
+		Assert.AreEqual( 1, at.Count, "the gate's two lines, once in the file" );
+		WriteLines( payload, at[0], "Jungle", "Fever" );
+
+		var renamed = new ParkWorld( payload );
+		typeof( Level ).GetProperty( nameof( Level.Park ) )!.SetValue( Level.Current, renamed );
+
+		var again = new ParkEntryPriceScreen( _stack );
+		_stack.Open( again );
+
+		Assert.AreEqual( "Jungle Fever", Find( again.Root, 0x4f3af ).Text, "the file's lines" );
+		Assert.AreEqual( "LOST Kingdom", ParkVisitorWindow.NameOfThing( renamed.ParkGates ), "not the item's rows" );
+		Assert.AreEqual( counted, Times( "ENTRY_PRICE_FRESH_PARK_NAME" ) );
+	}
+
+	/// <summary>Whether a name's two lines start at <paramref name="at"/>: a character of each every four bytes, the second line's two after the first's, each up to its nought.</summary>
+	private static bool HoldsLines( byte[] payload, int at, string lineA, string lineB )
+	{
+		bool Holds( int start, string line )
+			=> Enumerable.Range( 0, line.Length + 1 ).All( i => BitConverter.ToUInt16( payload, start + (i * 4) ) == (i < line.Length ? line[i] : 0) );
+
+		return Holds( at, lineA ) && Holds( at + 2, lineB );
+	}
+
+	/// <summary>Writes a name's two lines at <paramref name="at"/> as <see cref="HoldsLines"/> reads them, the rest of each 33-character line nought.</summary>
+	private static void WriteLines( byte[] payload, int at, string lineA, string lineB )
+	{
+		for ( var i = 0; i < 33; ++i )
+		{
+			BitConverter.TryWriteBytes( payload.AsSpan( at + (i * 4) ), (ushort)(i < lineA.Length ? lineA[i] : 0) );
+			BitConverter.TryWriteBytes( payload.AsSpan( at + 2 + (i * 4) ), (ushort)(i < lineB.Length ? lineB[i] : 0) );
+		}
 	}
 
 	/// <summary><b>The gadget writes its date again on a frame</b>, from UITEXT 448 (Q527): 10 January 2000 at the build,
-	/// 13 February 2000 (tick 1000) after a frame, and nothing counted for it.</summary>
-	/// <remarks><b>Mutations:</b> written only at the build; the report put back.</remarks>
+	/// 13 February 2000 (tick 1000) after a frame.</summary>
+	/// <remarks><b>Mutations:</b> written only at the build.</remarks>
 	[TestMethod]
 	public void TheGadgetRewritesItsDateOnAFrame()
 	{
-		var before = Times( "GADGET_DATE_UITEXT_448" );
-
 		try
 		{
 			GameCalendar.Rebase( 208 );
@@ -179,7 +216,6 @@ public class ParkStandInCountsTests
 			_stack.Update();
 
 			Assert.AreEqual( "2.13.2000", FindOrNull( gadget.Root, 0x20 )!.Text );
-			Assert.AreEqual( before, Times( "GADGET_DATE_UITEXT_448" ), "no longer a stand-in" );
 		}
 		finally
 		{
@@ -219,35 +255,6 @@ public class ParkStandInCountsTests
 
 		Assert.AreEqual( $"item rows of {fresh.ParkGates}", ParkEntryPriceScreen.ParkName( fresh, id => $"item rows of {id}" ) );
 		Assert.AreEqual( before + 1, Times( "ENTRY_PRICE_FRESH_PARK_NAME" ) );
-	}
-
-	/// <summary>
-	/// <b>The gadget letters the calendar's date from UITEXT 448</b>, day, month and year unpadded with the month from one and
-	/// the year whole, as the american table orders them (Q527): <c>mGameTick</c> 5000 is 5 August 2000, "8.5.2000"; nothing is counted.
-	/// </summary>
-	/// <remarks><b>Mutations:</b> the machine's short date ("8/5/2000"); the month from nought ("7.5.2000"); the year less
-	/// 1900 ("8.5.100"); the day and the month swapped ("5.8.2000"); the count left in.</remarks>
-	[TestMethod]
-	public void TheGadgetLettersTheDateFromUitext448()
-	{
-		var before = Times( "GADGET_DATE_UITEXT_448" );
-
-		try
-		{
-			GameCalendar.Rebase( 5000 );
-
-			var gadget = new ParkGadget( _stack );
-			_stack.Open( gadget );
-			_stack.Update();
-
-			Assert.AreEqual( new DateTime( 2000, 8, 5, 0, 20, 0 ), GameCalendar.Now );
-			Assert.AreEqual( "8.5.2000", Find( gadget.Root, 0x20 ).Text );
-			Assert.AreEqual( before, Times( "GADGET_DATE_UITEXT_448" ) );
-		}
-		finally
-		{
-			GameCalendar.Rebase();
-		}
 	}
 
 	/// <summary>

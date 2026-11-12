@@ -985,6 +985,59 @@ public class ParkListScreenRewriteTests
 			string.Join( "; ", clicked ) );
 	}
 
+	/// <summary>
+	/// <b>A tab of every tabbed list screen plays <c>Select3</c> (189)</b>: the tab tells its type-8 group, and the hire, buy,
+	/// all-staff and all-items groups carry flags <c>0x11</c> (<c>docs/exe/hud.md</c>, "Which window the click sound is for";
+	/// <see cref="UiControl.Flag10"/>), where the map's groups, flags <c>0x1</c>, play <c>BUTTON01</c> (<c>ParkMapOverlayTests</c>).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> one screen's group without <c>Flag10</c> (its tabs 31); the receiver's flag not read (every tab 31).</remarks>
+	[TestMethod]
+	public void EveryTabClicksSelect3()
+	{
+		var real = new WindowStack();
+		var clicked = new List<string>();
+		var lastTabs = new[] { typeof( ParkBuyScreen ), typeof( ParkItemsScreen ) }
+			.Select( screen => screen.GetField( "_lastTab", BindingFlags.Static | BindingFlags.NonPublic )! )
+			.Select( field => (field, field.GetValue( null )) ).ToList();
+
+		try
+		{
+			foreach ( var (name, open) in new (string, Func<UiWindow>)[]
+			{
+				("hire", () => new ParkHireScreen( real )), ("buy", () => new ParkBuyScreen( real )),
+				("all staff", () => new ParkStaffScreen( real )), ("all items", () => new ParkItemsScreen( real ))
+			} )
+			{
+				var screen = open();
+				real.Open( screen );
+
+				var tabs = Descendants( screen.Root ).OfType<UiRadioGroup>().SelectMany( group => group.Children.OfType<UiButton>() ).ToList();
+				Assert.IsTrue( tabs.Count >= 4, $"{name}: its tabs" );
+
+				foreach ( var tab in tabs )
+				{
+					var at = tab.Pixels;
+					UiSounds.LastClick = null;
+					real.ClickAt( at.X + (at.Width / 2f), at.Y + (at.Height / 2f) );
+					clicked.Add( $"{name} 0x{tab.Id:x} {UiSounds.LastClick?.ToString() ?? "none"}" );
+				}
+
+				real.Close( screen );
+			}
+		}
+		finally
+		{
+			foreach ( var (field, value) in lastTabs )
+				field.SetValue( null, value );
+
+			UiSounds.LastClick = null;
+		}
+
+		Assert.AreEqual( 5 + 4 + 5 + 4, clicked.Count, string.Join( "; ", clicked ) );
+		CollectionAssert.AreEqual( clicked.Select( line => line[..line.LastIndexOf( ' ' )] + " 189" ).ToList(), clicked,
+			string.Join( "; ", clicked ) );
+	}
+
 	private static void ClickEveryHeading( WindowStack real, List<string> clicked )
 	{
 		foreach ( var (name, open) in new (string, Func<UiWindow>)[]

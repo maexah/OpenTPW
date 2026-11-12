@@ -112,7 +112,9 @@ public sealed class ParkRides : Entity
 
 		// The engine's script loader starts the item's create effect over the cells its model covers as a bought
 		// thing's script starts (FUN_005587f0, 0x00558e7c; docs/exe/park.md, "What building a thing gives off").
-		// A fixed item stands on no cells of its own here, where the original's record holds cell (0,0) alone: counted.
+		// A fixed item stands on no cells of its own here, where the original's record holds cell (0,0) alone: counted. Dead by
+		// CONTENT: every fixed item of the four themes declares Create 0 (FileFormats sam.md, "The particle effects an item gives
+		// off"), and a made vehicle's model is stood only at the next ParkFixedItems.Sync, so it would take the branch below.
 		if ( item.CreateParticleEffect != 0 )
 		{
 			if ( _objects is { } objects && objects.ModelFor( placed.ThingId ) is not null && objects.StoredFootprint( placed.ThingId ) is null )

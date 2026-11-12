@@ -68,6 +68,7 @@ public class ParkBuildParticleTests
 
 	/// <summary>The Huge Hollow Rock, whose model stands a row off its anchor (Q744).</summary>
 	private const int HollowRockItem = 1427;
+	private const int BellyBounceItem = 1100;
 
 	/// <summary>An id nothing in the shipped park uses, for a thing bought by a test.</summary>
 	private const int BoughtThing = 77;
@@ -126,11 +127,12 @@ public class ParkBuildParticleTests
 	/// because their items declare 0; the rest of a park's things come back through the save-state reader, which does not
 	/// reach it. So the shipped park bound as it loads starts no emitter, the gates bought, declaring 0, none, and a Round
 	/// Fountain bought one: effect 81, life 30, at most 146 particles at the shipped park's density of 500, as the original's
-	/// (<c>original/emitters.py</c>, Q663).
+	/// (<c>original/emitters.py</c>, Q663). The sound zone the original makes over the same box next (<c>0x00558fda</c>) is not
+	/// built: counted <c>CREATE_SOUND_ZONE</c> once for the fountain and not for the gates (rule 4).
 	/// </summary>
 	/// <remarks>
 	/// <b>Mutations:</b> the start taken out of <c>BindNew</c> leaves no emitter; <c>Info.DestroyParticleEffect</c> started in
-	/// its place fails it. Not run: dropping the effect's test (it would start the gates' nought, a running effect
+	/// its place fails it; the zone's count left out (0) or made before the effect's test (the gates 1). Not run: dropping the effect's test (it would start the gates' nought, a running effect
 	/// of its own) and starting where the load binds (it would start the shipped park's things); the assertions on the
 	/// gates and the load answer each.
 	/// </remarks>
@@ -140,6 +142,7 @@ public class ParkBuildParticleTests
 		var world = World();
 		var catalogue = new ParkItemCatalogue( Theme, data );
 		var rides = Bind( world, catalogue );
+		Unimplemented.Forget();
 
 		Assert.IsTrue( rides.Scheduler.Count > 0, "the shipped park's things run their scripts" );
 		Assert.AreEqual( 0, CreateEffects.Length, "a load starts no create effect" );
@@ -150,6 +153,7 @@ public class ParkBuildParticleTests
 		Assert.IsTrue( catalogue.TryGet( gates.CatalogueId, out var gatesItem ), "the gates' item" );
 		Assert.IsTrue( rides.BindNew( gates with { ThingId = BoughtThing + 1 }, gatesItem ), "the gates run a script" );
 		Assert.AreEqual( 0, StartedSince( before ).Length, "effect nought starts nothing" );
+		Assert.AreEqual( 0, SoundZones, "and makes no sound zone" );
 
 		var fountain = world.Objects.Single( candidate => candidate.ThingId == RoundFountainThing );
 
@@ -159,7 +163,10 @@ public class ParkBuildParticleTests
 		var started = StartedSince( before ).Single();
 
 		Assert.AreEqual( (81, 30, 146), (started.Effect, started.Lifetime, started.MaxParticles), "the fountain's 81, as the original's" );
+		Assert.AreEqual( 1, SoundZones, "its sound zone, unbuilt, counted" );
 	}
+
+	private static int SoundZones => Unimplemented.Summary.FirstOrDefault( gap => gap.What == "CREATE_SOUND_ZONE" ).Times;
 
 	/// <summary>
 	/// <b>The effect starts at the middle of its model's cells, at its base height, spread over half its box across and along
@@ -167,16 +174,19 @@ public class ParkBuildParticleTests
 	/// 1024ths it is started at). The shipped park's Round Fountain, turned, covers (57,17)..(59,19), its base at nought and
 	/// its <c>.hmp</c> box 34.0 high: (37440, 0, 11840), area (960, 544, 960). The Huge Hollow Rock bought at (19,27) unturned
 	/// stands its model a row before its anchor (Q744): its cells (19,26)..(23,30), its base at -4.5 and its box 23.39 high:
-	/// (13760, -288, 18240), area (1600, 374, 1600).
+	/// (13760, -288, 18240), area (1600, 374, 1600). The Belly Bounce bought at (40,40) unturned covers three cells across and
+	/// four along, (40,40)..(42,43): (26560, 531, 26880), area (960, 308, 1280), its across and along apart.
 	/// </summary>
 	/// <remarks>
 	/// <b>Mutations:</b> the anchor's footprint for the model's cells gives the rock z 18880; the ground under the anchor for
 	/// the base height gives the rock y -384; the box's least corner for its middle gives the fountain (36480, 0, 10880); the
-	/// box's full height for its quarter gives 2176 and 1496.
+	/// box's full height for its quarter gives 2176 and 1496; the box's width and depth swapped give the Belly Bounce's area
+	/// (1280, 308, 960).
 	/// </remarks>
 	[TestMethod]
 	[DataRow( RoundFountainThing, 0, 0, 0, 37440, 0, 11840, 960, 544, 960, DisplayName = "the shipped park's Round Fountain, turned" )]
 	[DataRow( 0, HollowRockItem, 19, 27, 13760, -288, 18240, 1600, 374, 1600, DisplayName = "the Huge Hollow Rock, a row off its anchor" )]
+	[DataRow( 0, BellyBounceItem, 40, 40, 26560, 531, 26880, 960, 308, 1280, DisplayName = "the Belly Bounce, three cells across and four along" )]
 	public void TheCreateEffectStartsOverItsModelsBox( int thingId, int itemId, int cellX, int cellY,
 		int x, int y, int z, int areaX, int areaY, int areaZ )
 	{

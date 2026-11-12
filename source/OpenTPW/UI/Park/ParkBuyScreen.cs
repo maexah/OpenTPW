@@ -257,6 +257,7 @@ internal sealed class ParkBuyScreen : UiWindow
 		_tabs = _list.Add( new UiRadioGroup
 		{
 			Id = 0x1f9,
+			Flag10 = true,
 			Rect = new UiRect( 1280, 192, 1745, 300 )
 		} );
 

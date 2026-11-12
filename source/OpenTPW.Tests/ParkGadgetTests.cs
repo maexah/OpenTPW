@@ -164,14 +164,12 @@ public class ParkGadgetTests
 
 	/// <summary>
 	/// <b>The gadget letters the park's date when it is built</b>: tick 208 is 10 January 2000 (208 x 15,000 / 4 seconds
-	/// is nine days and a little), so "1.10.2000", and nothing is counted for it.
+	/// is nine days and a little), so "1.10.2000".
 	/// </summary>
-	/// <remarks><b>Mutations:</b> the machine's short date; the report put back.</remarks>
+	/// <remarks><b>Mutations:</b> the machine's short date.</remarks>
 	[TestMethod]
 	public void TheGadgetLettersTheParksDateWhenBuilt()
 	{
-		var counted = Unimplemented.Summary.FirstOrDefault( entry => entry.What == "GADGET_DATE_UITEXT_448" ).Times;
-
 		try
 		{
 			GameCalendar.Rebase( 208 );
@@ -179,7 +177,6 @@ public class ParkGadgetTests
 
 			Assert.AreEqual( new DateTime( 2000, 1, 10 ), GameCalendar.Now.Date );
 			Assert.AreEqual( "1.10.2000", Find( gadget.Root, 0x20 ).Text );
-			Assert.AreEqual( counted, Unimplemented.Summary.FirstOrDefault( entry => entry.What == "GADGET_DATE_UITEXT_448" ).Times );
 		}
 		finally
 		{

@@ -1,6 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NeoVeldrid;
 using OpenTPW.UI;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Loader;
@@ -46,6 +47,7 @@ public class ParkMapOverlayTests
 		Input.Mouse = new();
 		Input.ForgetHeldKeys();
 		Unimplemented.Forget();
+		UiSounds.LastClick = null;
 	}
 
 	/// <summary>
@@ -102,7 +104,9 @@ public class ParkMapOverlayTests
 	/// <b>A pick takes its value, and a press on the chosen one leaves none</b> (the group posts <c>0x101</c> with the button
 	/// and 1 as it goes down, 0 as it comes up; the word is the value or 0). The staff values are 1 handyman, 2 mechanic,
 	/// 3 guard, 4 entertainer, so the guard, below the entertainer on the screen, is 3; the metrics 1 happiness, 2
-	/// excitement, 3 satisfaction, so satisfaction, the left one, is 3.
+	/// excitement, 3 satisfaction, so satisfaction, the left one, is 3. Each <c>0x101</c> repaints (<c>Map_Proc</c>'s arms,
+	/// <c>0x005f1406</c>..<c>0x005f141b</c>), so a pick that moves the choice counts the unpainted overlay twice, (old, 0) and
+	/// (id, 1), and one from none or a lift once: 2, 2, 2, 1, 1 and 2, 2, 1, 1 after the opening's one, 15.
 	/// </summary>
 	[TestMethod]
 	public void APickTakesItsValueAndAPressOnTheChosenOneLeavesNone()
@@ -126,6 +130,31 @@ public class ParkMapOverlayTests
 		}
 
 		Assert.AreEqual( 1, ParkMapOverlay.Layers, "no pick touches the layer word" );
+		Assert.AreEqual( 15, Times( "MAP_OVERLAY" ), "a repaint for each 0x101" );
+	}
+
+	/// <summary>
+	/// <b>Every one of the map's 13 buttons clicks <c>BUTTON01</c> (31), not <c>Select3</c> (189)</b>: the click hook picks the
+	/// sound by the receiver's flag <c>0x10</c> (<c>0x004857cb</c>), and the switches tell the root <c>0x980</c> and the picks
+	/// their groups <c>0x98b</c> and <c>0x996</c>, all three flags <c>0x1</c> (stream <c>0x00774da0</c>; <c>docs/exe/hud.md</c>,
+	/// "Which window the click sound is for"). The tabs' groups, flags <c>0x11</c>, play 189 (<c>ParkListScreenRewriteTests</c>).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the button's own <c>Toggles</c> read for the sound (every one 189); any group's option taken for
+	/// <c>Select3</c> (the picks 189).</remarks>
+	[TestMethod]
+	public void EveryButtonOfTheMapClicksButton01()
+	{
+		var (stack, map) = Open();
+		var clicked = new List<string>();
+
+		foreach ( var id in new[] { 0x987, 0x994, 0x993, 0x982, 0x989, 0x983, 0x98e, 0x98f, 0x98d, 0x98c, 0x999, 0x998, 0x997 } )
+		{
+			UiSounds.LastClick = null;
+			Click( stack, map, id );
+			clicked.Add( $"{id:x} {UiSounds.LastClick?.ToString() ?? "none"}" );
+		}
+
+		CollectionAssert.AreEqual( clicked.Select( line => line[..3] + " 31" ).ToList(), clicked, string.Join( "; ", clicked ) );
 	}
 
 	/// <summary>

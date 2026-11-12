@@ -1447,6 +1447,12 @@ control constructor stores the layout's flags at `+0x48` (`0x0065bd2c`) and the 
   to `[button+0x60]` (`0x006691e5`..`0x006691f9`) only while `0x00668eff` answers 1, which it does not after a repeat (`+0x15a` 2, `0x00668f18`).
   So an arrow clicked without repeating plays **`0xbd`** (its receiver is the bar, flags `0x10`), and an arrow **held past 500 ms plays nothing**: the
   repeats `0x10009` / `0x10008` are not `0x100`. The thumb and the track post no `0x100`. Q918 built the bar and the arrows: a quick click plays `Select3`, a repeat and the release after one play nothing.
+- **A switch or a group's option** tells its parent too, so its own flag `0x10` does not choose the sound; its receiver's does (the
+  review of 2026-11-12, VERIFY-23). Window roots are flags `0x1` (the options screen's `0x1d4c0`, the map's `0x980`, the entry price's
+  `0x4f3aa`, the object window's `0x3e14`, the shop's `0xc066`, the staff window's `0x50a`; the gadget's panel `0x25`), so their switches and
+  doors play `BUTTON01`. Every type-8 group walked is flags `0x11` (the buy `0x1f9`, hire `0x248f`, staff `0x322` and all-items `0x12c4b9`
+  tabs, the new player dialog's `0x70c`), so its options play `Select3`, except the map's `0x98b` and `0x996` and the locator's `0x95d`
+  (flags `0x1`): `BUTTON01`. Ours reads it as `UiControl.Flag10` on the receiver (`WindowStack.Release`).
 - **The rename boxes' keys.** The edit control sends `0x802` (Enter, only when its own `+0x48` lacks `0x80`), `0x803` (Tab) and `0x804` (Escape) to its
   parent at once (`0x00667fee`: `0x00668020`, `0x00668054`, `0x00668078`). In the two-line boxes (the object's, handler `0x0048d640`, layout `0x00750090`,
   opener `0x0048d370`; the park's, `0x004993e0`, layout `0x00751928`, opener `0x004990f0`), **Enter on the first line (control `0x3943c`) moves the focus
@@ -1841,8 +1847,9 @@ button whose flags (`FUN_0065d57c`) hold `0x10` is let go: the button class's pr
 `FUN_00492070` for the sink's control (`+0x14`) while `+4` is set. Whether it posts again at a change made without a
 release is not decoded. A press posts nothing (`0x10005` to the button, `0x00669003`..`0x006690c5`), and the leave of a held
 button clears its held bit (`0x00669278`), so the pointer coming back posts state 1's row. The release of a toggle that is
-a radio group's chosen option sets state 0, posts (op 0x11's row) and only then is put down again by the group with no post
-(`0x0066a468`), so that row stands until the pointer leaves. Ours posts a control's row again when the pointed control or
+a radio group's chosen option sets state 0 and posts (op 0x11's row); a group flagged `0x10` then puts it down again with no
+post (`0x0066a455`..`0x0066a468`), and one without it (the map's `0x98b` and `0x996`) selects none and posts its parent `0x101`
+with 0 (`0x0066a42d`..`0x0066a44b`), so that row stands until the pointer leaves either way. Ours posts a control's row again when the pointed control or
 its `HelpText` changes (the doors' and the gadget's swaps), never for its state alone, and `WindowStack.Release` posts the
 row after the release of a button that carries `HelpWhenOn` and is a switch or a group's option (Q772, review 22). Measured here
 (`q473/run1`, 10 of 10, and main's build `q473/ctl1`, which kept 441 over the hoarding and emptied the bar under the
@@ -2205,9 +2212,11 @@ its interior's grid lies over the picture in both games.
 Decoded from the listing and the decompiler (`q664/g1`, `g2`, `g3`), measured in the original's stock park (`q664/orig`,
 round a, `mapgrid.py`: every switch and picker pressed in turn, each step's words, records and picture as decoded;
 `q664/PREDICTION.txt`). **Built here: the three words and the buttons that press them** (Q684, `ParkMapOverlay`,
-`ParkMapScreen`; each pick its value as its press puts it down and 0 as it lifts it, the radio group's `0x101` with 1 or 0;
+`ParkMapScreen`; each pick its value as its press puts it down and 0 as it lifts it, the radio group's `0x101` with 1 or 0
+(the groups `0x98b` and `0x996` carry flags `0x1`, not `0x11`, so a press on the chosen one lifts it, the type-8 proc `0x0066a31c`,
+and every one of the 13 buttons clicks `BUTTON01`);
 each button's op 0x12 row while it is down, `UiButton.HelpWhenOn`, by the tree stream's op 0x12 above). **Not built: the painting** (the code grid, the
-sprite records, the rectangles and the coaster lines), counted `MAP_OVERLAY` as the map opens and on every press; the build
+sprite records, the rectangles and the coaster lines), counted `MAP_OVERLAY` as the map opens and on every press, twice for a pick that moves the choice (one for each `0x101`); the build
 is Q1572.
 
 **Two layers.** The opener (`Map_Open`, `0x005f0b40`) fills the code grid (`Map_FillCodeGrid`, `FUN_005f2050`, below) and
@@ -4688,7 +4697,7 @@ its newest (`Analyser_RecentlyResearchedBack` `0x004caa70`: at or before the new
 once the ring has wrapped, else nought), 2 on a match; else 0. The ring is the analyser's (`park-engine.md`, "The lab at
 work", message `0x11`). Built (`ParkBuyScreen.StateOf`, `ParkResearchedRings`): Dino Karts starred and the Belly Bounce
 ticked in both games, and the state heading's sort the original's (`q702/side-by-side.png`). The original draws an empty
-box on a row of state 0, this list nothing (Q158).
+box on a row of state 0, this list nothing (Q1559).
 
 **The mystery row** is inside the researched test, never an unresearched item's (`0x004ab023`): a researched item
 whose `UsageInfo.GoldenTicketCost` (`item+0xC4`, a dword; `Research.Group` is `+0x178`) is above nought and whose id

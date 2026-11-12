@@ -208,8 +208,8 @@ internal sealed class ParkMapScreen : UiWindow
 		} );
 
 		// The six layer switches (type 2, flags 0x11): each press XORs its bit of the layer word (Map_Proc 0x005f1130,
-		// message 0x100). Each carries a pair of help rows, "show" (op 0x11) while it is up or held and "hide" (op 0x12)
-		// while it is down.
+		// message 0x100). Each carries a pair of help rows, "show" (op 0x11) while it is up and "hide" (op 0x12) while it is
+		// down, held or not (UiButton.ShownHelp).
 		Switch( 0x987, new UiRect( 64, 1409, 167, 1512 ), 267, "b_srides", ParkMapOverlay.Rides );
 		Switch( 0x994, new UiRect( 184, 1409, 286, 1512 ), 271, "b_sshow", ParkMapOverlay.Sideshows );
 		Switch( 0x993, new UiRect( 303, 1409, 406, 1512 ), 269, "b_sshop", ParkMapOverlay.Shops );
@@ -264,8 +264,10 @@ internal sealed class ParkMapScreen : UiWindow
 
 	/// <summary>
 	/// One option of a picker, a switch (flags 0x11) in a type-8 group. Its press flips it, and the group posts the map
-	/// <c>0x101</c> with it and 1 if it went down, 0 if it came up (the radio group's pick, <c>0x0066a468</c>): the word takes
-	/// the option's value, or 0, so a press on the chosen one leaves none chosen ("hide", its op 0x12 row, says as much).
+	/// <c>0x101</c> with it and 1 if it went down, 0 if it came up (the type-8 proc <c>0x0066a31c</c>, message <c>0x100</c>: down
+	/// posts (old, 0) and (id, 1); up, in a group without flag 0x10 as both of the map's are, selects none and posts (id, 0)):
+	/// the word takes the option's value, or 0, so a press on the chosen one leaves none chosen. Each <c>0x101</c> repaints, so a
+	/// pick that moves the choice repaints twice.
 	/// </summary>
 	private void Pick( UiRadioGroup group, int id, UiRect rect, int help, string mesh, int value, bool staffWord )
 	{
@@ -282,6 +284,7 @@ internal sealed class ParkMapScreen : UiWindow
 		option.Clicked = () =>
 		{
 			var word = option.IsDown ? value : 0;
+			var moved = option.IsDown && group.Selected != -1;
 
 			if ( staffWord )
 				ParkMapOverlay.Staff = word;
@@ -289,6 +292,11 @@ internal sealed class ParkMapScreen : UiWindow
 				ParkMapOverlay.Metric = word;
 
 			group.Put( option.IsDown ? id : -1 );
+
+			// The (old, 0) post's repaint, before the (id, 1) one's.
+			if ( moved )
+				Unimplemented.Report( "MAP_OVERLAY" );
+
 			Changed( id );
 		};
 

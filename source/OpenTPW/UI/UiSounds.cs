@@ -7,9 +7,10 @@ namespace OpenTPW.UI;
 /// <para>
 /// <b>What plays them.</b> Three things in the lobby, and nothing else there does. UI_Init hooks every
 /// message the interface sends (0x00485780), and on a button's "I was clicked" message it plays
-/// effect 31, BUTTON01 - or effect 189, Select3, when the control the message is for is flagged
-/// 0x10, which in the lobby's layouts is the new player dialog's pair of game-mode toggles and the
-/// options screen's switches. The game menu's choices play effect 193 themselves when clicked
+/// effect 31, BUTTON01 - or effect 189, Select3, when the control the message is for, the button's
+/// parent, is flagged 0x10, which in the lobby's layouts is the new player dialog's group of two
+/// game-mode toggles. The options screen's switches tell its root, flagged 0x1, so they play
+/// BUTTON01 like any other button there. The game menu's choices play effect 193 themselves when clicked
 /// (0x00492d80). And the advisor's cue in his tour of the lobby (see Advisor) plays effect 198,
 /// goldkey, as the new player's key arrives. The sparkle round an affordable park's key, the burst at that cue and the
 /// glints on a button under the pointer are not sounds at all but particle effects, out of

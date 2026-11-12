@@ -134,6 +134,48 @@ public class ToggleHelpRowTests
 		}
 	}
 
+	/// <summary>
+	/// <b>The new player dialog's mode toggles click <c>Select3</c> (189)</b>: each tells its group, <c>0x70c</c>, flags
+	/// <c>0x11</c> (stream <c>0x00753f50</c>), and the click hook picks the sound by the receiver's flag <c>0x10</c>
+	/// (<c>0x004857cb</c>), where the map's and the options screen's switches play <c>BUTTON01</c> (31).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the group's <c>Flag10</c> left off (both 31); the receiver's flag not read (the same).</remarks>
+	[TestMethod]
+	public void TheModeTogglesClickSelect3()
+	{
+		Log ??= new();
+		FileSystem = GameData.Required();
+
+		_screen = Screen.Size;
+		Screen.Size = new Point2( 2048, 1536 );
+		Input.Mouse = new();
+
+		try
+		{
+			_stack = new WindowStack();
+			var frontEnd = (FrontEnd)RuntimeHelpers.GetUninitializedObject( typeof( FrontEnd ) );
+			var dialog = new NewPlayerDialog( _stack, frontEnd, 0 );
+			_stack.Open( dialog );
+
+			int? Click( int id )
+			{
+				var at = dialog.Root.DrawOrder().OfType<UiButton>().Single( button => button.Id == id ).Pixels;
+				UiSounds.LastClick = null;
+				_stack.ClickAt( at.X + (at.Width / 2f), at.Y + (at.Height / 2f) );
+				return UiSounds.LastClick;
+			}
+
+			Assert.AreEqual( (189, 189, 189), (Click( 0x70d ), Click( 0x70e ), Click( 0x70d )), "Instant Action, Full Simulation, Instant Action" );
+		}
+		finally
+		{
+			Input.Mouse = new();
+			new WindowStack().Update();
+			Screen.Size = _screen;
+			UiSounds.LastClick = null;
+		}
+	}
+
 	private void Frame( bool down, Vector2 at, long now )
 	{
 		Time.PinWall( now );

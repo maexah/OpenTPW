@@ -44,6 +44,54 @@ public class OptionsKeepTests
 		Directory.Delete( root, true );
 	}
 
+	/// <summary>
+	/// <b>The screen's switches click <c>BUTTON01</c> (31), not <c>Select3</c> (189)</b>: a switch tells the screen's root,
+	/// <c>0x1d4c0</c>, flags <c>0x1</c> (stream <c>0x00752f30</c>), and the click hook picks the sound by the receiver's flag
+	/// <c>0x10</c> (<c>0x004857cb</c>; <c>docs/exe/hud.md</c>, "Which window the click sound is for"), not the switch's own. Each is
+	/// clicked twice, so it is left as it was.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the switch's own <c>Toggles</c> read for the sound (every one 189).</remarks>
+	[TestMethod]
+	public void TheSwitchesClickButton01()
+	{
+		GameOptions.Current = oldOptions.Copy();
+		var screenSize = Screen.Size;
+		Screen.Size = new Point2( 2048, 1536 );
+		Input.Mouse = new();
+		var clicked = new List<string>();
+
+		try
+		{
+			var stack = new UI.WindowStack();
+			UI.OptionsScreen.Open( stack, () => { } );
+			var screen = stack.Windows.OfType<UI.OptionsScreen>().Single();
+
+			foreach ( var id in new[] { 0x1d4c1, 0x1d4c2, 0x1d4c3, 0x1d4c4, 0x1d4c5 } )
+			{
+				var button = screen.Root.DrawOrder().OfType<UI.UiButton>().Single( control => control.Id == id );
+				Assert.IsTrue( button.Toggles, $"0x{id:x} is a switch" );
+
+				for ( var press = 0; press < 2; press++ )
+				{
+					var at = button.Pixels;
+					UI.UiSounds.LastClick = null;
+					stack.ClickAt( at.X + (at.Width / 2f), at.Y + (at.Height / 2f) );
+					clicked.Add( $"{id:x} {UI.UiSounds.LastClick?.ToString() ?? "none"}" );
+				}
+			}
+		}
+		finally
+		{
+			Input.Mouse = new();
+			new UI.WindowStack().Update();
+			Screen.Size = screenSize;
+			UI.UiSounds.LastClick = null;
+		}
+
+		Assert.AreEqual( 10, clicked.Count );
+		CollectionAssert.AreEqual( clicked.Select( line => line[..5] + " 31" ).ToList(), clicked, string.Join( "; ", clicked ) );
+	}
+
 	/// <summary>The tick hands the audio quality slider's value on as the sound detail (<c>0x00423850</c>): at 30 or below a fade is a stop (Q509).</summary>
 	/// <remarks><b>Mutations:</b> the <c>ApplySoundDetail</c> call taken out of <c>Keep</c> leaves fading on.</remarks>
 	[TestMethod]

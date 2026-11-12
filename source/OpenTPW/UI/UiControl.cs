@@ -87,6 +87,15 @@ internal class UiControl
 	public bool HoldsChildren { get; init; }
 
 	/// <summary>
+	/// Its layout's flag 0x10 (the control's <c>+0x48</c>), as the control a child's click is told to: UI_Init's hook plays
+	/// Select3 for a click whose receiver carries it and BUTTON01 otherwise (<c>0x004857cb</c>; <c>docs/exe/hud.md</c>, "Which
+	/// window the click sound is for"). Every window root built here lacks it (flags 0x1), and so do the map's two pickers and
+	/// the locator's groups; the tab groups and the new player dialog's mode group carry it (flags 0x11). A sorted list and a
+	/// list's bar carry it too, read through <see cref="UiList.Sorted"/> and <see cref="UiButton.ClicksSelect3"/>.
+	/// </summary>
+	public bool Flag10 { get; init; }
+
+	/// <summary>
 	/// Which edge of the window it keeps to across, when the third of the virtual screen it sits in
 	/// is not what it belongs with. The four player slots are one column, and their thirds straddle
 	/// the middle of the screen, so each says which edge it keeps to rather than being spread down a
@@ -417,8 +426,8 @@ internal class UiButton : UiControl
 
 	/// <summary>
 	/// A switch, flagged 0x10 in its layout data: a click puts it down if it was up and up if it was down,
-	/// and whoever it tells reads which it is now (the options screen, 0x004a3480). The flag is also what
-	/// makes UI_Init's hook play Select3 for its click rather than BUTTON01 (0x00485780).
+	/// and whoever it tells reads which it is now (the options screen, 0x004a3480). Its own flag does not choose its click's
+	/// sound: the receiver's does (<see cref="UiControl.Flag10"/>), so a switch on a window's root clicks BUTTON01.
 	/// </summary>
 	public bool Toggles { get; init; }
 

@@ -196,6 +196,7 @@ internal sealed class ParkItemsScreen : UiWindow
 		_tabs = Root.Add( new UiRadioGroup
 		{
 			Id = 0x12c4b9,
+			Flag10 = true,
 			Rect = new UiRect( 1280, 192, 1745, 300 )
 		} );
 

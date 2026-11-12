@@ -201,6 +201,7 @@ internal sealed class ParkStaffScreen : UiWindow
 		_tabs = _list.Add( new UiRadioGroup
 		{
 			Id = 0x322,
+			Flag10 = true,
 			Rect = new UiRect( 1157, 188, 1737, 297 )
 		} );
 

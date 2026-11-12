@@ -121,6 +121,7 @@ internal sealed class NewPlayerDialog : UiWindow
 		_mode = dialog.Add( new UiRadioGroup
 		{
 			Id = 0x70c,
+			Flag10 = true,
 			Rect = new UiRect( 735, 377, 1235, 597 ),
 			Mesh = UiMesh.Get( "!f_plain" )
 		} );

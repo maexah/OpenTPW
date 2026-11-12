@@ -252,6 +252,7 @@ internal sealed class ParkHireScreen : UiWindow
 		_tabs = _list.Add( new UiRadioGroup
 		{
 			Id = 0x248f,
+			Flag10 = true,
 			Rect = new UiRect( 1161, 192, 1770, 300 )
 		} );
 

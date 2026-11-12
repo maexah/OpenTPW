@@ -39,7 +39,7 @@ public class ParkBuyFeaturesTabTests
 	/// <summary>
 	/// The features tab lists every researched feature of the catalogue and the two land rows, Buy Land (-1) and Clear Land (-2);
 	/// Clear Land is lettered "$ 0", as the original's ("There is no cost for this"). Buy Land is lettered "$ 0" too, a known gap:
-	/// the original prices it at <c>Costs.MapCell</c> (<c>[0x0078560c]</c>, 10 in jungle's <c>Easy_Standard.sam</c>; QUEUE.md, Q158).
+	/// the original prices it at <c>Costs.MapCell</c> (<c>[0x0078560c]</c>, 10 in jungle's <c>Easy_Standard.sam</c>; QUEUE.md, Q1559).
 	/// The rides, shops and sideshows tabs carry neither land row.
 	/// </summary>
 	/// <remarks>
@@ -73,7 +73,7 @@ public class ParkBuyFeaturesTabTests
 		Assert.AreEqual( Localization.Get( UIStrings.ClearLand ), land[-2].Name );
 		Assert.AreEqual( 0, land[-2].Value, "Clear Land costs nothing" );
 		Assert.AreEqual( ParkBuyScreen.PriceText( 0 ), land[-2].Values![0] );
-		// Known gap (QUEUE.md, Q158, from Q130e): the original's Buy Land is Costs.MapCell, 10 here. Flip these two when it is built.
+		// Known gap (QUEUE.md, Q1559, from Q130e): the original's Buy Land is Costs.MapCell, 10 here. Flip these two when it is built.
 		Assert.AreEqual( 0, land[-1].Value, "known gap: the original letters Costs.MapCell (10)" );
 		Assert.AreEqual( ParkBuyScreen.PriceText( 0 ), land[-1].Values![0] );
 

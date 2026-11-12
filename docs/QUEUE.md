@@ -2490,7 +2490,7 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
 - [ ] **Q38. What building and selling look and sound like.** Counted, not built: the death particle
   (`DESTROY_PARTICLE_EFFECT`, `Info.DestroyParticleEffect`, 75-78, a world effect spread over the
   footprint) and the demolish sound (`DEMOLISH_SOUND`, `0x96`-`0x99` by size; Q1000 caught the pillar's sale in the original playing `0x98` once, category word 3, X 40 = 10 x the picture's width, `park-engine.md`, "The demolisher's per-cell tail, and its sale sound"). The build side's particle is
-  started since Q683 over the model's box (`ParkCreateEffect.Box`, the box the destroy effect is spread over too); not yet counted: the `+0xd4` sound zone (an EAX 2.0 occlusion zone) the script
+  started since Q683 over the model's box (`ParkCreateEffect.Box`, the box the destroy effect is spread over too); counted since the run 22 review, `CREATE_SOUND_ZONE`: the `+0xd4` sound zone (an EAX 2.0 occlusion zone) the script
   loader makes when an item has one (`park.md`, "What building a thing gives off"). The world pass to draw them in is `WorldParticles`.
   - **Note (fork watch 2026-10-16, `verify-audio-fx.md` A6):** particle caller ids read in the listing: `0x004d95bf`
     50, `0x00544dd8` 2, `0x005480fc` 96, `0x0055dba3` 39, `0x0055dc22` and `0x0055dca1` 40, `0x005999ad` 87,

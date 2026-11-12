@@ -963,10 +963,11 @@ internal sealed class WindowStack : Panel
 		// clicks on that message whoever it was for. The purple buttons are not buttons to the
 		// original - they take the pointer themselves and tell nobody - so they are silent.
 		// The hook picks the sound by the RECEIVER's style bit 0x10 (0x004857cb; hud.md, "Which window the click sound is
-		// for"): a list's heading reports to the list, so a heading of a sorted list plays Select3 (0xbd).
+		// for"): a list's heading reports to the list, so a heading of a sorted list plays Select3 (0xbd), and a tab to its group,
+		// flagged 0x11; a switch on a window's root (flags 0x1), or an option of the map's pickers, plays BUTTON01 (0x1f).
 		if ( pressed is UiButton { Clicks: true } button )
 		{
-			UiSounds.Click( toggle: button.Toggles || button.ClicksSelect3 || pressed.Parent is UiRadioGroup or UiList { Sorted: true } );
+			UiSounds.Click( toggle: button.ClicksSelect3 || pressed.Parent is { Flag10: true } or UiList { Sorted: true } );
 
 			if ( button.Toggles )
 				button.IsDown = !button.IsDown;
@@ -976,7 +977,8 @@ internal sealed class WindowStack : Panel
 
 		// The release of a button with flag 0x10 posts the hovered control's row as its state now stands (0x10004: the flip at
 		// 0x00669151/0x0066915f, then the sink's +0x1c at 0x00669172). A group's option that was already down is let go to state
-		// 0 there and put down again by the group after the post (0x0066a468), so its op 0x11 row stands until the pointer leaves.
+		// 0 there; a group flagged 0x10 puts it down again after the post (0x0066a468) and one without it (the map's pickers)
+		// leaves it up, so its op 0x11 row stands until the pointer leaves either way.
 		if ( pressed is UiButton { HelpWhenOn: not null } posted && (posted.Toggles || posted.Parent is UiRadioGroup) )
 		{
 			PostPointed( posted, posted );
