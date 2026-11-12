@@ -174,6 +174,9 @@ internal sealed class ParkObjectWindow : UiWindow, IStatusBox
 	/// <summary>Show the track, <c>b_track</c> (<c>0x3e2a</c>): shown only for a ride that runs on a track (<see cref="ShowsTheTrack"/>).</summary>
 	private readonly UiButton? _track;
 
+	/// <summary>Move, <c>b_move</c> (<c>0x3e2c</c>): greyed for a kart or water ride once track runs from a mouth (<see cref="MayMove"/>).</summary>
+	private readonly UiButton? _move;
+
 	/// <summary>The model turning in the preview, built when the window first draws a thing and let go when it shows another.</summary>
 	private ParkObjectPreview? _model;
 
@@ -306,6 +309,8 @@ internal sealed class ParkObjectWindow : UiWindow, IStatusBox
 				_door = verb;
 			else if ( id == 0x3e2a )
 				_track = verb;
+			else if ( id == 0x3e2c )
+				_move = verb;
 		}
 
 		Root.Add( new UiButton
@@ -400,6 +405,9 @@ internal sealed class ParkObjectWindow : UiWindow, IStatusBox
 
 		if ( _track != null )
 			_track.Visible = ShowsTheTrack( TrackTypeOfItem() );
+
+		if ( _move != null )
+			_move.Enabled = MayMove();
 
 		// Said out loud so a test can pair what is on screen with what the window thinks it is showing.
 		// A region that changed when the arrows were pressed proves something moved, not that the
@@ -908,6 +916,14 @@ internal sealed class ParkObjectWindow : UiWindow, IStatusBox
 	/// flat ride's window leaves the place empty and a kart, water or coaster ride's shows it.
 	/// </summary>
 	internal static bool ShowsTheTrack( int trackType ) => trackType != 0;
+
+	/// <summary>
+	/// Whether <c>b_move</c> is enabled: <c>FUN_004ad4e0</c> sets it through the control's vtable <c>+0x14</c> to
+	/// <c>TrackRide_MayMove</c>'s answer (<c>0x004ad6df</c>..<c>0x004ad6fd</c>), <see cref="ParkTrackPieces.MayMove"/>.
+	/// </summary>
+	private bool MayMove() =>
+		Level.Current is not { ParkState: { } state } || !state.TryObject( ThingId, out var placed )
+			|| ParkTrackPieces.MayMove( state, TrackTypeOfItem(), placed.CellX, placed.CellY, placed.Angle );
 
 	private int TrackTypeOfItem() =>
 		Level.Current is { } level && level.ParkState is { } state

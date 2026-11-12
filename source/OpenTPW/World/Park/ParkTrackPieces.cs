@@ -169,6 +169,26 @@ public sealed class ParkTrackPieces : Entity
 	}
 
 	/// <summary>
+	/// Whether the ride window lets a ride be moved - <c>TrackRide_MayMove</c> (<c>FUN_0052c2b0</c>): any ride but a kart or
+	/// water one may; one of those may only while each of its mouths, the <see cref="StationOf"/> mouth and then the other
+	/// mouth, holds one track link alone (<c>Cell_CountMaskBits</c> on the track record), as a bought ride's do, so a run
+	/// laid from either greys the move. At a turn other than the four it tests the ride's own cell twice; a cell off the
+	/// map holds no link.
+	/// </summary>
+	public static bool MayMove( ParkState state, int trackType, int x, int y, int angle )
+	{
+		if ( trackType is not (ItemDescriptionFile.CarTrack or ItemDescriptionFile.WaterTrack) )
+			return true;
+
+		var (otherMouth, _, _, mouth) = angle is 0 or 90 or 180 or 270 ? StationOf( x, y, angle ) : ((x, y), (x, y), (x, y), (x, y));
+
+		return LinksAt( state, mouth ) == 1 && LinksAt( state, otherMouth ) == 1;
+	}
+
+	private static int LinksAt( ParkState state, (int X, int Y) at )
+		=> ParkState.OnMap( at.X, at.Y ) ? CellEdge.Links( state.Record( at.X, at.Y ).TrackNeighbours ) : 0;
+
+	/// <summary>
 	/// Lays a bought kart or water ride's station and both mouths on the track grid, as the place commit does
 	/// (<c>0x00524db7</c>..<c>0x0052518c</c>): the station's two sections of 0xd (0x12) run from the first to the second,
 	/// the mouth past it linked back, and the other mouth before it linked on; each anchor's way on the heading, its owner

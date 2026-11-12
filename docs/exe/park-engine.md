@@ -4418,9 +4418,25 @@ found by the thing's word `+0xe`. It runs each time the window is given a thing,
   - The door is disabled at statuses `0x19` and `0x1a`, the track's (`0x004ad5bc`..`0x004ad5c4`); otherwise it follows
     `mCanLoad` as [ride-window-door.md](ride-window-door.md) says.
   - `b_callmech` is set down (`0x00668bec`) at statuses `0x11`..`0x15`, the mechanic's (`0x004ad684`..`0x004ad6ac`).
-  - `b_move` is enabled only when `FUN_0052c2b0( thing )` answers non-zero (`0x004ad6df`..`0x004ad6fd`). That routine
-    starts at 1 and, for track types 1 and 2 alone, tests a track cell beside the station, chosen by the ride's angle
-    `+0x10` (`0x0052c2c1`..`0x0052c35f`, `FUN_00522790`); the rest is unread (Q1111).
+  - `b_move` (`0x3e2c`) is set through the control's vtable `+0x14`, the slot that disables the door, to the answer of
+    **`TrackRide_MayMove`** (`FUN_0052c2b0( thing )`, `0x004ad6df`..`0x004ad6fd`; read whole, Q1111). It answers 1 for any
+    item whose `WhichTrackType` is not 1 or 2. For a kart or water ride it reads the thing's cell from bytes `+5` (x) and
+    `+7` (y) and its angle `+0x10`, and answers 1 only when **both of the station's mouths hold exactly one track link**:
+    `Cell_CountMaskBits` (`FUN_00522790`, a popcount of the record's `+0x0c`, or of `+0x22` where the record's `+2` is 2 while `DAT_0081b4cc` is set,
+    which only editing functions do) on the track record (`[0x007cf83c] + (cell + 0x6cde) * 0x28`) is 1 at each.
+    The cells, by the angle (exact compares; any other angle tests the ride's own cell twice):
+
+        angle   first (0x0052c308..0x0052c337)   second (0x0052c392..0x0052c3d4)
+        0       (x+4, y+1)                       (x-2, y+1)
+        90      (x+1, y-5)                       (x+1, y+1)
+        180     (x-5, y-2)                       (x+1, y-2)
+        270     (x-2, y+4)                       (x-2, y-2)
+
+    These are the mouth and the other mouth the place commit lays (`TrackRide_LayStation`; ours'
+    `ParkTrackPieces.StationOf`), whose single links point back at the station and on along the heading. So a bought
+    ride may be moved, and a run laid from either mouth (a loop, or one run) greys the move. Before the second test it
+    calls `Dir_Opposite` (`FUN_004d8c00`) on the heading's bit (4, 1, `0x40`, `0x10`; at another angle the stack's
+    argument) and drops the answer (`0x0052c3db`..`0x0052c3e0`).
 
 **Measured in both games on one file** (Q1105, `q1105/`): ours' stock park with a TV Sim (Aztec Mayhem, item 1104) and a
 Dino Karts (1150) bought, saved, and loaded in the original. The original's tree (`uitree.py PID 0x007c24c8`, which prints
@@ -4428,8 +4444,19 @@ Dino Karts (1150) bought, saved, and loaded in the original. The original's tree
 only hidden node of 42. Ours' `control 3e2a` ends ` hidden` and ` mesh b_track` alone. Both games draw the same thing:
 the third place is empty for the TV Sim and holds the button for the karts (`q1105/orig/b-2-tvwindow.png`,
 `c-2-kartwindow.png`; `q1105/run1/window-tvsim.png`, `window-karts.png`). The original also draws the karts' `b_move`
-greyed, and ours does not (Q1111). Ours hides `b_track` (`ParkObjectWindow.ShowsTheTrack`). It does not yet have the
+greyed, and ours did not then. Ours hides `b_track` (`ParkObjectWindow.ShowsTheTrack`). It does not yet have the
 condemned hide, the door's track statuses or the call-mechanic's down state (Q1112).
+
+**The move greyed, in both games on two files** (Q1111, `q1111/`): ours' stock park with a Dino Karts (1150) bought at
+(32,25) with its loop and a Splish Splash (1160) at (20,20) bare, saved (`run2/q1111-a.TPWS`), then the Splish
+Splash's loop laid and saved again (`q1111-b.TPWS`). Ours' `control 3e2c` ends ` disabled` for the looped karts and
+the looped Splish Splash and not for the bare one; the original's tree (`uitree.py`, ` disabled` for `+0x48 & 2`,
+the button's disabled part, `0x00668820`) has the node (459,800)..(612,953) disabled for the same two and not for the
+bare one, on the same files. Both draw the looped rides' move grey and the bare one's blue (`run2/window-*.png`,
+`orig/a-5-kartwindow.png`, `a-9-splashwindow.png`, `b-5-splashwindow.png`). A click on the greyed move does nothing in
+either: the window stays, ours' hand is empty and the original's frame carries nothing. The original's pointer passes over the disabled button (its help line
+reads another control under it, no help row); ours keeps it and shows the move's help row (Q66). Ours enables it by
+`ParkTrackPieces.MayMove`.
 
 **The shared base's three ids.** `FUN_0048cea0( stream, handler, a, b, c )` is called here as
 `(0x00755150, FUN_004af600, 0x3e24, 0x3e15, 0x3e25)`: `a` is the preview panel, kept at `this[6]` and

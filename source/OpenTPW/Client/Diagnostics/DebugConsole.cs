@@ -563,6 +563,7 @@ public static class DebugConsole
 					+ (control.Mesh is { } drawnMesh ? $" mesh {drawnMesh.Name} frame {control.Frame}" : "")
 					+ (control is UI.UiList scrolled ? $" list: {scrolled.ScrollCensus()}" : "")
 					+ (Hidden( control ) ? " hidden" : "")
+					+ (control is UI.UiButton { Enabled: false } ? " disabled" : "")
 					+ (control.Text is { Length: > 0 } && control is not UI.UiEdit
 						? $" lettered font {control.Font} in ({control.TextColour.R}, {control.TextColour.G}, {control.TextColour.B}) "
 							+ (control.TextShadow ? "with" : "without") + " the edge"
