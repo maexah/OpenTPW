@@ -24,6 +24,10 @@ Read in a private copy of the `SimThemePark` Ghidra project, with all
   `0xff1e96ff` for 22 and 23. `FUN_004861e0` unpacks red from the low byte, then
   green and blue: **128/128/128** and **255/150/30**. The text table starts
   at `0x0074fbc0`; `FUN_004861d0` supplies the list's colour.
+- The ride window's status label (`0x3e25`) does not take that colour. It is made once by the window's vtable
+  slot `+0x10` (ride `0x004ad720`, shop `0x004afaa0`, sideshow `0x004b0ed0`): a text control on the base's `+0x1c`,
+  aligned (1, 1), font slot 8 (`0x00485a70( 8 )`, the list headings' slot), colour (0, 0, 0, 255), then hidden.
+  `FUN_004ade40` sets its text only, never its font or colour (fork watch 2026-11-12, verify-ui-hud.md H3; Q213).
 - Condemned, missing/unfinished track, maintenance and breakdown statuses
   precede ordinary closure. Exit-disconnected status 24 also precedes it, and it
   is asked whatever the open word: the routine reads its second argument (every
@@ -72,7 +76,8 @@ The callback stays unguarded, while `WindowStack.Release` refuses a disabled but
 The door and warning refresh immediately after a click or a change of selected ride,
 and each frame, including queue changes that leave `CanLoad` unchanged.
 
-`ParkClosedStatus` supplies ordinary non-track status 1/23 and its colour. Known
+`ParkClosedStatus` supplies ordinary non-track status 1/23 and its colour; the ride window letters
+every status in font 8, black, and leaves the colour to the all-items rows (Q213). Known
 states 1/2/4 and track rides remain counted as `OBJECT_WINDOW_HIGHER_PRIORITY_STATUS`,
 retaining their previous display rather than incorrectly labelling them CLOSED.
 The pre-existing script `VAR_BROKEN` warning takes precedence in the ride window.
