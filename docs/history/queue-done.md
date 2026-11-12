@@ -13046,3 +13046,8 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   rest were not classified, and the items say so. Not checked by hand: the 12 MESSAGE calls whose word the queue held
   (`COAST`, `ADDOBJ`...: the instruction is named, not that message's case) and the three DYNAMIC calls (the ride script's
   unhandled opcodes and a guest state, known at run time). After the filing the census lists 0.
+- [x] **Q54. The `.sam` reader against the original's parser.** Found by Q36's decode (`park-engine.md`, "How a key
+  finds its global"). In the original the first bad line ends the file - an unknown key, a bounded value out of
+  range, or a negative in a non-negative field - and an array's count is the highest index written plus one, so
+  Lost Kingdom's guest type is `rand % 8`. Compare `ParkBalance` with both. Confirm: a test per behaviour against the
+  shipped files, and the guest types a loaded park draws from.

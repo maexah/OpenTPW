@@ -216,6 +216,7 @@ public sealed partial class ParkPeople : Entity
 		}
 
 		_balance = balance;
+		_guestTypes = GuestTypesIn( balance );
 
 		// Thing 1's training budgets (the save's staff HQ; FileFormats saves.md, "The staff HQ").
 		if ( park?.StaffHq is { } hq )
@@ -455,6 +456,34 @@ public sealed partial class ParkPeople : Entity
 		Log.Info( $"People: {_peeps.Count} guests and {_staff.Count} staff simulating" );
 	}
 
+	/// <summary>How many kinds a new guest's kind is drawn over (<see cref="GuestTypesIn"/>).</summary>
+	private readonly int _guestTypes;
+
+	/// <summary>
+	/// How many kinds an arriving guest is drawn from: the balance's <c>PeepTypes</c> rows, the highest subscript
+	/// its files wrote plus one, as the original's array count is (<see cref="ParkBalance.RowsOf"/>). Every shipped
+	/// stack comes to 8. With no balance, as a test's park has, it is the save's 8 kinds.
+	/// </summary>
+	internal static int GuestTypesIn( ParkBalance? balance )
+	{
+		if ( balance == null )
+			return ParkWorld.GuestState.PersonTypes;
+
+		var rows = balance.RowsOf( "PeepTypes" );
+
+		// No row, or more than the 8 kinds the save and the sprite banks hold: what the original does then is not
+		// decoded (rand % 0, or a kind past its table), so the 8 are drawn from and the case is counted.
+		if ( rows is < 1 or > ParkWorld.GuestState.PersonTypes )
+		{
+			Unimplemented.Report( "BALANCE_PEEP_TYPE_ROWS" );
+			Log.Warning( $"Balance: PeepTypes has {rows} rows; a new guest's kind is drawn from {ParkWorld.GuestState.PersonTypes} instead" );
+			return ParkWorld.GuestState.PersonTypes;
+		}
+
+		Log.Info( $"Balance: PeepTypes has {rows} rows, so a new guest's kind is rand % {rows}" );
+		return rows;
+	}
+
 	/// <summary>
 	/// Puts one new guest at <paramref name="cellX"/>, <paramref name="cellY"/> - somebody who was not
 	/// in the save. Answers their thing id, or nought where the park cannot take one.
@@ -499,9 +528,8 @@ public sealed partial class ParkPeople : Entity
 		var exitLevel = (_balance?.Int( "PeepInfo.ExitLevel", 120 ) ?? 120)
 			+ _arrivalRandom.Next() % (2 * exitVariation) - exitVariation;
 
-		// The shipped balance stacks all define eight kinds. The parser's general row-count rule is Q54.
-		// An instrument's forced kind still consumes the original draw.
-		var drawnType = (byte)(_arrivalRandom.Next() % ParkWorld.GuestState.PersonTypes);
+		// Over the balance's PeepTypes rows (GuestTypesIn). An instrument's forced kind still consumes the original draw.
+		var drawnType = (byte)(_arrivalRandom.Next() % _guestTypes);
 		var type = personType ?? drawnType;
 		var cashVariation = _balance?.Int( "PeepInfo.StartingCashVarPc", 15 ) ?? 15;
 		var cashPercent = _arrivalRandom.Next() % (2 * cashVariation + 1) - cashVariation + 100;

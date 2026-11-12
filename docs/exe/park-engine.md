@@ -707,7 +707,16 @@ Decoded 2026-09-23 (`docs/QUEUE.md` Q36), put to two refuters. **The address com
 
 The `PeepInfo` object is at `0x00785040` (built at `0x00402ae0`, table `0x0073fc70`): `0x0078504c` ExitLevel, `0x00785050` ExitLevelVar, `0x00785054` StartingCashVarPc, **`0x00785058` SmallHappinessChange, `0x0078505c` MediumHappinessChange, `0x00785060` BigHappinessChange**, then **`0x00785064` PerfectRide, `0x00785068` GoodRide, `0x0078506c` OKRide, `0x00785070` RideVomitDivisor**, read off the table itself (record by record, Q169): the file lists RideVomitDivisor straight after BigHappinessChange, so fitting file order to addresses goes wrong from there, and the table does not. `FUN_004fdcc0`, the excitement match, is the four's only reader (`ride-operation.md`, "The excitement match"). `FUN_004fe980` confirms the three: its level 0, 1 and 2 return the bytes at `0x00785058`, `0x0078505c` and `0x00785060`. Every reader loads those three as a byte; the four ride keys are read as whole ints. Lost Kingdom offline takes 5, 15 and 25 from `data/levels/Standard.sam`; no jungle file overrides them (online is 3, 10, 25).
 
-A line may name several fields, each taking the next value (up to sixteen; OpenTPW reads these, `BalanceFieldTests`). Two more parser behaviours, measured and not yet compared with OpenTPW's reader: **the first bad line ends the file** - an unknown key, a bounded value out of range, or a negative in a type-5 field returns nought and no later line is read; and **an array's count is the highest index the files wrote, plus one**, not the table's size - so Lost Kingdom's guest type is `rand % 8`.
+A line may name several fields, each taking the next value (up to sixteen; OpenTPW reads these, `BalanceFieldTests`). Two more parser behaviours, measured: **the first bad line ends the file** - an unknown key, a bounded value out of range, or a negative in a type-5 field returns nought and no later line is read; and **an array's count is the highest index the files wrote, plus one**, not the table's size - so Lost Kingdom's guest type is `rand % 8`.
+
+OpenTPW (Q54): `ParkBalance.RowsOf` counts an array the same way over the whole stack, and an arriving guest's kind is
+drawn over the `PeepTypes` rows (`ParkPeople.GuestTypesIn`); every shipped stack comes to 8, all from the global
+`Standard.sam` (subscript 7), and a stack with none, or over 8, draws over 8 and is counted (`BALANCE_PEEP_TYPE_ROWS`).
+The first-bad-line stop is not built: which balance key is which type, and its bounds, are not decoded (Q1204), and
+every shipped balance file holds negatives (`WeatherEffects.QualityForSnowLow -1` among them). The original's key
+search is case-sensitive and the stack is not; no key across the eleven shipped balance files (`levels/` and each
+theme's `Standard.sam`, `Easy_Standard.sam` and `Online_Standard.sam`) is spelled two ways, so both read the same keys
+(`BalanceRowCountTests`).
 
 **An item's description is read the same way, one file laid over another** (Q171's verify, `wf_727b3f26-329`;
 Q178's decode, `wf_8a4195bd-544`, two Opus skeptics upholding every claim). The catalogue is built afresh at every
