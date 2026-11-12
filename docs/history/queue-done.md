@@ -14492,3 +14492,9 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   Done (lane B, 2026-11-12): all five decoded (`ride-operation.md`, "The end of the park"; `advisor-park.md`, "The park
   ended six months red"); the record `0x6a` posted, the render flag and the pending deletes built; the photograph is Q1564. (1) and (4) were also read by the run 22
   review's fix group L; one implementation of each kept.
+- [x] **Q457. The satisfaction bar is masked to a byte.** From the week-end audit (D6, `VERIFY-16a.md` Q367/Q368).
+  `ParkItemsScreen` runs satisfaction through `Bar()`'s `& 0xff`; the original does not (`0x00494031`, `0x00494199`,
+  `0x00495888`, `0x00495959`) and the setter clamps 0..0x400 (`0x0066d885`). A test with -1 and 256.
+  Done (cloud lane c115): `ParkItemsScreen.SatisfactionBar`, `(value << 10) / 100` with no mask, the bar's setter holding
+  it; `ParkItemsSatisfactionBarTests` (-1 is -10 units and an empty bar, 256 is 2621 and a full one, and the Belly
+  Bounce's row with thirty days of -51 and of 206). The photograph is Q1612.

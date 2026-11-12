@@ -42,26 +42,17 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the maintainer's pre-commit hook: grep it by Q-number.
 
-- **Q1425 (the end of the park, decoded):** off-screen on lane B (the private Ghidra copy, `lib/testme.objdump`; no
-  original, no desk display). The end's set is the door's (`+0x32 & 4`, live, not dead); the advisor hears the bank's
-  `0x13` first (set `0x13` is things 3, 4, 5, 8, 9 in all 1,227 park files) and posts record `0x6a`, which waits unsaid
-  in state 4 (now built, `ParkAdvisorMessages.Bankrupted`); the render flag `0x00763f84` gates every world sprite and so
-  every shadow (built: `ParkState.SpritesDrawn`, `ParkGuestSprites` draws none); its first review found the load clears
-  it for a file's state 4 and that litter is a sprite of the same table, both built in the merge; the end frees the pending deletes as the
-  sweep's tail does (built; the run 22 review's group L had built the same, and one implementation is kept). Two tests
-  added (`AnEndedParksFrameWritesNoQuad`; `AnEndedParkDrawsNoLitter`, the review's; both needing the game; its
-  `TheEndFreesTheDeletedIds` dropped in the merge, as group L's `TheEndFreesThePendingDeletes` asserts the same and more),
-  five changed (the bank's six months, the ended park's load now reading the flag, the held member's frame, the tags'
-  groups, the records' count 118), group L's End-feature test reading the post in place of the count, and two
-  `Advisor.sam` fixtures given `Bankrupted.Score`; eight bugs put back by `mutate.py`, eight failed, and in the merge six more by hand (the end's two frees, the post
-  only when ending, the load's flag set or cleared for every state, litter whatever the flag), each failing a test. The final build's off-screen run (`q1425/run3`, the
-  Q404 recipe): `circle` 18 before the end and 0 after with `guests 18` both, `post message=106 ... score=100000 ...
-  tick=5611 result=queued` on the line before `Park: the park ends`, `pending=2 attempts=0 ... slot=106` after eight
-  seconds, `1x PARK_END_SCREEN` alone, the saved slot `(0, 0, 106, 100000, 1, -1, 0, 0)`. Not photographed on the desk
-  and not run beside the original (Q1564); the line not heard (never said).
+- **Q457 (the all-items satisfaction bar is not masked to a byte):** in a cloud container (no Ghidra, no original, no
+  photograph; the run's output was not kept), `ParkItemsSatisfactionBarTests` passes (two tests, one needing the game),
+  and two bugs put back by hand (the `& 0xff` in `SatisfactionBar`; `NumbersOf` back on `Bar`) each fail it with
+  "Expected:<-10>. Actual:<2611>". An off-screen run of the final build (`consolerun.py`, `park jungle`, `screen 5`) filled
+  the list (`Items list: tab 0, row 13 Belly Bounce: 0 409 1003 1013`), but the fresh park holds no shop and the console
+  cannot write a ring, so no satisfaction column past its ends was seen running: the bar at -1 and 256 beside the
+  original's is Q1612. The addresses are `docs/exe/hud.md`'s, not checked in Ghidra.
 
 ## Numbers (take counts fresh; these go stale within a day)
 
+- Linux, 2026-11-12, Q457 (`capped.sh`; the items screen's satisfaction bar clamped; two tests added, one needing no game; built in a cloud container, re-gated here after fixS): with the game, 5793 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5795; with no game named, 2498 passed, 0 failed, 3297 skipped.
 - Linux, 2026-11-12, review fixes group S (`capped.sh`; seven tests added on balance, needing the game; after Q1425): with the game, 5791 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5793; with no game named, 2497 passed, 0 failed, 3296 skipped.
 - Linux, 2026-11-12, Q1425 (`capped.sh`; the park's end decoded, with its first review applied; five tests added on balance, needing the game; built in lane B, merged by an agent onto Q684 and here after Q19): with the game, 5784 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5786; with no game named, 2497 passed, 0 failed, 3289 skipped.
 - Linux, 2026-11-12, Q19 (`capped.sh`; VSync and a frame limiter; eight tests added, none needing the game; built in a cloud container, re-gated here after Q521): with the game, 5779 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5781; with no game named, 2497 passed, 0 failed, 3284 skipped.

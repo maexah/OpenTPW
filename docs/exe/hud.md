@@ -4082,7 +4082,7 @@ satisfaction bars measure 0.526, 0.491 and 0.509 of their width (542, 491 and 51
 The excitement, repair and life bars are `((value & 0xff) << 10) / 100` of 1024 (the excitement an int, the others a
 float truncated first, `__ftol`), so a value past 255 shows its low byte. **The satisfaction bar is not masked**
 (`0x00494031`, `0x00494199`, `0x00495888`, `0x00495959`: `FUN_004e1e30`, then the shift, no `and 0xff`); the bar's
-setter `FUN_0066d885` holds it to 0..0x400, so below nought it is empty and from 100 up full (ours masks it, Q457). Measured in the original on `q353/grades.TPWS` (`q367/orig/a-*.png`, `object.py` on thing 13): the Belly
+setter `FUN_0066d885` holds it to 0..0x400, so below nought it is empty and from 100 up full (ours, `ParkItemsScreen.SatisfactionBar`, since Q457). Measured in the original on `q353/grades.TPWS` (`q367/orig/a-*.png`, `object.py` on thing 13): the Belly
 Bounce's row "5" with bars of 0.403, 0.925 and 0.993 of their width, its repair 92.32 and life 99.85 at the frame
 (942 and 1013 of 1024); the sideshows' excitement bars 0.308 (Jungle Spray, 30) and 0.28 (Strength Bird, 27).
 

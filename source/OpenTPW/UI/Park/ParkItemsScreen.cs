@@ -493,8 +493,8 @@ internal sealed class ParkItemsScreen : UiWindow
 	/// name's nought, then the customers of the last thirty finished days (<c>FUN_00495c20</c> on the ring
 	/// <c>+0x1a8</c>, <c>__ftol</c>'d), each bar's <c>((value &amp; 0xff) &lt;&lt; 10) / 100</c>: the excitement
 	/// (<c>FUN_004e0860( 0 )</c>), the state of repair <c>+0x44</c>, the remaining life <c>+0x48</c>, each float
-	/// truncated, and the satisfaction (<c>FUN_004e1e30</c>); and the money as it stands: the last thirty finished
-	/// days' profit (<c>FUN_004e1c70</c>) and the total, <c>mTotalTakings</c> less <c>mTotalCosts</c>
+	/// truncated; the satisfaction (<c>FUN_004e1e30</c>) unmasked, <see cref="SatisfactionBar"/>; and the money as it
+	/// stands: the last thirty finished days' profit (<c>FUN_004e1c70</c>) and the total, <c>mTotalTakings</c> less <c>mTotalCosts</c>
 	/// (<c>FUN_004e1c60</c>).
 	/// </summary>
 	internal static int[] NumbersOf( int tab, ParkWorld.CatalogueObject placed, ParkItemCatalogue.Item item, ParkState state )
@@ -508,7 +508,7 @@ internal sealed class ParkItemsScreen : UiWindow
 
 		var lastMonth = rings.ProfitOfLastDays( CustomersDays );
 		var total = unchecked(state.TakingsFor( placed.ThingId ) - state.CostsFor( placed.ThingId ));
-		var satisfaction = Bar( rings.SatisfactionOfLastDays( CustomersDays ) );
+		var satisfaction = SatisfactionBar( rings.SatisfactionOfLastDays( CustomersDays ) );
 
 		return tab == 1
 			? [0, customers, lastMonth, total, satisfaction]
@@ -517,6 +517,13 @@ internal sealed class ParkItemsScreen : UiWindow
 
 	/// <summary>A value as a bar's 0 to 1024: its low byte as a percentage.</summary>
 	internal static int Bar( int value ) => ((value & 0xff) << 10) / 100;
+
+	/// <summary>
+	/// The satisfaction as a bar's units: <c>(value &lt;&lt; 10) / 100</c> with no <c>&amp; 0xff</c> (<c>0x00494031</c>;
+	/// <c>docs/exe/hud.md</c>, "The all-items rows: a number, then bars"), so it can fall below nought or pass 1024; the bar's setter
+	/// (<c>FUN_0066d885</c>, <see cref="ParkObjectWindow.UiStatBar.Units"/>) holds it to 0..0x400.
+	/// </summary>
+	internal static int SatisfactionBar( int value ) => (value << 10) / 100;
 
 	/// <summary>How many finished days the customers column adds up (<c>PUSH 0x1e</c>, <c>0x004956ca</c>), and the profit
 	/// and satisfaction (<c>MOV EDX,0x1e</c>, <c>0x004e1c9b</c>; <c>MOV EBP,0x1e</c>, <c>0x004e1e38</c>).</summary>

@@ -1270,15 +1270,19 @@ filed the items that cite it.
   `WindowStack` flips the radio button up and `Put` returns before setting it down; the original's group with style
   0x10 sets it down again (`0x0066a455`..`0x0066a468`; frames `q364/orig/b-*.png`). `ParkLocator` already works round
   it. Read each screen group's style first.
-- [ ] **Q457. The satisfaction bar is masked to a byte.** From the week-end audit (D6, `VERIFY-16a.md` Q367/Q368).
-  `ParkItemsScreen` runs satisfaction through `Bar()`'s `& 0xff`; the original does not (`0x00494031`, `0x00494199`,
-  `0x00495888`, `0x00495959`) and the setter clamps 0..0x400 (`0x0066d885`). A test with -1 and 256.
 - [ ] **Q1372. The staff screen's two meters on screen, beside the original's (the split piece of Q458).** For a desk
   lane with a display. Q458 (cloud lane c63, `alexah/1042-staff-meter-average`) built the original's averaging and
   confirmed it by tests and log lines only (`Staff list: all-staff meter 909 from [92, 89, 89, 87, 87]`, `kind meter 890`
   on `park jungle`, `screen 4`); no frame was taken. Photograph both meters (`0x32c`, `0x32d`) on the jungle park at
   909 of 1024, the all-staff one, beside the original's on the same park, and on `q369/skill.TPWS` the original's 892
   (`hud.md`, "What the two meters average"). Rule 6: predict each fill's length before looking.
+- [ ] **Q1612. The all-items satisfaction bar past its ends, photographed.** Split from Q457 (built in a cloud lane with no
+  display and no original). `ParkItemsScreen.SatisfactionBar` hands the bar `(value << 10) / 100` unmasked and
+  `UiStatBar.Units` holds it to 0..0x400, so a satisfaction of -1 is an empty bar and 256 a full one (the masked rule drew
+  them full and empty). Confirm on a desk: `parkfile.py`'s `ring_set` writes a shop's thirty satisfaction days to -51 and
+  another's to 206 (fifty plus the mean: -1 and 256), and both games load the file, the all-items screen (`screen 5` in
+  ours, the key `a` in the original) on the shops' tab: the log's `Items list: tab 1, row N ...` ends `-10` and `2621`,
+  and each bar is photographed beside the original's.
 - [ ] **Q460. Zlib textures round the chroma terms twice.** From the week-end audit (D9, `VERIFY-13b.md` Q355 1). The
   original stores the Cb and Cr terms as float32 at 1.5 x 2^23 (`0x00594f5e`, `0x00594f87`), integers before Y is added;
   `Held` rounds once: 933 of 986 files differ by 1. Green's rounding (the FPU mode) needs a breakpoint at `0x00594f72`.
