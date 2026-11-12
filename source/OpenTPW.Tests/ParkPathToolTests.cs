@@ -790,6 +790,84 @@ public class ParkPathToolTests
 		CollectionAssert.AreEqual( new[] { (11, 10) }, ParkBuildMode.Pending.ToArray() );
 	}
 
+	/// <summary>
+	/// <b>The path tool's unanchored click asks the verdict again, as the run's middle square</b>
+	/// (<c>FUN_00535670( cell, 1, 0 )</c>, <c>0x0052727b</c>): bare ground and a loose queue end are charged a second
+	/// time, so one square of bare ground needs twice the price; a path is free and anchors on any balance; a path on a
+	/// track corner, <c>m_end</c> in the preview, is refused by the click. A refusal changes nothing and keeps the tool.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the second charge dropped (39 anchors); the money test at or below (40 refuses); a path
+	/// charged (a balance of 0 refuses it); the verdict asked as the last square (the corner anchors); the list not
+	/// emptied; the counter not zeroed; the loose queue end charged once (39 anchors).</remarks>
+	[TestMethod]
+	public void AnUnanchoredPathClickAnchorsOnlyWhereItsOwnVerdictAgrees()
+	{
+		var park = World();
+		var state = new ParkState( park );
+		var bare = ParkState.CellFor( park, 11, 10 );
+
+		void Stale()
+		{
+			ParkBuildMode.Forget();
+			ParkBuildMode.Push( 40, 20 );
+			ParkBuildMode.Push( 44, 20 );
+			ParkBuildMode.Clicks = 2;
+			ParkBuildMode.Arm( ParkBuildMode.Path );
+		}
+
+		ParkPathBuilding.QueueSquare Preview() => ParkPathBuilding.PathStrip( state, park, 11, 10, Price ) is [var one] ? one : default;
+
+		string Click() => ParkPathBuilding.FirstPathClick( state, park, Preview(), Price );
+
+		void BalanceAt( int balance ) => state.Spend( state.Balance - balance );
+
+		void Untouched( string because )
+		{
+			Assert.IsFalse( ParkBuildMode.Anchored, because );
+			CollectionAssert.AreEqual( new[] { (40, 20), (44, 20) }, ParkBuildMode.Pending.ToArray(), because );
+			Assert.AreEqual( 2, ParkBuildMode.Clicks, because );
+			Assert.AreEqual( ParkBuildMode.Path, ParkBuildMode.Current, "the tool stays out: " + because );
+		}
+
+		Assert.AreEqual( 0, bare.Type, "(11,10) is bare ground in the stock park" );
+
+		Stale();
+		BalanceAt( (2 * Price) - 1 );
+		Assert.AreEqual( (ParkPathBuilding.MarkerBlue, 20), (Preview().Marker, Preview().Owed), "the preview charges it once and lets it through" );
+		StringAssert.Contains( Click(), "would bring the run to 40 against a balance of 39" );
+		Untouched( "bare ground is charged twice" );
+
+		Stale();
+		BalanceAt( 2 * Price );
+		StringAssert.Contains( Click(), "anchored at (11,10)" );
+		Assert.AreEqual( (11, 10), ParkBuildMode.Anchor );
+		CollectionAssert.AreEqual( new[] { (11, 10) }, ParkBuildMode.Pending.ToArray() );
+		Assert.AreEqual( 0, ParkBuildMode.Clicks );
+
+		Stale();
+		BalanceAt( 0 );
+		state.SetRecord( 11, 10, bare with { Type = CellEdge.Path } );
+		StringAssert.Contains( Click(), "anchored at (11,10)", "a path is free" );
+
+		Stale();
+		BalanceAt( 1000 );
+		state.SetRecord( 11, 10, bare with { Type = CellEdge.Path, TrackNeighbours = 0x05 } );
+		Assert.AreEqual( ParkPathBuilding.MarkerEnd, Preview().Marker, "the preview's last square is m_end before the corner is asked" );
+		StringAssert.Contains( Click(), "is a track corner or junction" );
+		Untouched( "the corner is asked of a middle square" );
+
+		Stale();
+		BalanceAt( (2 * Price) - 1 );
+		state.SetRecord( 11, 10, bare with { Type = ParkRideChoice.QueueCellType, Neighbours = 0x10 } );
+		state.SetRecord( 11, 11, ParkState.CellFor( park, 11, 11 ) with { Type = ParkRideChoice.QueueCellType, Neighbours = 0x11 } );
+		Assert.AreEqual( ParkPathBuilding.MarkerLink, Preview().Marker );
+		StringAssert.Contains( Click(), "would bring the run to 40 against a balance of 39" );
+		Untouched( "a loose queue end is charged twice" );
+
+		BalanceAt( 2 * Price );
+		StringAssert.Contains( Click(), "anchored at (11,10)" );
+	}
+
 	private static string Describe( IEnumerable<ParkPathBuilding.QueueSquare> strip )
 		=> string.Join( " ", strip.Select( square => $"({square.X},{square.Y}):{square.Marker}" ) );
 }

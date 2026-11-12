@@ -960,9 +960,9 @@ public static class ParkPathBuilding
 	/// (<c>0x005271b7</c>..<c>0x00527655</c>), the same arm the queue tool shares.
 	/// </summary>
 	/// <remarks>
-	/// <b>The first click only anchors</b>, and a click on a red square refuses and puts the tool away. A
-	/// later click lays a straight run from the anchor to the pointer snapped to the longer axis, <b>one op
-	/// at a time over the whole line</b> as the original does - every cell stamped, then every cell joined,
+	/// <b>The first click only anchors</b>, if its own verdict lets it (<see cref="FirstPathClick"/>), and a click on a red
+	/// square refuses and puts the tool away. A later click lays a straight run from the anchor to the pointer
+	/// snapped to the longer axis, <b>one op at a time over the whole line</b> as the original does - every cell stamped, then every cell joined,
 	/// given a flow byte and an owner, and retiled - and the tool puts itself away when the run ended on
 	/// a path or a queue, or when the click was on the anchor. Otherwise the anchor moves to the run's end,
 	/// so an L is laid a click at a time. The run's end is pushed for Backspace to undo.
@@ -997,15 +997,7 @@ public static class ParkPathBuilding
 		LayingSound( "path", clickX, clickY );
 
 		if ( !ParkBuildMode.Anchored )
-		{
-			ParkBuildMode.AnchorAt( clickX, clickY );
-			ParkBuildMode.ClearPending();
-			ParkBuildMode.Push( clickX, clickY );
-			ParkBuildMode.Clicks = 0;
-			Unimplemented.Report( "PATH_TOOL_ADVISOR_MESSAGE_0xB8" );
-
-			return $"path: anchored at ({clickX},{clickY}) - click again to lay a run";
-		}
+			return FirstPathClick( state, park, strip[0], price );
 
 		ParkBuildMode.CountClick();
 
@@ -1034,6 +1026,38 @@ public static class ParkPathBuilding
 		ParkBuildMode.AnchorAt( toX, toY );
 
 		return $"path: laid {laid} from ({fromX},{fromY}) to ({toX},{toY}) - click again to carry on";
+	}
+
+	/// <summary>
+	/// The path tool's unanchored click once the preview's square let it through: the original asks the verdict
+	/// <c>FUN_00535670( cell, 1, 0 )</c> again (<c>0x0052726e</c>..<c>0x00527283</c>) and on red anchors nothing and keeps the
+	/// tool (<c>0x0052765b</c>); otherwise it anchors as <see cref="FirstQueueClick"/> does, on a fresh list with the click
+	/// counter at nought. It lays nothing.
+	/// </summary>
+	/// <remarks>
+	/// The pass has put its last-square flag <c>DAT_00820ab8</c> back to nought, so the second verdict judges the cell as a
+	/// run's middle square: bare ground and a loose queue end are charged a second time onto the run's total
+	/// (<c>0x005358f4</c>) and the money asked again, so bare ground on a balance below twice the path's price refuses; a path
+	/// is blue rather than <c>m_end</c>, and is red where its track record is a corner or junction (<c>0x00535bd7</c>), which
+	/// the preview's <c>m_end</c> answered before asking. In mode 1 <c>d58</c> is set only with a red answer, so the pass
+	/// leaves no latch for it. docs/exe/park-engine.md, "The unanchored click".
+	/// </remarks>
+	internal static string FirstPathClick( ParkState state, IParkInitialState park, QueueSquare square, int price )
+	{
+		var (x, y) = (square.X, square.Y);
+		var owed = square.Owed;
+		var latches = new Latches();
+
+		if ( PathVerdict( state, park, x, y, false, price, ref owed, ref latches ) is (MarkerRed, var why, _) )
+			return $"path: ({x},{y}) {why} - nothing anchored, the path tool stays out";
+
+		ParkBuildMode.AnchorAt( x, y );
+		ParkBuildMode.ClearPending();
+		ParkBuildMode.Push( x, y );
+		ParkBuildMode.Clicks = 0;
+		Unimplemented.Report( "PATH_TOOL_ADVISOR_MESSAGE_0xB8" );
+
+		return $"path: anchored at ({x},{y}) - click again to lay a run";
 	}
 
 	/// <summary>

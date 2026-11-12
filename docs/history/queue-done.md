@@ -13946,3 +13946,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   The console's `windows` now ends with `Level.OverlayCensus`: an off-screen park run counted frames under a dimmer only
   while `menu` held the game menu open (`shown=True paused=True`) and on top only once it closed. Not photographed (no
   display in the lane): Q1460. **Done 2026-11-12** (cloud lane c85, `alexah/1064-dimmer-over-advisor`).
+- [x] **Q1124. The path tool's unanchored click asks the verdict itself too (Q1046's tail).** Mode 1's arm asks
+  `FUN_00535670( cell, 1, 0 )` before it anchors (`0x0052726e`..`0x00527283`; `park-engine.md`, "The unanchored click"):
+  with the last-square flag nought it charges bare ground a second time onto the run's total and refuses on a balance
+  below it, and on red anchors nothing and keeps the tool (`0x0052765b`). `ParkPathBuilding.RunPath` anchors on the
+  preview's answer alone, so on a balance from 20 to 39 its first click on bare ground anchors where the original's does
+  not. Build it as `FirstQueueClick`, and read the original's first click on a balance of 30.
+  **Done (lane B, 2026-11-12):** decoded from `testme.objdump` (`park-engine.md`, "The unanchored click": mode 1's second
+  verdict is a middle square's, so it charges bare ground and a loose queue end again, a path is blue, and a path on a track
+  corner or junction, `m_end` in the preview, is red) and built (`ParkPathBuilding.FirstPathClick`, `PathVerdict` asked
+  again). Off-screen on the stock park (`q1124/run2-fixed`, 7 of 7): at balances 39 and 30 a click on (11,12)
+  `would bring the run to 40 ... nothing anchored, the path tool stays out`, `0 pending, 0 clicks`; at 40 `anchored at
+  (11,12)`, the balance still 40; a path at balance 0 anchored. Q1047's binary (`run3-control`) anchored at 39. The
+  original's click on a balance of 30 is Q1126 (lane B runs no original).

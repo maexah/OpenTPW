@@ -2979,18 +2979,29 @@ sale leaves the tool so for a click was not read. In OpenTPW an edit of a thing 
   before the cell's type is read, it answers **red for a path** (the preview's join left `d58`), and past that charges
   bare ground a second time onto the run's total `DAT_0081af4c` (`FUN_0052fba0`) and refuses when the balance is below
   it (`0x005358fc`, `d50`, `d48`, `DAT_00816d5c` set). This ride's own queue end answers blue (`DAT_00820ab8` nought,
-  `0x00535ad8`). Mode 1's arm asks `FUN_00535670( cell, 1, 0 )` the same way (`0x0052727b`); it differs from mode 1's
-  preview only in that second charge (Q1124).
+  `0x00535ad8`).
+- **The path tool's click asks it too** (`0x0052726e`..`0x00527283`): `FUN_00535670( cell, 1, 0 )`, after the same sound;
+  a red answer goes to `0x0052765b` (mode 1 is not 3, `0x00527291`), anything else anchors. Read for Q1124 from
+  `testme.objdump`: in mode 1 `d58` is set only with a red answer (`0x00535ba4`, `0x00535cc8`, `0x00535d57`), so an
+  unrefused preview leaves no latch, and the click's verdict is the run's middle square's. It charges bare ground and a
+  loose queue end a second time (`FUN_00535600` answers 1 for types 0 and 3 under op 1, and a path is the op's own type,
+  `0x005358db`), so one square of bare ground needs twice the path's price; a path is not `m_end` with the flag nought
+  (`0x00535afb`..`0x00535b1e`) and goes on to the track-corner test (`0x00535bd7`, red, `d58`) and then blue
+  (`0x00535bfe`); a loose queue end is `m_link` again (`0x00535d06`, no flag read). So a path whose track record is a
+  corner or junction, `m_end` in the preview, refuses the click. The pass clears `d48`, `d50`, `d58` and `DAT_00816d5c`
+  at its start (`0x005234ec`..`0x0052350a`), so what a refusing click sets lasts until the next pass.
 - **Red: nothing changes** (`0x0052765b`): the anchor, the pending list and the click counter stay, the tool stays out,
   `0x8186d8` is cleared. **Otherwise** it anchors on the cell (`0x005272b3`), empties the pending list (`FUN_0052fbd0`,
   count `DAT_00820a8c` to nought), pushes the cell (`FUN_0052fbf0`), posts advisor `0xb8` in mode 1 only (`0x005272d5`),
   and zeroes the click counter `DAT_008186dc` and `0x8186d8` (`0x00527316`, `0x00527320`). It lays nothing.
 
-**OpenTPW** (`ParkPathBuilding.RunQueue`, `FirstQueueClick`; `QueueStrip` answers the one square unanchored): the same,
+**OpenTPW** (`ParkPathBuilding.RunQueue`, `FirstQueueClick`; `QueueStrip` answers the one square unanchored; `RunPath`,
+`FirstPathClick`, which asks `PathVerdict` again as a middle square): the same,
 with the run's total the strip's own (`Owed`, as for the anchored run; how often the original zeroes it is Q541's), so
-the click refuses bare ground on a balance below twice the queue price. Tests:
+the click refuses bare ground on a balance below twice the queue's or the path's price. Tests:
 `ParkPathToolTests.AnUnanchoredQueueStripIsOneSquareJudgedAsTheLast`,
-`AnUnanchoredQueueClickAnchorsOnAFreshListAndRefusesWhatItsOwnVerdictRefuses`, and
+`AnUnanchoredQueueClickAnchorsOnAFreshListAndRefusesWhatItsOwnVerdictRefuses`,
+`AnUnanchoredPathClickAnchorsOnlyWhereItsOwnVerdictAgrees`, and
 `ParkStaffWindowTests.EveryUnrefusedPathAndQueueClickPlaysTheLayingSound` for the sound and the red square.
 
 ### Editing a queue: mode `0x14`, and the ride window's queue button
