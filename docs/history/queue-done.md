@@ -12809,3 +12809,11 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `STARTSCREAM` bands are variables (index 5 in 35, 12 in 4, 2 in 1), so a negative one is a run-time question, and the
   stock park run off-screen screamed bands 1 and 2 only (effects 71 and 72, as before). (1): the stock park's block is
   whole, and all 14 of its scripts resumed.
+- [x] **Q279. `Level.WrittenCells` writes a footprint cell on tile 8 only where the cell joined a footprint or
+  changed its type or parent.** So a file's thing moved and put back on its own anchor (sell then buy) goes out
+  with its unchanged cells on bare ground's tile 55, which the sale left and `ParkBuilding.Stamp` keeps. Every
+  footprint cell should go out on tile `(0, 8, 0)` as every footprint cell of seven park files is
+  (`docs/exe/saves.md`, "OpenTPW's writer, a thing bought and a thing sold"); a test that sells the Drinks Shop,
+  buys item 1203 on (43,30) again and reads `WrittenCells` for that cell's `TileIndex` would show 55 From the
+  week-end audit (stage 6, the second reading of commit `8422bffa`; read from the code, not reproduced in the
+  game). `OpenTPW/World/Level.cs`, line 907.
