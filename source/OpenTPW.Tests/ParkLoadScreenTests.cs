@@ -356,7 +356,8 @@ public class ParkLoadScreenTests
 
 		Assert.IsInstanceOfType( park, typeof( ParkWorld ) );
 		Assert.AreEqual( 755, park!.GameTick );
-		Assert.IsNull( Level.CreatePark( "jungle", balance, catalogue ), "entered, the newest is read, which will not" );
+		Assert.IsInstanceOfType( Level.CreatePark( "jungle", balance, catalogue ), typeof( FreshPark ),
+			"entered, the newest is read, which will not, so the world is made fresh" );
 	}
 
 	private static string Shape( StringPart[] parts )
@@ -414,6 +415,7 @@ public class ParkLoadScreenTests
 	{
 		Asked( "_parkAsked" ).SetValue( null, null );
 		Asked( "_parkFileAsked" ).SetValue( null, null );
+		Asked( "_parkFreshAsked" ).SetValue( null, false );
 	}
 
 	private static FieldInfo Asked( string field ) => typeof( Game ).GetField( field, BindingFlags.Static | BindingFlags.NonPublic )!;

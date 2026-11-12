@@ -94,7 +94,8 @@ public class PlayersOwnParkTests
 
 	/// <summary>
 	/// The level's own choice. The newer file is one that will not read, so which file was opened shows in what
-	/// comes back: the shipped park's 755 from the copy, nothing from the other.
+	/// comes back: the shipped park's 755 from the copy, a world made fresh from the other (Q994: the original's new
+	/// world stands where its load fails, <c>0x005ad054</c>).
 	/// </summary>
 	[TestMethod]
 	public void TheLevelReadsThePlayersNewestFileAndNotTheShippedOne()
@@ -111,7 +112,7 @@ public class PlayersOwnParkTests
 		Assert.AreEqual( 755, park!.GameTick );
 
 		File.SetLastWriteTimeUtc( Path.Combine( Jungle, "Not a park.TPWS" ), Old.AddDays( 2 ) );
-		Assert.IsNull( Create() );
+		Assert.IsInstanceOfType( Create(), typeof( FreshPark ) );
 	}
 
 	[TestMethod]

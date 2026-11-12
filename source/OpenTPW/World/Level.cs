@@ -190,16 +190,16 @@ public class Level
 	/// </summary>
 	private WindowStack? _windows;
 
-	/// <summary>The park file this park was asked to be built from, or null for the one it is entered with.</summary>
-	private readonly string? _parkFile;
+	/// <summary>What this park was asked to be built from (<see cref="ParkStart"/>); null in the lobby.</summary>
+	private readonly ParkStart? _parkStart;
 
 	/// <summary>The theme folder this level was built from - "jungle", "fantasy", "hallow" or "space".</summary>
 	public string ThemeName { get; private init; }
 
-	/// <param name="parkFile">A park file in the save folder to build the park from, the Load Park screen's; null for the one the park is entered with.</param>
-	public Level( string levelName, Scene kind = Scene.Lobby, string? parkFile = null )
+	/// <param name="parkStart">What the park is built from: a park file already read (a Load Park row, Alt+L, Restart Park), a world made fresh, or null for the one the park is entered with.</param>
+	internal Level( string levelName, Scene kind = Scene.Lobby, ParkStart? parkStart = null )
 	{
-		_parkFile = parkFile;
+		_parkStart = parkStart;
 
 		// Lower-cased once here rather than at each place that builds a path out of it. The two ways
 		// into a park disagree about case: the debug console passes "jungle" and the island panel
@@ -401,7 +401,7 @@ public class Level
 		load.Mark( "catalogue" );
 		var catalogue = Catalogue;
 
-		var park = EnterPark( ThemeName, Balance, catalogue, _parkFile );
+		var park = EnterPark( ThemeName, Balance, catalogue, _parkStart );
 		Park = park;
 
 		StartTheCalendar( ThemeName, park );
@@ -614,11 +614,17 @@ public class Level
 	/// </remarks>
 	/// <param name="parkFile">
 	/// A park file in the save folder to read instead, the row clicked on the Load Park screen (0x005ac5d0). One that
-	/// will not read leaves the park with nothing placed in it. <b>A gap, said at the site</b> (Q994, <c>docs/exe/saves.md</c>,
-	/// "The load"): the original checks the file before it takes anything down (<c>FUN_00414d40</c>), so a bad file loaded from a park
-	/// keeps that park running, and one entered with leaves the new world standing; only a module's failure after the teardown
-	/// leaves its state undefined. Here the scene has already ended (<c>Game.cs</c>) and the park is null.
+	/// will not read gives null here; the game never builds a park from one, because <see cref="Game"/> reads the file
+	/// before the running park's scene ends and keeps that park where it will not (<see cref="ReadParkFile"/>).
 	/// </param>
+	/// <remarks>
+	/// <b>Entering with a file that will not read makes the world fresh</b>, as the original's new world stands where
+	/// <c>FUN_00414d40</c> fails before its teardown and <c>FUN_005accf0</c> drops the answer (<c>0x005ad054</c>; state 9 goes on,
+	/// <c>0x0054f12b</c>; <c>docs/exe/saves.md</c>, "The load"). <b>A deviation, the original's undefined case filled</b>: a
+	/// file whose body will not inflate, or whose modules will not read at all, passes the original's checks and its
+	/// teardown and ends in failure 6 with the state "(possibly) inconsistent"; here every failure of the read is
+	/// taken before anything is built, so it too makes the world fresh. A file read in part is a park, as before.
+	/// </remarks>
 	internal static IParkInitialState? CreatePark( string theme, ParkBalance balance, ParkItemCatalogue catalogue,
 		string? parkFile = null )
 	{
@@ -629,21 +635,68 @@ public class Level
 			return ReadPark( theme, FileSystem, $"levels/{theme.ToLowerInvariant()}/Easymode.TPWI" );
 
 		if ( SaveFolder.NewestPark( player.Slot, player.Name, theme.ToLowerInvariant() ) is { } own )
-			return ReadPark( theme, SaveFileSystem, own );
+		{
+			if ( ReadPark( theme, SaveFileSystem, own ) is { } world )
+				return world;
 
-		Log.Info( $"{theme}: {player.Name} has no park file for this theme, so the park is made fresh" );
+			Log.Info( $"{theme}: {own} will not read, so the park is made fresh, as the original's new world stands" );
+		}
+		else
+		{
+			Log.Info( $"{theme}: {player.Name} has no park file for this theme, so the park is made fresh" );
+		}
+
+		return MakeFresh( theme, balance, catalogue );
+	}
+
+	/// <summary>A world made fresh for the theme, its census logged.</summary>
+	private static FreshPark MakeFresh( string theme, ParkBalance balance, ParkItemCatalogue catalogue )
+	{
 		var park = new FreshPark( theme, balance, catalogue );
 		Log.Info( $"{theme}: {park.Census()}" );
 		return park;
 	}
 
 	/// <summary>
-	/// The park a level is entered with: <see cref="CreatePark"/>, and the camera it opens on taken from the file
-	/// (<see cref="TakeTheFilesCamera"/>). One call, so a test can see the camera follow the file.
+	/// What a park is built from, as <see cref="Game.RequestParkLoad"/> and <see cref="Game.RequestFreshPark"/> ask: the
+	/// park the theme is entered with (<see cref="Entered"/>), a park file already read (<see cref="Read"/>, from
+	/// <see cref="File"/>), or a world made fresh (<see cref="Fresh"/>).
 	/// </summary>
-	internal static IParkInitialState? EnterPark( string theme, ParkBalance balance, ParkItemCatalogue catalogue, string? parkFile = null )
+	internal sealed record ParkStart( string? File, ParkWorld? Read, bool Fresh )
 	{
-		var park = CreatePark( theme, balance, catalogue, parkFile );
+		/// <summary>The park file the theme is entered with, or a world made fresh (<see cref="CreatePark"/>).</summary>
+		public static readonly ParkStart Entered = new( null, null, false );
+
+		/// <summary>A world made fresh, whatever the folder holds.</summary>
+		public static readonly ParkStart MadeFresh = new( null, null, true );
+	}
+
+	/// <summary>
+	/// The park a level is entered with: <see cref="CreatePark"/>, or the file <paramref name="start"/> holds already read,
+	/// its particle density taken now that the park's own particle system runs (<see cref="TakeParticleDensity"/>), or a
+	/// world made fresh; and the camera it opens on taken from the file (<see cref="TakeTheFilesCamera"/>). One call, so a
+	/// test can see the camera follow the file.
+	/// </summary>
+	internal static IParkInitialState? EnterPark( string theme, ParkBalance balance, ParkItemCatalogue catalogue, ParkStart? start = null )
+	{
+		start ??= ParkStart.Entered;
+
+		IParkInitialState? park;
+
+		if ( start.Read is { } read )
+		{
+			TakeParticleDensity( theme, read, ParticleSystem.Current );
+			park = read;
+		}
+		else if ( start.Fresh )
+		{
+			Log.Info( $"{theme}: the park is made fresh, as asked" );
+			park = MakeFresh( theme, balance, catalogue );
+		}
+		else
+		{
+			park = CreatePark( theme, balance, catalogue );
+		}
 
 		TakeTheFilesCamera( park );
 
@@ -682,9 +735,30 @@ public class Level
 	/// </summary>
 	private static ParkWorld? ReadPark( string themeName, BaseFileSystem files, string path )
 	{
+		var world = ReadParkFile( themeName, files, path );
+
+		// Taken as the file is read, before anything of the park starts an effect, as the original's file read
+		// calls its loader (0x00415437).
+		if ( world != null )
+			TakeParticleDensity( themeName, world, ParticleSystem.Current );
+
+		return world;
+	}
+
+	/// <summary>
+	/// A park file in the save folder read whole, with nothing of the running park touched: what <see cref="Game"/>
+	/// reads before it ends a park's scene for a file loaded from it (a Load Park row, Alt+L, Restart Park), so a file
+	/// that will not read keeps the running park, as the original's load fails before its teardown (<c>FUN_00414d40</c>;
+	/// <c>docs/exe/saves.md</c>, "The load"). Null where it will not read.
+	/// </summary>
+	internal static ParkWorld? ReadParkAhead( string themeName, string path ) => ReadParkFile( themeName, SaveFileSystem, path );
+
+	/// <summary>A park file, walked, or null where it is missing or will not read. Takes nothing into the running game.</summary>
+	private static ParkWorld? ReadParkFile( string themeName, BaseFileSystem files, string path )
+	{
 		if ( !files.FileExists( path ) )
 		{
-			Log.Info( $"{themeName}: no park file ships with this theme, so nothing is placed in it" );
+			Log.Info( $"{themeName}: no park file at {path}, so none is read" );
 			return null;
 		}
 
@@ -703,16 +777,11 @@ public class Level
 
 			Log.Info( $"{themeName}: park file holds {world.ThingCount} things, {world.Objects.Count} of them objects" );
 
-			// Taken as the file is read, before anything of the park starts an effect, as the original's file read
-			// calls its loader (0x00415437).
-			TakeParticleDensity( themeName, world, ParticleSystem.Current );
-
 			return world;
 		}
 		catch ( Exception e )
 		{
-			// A park worth looking at without its shops beats no park at all.
-			Log.Warning( $"{themeName}: the park file would not read, so the park is empty - {e.Message}" );
+			Log.Warning( $"{themeName}: the park file {path} will not read - {e.Message}" );
 			return null;
 		}
 	}

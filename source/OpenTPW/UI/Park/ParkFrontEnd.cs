@@ -556,12 +556,12 @@ internal sealed class ParkFrontEnd : Panel
 	/// (<c>FUN_0048b5b0</c>), and states 0xd and 0xe quieten the advisor (<c>Advisor_StopQuietly(1)</c>) and load the
 	/// player's <c>restart.INTS</c>, the park as the theme was first entered (<c>0x0055036c</c>; <c>docs/exe/saves.md</c>,
 	/// "Restart Park: restart.INTS"), and go back to state 10. Where the folder holds no such file the load fails at the
-	/// open, nothing is taken down, and the park runs on.
+	/// open, nothing is taken down, and the park runs on; so does a file that will not read (<see cref="Game.ChangeSceneIfAsked"/>).
 	/// <para>
 	/// <b>Deviations.</b> The file is loaded by building the scene again from it, as a Load Park row is, where the
 	/// original reads it over the running park. A park made fresh is written as <c>restart.INTS</c> as it is entered
 	/// (<see cref="Level.WriteRestartOnEntering"/>), so Restart Park loads that file; where a file cannot be written it is
-	/// made fresh again, the world the original's file would hold. With nobody playing, which only the console's <c>park</c> reaches, there is no folder,
+	/// made fresh again (<see cref="Game.RequestFreshPark"/>, never the newest file in the folder), the world the original's file would hold. With nobody playing, which only the console's <c>park</c> reaches, there is no folder,
 	/// and the copy that ships beside the level is read again.
 	/// </para>
 	/// </summary>
@@ -587,7 +587,7 @@ internal sealed class ParkFrontEnd : Panel
 		if ( Level.Current?.Park?.Save is null )
 		{
 			Log.Info( $"Park menu: Restart Park - no restart file, and this park was made fresh, so it is made fresh again" );
-			Game.RequestParkLoad( _themeName );
+			Game.RequestFreshPark( _themeName );
 			return;
 		}
 

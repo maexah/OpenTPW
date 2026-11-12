@@ -2268,23 +2268,18 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   bought here, loaded in the original. **Needs the desk (2026-10-31):** the original given a file ours wrote with a bought kart (Q858's
   `q858/rebased-fix/autosave.TPWS`: Dino Karts and Splish Splash, each looped): does it load, does the ride run and its sections draw without the
   pieces' models? Lane B may not run the original, so Q858 saw ours only.
-- [ ] **Q994. A file that will not load keeps the running park, as the original does.** From the week-end audit 2026-10-31 (S-D3).
-  `FUN_00414d40` leaves before its first teardown call (`0x0041501d`) on a failed open (`0x00414dc2`), version read (`0x00414e09`), a version
-  above 500 (`0x00414e3c`, mode 2 only), preamble (`0x00414e76`), length (`0x00414ec1`), read (`0x00414eef`), block size (`0x00414f2f`) and
-  memory file (`0x00414f96`); the inflate (`0x00414f5d`) is unchecked, so a file whose header reads but whose body is cut goes on to the
-  teardown and failure 6 (the only undefined case). Entering: `FUN_005accf0` drops the load's answer (`0x005ad054`, next `0x005ad059`) and
-  state 9 goes on (`0x0054f12b`, `0x0054f130`), so the new world stands and state 0xf writes `restart.INTS` from it. Ours: `Game.cs:244-245`
-  ends the scene first, so Load Park on a bad `.TPWS`, Alt+L, or Restart Park on a bad `restart.INTS` drops the running park for an empty
-  one, and entering with a bad file gives `Park` null (`Level.cs:676-681`): nothing placed, no gate, and `Level.cs:864-868` refuses every
-  save. The fresh-park arm is `Level.cs:622-625`. Build: read and check the file before the scene ends (no in-place build is needed: Q247's choice does not change this); on a failure keep the park (loading)
-  or make the world fresh (entering). Said at the site (`Level.CreatePark`). A copied or damaged file, a short one the original left
-  (`0x00414c37`) or an online one (`SaveReader.cs:95`) reaches it; not a file this game writes. The Restart Park comment at
-  `ParkFrontEnd.cs:587-590` (S-M3, Q997) belongs with it. Confirm: a truncated copy in each of the three routes, in both games.
 - [ ] **Q1174. One copy: a second path to one game folder through a link takes a second lock.** From Q995. `OneCopy.Name`
   keys the folder's full path as spelled, so a copy started through a symbolic link (or a junction, or a subst drive) to
   a folder another copy runs on is not refused, and the two share one `save/`. Resolve the path's links before hashing
   (every component, not only the last, which is all `Directory.ResolveLinkTarget` does), with a test that makes a link
   to a temporary folder. Not measured: whether anyone starts the game that way.
+- [ ] **Q1179. Alt+L's log says "QuickSave Loaded" before the file is read.** From Q994. `Level.QuickLoadKey` answers
+  `Quickload: QuickSave Loaded - <path> is loaded` as it asks for the load; since Q994 the file is read at the scene change, and one
+  that will not read is then logged `Load: <path> will not read ...` with the park kept, so the log carries both lines. The original
+  picks "QuickSave Loaded" or "QuickSave Load Failed" (`0x00747ed4`, `0x007486bc`) from the load's answer, into the empty logger
+  `FUN_005da3c0` (`docs/exe/saves.md`, "The quicksave and quickload keys"), so a player sees nothing either way. Log only: say
+  "QuickSave Load Failed" when the read fails (the read is at `Game.ChangeSceneIfAsked`, a frame later). Confirm: Alt+L on a cut
+  `jungle.TPWS` logs the failed string and not the loaded one.
 - [ ] **Q996. A failed route is not revived; a binding read on its press is rebuilt as the frame ends.** From the week-end audit 2026-10-31
   (D1, D2 of the docs sweep). (1) The original's walker revives a failed route when the ground near the guest has changed since the last plan
   and walks them to the loser's back of queue (`0x0050ed79`); `PeepBehaviour.cs:2459` says so, `docs/exe/ride-operation.md:4557` and STATUS
@@ -2297,7 +2292,7 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   `loaded.PutControls( body, built )` inside the `if` of `:366`, so an item bought and sold since a load, with nothing else structural, leaves
   no stamp, where the original's stays (`0x004dd0e1`; `ParkState.cs:292-300`); the next build takes a later one and `ParkWorth.cs:52`, `:59`
   ages by it. S-M2: a park read in part refuses every save (`ParkFileWriter.cs:236-240`) with a log line and no `SaveTrouble.Failed`
-  (`Level.cs:1065-1069`), so Save Park, Alt+S and the autosave lose the play in silence; the original has no such refusal. S-M3: Restart Park
+  (`Level.cs:1065-1069`), so Save Park, Alt+S and the autosave lose the play in silence; the original has no such refusal. S-M3 (built with Q994, `Game.RequestFreshPark`): Restart Park
   on a fresh park with no `restart.INTS` calls `Game.RequestParkLoad` (`ParkFrontEnd.cs:587-590`, `:562-564`) through `Level.cs:619`
   `NewestPark`, so any `*.TPW*` from an Alt+S since loads; with `Park` null it reads the same bad file again; the original loads nothing
   (`0x0055036c`, the open fails). S-M4: `SaveFolder`'s deletes use raw `File` and `Directory` calls (`DeletePlayer`, at `:634` and `:672`), so
