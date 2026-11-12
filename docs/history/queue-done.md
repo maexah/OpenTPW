@@ -12315,6 +12315,22 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   open. The engine finds a bounce rider's node by id in `0x800` ("Where a rider is drawn"); `ModelFile.FindNode` is
   that lookup and `RideNodes` the stored positions at rest (Q175b), not the animated pose a rider needs. A walk's riders
   are placed by `FUN_005580a0` from the posed nodes since Q585 (`ride-operation.md`, "Where a walk's rider is drawn").
+- [x] **Q64. Escape over the player slots opens the game menu.** Found by Q42's decode (`docs/exe/lobby.md`, "The
+  lobby's keys act on the release"). `FrontEnd_ShowPlayerSlots` hides the lobby's root control (`0x004a65a8`) and gives
+  the slots the focus (`0x004a65d6`), and their callback `0x004a5fc0` drops every key, so with the slots up no key acts
+  at all: Escape opens no menu, and the slots' own Quit is the way out. A message box closed over the slots moves the
+  focus to the hidden root (`0x004862a0`), where keys still reach nothing. Here `FrontEnd.MenuKey` opens the lobby's
+  menu over the slots, said at the site. Confirm: nobody playing, Escape let go, `windows` still `PlayerSlots`; a
+  screenshot. Built: `FrontEnd.MenuKey`, after the game menu's and a modal window's
+  claims and the camera's cancel, drops Escape while the lobby's root is hidden (nobody playing), logging `Front end:
+  Escape let go over the player slots - they drop every key, so no menu opens`; the rule is the root, not a slots
+  window in front, so a message box closed over the slots is covered too. Kept, said at the site: a flight the debug
+  console started with nobody playing (nothing the original can have) is still cancelled by Escape.
+  `EscapeOverThePlayerSlotsOpensNoMenu` (two Escapes over the slots open nothing; with a player the same key opens the
+  menu) and the changed `EscapeDuringAFlightWithNobodyPlayingOpensNoPanel` each failed with the test dropped and with it
+  made a `PlayerSlots`-in-front test. Off-screen run, nobody playing: two Escapes by xdotool each logged that line and
+  `windows` read `PlayerSlots` before and after both. Not taken: the screenshot (no display in the lane); not observed
+  in the original (no original in the lane). **Done 2026-11-12** (cloud lane c70, `alexah/1049-escape-over-player-slots`).
 
 ## E. Large
 

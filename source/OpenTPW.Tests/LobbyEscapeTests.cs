@@ -252,10 +252,10 @@ public class LobbyEscapeTests
 	/// <summary>
 	/// <b>With nobody playing there is no island panel to give back</b>: the debug console's flight is cancelled by
 	/// Escape like any other, and the lobby is left showing what it showed - here nothing - with no menu. In orbit the
-	/// same key then opens the menu.
+	/// same key then reaches nothing either: with nobody playing the lobby's root is hidden (Q64).
 	/// </summary>
 	/// <remarks>
-	/// <b>Mutations:</b> giving the panel back whoever is playing, or the camera answering Escape in orbit, turns this
+	/// <b>Mutations:</b> giving the panel back whoever is playing, or opening the menu with nobody playing, turns this
 	/// red.
 	/// </remarks>
 	[TestMethod]
@@ -273,7 +273,40 @@ public class LobbyEscapeTests
 		Assert.AreEqual( "", Names( stack ), "no panel with nobody playing, and no menu" );
 
 		Escape( frontEnd );
-		Assert.AreEqual( "GameMenu", Names( stack ), "in orbit, Escape opens the game menu" );
+		Assert.AreEqual( "", Names( stack ), "in orbit, with nobody playing, Escape opens no menu" );
+	}
+
+	/// <summary>
+	/// <b>Escape over the player slots opens no game menu</b> (Q64): the slots hide the lobby's root and take the focus,
+	/// and their callback <c>0x004a5fc0</c> drops every key, so the slots stay the only window however often it is let
+	/// go. A message box closed over them leaves the focus on the hidden root, which reaches nothing either: the slots
+	/// alone again, the same. The positive control: once someone is playing, the same key over the same stack opens
+	/// the menu. Needs the game, for the menu's text.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> dropping the root's test in <c>FrontEnd.MenuKey</c> opens the menu over the slots; testing
+	/// for a <see cref="UI.PlayerSlots"/> window in front rather than the root keeps a player's menu shut over one.
+	/// </remarks>
+	[TestMethod]
+	public void EscapeOverThePlayerSlotsOpensNoMenu()
+	{
+		FileSystem = GameData.Required();
+
+		var (frontEnd, stack, _) = ALobbyFrontEnd();
+		var slots = (UI.PlayerSlots)RuntimeHelpers.GetUninitializedObject( typeof( UI.PlayerSlots ) );
+		var windows = (List<UI.UiWindow>)typeof( UI.WindowStack ).GetField( "_windows", BindingFlags.Instance | BindingFlags.NonPublic )!
+			.GetValue( stack )!;
+		windows.Add( slots );
+
+		Escape( frontEnd );
+		Assert.AreEqual( "PlayerSlots", Names( stack ), "Escape over the slots reaches nothing" );
+
+		Escape( frontEnd );
+		Assert.AreEqual( "PlayerSlots", Names( stack ), "and a second Escape nothing more" );
+
+		SetCurrentPlayer( new Player( 0, "Test", new PlayerFile { InstantAction = true } ) );
+		Escape( frontEnd );
+		Assert.AreEqual( "PlayerSlots, GameMenu", Names( stack ), "with someone playing, the same key opens the menu" );
 	}
 
 	/// <summary>
