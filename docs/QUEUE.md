@@ -2636,16 +2636,14 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
     assigned member of every object broken down, calling or waiting for an upgrade, whoever held it, with no toilet
     test, and reads neither argument (`park-engine.md`, "A worker held at a save"). The same runs when a mechanic held
     at a save is put back.
-- [ ] **Q61. The park-entry fly-in darkens the screen, and nothing here draws it.** Found by Q41's decode
-  (`docs/exe/lobby.md`, "Escape cancels the fly-in"). State 2 sets the render camera's `+0x60` to
-  `clamp( (1 - (r - 8) / (SPINRADIUS - 8)) x 65536, 0, 65535 )` (`0x005e052f`), states 0 and 1 set it to 0, and
-  `0x005d8cb0` eases `+0x5c` toward it by an eighth of the gap per lobby pass and draws a black rectangle over the
-  view with alpha `min( +0x5c >> 8, 255 )` (`0x008bd4e4`, drawn at `0x00576e54`). So the flight fades to black as it
-  closes on the gate, and a cancel lifts it. Counted as `LOBBY_FLY_IN_FADE`. The ease is per pass, not per second:
-  convert it through `Time.SmoothingFactor` and say so (rule 10). Confirm: `step` into the flight, screenshots at
-  three radii with mean brightness falling, then Escape and the brightness back within a second.
-  - **Note (play test 2026-10-21, note 2):** no golden key animation at entry; the key puff is drawn since Q669, so
-    what is left of the note is this fade.
+- [ ] **Q1472. Set the fly-in's black beside the original's frames.** Split from Q61 (built in a cloud lane with no original).
+  On the desk, the original under Proton (`original/lobbypanel.sh` with `FILM` and `POLL` `lobbycam.py`, which reads the fade
+  word `[0x00f83778]+0x60`) and ours (`lib/lobbyentry.py`, its `f-NN` frames and means; `CANCEL=` for the Escape) entering
+  Lost Kingdom from the same orbit: three radii in state 2 with the mean brightness falling in both, the last lobby frame
+  before the loading screen, and an Escape at about 1.5 s into state 2 with the brightness back in both. Check too that the
+  island panel and the key puff are drawn over the black in the original as ours draws them (`Render_DrawView`, `0x00576e54`),
+  and whether state 2 writes its target before or after the pass's decay (`0x005e052f`-`0x005e05b4`, Ghidra). Confirm: the
+  photographs side by side, and the fade word against ours' `fade=` at matching radii.
 - [ ] **Q62. What View the online world does offline. Decode first.** Found by Q41's decode. `IslandPanel_Callback`'s
   case for button `0x1e0e9` (`0x004b8c18`-`0x004b8c2f`) calls the island camera's `+0x20`, its deactivate
   (`0x005e1bd0`, which Ghidra names `IslandLobby_ViewOnlineWorld`), and then the online-world child's `+0x1c`, which is

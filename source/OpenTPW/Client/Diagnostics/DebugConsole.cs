@@ -3348,6 +3348,8 @@ public static class DebugConsole
 			// and the only way to see the park-entry move at all: it finishes by loading the park, so
 			// by the time anything else could be asked the lobby is gone.
 			+ $"{LobbyCameraMode.LeaveDescription()} gate={island?.Gate.Describe()} "
+			// The fly-in's black over the view (LobbyFade), a pure getter.
+			+ $"{LobbyFade.Describe()} "
 			+ $"clock={(Time.Paused ? "paused" : "running")} stepping={Time.StepFrames} "
 			+ $"game={(GameClock.Paused ? "paused" : "running")} ticks={GameClock.Ticks} "
 			+ $"day={GameCalendar.Days} season={GameCalendar.Season} date={GameCalendar.Now:yyyy-MM-dd} "
