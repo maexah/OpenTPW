@@ -822,6 +822,13 @@ public class ParkFileWriterTests
 			Assert.AreEqual( (0, boarder, true), (Written( "Boarder" ).TrackRides.Cars.Count, Written( "Boarder" ).TrackRides.Listed.Single().Peep, Written( "Boarder" ).TrackRides.Listed.Single().Boarding) );
 			cars.RideOf( Handle )!.Boarding.Clear();
 
+			// And with one come off and nobody waiting: a type 7 alone.
+			cars.RideOf( Handle )!.Leaving.Insert( 0, leaver );
+			Unimplemented.Forget();
+			Assert.IsNotNull( Level.WritePark( shipped, state, "jungle", "Leaver", people, null, rides, catalogue ) );
+			Assert.AreEqual( (0, leaver, false), (Written( "Leaver" ).TrackRides.Cars.Count, Written( "Leaver" ).TrackRides.Listed.Single().Peep, Written( "Leaver" ).TrackRides.Listed.Single().Boarding) );
+			cars.RideOf( Handle )!.Leaving.Clear();
+
 			var launched = cars.Launch( Handle )!;
 
 			Assert.IsTrue( cars.Board( Handle, rider ) );
@@ -1057,32 +1064,39 @@ public class ParkFileWriterTests
 			Assert.AreEqual( 0, Counted( "SAVE_PARK_OBJECT_SOLD" ) );
 			Assert.AreEqual( shipped.Objects.Count, sold.Objects.Count );
 
-			// The file with somebody waiting to board, loaded and its list emptied: the file's boarding chunk does not
-			// stay under the ride's record, so the next load puts nobody back (FUN_005428e0 writes the lists as they stand).
-			again.Delete();
-			again = null;
-			Entity.ApplyDeletions();
-			TestRun.DeleteEvery<ParkPeople>();
+			// The file with somebody waiting to board, and the one with somebody come off, each loaded and its list emptied: the
+			// file's boarding or leaving chunk does not stay under the ride's record, so the next load puts nobody back
+			// (FUN_005428e0 writes the lists as they stand). Each list alone, so a test of either that misses the other fails.
+			foreach ( var (file, emptied, peep, boarding) in new[] { ("Boarder", "Unboarded", boarder, true), ("Leaver", "Unleft", leaver, false) } )
+			{
+				again?.Delete();
+				again = null;
+				Entity.ApplyDeletions();
+				TestRun.DeleteEvery<ParkPeople>();
 
-			var boarded = Written( "Boarder" );
-			var boardedPeople = new ParkPeople( boarded );
+				var listed = Written( file );
+				var listedPeople = new ParkPeople( listed );
 
-			again = new ParkRides( "jungle", boarded, catalogue, FileSystem );
+				again = new ParkRides( "jungle", listed, catalogue, FileSystem );
 
-			var waiting = boardedPeople.State.TrackRides.Cars.RideOf( Handle )!;
+				var waiting = listedPeople.State.TrackRides.Cars.RideOf( Handle )!;
 
-			Assert.AreEqual( (0, boarder, 0), (waiting.Cars, waiting.Boarding.Single(), waiting.Leaving.Count), "the load puts the boarder back" );
-			waiting.Boarding.Clear();
-			Unimplemented.Forget();
-			Assert.IsNotNull( Level.WritePark( boarded, boardedPeople.State, "jungle", "Unboarded", boardedPeople, null, again, catalogue ) );
+				Assert.IsTrue( listed.TrackRides.HoldsMoreThanTheRecordOf( Handle ), file );
+				Assert.AreEqual( (0, boarding ? 1 : 0, boarding ? 0 : 1), (waiting.Cars, waiting.Boarding.Count, waiting.Leaving.Count), $"{file}: the load puts the peep back" );
+				Assert.AreEqual( peep, (boarding ? waiting.Boarding : waiting.Leaving).Single() );
+				waiting.Boarding.Clear();
+				waiting.Leaving.Clear();
+				Unimplemented.Forget();
+				Assert.IsNotNull( Level.WritePark( listed, listedPeople.State, "jungle", emptied, listedPeople, null, again, catalogue ) );
 
-			var unboarded = Written( "Unboarded" );
+				var unlisted = Written( emptied );
 
-			Assert.IsNull( unboarded.Problem );
-			Assert.AreEqual( (1, 0, 0), (unboarded.TrackRides.Rides.Count, unboarded.TrackRides.Listed.Count, unboarded.TrackRides.Cars.Count), "the record, and nobody listed" );
-			Assert.AreEqual( new SavedTrackRide( Handle, 0x20400, 0x12c00, 0, HotPot, 60, 1, 1, 4350, 1 ), unboarded.TrackRides.Rides.Single() );
-			Assert.IsFalse( unboarded.TrackRides.HoldsMoreThanTheRecordOf( Handle ) );
-			Assert.AreEqual( 0, Counted( "SAVE_PARK_TRACK_RIDE_AS_THE_FILE" ) );
+				Assert.IsNull( unlisted.Problem );
+				Assert.AreEqual( (1, 0, 0), (unlisted.TrackRides.Rides.Count, unlisted.TrackRides.Listed.Count, unlisted.TrackRides.Cars.Count), $"{emptied}: the record, and nobody listed" );
+				Assert.AreEqual( new SavedTrackRide( Handle, 0x20400, 0x12c00, 0, HotPot, 60, 1, 1, 4350, 1 ), unlisted.TrackRides.Rides.Single() );
+				Assert.IsFalse( unlisted.TrackRides.HoldsMoreThanTheRecordOf( Handle ) );
+				Assert.AreEqual( 0, Counted( "SAVE_PARK_TRACK_RIDE_AS_THE_FILE" ) );
+			}
 		}
 		finally
 		{

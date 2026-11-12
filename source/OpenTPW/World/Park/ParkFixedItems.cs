@@ -172,7 +172,7 @@ public sealed class ParkFixedItems : Entity
 
 	/// <summary>
 	/// Stands the model of each vehicle made since the last call, outside the frame's entity walk, which cannot take
-	/// the entities a model adds (<c>Level.Update</c>): the summons runs inside it, in the people's sweep.
+	/// the entities a model adds (<c>Level.Update</c>): the summons runs in the people's sweep (<see cref="ParkLoop"/>), and the model is stood after the walk.
 	/// </summary>
 	internal void Sync()
 	{

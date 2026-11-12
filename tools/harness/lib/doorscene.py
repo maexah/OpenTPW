@@ -10,9 +10,10 @@ at (43,26); the queue tool then anchors at (43,27) and lays to (43,28), a cell o
     script has a child;
   4 the door clicked (closes it), the clock run until the script's line shows child 0;
   5 the door clicked again (opens it), the clock run until a child again;
-then `savepark`, kept as <outdir>/doorscene-open.TPWS for the original (docs/TOOLING.md, "A bought ride's door in both games").
+then `savepark`, kept as <outdir>/doorscene-open.TPWS for the original (docs/TOOLING.md, "A bought ride's door, in both games").
 Each read is `scripts` (the count and the thing's lines), `scriptvar <thing> VAR_RIDECLOSED`, the thing's `objects` line, the save and load gaps
-and `particles` (to <outdir>/particles-<tag>.txt; the lines whose x is in 400..459 printed); three frames a camera at 3, 4 and 5 with the clock
+and `particles` (to <outdir>/particles-<tag>.txt; the lines whose x is in the site's band printed, (x - 4) * 10 to
+(x + 2) * 10 less one: 400..459 at the default (44,25)); three frames a camera at 3, 4 and 5 with the clock
 running and the HUD hidden. The door is the real click on b_door (0x3e38) of `openthing <thing>`, the window's okay after. A ride's own script is
 the thing's line with parent 0. Run it with the venv's python; <bin> is the build's folder. Prints READ, DOOR and WAIT lines; confirm.txt and run.log
 are in <outdir>."""
@@ -36,12 +37,13 @@ def read(tag):
     for l in sc:
         if f"thing {k} " in l: print(f"READ {tag}   {l.strip()[:200]}")
     print(f"READ {tag} {' '.join(reply(f'scriptvar {k} VAR_RIDECLOSED', 0.6, 0)[-1:]).strip()}")
-    print(f"READ {tag} " + " ".join(l.strip() for l in reply("objects", 1.5, 0, 300) if f"thing  {k} " in l)[:220])
+    print(f"READ {tag} " + " ".join(l.strip() for l in reply("objects", 1.5, 0, 300) if _re.search(rf"thing +{k} ", l))[:220])
     print(f"READ {tag} gaps: {gaps(r'SAVE_PARK|LOADED_|OPEN_GUARD')}")
     pa = reply("particles", 1.5, 0, 400)
     open(os.path.join(OUT, f"particles-{tag}.txt"), "w").write("\n".join(pa))
-    near = [l.strip() for l in pa if _re.search(r" at \(4[0-5]\d,", l)]
-    print(f"READ {tag} particles: emitters at x 400..459: {len(near)}")
+    lo, hi = (SX - 4) * 10, (SX + 2) * 10
+    near = [l.strip() for l in pa if (m := _re.search(r" at \((-?\d+),", l)) and lo <= int(m.group(1)) < hi]
+    print(f"READ {tag} particles: emitters at x {lo}..{hi - 1}: {len(near)}")
     for l in near[:8]: print(f"READ {tag}   {l[:160]}")
 def until(pred, secs, what):
     t0 = time.time(); line = ""

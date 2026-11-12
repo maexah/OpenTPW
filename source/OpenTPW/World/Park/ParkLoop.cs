@@ -101,7 +101,11 @@ internal static class ParkLoop
 	/// the compare's messages (it joins sets 1 and 2 alone, <c>0x00511fa9</c>, <c>0x00511fb8</c>). Ours reads the date the
 	/// compare sets (<see cref="GameCalendar.Days"/>, <see cref="GameCalendar.Season"/>), so it turns after the compare and
 	/// sees the same date; and after the advisor's turn, thing 3's, which reads nothing of the weather (docs/exe/weather.md,
-	/// "The calendar").
+	/// "The calendar"). But the original's tail reads the turned weather: its arrival manager sizes a load by this sweep's
+	/// drops (<c>0x004cf60e</c>), where ours runs in <see cref="ParkPeople.Sweep"/> before this turn and reads the drops one
+	/// turn behind (Q1165). And the original skips the walk, its weather with it, in world state 4, the park's end
+	/// (<c>0x0051639e</c>), while the tail still runs; ours turns the weather whatever the state: gate it there when Q404
+	/// builds the end.
 	/// </remarks>
 	private static void Tail( ParkPeople people, Action<ParkPeople>? calendar, ParkWeather? weather )
 	{

@@ -851,8 +851,8 @@ public class Level
 			return;
 		}
 
-		// Made after this frame's entity walk, in which the lab's sweep runs: the original makes it inside the lab's
-		// message (0x00503fb7), so ours stands up later in the same frame, before anything is drawn.
+		// Made after this frame's entity walk; the lab's sweep runs in the park's loop before it: the original makes it inside
+		// the lab's message (0x00503fb7), so ours stands up later in the same frame, before anything is drawn.
 		_endFeatureOwed = () => ParkEndFeature.Make( catalogue, state, rides, objects, windows, InstantAction );
 	}
 
@@ -1775,6 +1775,30 @@ public class Level
 		_ => 32
 	};
 
+	/// <summary>
+	/// The world's part of a frame: a park's loop takes the frame's ticks one at a time through every system before anything
+	/// is done once a frame, as the original's loop runs before its frame's work (<see cref="ParkLoop"/>), each sweep followed
+	/// by <see cref="SweepTail"/> and the weather's turn; then every entity's once-a-frame work, which so sees all the frame's
+	/// ticks taken.
+	/// </summary>
+	private void RunTheWorld()
+	{
+		if ( Kind == Scene.Park )
+			ParkLoop.Run( ParticleSystem.Current, ParkRides.Current, ParkPeople.Current, SweepTail, ParkWeather.Current );
+
+		Entity.All.ForEach( entity => entity.Update() );
+	}
+
+	/// <summary>
+	/// What the level hands <see cref="ParkLoop"/> for each sweep's tail: the calendar's compare, the day's, month's and year's
+	/// work on its edges and the golden tickets that sweep owed (<see cref="TurnTheCalendar"/>). Only a park keeps a date.
+	/// </summary>
+	private void SweepTail( ParkPeople people )
+	{
+		if ( ParkState is { } clocked )
+			TurnTheCalendar( clocked, people, Catalogue, tick => ParkGoldenTickets.Sweep( tick, clocked, people ) );
+	}
+
 	public void Update()
 	{
 		DebugConsole.Poll();
@@ -1790,20 +1814,9 @@ public class Level
 		// choice that closes one screen and opens another never lets the world go in between.
 		GameClock.Update( PausedByWindow(), Kind == Scene.Park ? GameClock.ParkCatchUp : GameClock.LobbyCatchUp );
 
-		// A park's loop takes the frame's ticks one at a time through every system before anything is done once a frame,
-		// as the original's loop runs before its frame's work (ParkLoop); each sweep it runs is followed by the calendar's
-		// compare, the day's, month's and year's work on its edges and the golden tickets that sweep owed, then the weather's
-		// turn. Only a park keeps a date.
-		if ( Kind == Scene.Park )
-			ParkLoop.Run( ParticleSystem.Current, ParkRides.Current, ParkPeople.Current, people =>
-			{
-				if ( ParkState is { } clocked )
-					TurnTheCalendar( clocked, people, Catalogue, tick => ParkGoldenTickets.Sweep( tick, clocked, people ) );
-			}, ParkWeather.Current );
+		RunTheWorld();
 
-		Entity.All.ForEach( entity => entity.Update() );
-
-		// The End feature asked for in the walk above, made outside it: its model adds entities, which the walk cannot take.
+		// The End feature asked for in the lab's sweep (ParkLoop), made after the walk: its model adds entities, which the walk cannot take.
 		if ( _endFeatureOwed is { } owed )
 		{
 			_endFeatureOwed = null;
@@ -1814,7 +1827,7 @@ public class Level
 		// cannot take the entities a new boat adds.
 		ParkBumperBoats.Current?.Sync();
 
-		// And the model of an arrival vehicle made at a summons in the walk, for the same reason.
+		// And the model of an arrival vehicle made at a summons in this frame's sweeps (ParkLoop), for the same reason.
 		ParkFixedItems.Current?.Sync();
 
 		// Whatever was deleted during that walk leaves the list now the walk is over - see Entity.Delete.

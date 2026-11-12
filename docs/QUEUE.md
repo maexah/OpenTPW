@@ -138,7 +138,9 @@ confirm on Windows is done on that PC, through the "OpenTPW Windows" session.
   **Split (Q924, run 18, lane A):** C's first half is done and ticked as Q924: the banks a park decodes whole are kept across a Load Park and a Restart Park (`SoundBank.Kept`; the lobby's start lets them go), so a load from inside a park is 0.80 to 1.01 s from the
   release on the desk (before 1.88 to 2.16 s) and a Restart Park 0.72 to 0.83 s (before 1.89 to 1.95 s), the same picture, the game's memory the same (`saves.md`, "Load Park after Q924"). What C leaves is Q925 (the rest of the rebuild's time); what B would change, against a rebuild now about five times the original's 0.14 to 0.17 s, is for Alexah to decide on those numbers, so Q247 stays open.
 
-- [ ] **Q913. What Q910 and Q911 left unseen.** What `Worn.RSE`'s and `EventMap.RSE`'s effects look and sound like after a load in both games (the six companions are started and run; only the TV Sim's torches were seen and compared, and the engine's voice and the original's mixer were measured, not heard); and a load and a save on Windows. (A bought kart's and water ride's companion saved, Loaded and run on, in ours and the original's list, is Q939: done.) A bought Hot Pot's engine after a load, in both games, is Q929 (done); the Hot Pot sold after a load and saved is Q926 (done); the Volcano closed after a load and saved is Q927 (done); effect 31's start at height -4 against the original's is Q928 (done: a start keeps the node's fraction); the bought TV Sim's ride window closing and opening it once its queue is joined to a path, in both games on the same file, is Q1104 (done: the original drew that TV Sim at `setcam.py 430,250 75 180`, `q1104/orig/b-1-cam.png`, its screen face black in the off-screen frame where ours shows a picture, not looked at on the desk).
+- [ ] **Q913. What Q910 and Q911 left unseen.** What `Worn.RSE`'s and `EventMap.RSE`'s effects look and sound like after a load in both games (the six companions are started and run; only the TV Sim's torches were seen and compared, and the engine's voice and the original's mixer were measured, not heard); and a load and a save on Windows. (A bought kart's and water ride's companion saved, Loaded and run on, in ours and the original's list, is Q939: done.) A bought Hot Pot's engine after a load, in both games, is Q929 (done); the Hot Pot sold after a load and saved is Q926 (done); the Volcano closed after a load and saved is Q927 (done); effect 31's start at height -4 against the original's is Q928 (done: a start keeps the node's fraction); the bought TV Sim's ride window closing and opening it once its queue is joined to a path, in both games on the same file, is Q1104 (done: the original drew that TV Sim at `setcam.py 430,250 75 180`, `q1104/orig/b-1-cam.png`, its screen face black in the off-screen frame where ours shows a picture, not looked at on the desk). Still open from
+  Q1104: the original's TV Sim screen face, black in every off-screen frame (`q1104/orig/b-1-cam`, `b-4-*`, `b-7-*`) where
+  ours shows the tunnel picture, looked at on the desk beside ours'.
 - [ ] **Q820. What Q818, Q821 and Q822 left: the stacked and loop pylons, the original's picture of a flipped diagonal, and the heights by the original's samplers.** From Q818 (run 14, lane A;
   its piece (3), the face normals and the control word, is Q819; its piece (1), the ground's per-cell diagonal, is Q821, which ticks Q398; the decode
   of piece (4) and the float note are Q822). (2) Left by Q817: the pylon under a stacked piece is drawn with the alone-on-its-cell arms (the bottom of a stack that is not its top shows the `0x400` node and hides the `0x800` one, `0x00432ff8`..`0x0043304d`; ours hides `mc_bridge` on it); a stacked pylon stands on the
@@ -283,6 +285,11 @@ filed the items that cite it.
   From the run 13 review (`review13/q781`, finding 3): no test reaches `PlayClip`, `_playing` or the clip census on a real
   water piece (`ParkTrackPieces` builds `LobbyModel`s, which no test makes without a window); test it when the pieces' clips are
   next touched.
+  - **Note (run 22 review of Q758):** once a run may end on its own track at a junction or crossing, a closing run can leave
+    the mouth's walk open, and `RunOn` then walks the circuit back towards the other mouth (`laid.MouthOpen`, op 0x86's
+    `ShapeFromOtherMouth`, `0x0052cd48`; `docs/exe/park.md`, "The walk"). That is the original's rule and is built; this
+    item's confirm should check the sections a lasso lays against the original (only a spur set up by hand is unit-tested:
+    `ParkTrackToolTests.ARunThatMeetsASpurWithTheMouthsWalkOpenWalksBackTowardsTheOtherMouth`).
 - [ ] **Q774. A feature beside a cell the original's verdict never reaches.** From Q773 (`park.md`, "A run over scenery"). In
   the original the blue answer returns at once, before the other cells of the anchor's two by two are judged, so its piece
   is laid over a path, a queue, another ride's track, a map type 7 or 0x15 cell or a ride's south cell beside the feature (op
@@ -1134,7 +1141,8 @@ filed the items that cite it.
 - [ ] **Q1154. A handyman loaded walking to litter or sweeping falls to idle (from Q285).** A handyman loaded from a park
   file in state 8 or 9 (FUN_004d73c0's cases 8 and 9) takes `StaffBehaviour.Step`'s default arm, is counted
   (`HANDYMAN_LITTER_STATE_8`, `_9`) and stands in that state for the rest of the session. Until the litter job is built he
-  should fall to idle (`Staff.SetActivity( StaffActivity.Idle, tick )`, which clears the stamp so he decides on the next
+  should fall to idle (a deviation, said at the site: the original carries on with the walk or the sweep, `0x004d741f`,
+  `0x004d742a`) (`Staff.SetActivity( StaffActivity.Idle, tick )`, which clears the stamp so he decides on the next
   sweep), as Q285's bullet asked; left out of Q285 because it changes what is drawn (he walks off) and that lane could not
   photograph. Confirm: Alexah's `jungle/New Save.TPWS` (four such handymen) loaded, the `staff` census read before and
   after a few seconds, predicted first; a photograph of one walking off.
@@ -2359,6 +2367,24 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   finance and park-info toggles and the list headings' buttons letter one way always. First read which of Lost Kingdom's
   buttons are of the class (their layouts' controls), then build the states. Confirm: hover and press one toggle in both
   games, photographs side by side.
+- [ ] **Q1164. Up and Down in a name box.** From the run 22 review of Q285 (`review22/q285`, F2). The original's box
+  (`FUN_00667a72`) moves its caret a line on Up and Down (0x2600, 0x2800) only in a box flagged 0x80; in any other it sends
+  the key to the box's window as message 0x805 (`0x00667c68`, `0x00667cb0`), as it does every key it does not take
+  (`0x00667fd3`). Save Park's handler (`0x0049ea30`) has no 0x805 arm and hands it to `0x0047ee90`, whose only arm is 0x14,
+  then to the window's default through its vtable `+0x118` (`0x0065f688`), not read; the new player dialog's handler is not
+  read. Ours drops both keys in a focused box (`WindowStack.Keyboard`) uncounted. Read the vtable default and the new player
+  dialog's handler for 0x805: if either acts, count `EDIT_BOX_KEY_UP` and `_DOWN` (and any other key that reaches it); if
+  neither does, say so in `hud.md` and at the site. No game run is needed unless the reading leaves it open.
+- [ ] **Q1165. The arrival manager reads this sweep's rain (from Q570).** From the run 22 review of Q570 (`review22/q570`,
+  finding 1). In the original the weather (thing 7) turns in the sweep's walk, before the tail, and the tail's arrival
+  manager then reads its drops (`FUN_004cf5b0`, `0x004cf609` World_Weather, `0x004cf60e` `mov ecx,[eax+0x30]`, k 0.8 or 1.2
+  at `0x00700368`/`0x00700364`), so a load is sized with this sweep's rain. Ours runs the arrival manager in
+  `ParkPeople.Sweep` (`StepArrivals`, `Raining()`) before `ParkLoop.Tail`'s `weather.Turn()`, so on the sweep where the drops
+  cross nought a load is sized with the previous turn's rain (a third more or fewer guests). Said at `ParkLoop.Tail` and in
+  `weather.md`. A possible fix: turn the weather in `ParkPeople.Sweep` before `StepArrivals`, its day read from the date of
+  `State.GameTick` and not from the compared `GameCalendar.Days`. Test: a sweep whose turn starts or stops the rain sizes
+  its load with the new drops' k. Confirm: the weather's and the arrivals' log lines on the sweep the rain starts, read
+  against the original's drops and load at that sweep.
 
 ## B. Docs and comments
 

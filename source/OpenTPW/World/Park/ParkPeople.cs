@@ -2174,7 +2174,7 @@ public sealed partial class ParkPeople : Entity
 	/// <remarks>
 	/// The original keeps every kind of thing in that one list, so a hire made after a guest takes their turn before
 	/// them; here the guests, the staff and the rides are swept apart, each in the list's order among its own
-	/// (<c>docs/QUEUE.md</c>, Q150).
+	/// (<c>docs/QUEUE.md</c>, Q1121).
 	/// </remarks>
 	internal IReadOnlyList<Peep> Peeps => _peeps;
 

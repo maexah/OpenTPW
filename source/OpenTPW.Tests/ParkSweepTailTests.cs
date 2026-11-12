@@ -2,6 +2,8 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace OpenTPW.Tests;
 
@@ -186,6 +188,75 @@ public class ParkSweepTailTests
 		finally
 		{
 			Close( park );
+		}
+	}
+
+	/// <summary>An entity that reads the park's clock at its turn in the walk.</summary>
+	private sealed class ClockReader( ParkState state ) : Entity
+	{
+		public int? Seen;
+
+		protected override void OnUpdate() => Seen = state.GameTick;
+	}
+
+	/// <summary>
+	/// <b>The level's frame runs the park's loop before the entities' walk, and hands the loop the golden tickets</b>
+	/// (<c>Level.Update</c>'s world step, run by reflection on a bare level): Lost Kingdom's file with its clock set to 799, a
+	/// Full Simulation player and a frame of eight ticks. The sweep on the eighth tick makes 800, a hundredth, which owes the
+	/// tickets' test; an entity in the walk reads 800, and the test is run on 800 (<see cref="ParkGoldenTickets.Last"/>).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the loop after the walk (the walk reads 799); the tickets' delegate given as <c>_ => { }</c>
+	/// (no test run).</remarks>
+	[TestMethod]
+	public void TheLevelsFrameSweepsBeforeTheWalkAndTestsTheTicketsTheSweepOwed()
+	{
+		using var clock = new SimulationClockScope();
+		var (level, all, people, rides, particles) = (Level.Current, Entity.All, ParkPeople.Current, ParkRides.Current, ParticleSystem.Current);
+		var player = typeof( Players ).GetProperty( nameof( Players.Current ) )!;
+		var (playing, last) = (player.GetValue( Players.Roster ), typeof( ParkGoldenTickets ).GetProperty( nameof( ParkGoldenTickets.Last ), BindingFlags.Static | BindingFlags.NonPublic )!);
+		Park? park = null;
+
+		try
+		{
+			Entity.All = [];
+			typeof( ParkRides ).GetProperty( nameof( ParkRides.Current ) )!.SetValue( null, null );
+			typeof( ParticleSystem ).GetProperty( nameof( ParticleSystem.Current ) )!.SetValue( null, null );
+			last.SetValue( null, null );
+			ParkGoldenTickets.TakeOwed();
+
+			park = Open();
+			park.State.SetGameTick( 799 );
+			var reader = new ClockReader( park.State );
+
+			var bare = (Level)RuntimeHelpers.GetUninitializedObject( typeof( Level ) );
+			typeof( Level ).GetProperty( nameof( Level.Kind ) )!.SetValue( bare, Level.Scene.Park );
+			typeof( Level ).GetProperty( nameof( Level.ParkState ) )!.SetValue( bare, park.State );
+			typeof( Level ).GetProperty( nameof( Level.ThemeName ) )!.SetValue( bare, "jungle" );
+			typeof( Level ).GetProperty( nameof( Level.Balance ) )!.SetValue( bare, new ParkBalance( "jungle", easyMode: false ) );
+			Level.Current = bare;
+			player.SetValue( Players.Roster, new Player( 0, "Test", new PlayerFile { InstantAction = false } ) );
+
+			SimulationClockScope.Frame( 8.5f * GameClock.TickSeconds );
+			Assert.AreEqual( 8, GameClock.TicksDue );
+			typeof( Level ).GetMethod( "RunTheWorld", BindingFlags.Instance | BindingFlags.NonPublic )!.Invoke( bare, [] );
+
+			Assert.AreEqual( 800, park.State.GameTick, "one sweep" );
+			Assert.AreEqual( 800, reader.Seen, "the walk comes after the sweep" );
+			Assert.AreEqual( 800, ParkGoldenTickets.Last?.Tick, "the sweep's tail ran the tickets' test it owed" );
+		}
+		finally
+		{
+			Close( park );
+			Entity.All.ForEach( entity => entity.Delete() );
+			Entity.ApplyDeletions();
+			Entity.All = all;
+			Level.Current = level!;
+			player.SetValue( Players.Roster, playing );
+			last.SetValue( null, null );
+			ParkGoldenTickets.TakeOwed();
+			typeof( ParkPeople ).GetProperty( nameof( ParkPeople.Current ), BindingFlags.Static | BindingFlags.NonPublic )!.SetValue( null, people );
+			typeof( ParkRides ).GetProperty( nameof( ParkRides.Current ) )!.SetValue( null, rides );
+			typeof( ParticleSystem ).GetProperty( nameof( ParticleSystem.Current ) )!.SetValue( null, particles );
 		}
 	}
 }

@@ -81,10 +81,6 @@ internal static class UiSounds
 		return voice;
 	}
 
-	/// <summary>The interface's category once <see cref="Preload"/> has loaded it, null before.</summary>
-	/// Dead by CODE: only ParkCountedPathsTests reads it.
-	internal static SoundCategory? Category => _category;
-
 	/// <summary>The volume an effect's first variation asks for, its low bound of a hundred; nought with no header.</summary>
 	internal static float BootVolume( IReadOnlyList<SoundCategoryFile.Variation> variations )
 		=> variations.Count > 0 ? variations[0].Volume.Low / 100f : 0f;

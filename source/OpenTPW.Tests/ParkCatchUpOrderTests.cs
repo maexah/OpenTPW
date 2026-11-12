@@ -94,7 +94,7 @@ public class ParkCatchUpOrderTests
 			{
 				SimulationClockScope.Frame( ticksPerFrame * GameClock.TickSeconds );
 				Assert.AreEqual( ticksPerFrame, GameClock.TicksDue );
-				// Same order as Level's Entity.All walk, through actual production update methods.
+				// Level.Update's order: the park's loop, then the walk (ParkFrame), through actual production update methods.
 				ParkFrame.Run( people, rides );
 			}
 			Assert.AreEqual( 16, rides.Scheduler.Tick );
@@ -176,6 +176,40 @@ public class ParkCatchUpOrderTests
 		{
 			Entity.ApplyDeletions();
 			typeof( ParkRides ).GetProperty( nameof( ParkRides.Current ) )!.SetValue( null, previousRides );
+		}
+	}
+
+	/// <summary>
+	/// <b>A people system deleted earlier in the frame takes none of its sweeps</b>: nothing clears
+	/// <see cref="ParkPeople.Current"/> when it is deleted, so the loop's own test is the only guard. A frame of eight ticks,
+	/// whose eighth is the sweep's, leaves a deleted system's clock where it stood, and moves a live one's on by one.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the loop's test of a deleted people system taken out.</remarks>
+	[TestMethod]
+	public void ADeletedPeopleSystemTakesNoSweep()
+	{
+		using var clock = new SimulationClockScope();
+		var previousPeople = ParkPeople.Current;
+		var (live, deleted) = (new ParkPeople( null ), new ParkPeople( null ));
+
+		try
+		{
+			var (liveTick, deletedTick) = (live.State.GameTick, deleted.State.GameTick);
+
+			deleted.Delete();
+			SimulationClockScope.Frame( 8.5f * GameClock.TickSeconds );
+			Assert.AreEqual( 8, GameClock.TicksDue );
+			ParkLoop.Run( null, null, deleted );
+			ParkLoop.Run( null, null, live );
+			Assert.AreEqual( deletedTick, deleted.State.GameTick, "a deleted system took no sweep" );
+			Assert.AreEqual( liveTick + 1, live.State.GameTick, "a live one took the frame's" );
+		}
+		finally
+		{
+			live.Delete();
+			deleted.Delete();
+			Entity.ApplyDeletions();
+			typeof( ParkPeople ).GetProperty( nameof( ParkPeople.Current ), System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic )!.SetValue( null, previousPeople );
 		}
 	}
 }

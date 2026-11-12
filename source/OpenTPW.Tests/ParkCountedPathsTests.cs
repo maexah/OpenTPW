@@ -587,20 +587,24 @@ public class ParkCountedPathsTests
 		lock ( Audio.Lock )
 			voices = [.. Audio.Voices];
 
-		Assert.IsNull( UI.UiSounds.Boot(), "no sound up: nothing played" );
-
-		ready.SetValue( null, true );
-		category.SetValue( null, null );
-
 		try
 		{
+			// Whatever an earlier test loaded is put aside: with nothing loaded and no sound up, Boot answers at its own early-out.
+			category.SetValue( null, null );
+			ready.SetValue( null, false );
+
+			Assert.IsNull( UI.UiSounds.Boot(), "no sound up: nothing played" );
+
+			ready.SetValue( null, true );
+
 			var voice = UI.UiSounds.Boot();
+			var loaded = (SoundCategory)category.GetValue( null )!;
 
 			Assert.IsNotNull( voice );
 			Assert.AreEqual( 0f, voice.Volume, "the variation's volume of nought" );
-			Assert.AreEqual( UI.UiSounds.Category!.PickSample( 210, out _, out _ )!.Name, voice.Name, "effect 210's sample" );
-			Assert.IsNull( UI.UiSounds.Category.Play( 210, 0f ), "210 was the effect taken: it waits out its repeat" );
-			Assert.IsNotNull( UI.UiSounds.Category.Play( 31, 0f ), "the click's was not" );
+			Assert.AreEqual( loaded.PickSample( 210, out _, out _ )!.Name, voice.Name, "effect 210's sample" );
+			Assert.IsNull( loaded.Play( 210, 0f ), "210 was the effect taken: it waits out its repeat" );
+			Assert.IsNotNull( loaded.Play( 31, 0f ), "the click's was not" );
 		}
 		finally
 		{

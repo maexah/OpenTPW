@@ -9,8 +9,8 @@ namespace OpenTPW.Tests;
 /// <summary>
 /// The park's calendar: the date of the park's own clock, <c>mGameTick</c>, and the day's, the month's and the year's
 /// edges against the date it last compared, as <c>Calendar_Update</c> (<c>0x004f8260</c>) makes them at the tail of a
-/// sweep. Driven as <see cref="Level.Update"/> drives it: <see cref="GameCalendar.Update"/> with the park's tick once a
-/// frame's sweeps have counted it on.
+/// sweep. Driven as <see cref="ParkLoop"/> drives it, through <see cref="Level.TurnTheCalendar"/>, with the park's tick
+/// after each sweep.
 /// </summary>
 [TestClass]
 public class GameCalendarTests

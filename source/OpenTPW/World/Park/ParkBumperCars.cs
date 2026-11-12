@@ -498,8 +498,9 @@ public sealed class ParkBumperCars
 	/// </summary>
 	/// <returns>The car, or null for a handle the table does not hold or a full pool.</returns>
 	/// <remarks>
-	/// A car whose handle names no record here (a BumperType with no template, <c>BUMPER_TEMPLATE_n</c>) is dropped with
-	/// its riders, each counted, where the original's car arm restores it for any ride its handle names.
+	/// A car whose handle names no bumper record here when it is read (every BumperType but the Hot Pot's -1; a bumper-family
+	/// type also counts <c>BUMPER_TEMPLATE_n</c> at its record; a car ahead of its ride's record falls here too) is dropped
+	/// with its riders, each counted, where the original's car arm restores it for any ride its handle names.
 	/// </remarks>
 	internal Car? Restore( SavedTrackCar saved )
 	{
