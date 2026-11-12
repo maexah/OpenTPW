@@ -4971,6 +4971,53 @@ with masks 1 and 2 handled inline instead (mask 1 ends `FUN_00403be0(0x37)`, mas
 
 **`DAT_007b05e8` is the current interaction-mode holder, not a camcorder global.** `FUN_00497bc0` constructs it when null exactly as `FUN_00481a10` does, then asks the current mode object `DAT_007b05d8` for its type through vtable `+0x24` and swaps in a different one when it is not the type wanted — build wants 8, the staff/visitor locator checks 9, and camcorder builds its own.
 
+### The track's marks: m_erase, red and blue
+
+Read 2026-11-12 (Q991; the disassembly and lane B's private Ghidra copy, not seen in the running original). The fork watch
+of 2026-10-31 called these the demolish preview's; the two that set a mark record the track tool's multi-delete and move.
+
+**The three textures.** `Coaster_LoadType` (`0x0042f390`) gives a coaster type its own `n` materials (`n` is the type's
+`+0xfc`), then appends the `[0x0074ce10]` = 3 entries of the table at `0x0074cde0` (16 bytes each: flags 7, the name, two
+noughts) in its order: `m_erase.tga`, `red.tga`, `blue.tga` (`0x0042f509`..`0x0042f55d`). It stores `n` at the type's
+`+0x20` (`0x0042f575`), so the three are materials `n`, `n + 1` and `n + 2`. The game's files of those names are
+`m_erase.wct`, `red.wct` and `blue.wct` in `data/generic/dynamic/textures` and `stexture`. `FUN_00435a30` reads the same
+`+0x20` as the count of the type's own scrolling materials (Q594's note).
+
+**The pick.** `Coaster_BuildSpan` (`0x0043f4e0`) builds the span from a node A to the next node B (its two callers in
+`Coaster_RebuildTrack`, `0x0043ef5f` and `0x0043efcc`) on the coaster `[0x00792218]`'s type `[+4]`. A marked span has
+material `[type + 0x20] + mark - 1` written into every face's word `+4` (`0x0043f5a5`..`0x0043f5cc`), so mark 1 is
+`m_erase`, 2 is `red` and 3 is `blue`:
+
+    A has 0x1000000 (inside the marked run)   mark 2 if A has 0x4000, else the mark word [0x007925d0]
+    else A's +0xb0 is not nought               mark 2
+    else B has 0x2000 or 0x800000              mark 2 if B has 0x4000, else 3
+    else                                       no mark: the type's own materials
+
+**What sets them.**
+- **The mark word `[0x007925d0]`** is set to a mark at two places only. It is 1 at `0x00446c1f`, the first click of
+  `Coaster_DeleteMultiClick` (`0x00446740`), whose second click records action `0x3f` (`ACTION_COASTER_DELETEMULTI` = 63
+  in the executable's own name list) and clears the run. It is 3 at `0x00446df6`, in `Coaster_MovePickUp` (`0x00446d50`),
+  which records action `0x3c` (`ACTION_COASTER_MOVE` = 60). The other twelve writers store nought (`0x00442366`, `0x004427e6`,
+  `0x004429c9`, `0x004444a6`, `0x00444896`, `0x00445ab5`, `0x00445f88`, `0x0044601b`, `0x004460c3`, `0x0044627c`,
+  `0x004467f5`, `0x004476ce`), and nothing else reads it.
+- **The run**, bit `0x1000000`: `Coaster_MarkRange` (`0x00444090`) sets it on the nodes between `[0x0079c62c]` (where the
+  tool started) and the node given, from the lower id along `+0x64`, the higher end left out; `Coaster_ClearMarks`
+  (`0x00444040`) and the second click take `0x1000000` and `0x4000` off the run (mask `0xfeffbfff`). Its one caller is the
+  editor's per-frame `FUN_00443340` (`0x00443bd5`), with a node it works out from the pylon under the pointer
+  (`Coaster_NodeOfPylonModel`, `0x00443ee0`, called at `0x00443add`: the node whose pylon's model
+  `[0x007a4610 + 4 × [pylon + 0x70]]` is the given one). `Coaster_DeleteMultiClick` is called from `FUN_00446300` (the
+  editor's mouse slots) and `FUN_00447b60`, `Coaster_MovePickUp` from `FUN_00446300` and `FUN_00447bb0`. Whether a sale
+  sets a mark is not settled: a walk of the direct calls from the demolisher `FUN_00527ee0` reaches 1,365 functions, these
+  among them (`q991/reach.py`), so it shows no path, only that the graph is too wide to rule one out.
+- **Red without the word**: bit `0x4000`, set by `Coaster_InsertNode` (`0x00436190`) when its third argument, the answer of
+  `FUN_00434740` that the cursor's preview `FUN_00435d50` asks, is nought (Q1001 saw a stacked carry drawn so); and `+0xb0`,
+  a piece's count of the pieces it crosses, which `FUN_00439c40` raises with the coaster's `+0x140` (`0x00439ffe`,
+  `0x0043a03c`). What bits `0x2000` and `0x800000` of B mean is not read.
+
+**OpenTPW** draws no coaster track (Q594) and has no track tool (Q406), so nothing of its reaches a mark, and none is
+built or counted: Q1552 holds the build. Of the ten park files on the maintainer's machine, two hold a coaster (the
+Full Simulation jungle `New Save` and its autosave, model 19, instance 330), each with clashes 0 (`parkfile.py -K`).
+
 ---
 
 ## Axis and handedness

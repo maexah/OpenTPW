@@ -14232,3 +14232,11 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `0x004b0633` on a change of status, and that slot is `0x0048d160` in the ride's, shop's and sideshow's vtables, which
   colours the label through `FUN_004861e0` (`0x0048621b`). So the shop's recolour is right, and the ride's, which Q213 dropped, is
   put back (Q1112; `ride-window-door.md`).
+- [x] **Q991. The coaster demolish preview's marks.** From the fork watch 2026-10-31 (`verify-world.md` M6, partly confirmed; Q951 is the nearest).
+  `0x00444090` sets `0x1000000` on [low, high) and `0x00444040` clears `0x1004000` (mask `0xfeffbfff`); `0x00443ee0` finds the pylon
+  through `0x007a4610`; `0x0043f4e0` tests the flag (`0x0043f50b`, `0x0043f57b`); `[0x007925d0]` picks a material index stored on the faces
+  (`0x0043f5a5`..`0x0043f5bf`), written 1 at `0x00446c1f` and 3 at `0x00446df6`, and a `0x4000` node takes 2. Unread: which texture each index
+  names (the fork says `m_erase` and a blue moved-pylon one; unproven). Read these, then build with Q951.
+  **Done (lane B, run 22, 2026-11-12; decode only):** the type's three appended materials are `m_erase`, `red`, `blue`
+  (mark 1, 2, 3); 1 is set by the track tool's multi-delete, 3 by its move, 2 by a refused node (`0x4000`) or a piece that
+  crosses track (`+0xb0`). `park-engine.md`, "The track's marks". Nothing of ours reaches them; the build is Q1552.

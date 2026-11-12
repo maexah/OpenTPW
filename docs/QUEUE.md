@@ -2087,17 +2087,21 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
 - [ ] **Q990. The guard's chase counters.** From the fork watch 2026-10-31 (`verify-other.md` L7, confirmed by a glance only). `0x004c74f0`
   raises `+0x21bfc` and `+0x21c04`, and `+0x21c00` on argument 0; `0x004d691b` passes 2, `0x004d6a1f` passes 0; `0x004c94a0` reads
   `+0x21c00`; `0x004c79eb` zeroes the month words. What the arguments mean (caught, got away) is the fork's, not read. The advisor's guard messages wait on these; the chase that raises them is unbuilt (Q605). Decode the meaning first, then build with that item.
-- [ ] **Q991. The coaster demolish preview's marks.** From the fork watch 2026-10-31 (`verify-world.md` M6, partly confirmed; Q951 is the nearest).
-  `0x00444090` sets `0x1000000` on [low, high) and `0x00444040` clears `0x1004000` (mask `0xfeffbfff`); `0x00443ee0` finds the pylon
-  through `0x007a4610`; `0x0043f4e0` tests the flag (`0x0043f50b`, `0x0043f57b`); `[0x007925d0]` picks a material index stored on the faces
-  (`0x0043f5a5`..`0x0043f5bf`), written 1 at `0x00446c1f` and 3 at `0x00446df6`, and a `0x4000` node takes 2. Unread: which texture each index
-  names (the fork says `m_erase` and a blue moved-pylon one; unproven). Read these, then build with Q951.
 - [ ] **Q1492. What reads a script frame's `+0xb4`, and the Q992 addresses read in Ghidra.** From Q992 (a cloud lane with no
   Ghidra). `SPAWNCHILD`'s copy (`0x0055516b`) writes the parent's `+0x9c` (`TOUR`'s record) and `+0xb4` into the child; no reader of a
   script's `+0xb4` is decoded (`park.md`, "What a child holds, against OpenTPW"). Find its writers and readers; read the other Q992
   addresses (`0x005588a8` the clear, `0x00558c4c` the -1, `0x0055429a` `NAME`, `0x00554c8f`..`0x00554cd3` the draw) and say in `park.md`
   whether each holds. Dead by CONTENT in shipped scripts either way (no spawner carries `TOUR`), so nothing to build unless a reader
   turns up that a child's shipped opcodes reach.
+- [ ] **Q1552. The coaster track's marks, drawn (from Q991).** `park-engine.md`, "The track's marks", has the rule: a
+  coaster type's materials are its own `n` and then `m_erase`, `red`, `blue` (`0x0074cde0`), and `Coaster_BuildSpan`
+  (`0x0043f4e0`) writes material `n + mark - 1` on a span's faces. Ours draws no track (Q594) and has no track tool
+  (Q406), so it waits on them, and neither builds a layer for it before then (AGENTS.md rule 9). With Q594: a piece whose
+  `+0xb0` crossing count is not nought is red (whether the loader restores the pieces' counts is not read; the two park
+  files here that hold a coaster have clashes 0).
+  With Q406: the multi-delete's run in `m_erase`, a carried pylon's run in `blue`, a refused node (`0x4000`) in `red`.
+  Not read: B's bits `0x2000` and `0x800000`, and whether a sale ever sets a mark (the static call graph is too wide).
+  Confirm against the original's track tool on the desk (the recipe in `docs/TOOLING.md`, "Moving a pylon, and stacking one").
 - [ ] **Q993. What a written park still leaves out: a bought coaster, a kart's cars and pieces' models, and the counted names.** From the
   week-end audit 2026-10-31 (S-D1, S-S1, the Standing count; N8 of the docs sweep). **Done as Q858:** a bought kart or water ride is written whole
   (the object, script, model, footprint cells, the ride's record and sections) and the Standing count is of the objects the file holds
@@ -3035,8 +3039,8 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
     calls `0x004862a0`. Help rows: `0x134` with `cb_trough`, else `0x132` with `cb_loop` (`0x004987f0`; the rows' text not
     read). The definition's loop bit is read at `0x0042fd57`; the enable is mask `0x00445910` bit 2, set from definition bit
     `0x80` (`0x0042fa4a`) and cleared when the controller's `+0x3c` has bit 0 without bit 1 (`0x00445a4a`..`0x00445a57`).
-    Range marks: `0x00444090` sets `0x1000000` on [low, high), `0x00444040` clears with `0xfeffbfff`; which texture each
-    variant takes (1, 3) is unread.
+    Range marks: `0x00444090` sets `0x1000000` on [low, high), `0x00444040` clears with `0xfeffbfff`; mark 1 is `m_erase`,
+    2 `red`, 3 `blue` (Q991; `park-engine.md`, "The track's marks"; the build is Q1552).
 
 - [ ] **Q407. Buy Land.** From the fork review 2, 2026-10-16 (`verify-objects-signs-other.md` L1). Counted,
   `BUY_LAND_TOOL`; Lost Kingdom's Features tab offers it (`hud.md`, item 101), and 13,878 of the 16,384 cells carry
