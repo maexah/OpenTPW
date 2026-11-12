@@ -82,7 +82,6 @@ public sealed class RideNodes
 		_hasChild = new bool[_nodes.Length];
 		_moved = new bool[_nodes.Length];
 		_morphed = new bool[_nodes.Length];
-		_routed = new bool[_nodes.Length];
 
 		foreach ( var node in _nodes )
 		{
@@ -181,9 +180,9 @@ public sealed class RideNodes
 	/// (<c>docs/exe/ride-operation.md</c>, "How long a leg lasts, and where its ends are"), so any other model off the
 	/// screen keeps the pose of the frame it was last drawn in; this follows the players whether the model is seen or not.
 	/// <b>A path track is followed:</b> <see cref="NodePoser"/> poses rotation, position and path tracks, carrying a node
-	/// along its route and turning it to face along it, as the drawn model does (<see cref="LobbyModel.Pose"/>). A carried
-	/// find of a node on a route, or under one, is still counted <c>RIDE_NODE_ON_A_ROUTE</c> (<see cref="Stored"/>); that
-	/// count is stale (Q573), reached in every Lost Kingdom run by the vehicle's sound start.
+	/// along its route and turning it to face along it, as the drawn model does (<see cref="LobbyModel.Pose"/>), so a
+	/// carried find of a node on a route, or under one, reads where the route puts it (in Lost Kingdom the bus's, ferry's
+	/// and seaplane's sound nodes, Q573).
 	/// </remarks>
 	public void Follow( RideAnimations players )
 	{
@@ -193,21 +192,7 @@ public sealed class RideNodes
 			Array.Resize( ref _carriedClips, players.ChannelCount );
 
 		players.PoseOnto( _carrier, _carriedClips );
-
-		Array.Clear( _routed );
-
-		foreach ( var (clip, _) in _carriedClips )
-		{
-			foreach ( var track in clip?.PathTracks ?? [] )
-			{
-				if ( track.TargetIndex >= 0 && track.TargetIndex < _routed.Length )
-					_routed[track.TargetIndex] = true;
-			}
-		}
 	}
-
-	/// <summary>The nodes a route moves in the clips <see cref="Follow"/> last posed.</summary>
-	private readonly bool[] _routed;
 
 	/// <summary>
 	/// One entry of the engine's sine table (<c>FUN_004708d0</c>): <c>sin( i / 4096 × 6.2831855f )</c>, stored as a float,
@@ -507,9 +492,6 @@ public sealed class RideNodes
 		chain.Reverse();
 
 		Numerics.Matrix4x4 Local( int at ) => carrier?.Local( at ) ?? _nodes[at].LocalTransform;
-
-		if ( carrier != null && chain.Any( at => _routed[at] ) )
-			Unimplemented.Report( "RIDE_NODE_ON_A_ROUTE" );
 
 		var world = Root( Local( chain[0] ) );
 

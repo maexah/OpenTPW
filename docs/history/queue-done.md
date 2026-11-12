@@ -12145,6 +12145,22 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q573. A node a clip's route moves, followed (`RIDE_NODE_ON_A_ROUTE`).** From the run 6 review of Q555 (`VERIFY-14.md`, Q555 5).
+  `RideNodes.Follow` poses a thing's node tree for its particle records through `NodePoser`, which since Q561 carries a
+  node along its route and since Q583 turns it to face along it, and through which `LobbyModel.Pose` now draws every
+  route clip; `RideNodes.Stored` still counts a carried find of a node on a route, or under one, as
+  `RIDE_NODE_ON_A_ROUTE`; the count is stale, as the node found is now carried and turned along its route. Every Lost
+  Kingdom run reaches it: the first reach is that run's vehicle's sound start (the bus's `mk_bus_1`, the seaplane's
+  `mk_plane_1`, the ferry's `mk_ferry_3`; 116, 178 and 94 counts in Q583's runs), not a particle record; whether any
+  other clip with a route carries a particle record is not measured. Measure it across the shipped
+  scripts and clips (`cliptracks`, the `.RSE` corpus); then drop the count, so the gap census no longer overstates the
+  unbuilt work.
+  Built (cloud lane c65): `cliptracks route` measured it over 311 wads, 308 scripts and 47 clips with a route: in Lost
+  Kingdom the effect starts on a routed node are five type 8 sounds (`bus.RSE` word 13, `Ferry.RSE` 12, `seaplane.RSE`
+  10, 18 and 67, each node 1), the same in each theme; the only particle records on a route are `Haunt.RSE`'s four type
+  2 fumes (Halloween), and no walk node hangs under one (`docs/exe/park.md`). The count and the routed-node list behind
+  it are gone from `RideNodes`; `ANodeARouteCarriesIsFollowedAndNotCounted` finds the bus's sound node carried 4 s into
+  `Busm1` where the drawn tree puts it, off its rest, with no count. Not checked: the original (no Ghidra or Proton here).
 
 ## B. Docs and comments
 

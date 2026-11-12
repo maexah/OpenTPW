@@ -10,9 +10,15 @@
 //     unflipped blend takes the long way), and the list rotwrap.txt in the working folder. It opens each wad itself and
 //     walks its folders, and adds the loose .md2 files, so given the game folder (not Data) it reads the whole corpus:
 //     2,129 in the shipped game, 2,123 under Data and the six under USEnglish/Meshes
+//   ... -- <game folder> route   (Q573) every clip with a route (a path track) over every wad: its model (the rule above,
+//     within the wad's folder), each routed node and every node under it that has a lookup id, with its flags (0x100 a
+//     particle's, 0x200 a sound's, 0x800 a walk's), and each ADDOBJ/EVENT of a script in the same wad whose type and node
+//     are literals and whose node is found (RideNodes.EffectIndex's space) at or under a routed node; one whose type or
+//     node is a variable is counted, not resolved
 using OpenTPW;
 var dataDir = args[0];
 if ( args.Length > 1 && args[1] == "rot" ) { RotScan( dataDir ); return; }
+if ( args.Length > 1 && args[1] == "route" ) { RouteScan( dataDir ); return; }
 if ( args.Length > 1 ) { var d = new BaseFileSystem( dataDir ); d.RegisterArchiveHandler( ".wad", path => new WadArchive( path ) ); using var cs = d.OpenRead( args[1] )!; var c = new AnimationFile( cs ); Console.WriteLine( $"declared {c.DeclaredFirstFrame}..{c.DeclaredLastFrame} fps {AnimationFile.FramesPerSecond}" ); foreach ( var t in c.PositionTracks ) { Console.WriteLine( $"node {t.TargetIndex} {(t.IsBezier ? "bez" : "lin")} keys {string.Join(",", t.FrameIndices)}" ); foreach ( var f in new[]{0,50,100,150,200,250,300,350,400,450,500} ) Console.Write( $" f{f}:{t.Sample(f).X:F0},{t.Sample(f).Y:F0},{t.Sample(f).Z:F0}" ); Console.WriteLine(); } return; }
 var data = new BaseFileSystem( dataDir );
 data.RegisterArchiveHandler( ".wad", path => new WadArchive( path ) );
@@ -125,4 +131,79 @@ static void RotScan( string dataDir )
 	Console.WriteLine( $"of those, last key turned from key 0 {beforeTurns} in {clipsTurns.Count} clips (negative dot {beforeNeg})" );
 	foreach ( var c in clipsTurns.OrderBy( c => c, StringComparer.Ordinal ) ) Console.WriteLine( $"turns: {c}" );
 	File.WriteAllLines( "rotwrap.txt", list );
+}
+
+static void RouteScan( string gameDir )
+{
+	int wads = 0, routeClips = 0, noModel = 0, idNodes = 0, effectOps = 0, unresolved = 0, onRoute = 0, scripts = 0;
+	var flagged = new Dictionary<uint, int>();
+	foreach ( var wad in Directory.GetFiles( gameDir, "*.wad", SearchOption.AllDirectories ).OrderBy( w => w, StringComparer.Ordinal ) )
+	{
+		++wads;
+		var archive = new WadArchive( wad );
+		var stem = Path.GetRelativePath( gameDir, wad ).Replace( '\\', '/' );
+		var md2 = new List<(string Dir, string Name, ArchiveFile File)>(); var rse = new List<(string Name, ArchiveFile File)>();
+		void Walk( ArchiveDirectory d, string at )
+		{
+			foreach ( var item in d.Children )
+			{
+				if ( item is ArchiveDirectory sub ) Walk( sub, $"{at}{sub.Name}/" );
+				else if ( item is ArchiveFile f && f.Name.EndsWith( ".md2", StringComparison.OrdinalIgnoreCase ) ) md2.Add( (at, f.Name, f) );
+				else if ( item is ArchiveFile r && r.Name.EndsWith( ".rse", StringComparison.OrdinalIgnoreCase ) ) rse.Add( ($"{at}{r.Name}", r) );
+			}
+		}
+		Walk( archive.Root, "" );
+		var ops = new List<(string Script, int Word, Opcode Op, int Type, int Node)>();
+		foreach ( var (name, file) in rse )
+		{
+			RideScriptFile script;
+			try { using var s = new MemoryStream( file.GetData() ); script = new RideScriptFile( s ); } catch { continue; }
+			++scripts;
+			foreach ( var i in script.Instructions.Where( i => i.Opcode is Opcode.ADDOBJ or Opcode.EVENT ) )
+			{
+				++effectOps;
+				if ( i.Operands.Count < 3 || i.Operands[0].Kind != RideOperandKind.Literal || i.Operands[1].Kind != RideOperandKind.Literal ) { ++unresolved; Console.WriteLine( $"variable {stem}:{name} @{i.Address} {i.Opcode}" ); continue; }
+				ops.Add( (name, i.Address, i.Opcode, i.Operands[0].Value, i.Operands[1].Value) );
+			}
+		}
+		foreach ( var (dir, name, file) in md2 )
+		{
+			AnimationFile clip;
+			try { using var s = new MemoryStream( file.GetData() ); clip = new AnimationFile( s ); } catch { continue; }
+			if ( clip.PathTracks.Count == 0 ) continue;
+			++routeClips;
+			ModelFile? model = null; string? modelName = null;
+			foreach ( var cand in md2.Where( m => m.Dir == dir && !string.Equals( m.Name, name, StringComparison.OrdinalIgnoreCase ) && name.StartsWith( Path.GetFileNameWithoutExtension( m.Name ), StringComparison.OrdinalIgnoreCase ) ).OrderByDescending( m => m.Name.Length ) )
+			{
+				try { using var s = new MemoryStream( cand.File.GetData() ); var m = new ModelFile( s ); if ( m.IsAnimation || m.Nodes.Count == 0 ) continue; model = m; modelName = cand.Name; break; } catch { }
+			}
+			if ( model == null ) { ++noModel; Console.WriteLine( $"route {stem}:{dir}{name}: no model" ); continue; }
+			var under = new bool[model.Nodes.Count];
+			foreach ( var t in clip.PathTracks ) if ( t.TargetIndex >= 0 && t.TargetIndex < under.Length ) under[t.TargetIndex] = true;
+			for ( var changed = true; changed; )
+			{
+				changed = false;
+				for ( var n = 0; n < under.Length; ++n )
+					if ( !under[n] && model.Nodes[n].ParentIndex is var p && p >= 0 && p < under.Length && under[p] ) { under[n] = true; changed = true; }
+			}
+			var tracked = string.Join( ",", clip.PathTracks.Select( t => t.TargetIndex < model.Nodes.Count ? $"{t.TargetIndex}:{model.Nodes[t.TargetIndex].Name}" : $"{t.TargetIndex}:?" ) );
+			Console.WriteLine( $"route {stem}:{dir}{name} model {modelName} routed {tracked} nodes under {under.Count( u => u )}" );
+			for ( var n = 0; n < under.Length; ++n )
+			{
+				if ( !under[n] || model.Nodes[n].Id < 0 ) continue;
+				++idNodes;
+				var f = model.Nodes[n].IdFlags & 0xf00;
+				flagged[f] = flagged.GetValueOrDefault( f ) + 1;
+				Console.WriteLine( $"  id node {n} {model.Nodes[n].Name} id {model.Nodes[n].Id} flags 0x{model.Nodes[n].IdFlags:x}" );
+			}
+			foreach ( var (script, word, op, type, node) in ops )
+			{
+				var at = model.FindNode( node, type <= 2 ? 0x100u : 0x200u );
+				if ( at < 0 || !under[at] ) continue;
+				++onRoute;
+				Console.WriteLine( $"  ON ROUTE {script} @{word} {op} type {type} node {node} -> {at} {model.Nodes[at].Name}" );
+			}
+		}
+	}
+	Console.WriteLine( $"wads {wads}, scripts {scripts}, ADDOBJ/EVENT {effectOps} (type or node a variable {unresolved}); clips with a route {routeClips} (no model {noModel}); id'd nodes at or under a route {idNodes} ({string.Join( ", ", flagged.OrderBy( k => k.Key ).Select( k => $"0x{k.Key:x} {k.Value}" ) )}); effect starts on a route {onRoute}" );
 }

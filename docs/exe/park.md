@@ -2922,9 +2922,12 @@ emitter on a model off the screen stands still there, where this follows the pla
 no matrix is started at the origin (`RideScript.StartParticle`; a type 2 aimed along (0, 0, 1)) and passed over here,
 so it stays there, as the engine's, which moves it to the origin every tick (`0x005518f9`, the float at `0x00700fd8` is
 nought). A node a clip's route moves, or one under it, is read where the route puts it, as `RideNodes.Follow` poses
-through `NodePoser` (Q561, Q583); a carried find of such a node is still counted `RIDE_NODE_ON_A_ROUTE`, a count that is
-stale (Q573): every Lost Kingdom run reaches it at its vehicle's sound start (the bus's `mk_bus_1` at its route's
-frame-0 point, the seaplane's `mk_plane_1`, the ferry's `mk_ferry_3`).
+through `NodePoser` (Q561, Q583), and counted nowhere (Q573). Over the shipped game (`cliptracks route`: 311 wads, 308
+scripts, 47 clips with a route) the effect starts a script names on such a node are, in Lost Kingdom, five sounds of
+type 8: the bus's (`bus.RSE` word 13, node 1, `mk_bus_1` at its route's frame-0 point), the ferry's (`Ferry.RSE` word
+12, node 1) and the seaplane's (`seaplane.RSE` words 10, 18 and 67, node 1), the same three vehicles in each other
+theme; the only particle records on a route are the Halloween haunted house's four type 2 fumes (`Haunt.RSE` words 194
+to 209, nodes 1 to 4), and no walk node hangs under a route.
 
 **Deviations and gaps, each counted where it is reached.** Started nowhere: an effect of the item's own
 (`PARK_PARTICLE_ITEM_EFFECT`), a record with no node or one the model lacks (`PARK_PARTICLE_NO_PLACE`), a type 2

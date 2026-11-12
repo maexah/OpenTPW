@@ -1070,16 +1070,6 @@ filed the items that cite it.
   additive restore `FUN_00473c70`/`0x00473d0c` puts the turn back every advance, then build it in both posers when the
   coaster pylons are drawn (Q594). Confirm by a pylon's turn beside the original's. (Q817 draws the pylons by taking each rotation key as the
   node's turn, which is the composition on the nodes the file leaves unturned, as `ParkCoasterPylon` does for the knot; the general order stays here.)
-- [ ] **Q573. A node a clip's route moves, followed (`RIDE_NODE_ON_A_ROUTE`).** From the run 6 review of Q555 (`VERIFY-14.md`, Q555 5).
-  `RideNodes.Follow` poses a thing's node tree for its particle records through `NodePoser`, which since Q561 carries a
-  node along its route and since Q583 turns it to face along it, and through which `LobbyModel.Pose` now draws every
-  route clip; `RideNodes.Stored` still counts a carried find of a node on a route, or under one, as
-  `RIDE_NODE_ON_A_ROUTE`; the count is stale, as the node found is now carried and turned along its route. Every Lost
-  Kingdom run reaches it: the first reach is that run's vehicle's sound start (the bus's `mk_bus_1`, the seaplane's
-  `mk_plane_1`, the ferry's `mk_ferry_3`; 116, 178 and 94 counts in Q583's runs), not a particle record; whether any
-  other clip with a route carries a particle record is not measured. Measure it across the shipped
-  scripts and clips (`cliptracks`, the `.RSE` corpus); then drop the count, so the gap census no longer overstates the
-  unbuilt work.
 - [ ] **Q574. One node tree for every channel of a drawn model.** From the run 6 review of Q554 (`VERIFY-13.md`, Q554 2). The engine
   keeps one matrix per node for all of a model's channels; ours poses a clip that moves nodes through `NodePoser` and
   places every mesh from it (`LobbyModel.PlacePosed`), and a clip that only turns through `MeshRotator`, so a
