@@ -2407,8 +2407,9 @@ public sealed class ParkState
 
 		var (back, cells) = TryObject( objectId, out var thing ) ? ParkRideChoice.QueueCellsFor( _park, thing ) : (0, 0);
 
-		// The queue is measured first (FUN_004de130, 0x004de210), then the counter is taken (0x004de233) and
-		// written into the new back cell's block (0x004de266), so a queue edit frees its stranded guests.
+		// The queue is measured first (FUN_004de130, 0x004de210), then the counter is taken (0x004de233), back cell or
+		// not, and written into the new back cell's block (0x004de266); FUN_004d8c60 writes nothing for a nought cell
+		// (0x004d8c67). So a queue edit frees its stranded guests.
 		var stamp = NextCounter();
 
 		if ( back != 0 )

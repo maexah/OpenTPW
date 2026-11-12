@@ -10,8 +10,8 @@ steps of DEG (0.05), and the shift that best matches REST's inside BOX (the midd
 cross-correlation. Prints the angle that matches best, refined between its neighbours by a parabola, as how far MOVED's
 picture is turned CLOCKWISE on the screen against REST's (negative: counter-clockwise), with its shift and correlation,
 and the scores by angle. A roll about the view's middle is the same angle at any frame size, so the two games' numbers
-compare directly. Where the shift is not whole pixels the angle reads up to about 0.04 degrees off (a 0.5 turn with a
-shift of (30, -7) read 0.468; the same turn alone read 0.500).
+compare directly. Take the reading's spread as about 0.06 degrees: two runs of one 0.457 roll against the same rest
+point read 0.465 (shift +0) and 0.520 (shift +1), Q1109; a 0.5 turn with a shift of (30, -7) read 0.468, alone 0.500.
 """
 import sys
 import numpy as np

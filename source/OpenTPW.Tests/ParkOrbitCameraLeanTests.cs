@@ -188,6 +188,67 @@ public class ParkOrbitCameraLeanTests
 
 			Assert.AreEqual( 0f, camera.Rotation.Forward.X, 1e-5f, "a pan along y looks straight on" );
 			Assert.AreEqual( 0f, camera.Up.X, 1e-5f, "and rolls nothing" );
+
+			// Turned a quarter, the map's x runs along the look: the x term nods the view and turns it nothing, where a
+			// lean along the camera's right would turn it.
+			ParkOrbitCameraMode.Yaw = -MathF.PI / 2f;
+			ParkOrbitCameraMode.Scroll = new Vector2( Held110, 0f );
+			camera.Place( 0f );
+
+			Assert.AreEqual( 57.4628f, MathF.Asin( -camera.Rotation.Forward.Z ) * 180f / MathF.PI, 2e-3f, "the x term nods the view" );
+			Assert.AreEqual( 0f, camera.Rotation.Forward.Y, 1e-5f, "and turns it nothing" );
+
+			ParkOrbitCameraMode.Scroll = new Vector2( 0f, Held110 );
+			camera.Place( 0f );
+
+			Assert.AreEqual( 58.3333f, MathF.Asin( -camera.Rotation.Forward.Z ) * 180f / MathF.PI, 2e-3f, "a pan along y nods nothing" );
+			Assert.AreEqual( 0f, camera.Rotation.Forward.Y, 1e-5f, "and turns nothing" );
+			Assert.AreEqual( 0f, camera.Up.Y, 1e-5f, "nor rolls" );
+		}
+		finally
+		{
+			(ParkOrbitCameraMode.PointOfInterest, ParkOrbitCameraMode.Yaw, ParkOrbitCameraMode.Zoom, ParkOrbitCameraMode.Scroll) =
+				(point, yaw, zoom, scroll);
+		}
+	}
+
+	/// <summary>
+	/// A sprite's sector reads the asked rotation, which the lean does not turn (FUN_00540ab0 reads <c>[0x00790a38]</c>):
+	/// at a yaw a third of a degree inside a sector's edge, a held pan's lean swings the look across it, and the people's
+	/// sector stays the one at rest.
+	/// </summary>
+	[TestMethod]
+	public void APansLeanLeavesThePeoplesSectorAlone()
+	{
+		var (point, yaw, zoom, scroll) = (ParkOrbitCameraMode.PointOfInterest, ParkOrbitCameraMode.Yaw, ParkOrbitCameraMode.Zoom,
+			ParkOrbitCameraMode.Scroll);
+
+		try
+		{
+			ParkOrbitCameraMode.PointOfInterest = new Vector3( 300f, 400f, 0f );
+			ParkOrbitCameraMode.Zoom = 110f;
+			var crossed = 0;
+
+			foreach ( var asked in new[] { MathF.PI / 8f - 0.006f, MathF.PI / 8f + 0.006f, -MathF.PI / 8f - 0.006f, -MathF.PI / 8f + 0.006f } )
+			{
+				ParkOrbitCameraMode.Yaw = asked;
+				ParkOrbitCameraMode.Scroll = Vector2.Zero;
+				var camera = new ParkOrbitCameraMode();
+				camera.Place( 0f );
+				var atRest = ParkGuestSprites.CameraOctant( camera.Rotation.Forward );
+
+				foreach ( var held in new[] { Held110, -Held110 } )
+				{
+					ParkOrbitCameraMode.Scroll = new Vector2( held, 0f );
+					camera.Place( 0f );
+
+					Assert.AreEqual( atRest, ParkGuestSprites.CameraOctant( camera.SectorLook ), $"yaw {asked}, pan {held}" );
+					if ( ParkGuestSprites.CameraOctant( camera.Rotation.Forward ) != atRest )
+						++crossed;
+				}
+			}
+
+			Assert.IsTrue( crossed > 0, "the leaned look crosses a sector's edge somewhere here" );
 		}
 		finally
 		{

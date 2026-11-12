@@ -416,22 +416,7 @@ public class Level
 
 		if ( park?.Save?.Tags.Problem is { } unread )
 			Log.Warning( $"{ThemeName}: the file's aerial tags did not read - {unread}" );
-		// The advisor's records of the built messages are the file's; a park made fresh keeps FUN_00599e70's.
-		if ( park?.Save is { } advised )
-		{
-			Log.Info( $"{ThemeName}: {ParkState.AdvisorMessages.Restore( advised.AdvisorHistoryOf )} of the advisor's built messages have a record in the file" );
-			Log.Info( $"{ThemeName}: {ParkState.AdvisorMessages.RestoreSlots( advised.AdvisorSlotOf )} of the file's waiting advisor messages are taken up" );
-			// His last action is timed on the file's second stopwatch; a file whose clock did not read keeps none.
-			if ( advised.AdvisorActionOf() is { } action && advised.Clock.Second is { } stopwatch )
-				ParkState.AdvisorMessages.RestoreAction( action, stopwatch, (long)(GameClock.Now * 1000) );
-			// The poll goes on from the file's row; a park made fresh keeps the program's.
-			if ( advised.AdvisorPollCursorOf() is { } row )
-				ParkState.AdvisorMessages.RestoreCursor( row );
-		}
-		// The save's load is followed by event 10 on the player's first park (0x0054f24e). With nobody playing,
-		// which only the debug console reaches, there is no gms.dat byte to read, and nothing is reset.
-		if ( ParkState.AdvisorMessages.FirstPark( Players.Roster.Current?.File, park?.Save is { } first ? first.AdvisorHistoryOf : _ => null ) )
-			Log.Info( $"{ThemeName}: the player's first park: the advisor's records are reset and the first park byte cleared" );
+		Advise( ParkState.AdvisorMessages, park?.Save, Players.Roster.Current?.File, ThemeName );
 		load.Mark( "park state" );
 
 		Research = park == null || catalogue == null ? null : new ParkResearch( park.ObjectControlRecords, catalogue, park.ResearchProjects,
@@ -959,6 +944,34 @@ public class Level
 			+ (written is null ? "is not written" : $"is written to {written}") );
 
 		return written;
+	}
+
+	/// <summary>
+	/// The advisor at a park's start: event 0 from the world's setup, the file's records, slots, action and poll row, then
+	/// the player's first park (<see cref="ParkAdvisorMessages.FirstPark"/>), in the original's order.
+	/// </summary>
+	internal static void Advise( ParkAdvisorMessages advisor, ParkWorld? save, PlayerFile? player, string theme )
+	{
+		// The world's setup sends event 0 on every park start (0x00515da4), before the save's load: Welcome, and
+		// 0x143 in Instant Action (docs/exe/advisor-park.md, "Still unknown", Welcome). Q543.
+		Unimplemented.Report( ParkAdvisorMessages.EventZeroNotBuilt );
+		// The advisor's records of the built messages are the file's; a park made fresh keeps FUN_00599e70's.
+		if ( save is { } advised )
+		{
+			Log.Info( $"{theme}: {advisor.Restore( advised.AdvisorHistoryOf )} of the advisor's built messages have a record in the file" );
+			Log.Info( $"{theme}: {advisor.RestoreSlots( advised.AdvisorSlotOf )} of the file's waiting advisor messages are taken up" );
+			// His last action is timed on the file's second stopwatch; a file whose clock did not read keeps none.
+			if ( advised.AdvisorActionOf() is { } action && advised.Clock.Second is { } stopwatch )
+				advisor.RestoreAction( action, stopwatch, (long)(GameClock.Now * 1000) );
+			// The poll goes on from the file's row; a park made fresh keeps the program's.
+			if ( advised.AdvisorPollCursorOf() is { } row )
+				advisor.RestoreCursor( row );
+		}
+		// The save's load is followed by the first-park block (0x0054f1b6): the byte cleared, then event 10 in Instant
+		// Action. With nobody playing, which only the debug console reaches, nothing is reset: a deviation, as the
+		// original makes a player there whose byte is set (0x005af0cb) and would reset an Instant Action park.
+		if ( advisor.FirstPark( player, save is { } first ? first.AdvisorHistoryOf : _ => null ) )
+			Log.Info( $"{theme}: an Instant Action player's first park: the advisor's records are reset and the first park byte cleared" );
 	}
 
 	/// <summary><see cref="WritePark(string, string)"/> for a park's own parts, the camera's being the orbit camera's.</summary>
@@ -3403,7 +3416,7 @@ public class Level
 
 		// The ears go where the camera just went. Here rather than in Update because the camera itself
 		// moves here, so a listener set during the update pass would be a frame behind the picture.
-		Audio.SetListener( Camera.Ears, Camera.Rotation.Forward );
+		Audio.SetListener( Camera.Ears, Camera.Rotation.Forward, Camera.Up );
 
 		// The solid geometry, then everything see-through, then the sprites.
 		Entity.RenderWorld();

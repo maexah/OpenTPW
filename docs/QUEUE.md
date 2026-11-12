@@ -1170,15 +1170,14 @@ filed the items that cite it.
     next `+10`) in its own order; kinds 1, 4, 5, 6, 7, 8 and `0x12`; itself excluded; distance non-zero and strictly
     inside the radius; it stops after the **fifth** neighbour. Whether guests reach it is not read.
 
-- [ ] **Q1308. The queue remeasure's stamp in the original, and whether it takes one with no back cell.** Left from Q290
-  (cloud lane c47, no Ghidra, no original). Two things. (1) In Ghidra, `FUN_004de1f0` from `0x004de210` to `0x004de266`:
-  whether the counter call at `0x004de233` is reached when `FUN_004de130` finds no back cell, and what `FUN_004d8c60`
-  writes then. `ParkState.RemeasureQueue` takes one counter value on every call, back cell or not, as it did before
-  Q290; that is unchecked. (2) The item's own confirm: the back cell's block stamp read in the original under Proton
-  after one queue cell laid on the Belly Bounce's back, (49,23) entered from (49,22), beside ours (`cell 49 23` prints
-  `block stamp S of counter C`; ours read stamp 10723, 5 cells, back 2994). The stamp's value cannot match across the
-  two games (the counter is a logical clock that each runs its own way); compare that it is the remeasure's own value,
-  the newest counter at the lay, and lands in the back cell's block.
+- [ ] **Q1308. The queue remeasure's stamp in the original.** Left from Q290 (cloud lane c47, no Ghidra, no original).
+  Whether a remeasure with no back cell takes a counter value is answered by the listing (no branch from `0x004de215` to
+  `0x004de233`; `FUN_004d8c60` returns on a nought cell, `0x004d8c60`..`0x004d8c67`), as ours does
+  (`AQueueWithNoBackCellTakesItsCounterAndStampsNothing`). Left: the item's own confirm, the back cell's block stamp read
+  in the original under Proton after one queue cell laid on the Belly Bounce's back, (49,23) entered from (49,22), beside
+  ours (`cell 49 23` prints `block stamp S of counter C`; ours read stamp 10723, 5 cells, back 2994). The stamp's value
+  cannot match across the two games (the counter is a logical clock that each runs its own way); compare that it is the
+  remeasure's own value, the newest counter at the lay, and lands in the back cell's block.
 
 - [ ] **Q399. Ride boards lettered as the original letters them.** From the fork review 2, 2026-10-16
   (`verify-objects-signs-other.md` H1, H3, M1). `ParkObjects.BuildSign` letters the `.sam`'s `Name`, split; the
@@ -1668,6 +1667,12 @@ filed the items that cite it.
   - **Note (play test 2026-10-21, note 3):** the advisor does not say his opening lines in a fresh park. Nothing here
     posts message 0 on tick 1 (`map.md`; Q543 is decode first and unstarted).
   - **Note (play test 2026-10-31):** the advisor still says no opening lines in a fresh Full Simulation park: polls from tick 1 log `result=no-score`, row 281 plays at tick 612. Nothing counts the missing welcome; add the count with the fix. Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
+  - **Note (run 22 review, 2026-11-12):** the poster is **event 0** (a type-0x13 event, id 0), handled at `0x0059ae43`: message 0, then 0x143 when
+    `[0x00fb3b7c] == 2`. It is sent at the end of the world's setup, FUN_005156a0 (`0x00515d3e`, dispatched at once by `0x00515da4`),
+    on every park start, Full Simulation included, before the save's load; and again after event 10 on an Instant Action
+    player's first park (`0x0054f2d7`/`0x0054f33b`). Both sends are counted now as `PARK_ADVISOR_EVENT_0_NOT_BUILT`
+    (`Level.Advise`, `ParkAdvisorMessages.FirstPark`). Still to read: whether the save's load replaces the setup's post in
+    the slots, what 0x143 says, and whether a duplicate post of message 0 is refused (`advisor-park.md`, "Still unknown").
 - [ ] **Q547. The cursor Up and Down keys step an object window.** From Q31. The base window proc `0x0048d200` takes key
   down `0x2600` and `0x2800` to `0x0048cbe0` and `0x0048caf0` (`hud.md`, "The shop, sideshow and ride windows"), which
   apply and step to the next or the previous object of the class; no object window here hears a key. Build it for the

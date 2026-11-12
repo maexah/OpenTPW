@@ -10,6 +10,9 @@ public static class Camera
 	/// <summary>The picture's up, which the view is built against - see <see cref="CameraMode.Up"/>.</summary>
 	public static Vector3 Up => CameraMode?.Up ?? Vector3.Up;
 
+	/// <summary>The way the camera is turned for a sprite's sector - see <see cref="CameraMode.SectorLook"/>.</summary>
+	public static Vector3 SectorLook => CameraMode?.SectorLook ?? Rotation.Forward;
+
 	/// <summary>Where the scene is heard from - see <see cref="CameraMode.Ears"/>.</summary>
 	public static Vector3 Ears => CameraMode?.Ears ?? Vector3.Zero;
 

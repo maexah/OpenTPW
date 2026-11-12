@@ -18,6 +18,12 @@ public class CameraMode
 	/// </summary>
 	public float FieldOfView { get; set; } = 90f;
 
+	/// <summary>
+	/// The way the camera is turned for a sprite's sector (<see cref="ParkGuestSprites.CameraOctant"/>): the look, unless the
+	/// mode turns its look by something the original's sector does not read.
+	/// </summary>
+	public virtual Vector3 SectorLook => Rotation.Forward;
+
 	/// <summary>Where the scene is heard from: the eye, unless the mode says otherwise.</summary>
 	public virtual Vector3 Ears => Position;
 

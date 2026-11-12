@@ -106,6 +106,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0044b2e0` | | OpenTPW/World/Advisor/AdvisorModel.cs  |
 | `0x0044ba1f` | | OpenTPW/World/Park/ParkGuestSprites.cs  |
 | `0x0044e4b7` | FUN_0044e410( 3 ), the off-screen sweep: FUN_00473c70 called with flags 8 (no rest pose, no hide list) | OpenTPW/World/Ride/AnimTimeControl.cs  |
+| `0x00452a6d` | `FUN_00452a60` asks the track grid (`FUN_0053bf30`) before the gate's row | OpenTPW/World/Park/ParkSceneHeight.cs  |
 | `0x00452bb0` | | OpenTPW/World/Park/ParkItemHeights.cs  |
 | `0x00452c1d` | | OpenTPW/World/Park/ParkItemHeights.cs  |
 | `0x0045aa5a` | | OpenTPW/Client/Players.cs  |
@@ -393,6 +394,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004d8b8f` | FUN_004d8b40, a route's length: -1 when FUN_00511ef0 answers 0x70000000 | OpenTPW/World/Park/CellSearch.cs  |
 | `0x004d8ba0` | FUN_004d8b40: | OpenTPW/World/Park/CellSearch.cs  |
 | `0x004d8be7` | FUN_004d8b40: the sum, to here | OpenTPW/World/Park/CellSearch.cs  |
+| `0x004d8c67` | `FUN_004d8c60` returns without writing when the back cell is nought | OpenTPW.Tests/ParkStrandedTests.cs OpenTPW/World/Park/ParkState.cs  |
 | `0x004db169` | Object constructor FUN_004db090: mTotalCosts +0x184 zeroed | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x004db389` | FUN_004db090: mQualityOfGoods +0x18c = 50 | OpenTPW.Tests/ParkBankTests.cs OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x004db3ad` | Object constructor FUN_004db090: mPricePerUse +0x194 copied unclamped from UsageInfo.InitPricePerUse (+0xe4) | OpenTPW.Files/Formats/ItemDescriptionFile.cs OpenTPW.Tests/ParkStartingSettingsTests.cs OpenTPW/World/Park/ParkBuilding.cs  |
@@ -421,6 +423,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004ddde9` | `FUN_004ddd20`: with no `mQPrev` the leaver's `mQNext` becomes `mFirstInQ` | OpenTPW.Tests/ParkQueueJoinTests.cs OpenTPW.Tests/ParkQueueTurnTests.cs OpenTPW/World/Park/ParkRideOperation.cs OpenTPW/World/Park/ParkState.cs  |
 | `0x004ddfa9` | `FUN_004ddf50` (GetPositionInQueue) gives up at a guest no longer queueing | OpenTPW.Tests/ParkQueueRemeasureTests.cs OpenTPW/World/Park/ParkState.cs  |
 | `0x004de210` | `FUN_004de1f0` measures the queue again (`FUN_004de130`), before it takes the counter | OpenTPW/World/Park/ParkState.cs  |
+| `0x004de215` | `FUN_004de1f0`: no branch from here to the counter call at `0x004de233` | OpenTPW.Tests/ParkStrandedTests.cs  |
 | `0x004de233` | `FUN_004de1f0` takes the counter (`FUN_004d8c50`), after the measure | OpenTPW.Tests/ParkStrandedTests.cs OpenTPW/World/Park/ParkState.cs  |
 | `0x004de266` | `FUN_004de1f0` calls `FUN_004d8c60`, a write into a coarse grid at the back cell's block | OpenTPW.Tests/ParkStrandedTests.cs OpenTPW/World/Park/ParkState.cs  |
 | `0x004de2b9` | `FUN_004de1f0`'s queue walk skips the object's nominee | OpenTPW.Tests/ParkQueueRemeasureTests.cs OpenTPW/World/Park/ParkPeople.cs  |
@@ -781,6 +784,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00512b4c` | | OpenTPW/World/Weather/Lightning.cs  |
 | `0x00515865` | | OpenTPW/Global/GameCalendar.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x00515886` | Park init FUN_005156a0 calls Calendar_SeedMonthAndYear (through FUN_004d7af0): month and year of tick nought | OpenTPW/Global/GameCalendar.cs  |
+| `0x00515da4` | FUN_005156a0, the world's setup, dispatches the advisor event 0 on every park start | OpenTPW/World/Level.cs  |
 | `0x00516330` | The park's generator: the state at world +0x1da708 times 0x19660d plus 0x3c6ef35f, rolled right 13 and kept; answers its magnitude | OpenTPW.Tests/ParkPeopleTests.cs  |
 | `0x0051635f` | World generator FUN_00516330: NEG leaves 0x80000000 unchanged, which RAND and FINDSCRIPTRAND then halve | OpenTPW.Tests/RideScriptClockTests.cs OpenTPW/VM/RideScript.cs OpenTPW/World/Park/ParkGenerator.cs  |
 | `0x00516394` | Thing sweep `FUN_00516380`: `mGameTick` up by one | OpenTPW/World/Park/ParkPeople.cs OpenTPW/World/Park/ParkState.cs OpenTPW/World/Park/PeepBehaviour.cs  |
@@ -974,7 +978,11 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0054ec9f` | | OpenTPW/World/Level.cs OpenTPW/World/Park/ParkAudio.cs  |
 | `0x0054ed3f` | | OpenTPW/World/Level.cs  |
 | `0x0054ed7c` | | OpenTPW/Global/GameClock.cs OpenTPW/World/Level.cs  |
-| `0x0054f24e` | State 9 sends the advisor event 10 (`RESET_FOR_EASY_MODE`) on the player's first park, after the park file's load | OpenTPW/World/Advisor/ParkAdvisorMessages.cs OpenTPW/World/Level.cs  |
+| `0x0054f1b6` | State 9 tests gms.dat's first-park byte `+0x4c` (FUN_005b0cb0) after the park file's load | OpenTPW/World/Advisor/ParkAdvisorMessages.cs OpenTPW/World/Level.cs  |
+| `0x0054f208` | State 9 clears the first-park byte `+0x4c` (FUN_005b0cc0) for any offline park | OpenTPW/World/Advisor/ParkAdvisorMessages.cs OpenTPW.Files/Formats/Save/PlayerFile.cs  |
+| `0x0054f240` | State 9's first-park block asks the game type: event 10 and event 0 only when it is 2 (Instant Action) | OpenTPW/World/Advisor/ParkAdvisorMessages.cs  |
+| `0x0054f24e` | State 9 sends the advisor event 10 (`RESET_FOR_EASY_MODE`) on an Instant Action player's first park, after the park file's load | OpenTPW/World/Advisor/ParkAdvisorMessages.cs  |
+| `0x0054f2d7` | State 9 sends the advisor event 0 after event 10 on an Instant Action player's first park | OpenTPW/World/Advisor/ParkAdvisorMessages.cs  |
 | `0x0054f455` | | OpenTPW/Global/GameClock.cs  |
 | `0x0054f45f` | | OpenTPW/Global/GameClock.cs  |
 | `0x0054f47f` | | OpenTPW/World/Park/ParkRides.cs  |
@@ -995,6 +1003,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0054f870` | | OpenTPW/World/Park/ParkAudio.cs  |
 | `0x0054f875` | Game_StateMachine, the every-32nd-step block: the word at 0x007b05cc read for the crowd voice's count (FUN_004c8d30) | OpenTPW/World/Park/ParkAudio.cs  |
 | `0x0054f8c8` | Game_StateMachine, the every-32nd-step block: CALL FUN_0055ab50, its last call | OpenTPW/World/Park/ParkAudio.cs  |
+| `0x0054f9a6` | The park's orbit hands the mixer's listener the leaned matrix's forward and top rows (pushed 0x0054f9a6..0x0054f9d1, the call at 0x0054f9e4) | OpenTPW.Tests/AudioListenerTests.cs OpenTPW/Audio/AudioListener.cs  |
 | `0x0054f9f9` | | OpenTPW/World/Advisor/Advisor.cs OpenTPW/World/Level.cs  |
 | `0x0054fa08` | The park frame's one call of `FUN_00557ab0`, after the 31 ms catch-up loop: every script's walks stepped once a frame | OpenTPW/VM/RideScript.cs OpenTPW/World/Park/ParkRides.cs  |
 | `0x0054fa0d` | Per-frame block: placed objects' fraction, 1/31 against its own baseline | OpenTPW/Global/GameClock.cs OpenTPW/World/Park/ParkBumperBoats.cs  |
@@ -1134,10 +1143,12 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x005994e0` | | OpenTPW/UI/Park/ParkFrontEnd.cs OpenTPW/World/Advisor/Advisor.cs  |
 | `0x005996d0` | | OpenTPW/World/Advisor/Advisor.cs  |
 | `0x00599880` | | OpenTPW/UI/FrontEnd/FrontEnd.cs OpenTPW/UI/FrontEnd/FrontEndLines.cs OpenTPW/World/Advisor/Advisor.cs OpenTPW/World/Advisor/ClipSequence.cs  |
+| `0x0059ae43` | The advisor's event 0: posts message 0 (`Welcome`), then 0x143 in game type 2 | OpenTPW/World/Advisor/ParkAdvisorMessages.cs  |
 | `0x0059af63` | Event 10 handled in `FUN_0059ae20`: every record's line -1, said and slaps nought, tick kept | OpenTPW.Tests/ParkAdvisorMessageTests.cs OpenTPW/World/Advisor/ParkAdvisorMessages.cs  |
 | `0x005a0a50` | The advisor metadata table's filler: a static initializer run before WinMain, filling 0x0076e300's 351 rows | OpenTPW/UI/Park/ParkLines.cs  |
 | `0x005accf0` | | OpenTPW/Client/Players.cs  |
 | `0x005aef50` | | OpenTPW.Files/Formats/Save/PlayerFile.cs  |
+| `0x005af0cb` | The new player's constructor sets the first-park byte `+0x4c` to 1 | OpenTPW/World/Level.cs  |
 | `0x005af530` | | OpenTPW.Files/Formats/Save/PlayerFile.cs OpenTPW/Client/Players.cs OpenTPW/Client/SaveFolder.cs  |
 | `0x005af680` | | OpenTPW.Files/Formats/Save/PlayerFile.cs OpenTPW/Client/Players.cs OpenTPW/UI/FrontEnd/Screens/IslandPanel.cs  |
 | `0x005af740` | | OpenTPW.Files/Formats/Save/PlayerFile.cs  |
@@ -1148,10 +1159,10 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x005afc60` | | OpenTPW.Files/Formats/Save/PlayerFile.cs OpenTPW.Tests/ProfilePreservationTests.cs  |
 | `0x005afd70` | | OpenTPW.Files/Formats/Save/PlayerFile.cs  |
 | `0x005aff50` | | OpenTPW.Files/Formats/Save/PlayerFile.cs OpenTPW.Files/Formats/Save/RecordStream.cs  |
-| `0x005b0109` | gms.dat's first-park byte (`+0x4c`) cleared | OpenTPW/World/Advisor/ParkAdvisorMessages.cs  |
-| `0x005b0597` | gms.dat's first-park byte (`+0x4c`) read | OpenTPW/World/Advisor/ParkAdvisorMessages.cs  |
+| `0x005b0109` | gms.dat's writer: the first-park byte `+0x4c` | OpenTPW.Files/Formats/Save/PlayerFile.cs  |
+| `0x005b0597` | gms.dat's reader: the first-park byte `+0x4c` | OpenTPW.Files/Formats/Save/PlayerFile.cs  |
 | `0x005b09c0` | A park's record: found or made, and answered only while its global.sam loads (`0x005b11c0`) | OpenTPW.Files/Formats/Save/PlayerFile.cs OpenTPW/World/Lobby/LobbyIsland.cs  |
-| `0x005b0cc0` | | OpenTPW.Files/Formats/Save/PlayerFile.cs  |
+| `0x005b0cc0` | Clears the player's first-park byte `+0x4c` (called at `0x0054f208`) | OpenTPW.Files/Formats/Save/PlayerFile.cs  |
 | `0x005b0d70` | | OpenTPW.Files/Formats/Save/PlayerFile.cs  |
 | `0x005b11a0` | | OpenTPW/World/Lobby/LobbyIsland.cs  |
 | `0x005b11c0` | Loads a park's `data\levels\%s\global.sam`; 0 when it will not load | OpenTPW/World/Lobby/LobbyIsland.cs  |
@@ -1447,6 +1458,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00786ba4` | | OpenTPW/Global/GameClock.cs OpenTPW/UI/UiWindow.cs OpenTPW/World/Advisor/Advisor.cs OpenTPW/World/Level.cs  |
 | `0x0078d8d8` | | OpenTPW.Files/Formats/Save/ConfigFile.cs OpenTPW/Client/GameOptions.cs  |
 | `0x0078d90e` | | OpenTPW/UI/ButtonGlint.cs  |
+| `0x00790a38` | The orbit's asked rotation, which a sprite's camera sector reads (`FUN_00540ab0`) and the lean does not turn | OpenTPW.Tests/ParkOrbitCameraLeanTests.cs OpenTPW/World/Park/ParkCamcorderCameraMode.cs OpenTPW/World/Park/ParkOrbitCameraMode.cs  |
 | `0x00790a88` | Camera scroll term, the first of three FUN_0042aab0 zeroes when it places the look-at | OpenTPW/World/Park/ParkOrbitCameraMode.cs  |
 | `0x00790a90` | Camera scroll term, the last of the three FUN_0042aab0 zeroes | OpenTPW/World/Park/ParkOrbitCameraMode.cs  |
 | `0x007afd08` | The preview record FUN_004689f0 fills: instance, root matrix, angle, panel, the fit's five floats, the clock | OpenTPW.Tests/ParkObjectPreviewTests.cs OpenTPW/UI/Park/ParkObjectPreview.cs  |

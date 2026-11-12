@@ -240,22 +240,24 @@ public class ParkAdvisorMessageTests
 	}
 
 	/// <summary>
-	/// The reset is sent on the player's first park only, by gms.dat's byte, which it clears; a later park, and a
-	/// park with nobody playing, keep the file's records.
+	/// The reset is sent on an Instant Action player's first park only, by gms.dat's byte, which it clears, and event 0
+	/// is counted after it; a later park, and a park with nobody playing, keep the file's records.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> the byte not read; the byte not cleared; the reset sent with nobody playing.</remarks>
+	/// <remarks><b>Mutations:</b> the byte not read; the byte not cleared; the reset sent with nobody playing; event 0 not counted.</remarks>
 	[TestMethod]
 	public void OnlyThePlayersFirstParkIsReset()
 	{
 		ParkWorld.AdvisorHistory? Saved( int id ) => id == ParkAdvisorMessages.TagMessage ? new ParkWorld.AdvisorHistory( 911, 0, true, 0 ) : null;
-		var player = new PlayerFile();
+		var player = new PlayerFile { InstantAction = true };
 		Assert.IsTrue( player.FirstParkToCome, "on for a new player" );
+		Unimplemented.Forget();
 
 		var first = new ParkAdvisorMessages( Settings() );
 		first.Restore( Saved );
 		Assert.IsTrue( first.FirstPark( player, Saved ) );
 		Assert.IsFalse( player.FirstParkToCome );
 		Assert.AreEqual( new ParkWorld.AdvisorHistory( 911, -1, false, 0 ), first.Written()[ParkAdvisorMessages.TagMessage] );
+		Assert.AreEqual( 1, EventZeroCount(), "event 0 after the reset" );
 
 		var second = new ParkAdvisorMessages( Settings() );
 		second.Restore( Saved );
@@ -266,7 +268,67 @@ public class ParkAdvisorMessageTests
 		nobody.Restore( Saved );
 		Assert.IsFalse( nobody.FirstPark( null, Saved ) );
 		Assert.AreEqual( new ParkWorld.AdvisorHistory( 911, 0, true, 0 ), nobody.Written()[ParkAdvisorMessages.TagMessage] );
+		Assert.AreEqual( 1, EventZeroCount(), "no second event 0" );
+		Unimplemented.Forget();
 	}
+
+	/// <summary>
+	/// A Full Simulation player's first park clears the byte (<c>0x0054f208</c>) and sends nothing: the game type is
+	/// asked after the clear (<c>0x0054f240</c>), so the file's records stay and no event 0 follows.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the game type not asked (the records reset); the byte cleared only in Instant Action.</remarks>
+	[TestMethod]
+	public void AFullSimulationPlayersFirstParkKeepsItsRecords()
+	{
+		ParkWorld.AdvisorHistory? Saved( int id ) => id == ParkAdvisorMessages.TagMessage ? new ParkWorld.AdvisorHistory( 911, 0, true, 2 ) : null;
+		var player = new PlayerFile { InstantAction = false };
+		Assert.IsTrue( player.FirstParkToCome );
+		Unimplemented.Forget();
+
+		var messages = new ParkAdvisorMessages( Settings() );
+		messages.Restore( Saved );
+		Assert.IsFalse( messages.FirstPark( player, Saved ) );
+		Assert.IsFalse( player.FirstParkToCome, "cleared for any offline park" );
+		Assert.AreEqual( new ParkWorld.AdvisorHistory( 911, 0, true, 2 ), messages.Written()[ParkAdvisorMessages.TagMessage] );
+		Assert.AreEqual( 0, EventZeroCount() );
+	}
+
+	/// <summary>
+	/// <see cref="Level.Advise"/> on the shipped Lost Kingdom: event 0 counted at the start, the file's records restored
+	/// and then reset for an Instant Action player's first park (the reset after the restore, from the file's records),
+	/// and restored as the file has them for a Full Simulation player's.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the first park ahead of the restore; no records passed to the reset; event 0 not counted at the start.</remarks>
+	[TestMethod]
+	public void AParkStartRestoresTheFileThenResetsAnInstantActionFirstPark()
+	{
+		var data = GameData.Required();
+		var shipped = new ParkWorld( new SaveReader( new MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) ) ).ReadFile() );
+		Assert.AreEqual( new ParkWorld.AdvisorHistory( 605, 0, true, 0 ), shipped.AdvisorHistoryOf( 0x11a ) );
+		Unimplemented.Forget();
+
+		var instant = new ParkAdvisorMessages( Settings(), tutorial: () => true );
+		Level.Advise( instant, shipped, new PlayerFile { InstantAction = true }, "jungle" );
+		Assert.AreEqual( new ParkWorld.AdvisorHistory( 605, -1, false, 0 ), instant.Written()[0x11a], "the file's tick kept, its said cleared" );
+		Assert.AreEqual( new ParkWorld.AdvisorHistory( 257, -1, false, 0 ), instant.Written()[0xb9], "an unbuilt record taken from the file" );
+		Assert.AreEqual( 2, EventZeroCount(), "the park start's and the reset's" );
+
+		var full = new ParkAdvisorMessages( Settings(), tutorial: () => true );
+		var simulation = new PlayerFile { InstantAction = false };
+		Level.Advise( full, shipped, simulation, "jungle" );
+		Assert.IsFalse( simulation.FirstParkToCome );
+		Assert.AreEqual( new ParkWorld.AdvisorHistory( 605, 0, true, 0 ), full.Written()[0x11a] );
+		Assert.AreEqual( 3, EventZeroCount(), "the park start's only" );
+		Assert.IsTrue( instant.Written().Count > full.Written().Count, $"the reset writes the file's unbuilt records too: {instant.Written().Count} against {full.Written().Count}" );
+		var unbuilt = instant.Written().Keys.Except( full.Written().Keys ).Order().ToArray();
+		Assert.IsTrue( unbuilt.Any( id => shipped.AdvisorHistoryOf( id ) is { Said: true } ), "a said unbuilt record in the file" );
+		foreach ( var id in unbuilt )
+			Assert.AreEqual( shipped.AdvisorHistoryOf( id )!.Value with { Line = -1, Said = false, Slaps = 0 }, instant.Written()[id], $"message {id}" );
+		Unimplemented.Forget();
+	}
+
+	private static int EventZeroCount() =>
+		Unimplemented.Summary.FirstOrDefault( entry => entry.What == ParkAdvisorMessages.EventZeroNotBuilt ).Times;
 
 	/// <summary>
 	/// The shipped Lost Kingdom as a new player's first park: the file's said 0xb9 and 0x11a are cleared, their ticks
@@ -291,7 +353,7 @@ public class ParkAdvisorMessageTests
 			return messages;
 		}
 
-		var player = new PlayerFile();
+		var player = new PlayerFile { InstantAction = true };
 		var first = Park( player );
 		var written = first.Written();
 		Assert.AreEqual( new ParkWorld.AdvisorHistory( 257, -1, false, 0 ), written[0xb9] );

@@ -1086,17 +1086,30 @@ internal sealed class ParkAdvisorMessages
 	}
 
 	/// <summary>
-	/// On the player's first park, by gms.dat's byte (<see cref="PlayerFile.FirstParkToCome"/>, read <c>0x005b0597</c>),
-	/// sends <see cref="ResetForEasyMode"/> and clears the byte (<c>0x005b0109</c>); it goes out with the player's next
-	/// save. Any later park, and a park with nobody playing, is left alone. Says whether it reset.
+	/// The post of message 0 (<c>Welcome</c>) and, in Instant Action, 0x143, that event 0 makes (<c>0x0059ae43</c>):
+	/// unbuilt (Q543).
+	/// </summary>
+	internal const string EventZeroNotBuilt = "PARK_ADVISOR_EVENT_0_NOT_BUILT";
+
+	/// <summary>
+	/// The player's first park, by gms.dat's byte (<see cref="PlayerFile.FirstParkToCome"/>, tested at <c>0x0054f1b6</c>
+	/// by FUN_005b0cb0): the byte is cleared for any offline park (<c>0x0054f208</c>, FUN_005b0cc0) and goes out with the
+	/// player's next save; only in Instant Action is <see cref="ResetForEasyMode"/> sent then, followed by event 0. A
+	/// later park, a Full Simulation player's and a park with nobody playing keep their records. Says whether it reset.
 	/// </summary>
 	internal bool FirstPark( PlayerFile? player, Func<int, ParkWorld.AdvisorHistory?> saved )
 	{
 		if ( player is not { FirstParkToCome: true } )
 			return false;
 
-		ResetForEasyMode( saved );
 		player.FirstParkToCome = false;
+		// Game type 2 only (0x0054f240).
+		if ( !player.InstantAction )
+			return false;
+
+		ResetForEasyMode( saved );
+		// Event 0 again, after event 10 (0x0054f2d7).
+		Unimplemented.Report( EventZeroNotBuilt );
 		return true;
 	}
 

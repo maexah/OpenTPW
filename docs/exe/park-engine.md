@@ -900,7 +900,7 @@ so the people stay upright on the screen while the ground rolls under them.
   name for the original's Z) by the term along x, per second here. On the desk at the same five cases (`q1109/ours/run4`, the committed build): the
   `camera` census mid-hold read lean 0.01517 (the term 104.60 a second, its ease 0.3 per cent short at 0.25 s), look (0.0129,
   0.5250, -0.8510) and up (-0.0080, 0.8511, 0.5249), the original's rows in this engine's axes; at the original's 90 the look
-  57.46 degrees down; the frames turned 0.520 clockwise, 0.459 the other way, 0.045 and 0.001 where nothing leans; `main`'s
+  57.46 degrees down; the frames turned 0.520 clockwise (0.465 in `run3` on the same lean and rest point: the instrument's spread, the rows agreeing to four places), 0.459 the other way, 0.045 and 0.001 where nothing leans; `main`'s
   build before Q1109 read no turn in any case (0.043 at most). A pan facing along x nods the view, which a shift of a rest frame
   cannot match: `frameroll.py` read 0.182 there in the original and 0.116 here, the keystone's and not a roll (0.010 on main).
 

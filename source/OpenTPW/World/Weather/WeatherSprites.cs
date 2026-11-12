@@ -54,7 +54,8 @@ public abstract class WeatherSprites : ModelEntity
 
 	/// <summary>
 	/// Points a quad at the camera. <paramref name="up"/> is the quad's own up in world space -
-	/// rain keeps world up so drops always fall straight down the screen - and the across
+	/// rain keeps world up, so its drops fall straight down the screen but for the orbit's lean while panning (at
+	/// most about half a degree; how the original draws rain under the lean is not read) - and the across
 	/// direction is whatever is perpendicular to both that and the view.
 	/// </summary>
 	protected void WriteQuad( int index, Vector3 centre, Vector3 up, float halfWidth, float halfHeight )

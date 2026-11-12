@@ -546,6 +546,14 @@ public sealed class ParkOrbitCameraMode : CameraMode
 			=> (at < 0f && term < 0f) || (at > far && term > 0f);
 	}
 
+	private Vector3 _aim = Vector3.Forward;
+
+	/// <summary>
+	/// The look before the pan's lean: a sprite's sector reads the asked rotation <c>[0x00790a38]</c> (FUN_00540ab0,
+	/// <c>docs/exe/park-engine.md</c>, "A sprite's camera sector reads the asked rotation"), which the lean does not turn.
+	/// </summary>
+	public override Vector3 SectorLook => _aim;
+
 	/// <summary>
 	/// Swings the eye around the point of interest and looks back the way it came, at the point raised by the ground
 	/// the eye rose by - see <see cref="View"/>.
@@ -559,6 +567,7 @@ public sealed class ParkOrbitCameraMode : CameraMode
 	internal void Place( float ground )
 	{
 		(Position, var aim) = View( PointOfInterest, Yaw, Zoom, ground );
+		_aim = aim.Normal;
 		var (look, up) = Leaned( aim, LeanAt( Scroll.X ) );
 
 		// Only Forward is taken from this - see Rotation.LookAt, whose roll is arbitrary, and the note

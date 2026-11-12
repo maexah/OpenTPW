@@ -88,6 +88,22 @@ public class AudioListenerTests
 		Assert.AreEqual( Vector3.Right.Z, listener.Right.Z, 1e-5f );
 	}
 
+	/// <summary>
+	/// The ears square to the picture's up when one is given: the orbit's lean rolls the up by a fraction of a degree
+	/// while panning, and the original's mixer is handed the leaned matrix's top row (0x0054f9a6).
+	/// </summary>
+	[TestMethod]
+	public void ARolledUpTiltsTheEarsWithIt()
+	{
+		var roll = 0.3f;
+		var up = new Vector3( 0, MathF.Sin( roll ), MathF.Cos( roll ) );
+		var listener = AudioListener.Facing( Vector3.Zero, Vector3.Forward, up: up );
+
+		Assert.AreEqual( 0f, listener.Right.X, 1e-5f );
+		Assert.AreEqual( -MathF.Cos( roll ), listener.Right.Y, 1e-5f );
+		Assert.AreEqual( MathF.Sin( roll ), listener.Right.Z, 1e-5f, "the right ear tilted by the roll" );
+	}
+
 	/// <summary>And turning round swaps the ears over, rather than leaving them where they were.</summary>
 	[TestMethod]
 	public void TurningRoundSwapsTheEarsOver()

@@ -2520,6 +2520,8 @@ public sealed partial class ParkPeople : Entity
 
 		// The sweep's tail (FUN_004d7b20, called at 0x00516695), after the advisor's turn and the free list: the arrival
 		// manager (0x004d7b29), so a guest it makes may take an id freed in this sweep, then the staff pool (0x004d7b30).
+		// Only the staff pool's place is pinned by a test (ParkAdvisorBeforeTailTests); the arrivals' and the vehicle's,
+		// after the advisor and after the free list, are not.
 		StepArrivals();
 
 		// After the load, and on every sweep rather than only while one is running - the original

@@ -540,14 +540,15 @@ public static class Audio
 	/// an arbitrary amount and would be wrong at most camera angles - see
 	/// <see cref="AudioListener.Facing"/>.
 	/// </param>
-	public static void SetListener( Vector3 position, Vector3 forward )
+	/// <param name="up">The picture's up, <c>Camera.Up</c>, which the ears are squared to; the world's when none is given.</param>
+	public static void SetListener( Vector3 position, Vector3 forward, Vector3? up = null )
 	{
 		if ( !Ready )
 			return;
 
 		lock ( Lock )
 		{
-			_listener = AudioListener.Facing( position, forward, _referenceDistance );
+			_listener = AudioListener.Facing( position, forward, _referenceDistance, up );
 
 			foreach ( var voice in Voices )
 				voice.Locate( _listener, immediately: false );

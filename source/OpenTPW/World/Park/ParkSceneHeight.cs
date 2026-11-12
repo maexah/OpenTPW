@@ -46,7 +46,8 @@ internal sealed class ParkSceneHeight( ParkItemCatalogue? catalogue, Func<ParkIt
 
 	/// <summary>
 	/// The catalogue item of the object a cell answers, or null where it answers none - <c>FUN_00527e80</c>: a cell of the
-	/// gate's row (<see cref="ParkItemHeights.OnGateRow"/>) answers the gate, whatever it holds, and nothing where the gate
+	/// gate's row (<see cref="ParkItemHeights.OnGateRow"/>) answers the gate, whatever its map cell holds (after the track grid, FUN_0053bf30 at 0x00452a6d, which is not built
+	/// here), and nothing where the gate
 	/// is no placed object (the original's type byte 3, <c>0x00452ac8</c>); any other goes to <c>FUN_00527d60</c>, where a
 	/// footprint, entrance or exit cell's parent cell names it.
 	/// </summary>

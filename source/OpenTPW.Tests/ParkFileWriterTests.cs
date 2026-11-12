@@ -3,6 +3,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Reflection;
 using System.Text;
 
 namespace OpenTPW.Tests;
@@ -2061,6 +2063,38 @@ public class ParkFileWriterTests
 		{
 			people.Delete();
 			Entity.ApplyDeletions();
+		}
+	}
+
+	/// <summary>
+	/// The running park's gate row on the loaded Lost Kingdom (<see cref="ParkItemHeights.ParkGateRow"/>): the thing the
+	/// fixed items stood the gate as, and the balance's <c>EntranceA</c> and <c>EntranceB</c>, (47,17) and (48,17).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the wrong fixed item's name; EntranceA's cell taken for B; the off-map cells kept where a balance is loaded.</remarks>
+	[TestMethod]
+	public void TheLoadedJunglesGateRowIsItsGateAndEntrances()
+	{
+		var level = Level.Current;
+		var items = ParkFixedItems.Current;
+
+		try
+		{
+			var park = (Level)RuntimeHelpers.GetUninitializedObject( typeof( Level ) );
+			typeof( Level ).GetProperty( nameof( Level.Balance ) )!.SetValue( park, new ParkBalance( "jungle", easyMode: true ) );
+			Level.Current = park;
+
+			var fixedItems = (ParkFixedItems)RuntimeHelpers.GetUninitializedObject( typeof( ParkFixedItems ) );
+			typeof( ParkFixedItems ).GetField( "_thingOf", BindingFlags.NonPublic | BindingFlags.Instance )!
+				.SetValue( fixedItems, new Dictionary<string, int> { ["gates"] = shipped.ParkGates, ["bus"] = 1 } );
+			typeof( ParkFixedItems ).GetProperty( nameof( ParkFixedItems.Current ) )!.SetValue( null, fixedItems );
+
+			Assert.AreNotEqual( 0, shipped.ParkGates );
+			Assert.AreEqual( new ParkItemHeights.GateRow( shipped.ParkGates, (47, 17), (48, 17) ), ParkItemHeights.ParkGateRow() );
+		}
+		finally
+		{
+			Level.Current = level;
+			typeof( ParkFixedItems ).GetProperty( nameof( ParkFixedItems.Current ) )!.SetValue( null, items );
 		}
 	}
 

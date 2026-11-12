@@ -60,7 +60,8 @@ public sealed class PlayerFile
 	/// it where the swear list does not open. Nothing here filters what is typed.</summary>
 	public bool FilterSwearing = true;
 
-	/// <summary>Set until the player's first park starts, when the state machine clears it (0x005b0cc0). On for a new player.</summary>
+	/// <summary>Set until the player's first offline park starts, when the state machine clears it (0x005b0cc0, called at 0x0054f208). On for a
+	/// new player. gms.dat's reader takes it at 0x005b0597 and its writer puts it out at 0x005b0109.</summary>
 	public bool FirstParkToCome = true;
 
 	public List<ParkRecord> Parks = new();

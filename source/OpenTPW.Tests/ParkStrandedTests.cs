@@ -379,6 +379,40 @@ public class ParkStrandedTests
 		}
 	}
 
+	/// <summary>
+	/// An object with no back cell takes its counter value all the same (no branch from <c>0x004de215</c> to
+	/// <c>0x004de233</c>) and stamps no block (FUN_004d8c60 returns on a nought cell, <c>0x004d8c67</c>).
+	/// </summary>
+	[TestMethod]
+	public void AQueueWithNoBackCellTakesItsCounterAndStampsNothing()
+	{
+		var (world, state, people) = Open();
+
+		try
+		{
+			var none = world.Objects.First( thing => ParkRideChoice.QueueCellsFor( world, thing ).BackOfQueue == 0 );
+			var stamps = new System.Collections.Generic.List<uint>();
+			for ( var y = 0; y < 128; y += 16 )
+				for ( var x = 0; x < 128; x += 16 )
+					stamps.Add( state.BlockStamp( x, y ) );
+
+			var before = ParkState.Counter;
+
+			state.RemeasureQueue( none.ThingId );
+
+			Assert.AreEqual( before + 1, ParkState.Counter, $"one counter value for object {none.ThingId}, with no back cell" );
+			var after = new System.Collections.Generic.List<uint>();
+			for ( var y = 0; y < 128; y += 16 )
+				for ( var x = 0; x < 128; x += 16 )
+					after.Add( state.BlockStamp( x, y ) );
+			CollectionAssert.AreEqual( stamps, after, "no block stamped" );
+		}
+		finally
+		{
+			Close( people );
+		}
+	}
+
 	/// <summary>The shipped park's guests: nobody stranded, every thought one the switch knows or none.</summary>
 	[TestMethod]
 	public void TheShippedParksGuestsAreSavedWithNoStampAndAKnownThought()

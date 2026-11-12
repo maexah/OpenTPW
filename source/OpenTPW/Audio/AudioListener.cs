@@ -19,7 +19,9 @@ internal readonly record struct AudioListener( Vector3 Position, Vector3 Right, 
 {
 	/// <summary>
 	/// A listener standing at <paramref name="position"/> looking along <paramref name="forward"/>,
-	/// with its ears level.
+	/// with its ears square to <paramref name="up"/>, the picture's up (<c>Camera.Up</c>); the world's when none is
+	/// given. The park's orbit hands the original's mixer its leaned matrix's top row (pushed at 0x0054f9a6), so a pan's
+	/// roll tilts the ears with the picture.
 	///
 	/// <para>
 	/// The right ear is worked out here rather than taken from the camera's rotation, because
@@ -28,7 +30,7 @@ internal readonly record struct AudioListener( Vector3 Position, Vector3 Right, 
 	/// basis it hands back is rolled by whatever that turn happened to leave: around the lobby's own
 	/// orbit its right ear tilts as far as 0.79 out of the horizontal, and at one angle it points the
 	/// opposite way to the camera's actual right. None of that shows in the picture, because the view
-	/// matrix is built by <c>CreateLookTo</c> against the world's up and squares its own basis up - so
+	/// matrix is built by <c>CreateLookTo</c> against <c>Camera.Up</c> and squares its own basis up - so
 	/// it would have been wrong in the sound alone, and wrong in a way that still sounds like working
 	/// positional audio.
 	/// </para>
@@ -37,9 +39,9 @@ internal readonly record struct AudioListener( Vector3 Position, Vector3 Right, 
 	/// (0,-1,0), which is <see cref="Vector3.Right"/>.
 	/// </para>
 	/// </summary>
-	public static AudioListener Facing( Vector3 position, Vector3 forward, float referenceDistance = 0f )
+	public static AudioListener Facing( Vector3 position, Vector3 forward, float referenceDistance = 0f, Vector3? up = null )
 	{
-		var right = Vector3.Cross( forward, Vector3.Up );
+		var right = Vector3.Cross( forward, up ?? Vector3.Up );
 
 		// Looking straight up or straight down, there is no level right ear to find - the two vectors
 		// are parallel and the cross product collapses. The world's own right stands in, rather than

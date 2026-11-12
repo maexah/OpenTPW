@@ -718,7 +718,7 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// </para>
 	/// </summary>
 	private static int Facing( int personFacing )
-		=> Facing( personFacing, CameraOctant( Camera.Rotation.Forward ) );
+		=> Facing( personFacing, CameraOctant( Camera.SectorLook ) );
 
 	/// <summary>
 	/// Which of the eight ways round the camera is looking, from the direction it looks rather than from
