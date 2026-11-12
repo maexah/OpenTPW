@@ -266,30 +266,41 @@ public class ConsoleLogTests
 		}
 	}
 
+	/// <remarks>
+	/// The folder is a scratch folder of the test's own: <see cref="ConsoleLog.Sink.Open"/> makes the folder it is given
+	/// before it calls the create hook, so a bare name would be made in the test host's working directory (the build's
+	/// output folder), and an account that cannot write there would open no file at all.
+	/// </remarks>
 	[TestMethod]
 	public void AFileThatStopsBeingWritableEndsTheFileAndNeverTheTerminal()
 	{
-		var terminal = new StringWriter();
-		var disk = new FailingStream();
-		using var sink = new ConsoleLog.Sink( _ => disk );
-		var tee = new ConsoleLog.Tee( terminal, sink );
+		var folder = Scratch();
 
-		sink.Open( ["anywhere"], "H" );
-		tee.WriteLine( "kept" );
-		disk.Full = true;
+		try
+		{
+			var terminal = new StringWriter();
+			var disk = new FailingStream();
+			using var sink = new ConsoleLog.Sink( _ => disk );
+			var tee = new ConsoleLog.Tee( terminal, sink );
 
-		// None of these may throw; the terminal gets every one, and the failure is told once.
-		tee.WriteLine( "lost 1" );
-		tee.Write( 'x' );
-		tee.WriteLine( "lost 2" );
+			Assert.IsTrue( sink.Open( [folder], "H" ), $"the file was not opened: {sink.Failures}" );
+			tee.WriteLine( "kept" );
+			disk.Full = true;
 
-		var shown = terminal.ToString().ReplaceLineEndings( "\n" );
+			// None of these may throw; the terminal gets every one, and the failure is told once.
+			tee.WriteLine( "lost 1" );
+			tee.Write( 'x' );
+			tee.WriteLine( "lost 2" );
 
-		StringAssert.Contains( shown, "kept\nlost 1" );
-		StringAssert.Contains( shown, "xlost 2" );
-		Assert.AreEqual( 1, System.Text.RegularExpressions.Regex.Count( shown, "the file stops here" ) );
-		StringAssert.Contains( Encoding.UTF8.GetString( disk.Written ), "kept" );
-		Assert.IsFalse( Encoding.UTF8.GetString( disk.Written ).Contains( "lost" ) );
+			var shown = terminal.ToString().ReplaceLineEndings( "\n" );
+
+			StringAssert.Contains( shown, "kept\nlost 1" );
+			StringAssert.Contains( shown, "xlost 2" );
+			Assert.AreEqual( 1, System.Text.RegularExpressions.Regex.Count( shown, "the file stops here" ) );
+			StringAssert.Contains( Encoding.UTF8.GetString( disk.Written ), "kept" );
+			Assert.IsFalse( Encoding.UTF8.GetString( disk.Written ).Contains( "lost" ) );
+		}
+		finally { Directory.Delete( folder, true ); }
 	}
 
 	[TestMethod]
