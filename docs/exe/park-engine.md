@@ -797,6 +797,7 @@ Separate from the lobby island camera. Save module `"SAD_CAMERA"`, chunk magic `
     pitch = lerp(45deg, 65deg, (zoom - 70) / 60), clamped [0, 84.2673deg]
     eye = POI + rotateY( yaw, (0, sin(pitch)*zoom, -cos(pitch)*zoom) )
     eye Y additionally raised by the one-pole-smoothed (alpha 0.5) terrain height under the POI
+    turned by the pitch and the rotation alone, nothing looked at: the frame's middle is the POI lifted by the same height
     projection near 0.1, far 1000.0, angle 90: a 53.13 degree picture top to bottom ("The lens" below)
 
 The projection (0.1, 1000.0, 90) is pushed to `0x00578be0` on the camera `0x0087b110` at `0x0054e86a` (fork watch
@@ -835,7 +836,30 @@ gives x/w = 1.5 tan and y/w = 2 tan of the angle off the eye's axis: 768 pixels 
 since Q441, the same lens: its 1280 x 720 frame's middle 960 x 720, scaled by 768/720, lays on the original's whole
 frame (`q441/side-by-side.png`).
 
-**The aim is lifted with the eye** (Q1106, 2026-11-12, `q1106/orig/run2/camera-1.txt`, `proj-1.txt`; Alexah's New Save, a copy, by `fsload.sh`). At the point (595, 355), zoom 70, rotation 180, over ground 2.6265, the stored point reads (595.000, 0.000, 355.000), the eye (595.000, 52.124, 404.497) (49.497 above the point plus the ground) and the forward (0, -0.7071, -0.7071), the zoom's pitch of 45 degrees unchanged; the draw matrix puts (595, 2.6265, 355) on (512.00, 384.00), the frame's middle. So the whole camera rises with the ground: the frame's middle is the point lifted by it, not the stored point. Where `FUN_0042b1c0` lifts the aim was not read. OpenTPW looks at the stored point from the lifted eye (`ParkOrbitCameraMode.Place`), a pitch of 46.47 degrees there, and drew the same point at row 338.3 of 720, 23.1 of the original's pixels higher: Q1107.
+**Nothing is aimed at: the orbit's turn is the pitch and the rotation alone, stood on the lifted eye** (Q1107, 2026-11-12, the
+stored disassembly and Ghidra). With `gui_CameraFlags & 0x16` clear the update builds the matrix `0x00790990` by
+`FUN_0046fb50( m, [0x00790a3c], [0x007909e0] )` (`0x0042cc02`..`0x0042cc15`): a turn about x by the zoom's pitch (rows 1,0,0 /
+0,cos,sin / 0,-sin,cos), then `FUN_0046f650` by the drawn rotation's sin and cos. Its translation is the eye, `0x00790aa0`..`aa8`
+copied to `0x007909c0`..`c8` (`0x0042cc50`..`0x0042cc76`), whose height already holds the eased ground (`0x0042c842`). No point
+is looked at, so the frame's middle is the eye plus the forward times the zoom: the point lifted by the same eased ground. Then
+`FUN_0046f870( m, 9, 0x007908e0 )` (`0x0042cc1d`..`0x0042cc29`) turns it by the axis string `"ZX"` (`[0x0074da5c]`): Z by
+`[0x007908e0]`, X by `[0x007908e4]`, each worked out from a pan's scroll term (`0x0042c822`..`0x0042c964`):
+`0.005 sqrt( 100 |t| ) - 0.001` signed as the x term `0x00790a88` and kept only past nought, so nought at rest (the terms are
+noughted under 0.0001) and about 0.015 radians on a held pan at zoom 110. The X angle is nought at every term: its scale is
+-0.005 (`0x006fde2c`), so both of its branches fail their clamp. Ours has no lean: Q1109. The matrix is copied out by
+`FUN_00578bc0` only when `FUN_0042b070` answers nought (`0x0042cc7c`), a check not read. **Measured** (Q1106 and Q1107,
+Alexah's New Save, a copy, by `fsload.sh`; `q1107/orig/run1/camera-1.txt`, `proj-1.txt`): at the point (595, 355), zoom 70,
+rotation 180, over ground 2.6265, the stored point reads (595.000, 0.000, 355.000), the eye (595.000, 52.124, 404.497) and
+the forward (0, -0.7071, -0.7071), the zoom's 45 degrees, and the draw matrix puts (595, 2.6265, 355) on (512.00, 384.00).
+The picker's point at the frame's middle is (594.999, 352.374) on the plane at height nought there (`q1107/orig/run3`, the
+pointer's 3 x 3 grid read with its 3-pixel offset on `:77`). **OpenTPW** (`ParkOrbitCameraMode.View`, since Q1107) looks back
+along the eye's own offset, so on the desk at the same camera (`q1107/ours/after2`): the eye (595.000, 404.497, 52.124), the
+point (595, 355, 2.6265) at (640.0, 360.0) of 1280 x 720, the frame's middle (`circle`), the pick at (640, 360) (595.000,
+352.374), and the scene lined up with the original's frame (`lib/sceneshift.py`: shift 0, against 20 of the original's pixels
+higher before, `q1107/side-before1.png`, `side-after1.png`). Before Q1107 it looked at the stored point from the lifted eye, 46.47
+degrees down there, and drew the point at row 341.4. Q1106's 338.3 was at another eye: its frames were taken with the camera moved
+under `pause`, so the eye kept the eased ground of the file's own camera point, -4.896 (an eye 44.60 up, read in `q1107/ours/before1`
+before its `step 30`; VERIFYING rule 91).
 
 **The turn** (Q440, decoded and measured). The update builds the eye's offset as (0, sin p x zoom, -cos p x zoom)
 (`0x00790aa0` nought, `0x00790aa4`, `0x00790aa8`) and turns it by the drawn rotation `0x007909e0`: x' = x cos r + z sin r,

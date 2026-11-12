@@ -547,7 +547,8 @@ public sealed class ParkOrbitCameraMode : CameraMode
 	}
 
 	/// <summary>
-	/// Swings the eye around the point of interest and looks back at it.
+	/// Swings the eye around the point of interest and looks back the way it came, at the point raised by the ground
+	/// the eye rose by - see <see cref="View"/>.
 	/// </summary>
 	/// <remarks>
 	/// Called from the constructor as well as from <see cref="Update"/>, for the reason
@@ -555,15 +556,25 @@ public sealed class ParkOrbitCameraMode : CameraMode
 	/// same <see cref="Camera.Update"/>, so a mode that waited for its first update would have a
 	/// frame drawn from the world origin.
 	/// </remarks>
-	private void Place( float ground )
+	internal void Place( float ground )
 	{
-		Position = EyeAt( PointOfInterest, Yaw, Zoom, ground );
+		(Position, var aim) = View( PointOfInterest, Yaw, Zoom, ground );
 
 		// Only Forward is taken from this - see Rotation.LookAt, whose roll is arbitrary, and the note
 		// on it in AudioListener. Camera builds its view from Forward and a fixed world up, so that is
 		// all this has to be right about.
-		Rotation = Rotation.LookAt( PointOfInterest - Position );
+		Rotation = Rotation.LookAt( aim );
 	}
+
+	/// <summary>
+	/// Where the eye stands and which way it looks, for a point of interest, a spin, a zoom and the eased ground under the
+	/// point. The look is back along the eye's own offset from the point, whatever the ground: the original turns its
+	/// camera by the zoom's pitch and the drawn rotation alone (<c>FUN_0046fb50</c>, <c>0x0042cc15</c>) and stands it on
+	/// the lifted eye (<c>0x0042cc50</c>), so it looks at the point raised by the same eased ground, not at the point
+	/// itself (<c>docs/exe/park-engine.md</c>, "The park camera").
+	/// </summary>
+	internal static (Vector3 Eye, Vector3 Aim) View( Vector3 pointOfInterest, float yaw, float zoom, float ground )
+		=> (EyeAt( pointOfInterest, yaw, zoom, ground ), -EyeAt( Vector3.Zero, yaw, zoom, 0f ));
 
 	/// <summary>
 	/// Where the eye stands for a point of interest, a spin, a zoom and the eased ground under the point. The original
@@ -668,7 +679,9 @@ public sealed class ParkOrbitCameraMode : CameraMode
 	/// <para>
 	/// <c>ground</c> is sampled fresh rather than being the eased value the camera is actually riding,
 	/// so it says what the land under the point of interest is, not where the eye has caught up to.
-	/// That is the more useful of the two to read back: it is the thing being followed.
+	/// That is the more useful of the two to read back: it is the thing being followed. The eye is where the camera
+	/// stood at its last frame, so its height less the zoom's is the eased ground it rides; under <c>pause</c> that
+	/// ground does not move (<c>docs/VERIFYING.md</c> rule 91).
 	/// </para>
 	/// </summary>
 	public static string State()
@@ -687,6 +700,7 @@ public sealed class ParkOrbitCameraMode : CameraMode
 			$"cell=({(PointOfInterest.X - 5f) / 10f:F1},{(PointOfInterest.Y - 5f) / 10f:F1}) " +
 			$"yaw={Yaw:F2} zoom={Zoom:F0} pitch={Pitch:F1} " +
 			$"ground={(ground.HasValue ? ground.Value.ToString( "F1" ) : "-")} " +
-			$"attr={(attributes != null ? attributes.At( cellX, cellY ).ToString() : "-")}";
+			$"attr={(attributes != null ? attributes.At( cellX, cellY ).ToString() : "-")} " +
+			$"eye=({Camera.Position.X:F3},{Camera.Position.Y:F3},{Camera.Position.Z:F3})";
 	}
 }

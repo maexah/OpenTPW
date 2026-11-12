@@ -1,4 +1,4 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Numerics;
 
@@ -62,5 +62,82 @@ public class ParkOrbitCameraEyeTests
 
 		Assert.AreEqual( flat.Z + 12f, raised.Z, 0.01f, "twelve higher" );
 		Assert.AreEqual( flat.Y, raised.Y, 0.01f, "no nearer or further" );
+	}
+
+	/// <summary>
+	/// The original at point (595, 355), zoom 70, rotation 180, over ground 2.6265 (Q1106, its camera matrix
+	/// <c>0x0087aff0</c>): the eye (595, 52.124, 404.497) and the forward (0, -0.7071, -0.7071) in its own axes, the zoom's
+	/// 45 degrees, so its draw matrix put the point lifted by the ground, (595, 2.6265, 355), on the frame's middle. Looking
+	/// at the point itself from that eye would be 46.47 degrees down, a forward height of -0.7249.
+	/// </summary>
+	[TestMethod]
+	public void OverRaisedGroundTheAimRisesWithTheEye()
+	{
+		var (eye, aim) = ParkOrbitCameraMode.View( new Vector3( 595f, 355f, 0f ), -MathF.PI, 70f, 2.6265f );
+		var look = aim.Normal;
+
+		Assert.AreEqual( 404.497f, eye.Y, 0.01f, "49.50 beyond the point" );
+		Assert.AreEqual( 52.124f, eye.Z, 0.01f, "49.50 up, plus the ground" );
+		Assert.AreEqual( 0f, look.X, 1e-4f, "straight along" );
+		Assert.AreEqual( -0.7071f, look.Y, 1e-4f, "towards the point" );
+		Assert.AreEqual( -0.7071f, look.Z, 1e-4f, "the zoom's 45 degrees down, not 46.47" );
+
+		var middle = eye + (look * 70f);
+
+		Assert.AreEqual( 595f, middle.X, 0.001f, "the frame's middle, across" );
+		Assert.AreEqual( 355f, middle.Y, 0.001f, "the frame's middle, along" );
+		Assert.AreEqual( 2.6265f, middle.Z, 0.001f, "the point lifted by the ground" );
+	}
+
+	/// <summary>
+	/// The camera itself, placed over the same ground at the same numbers, faces that way: what the frame is drawn from
+	/// (<see cref="Camera"/> builds its view from the mode's forward).
+	/// </summary>
+	[TestMethod]
+	public void ThePlacedCameraFacesTheZoomsPitchOverRaisedGround()
+	{
+		var (point, yaw, zoom) = (ParkOrbitCameraMode.PointOfInterest, ParkOrbitCameraMode.Yaw, ParkOrbitCameraMode.Zoom);
+
+		try
+		{
+			ParkOrbitCameraMode.PointOfInterest = new Vector3( 595f, 355f, 0f );
+			ParkOrbitCameraMode.Yaw = -MathF.PI;
+			ParkOrbitCameraMode.Zoom = 70f;
+
+			var camera = new ParkOrbitCameraMode();
+			camera.Place( 2.6265f );
+			var forward = camera.Rotation.Forward;
+
+			Assert.AreEqual( 52.124f, camera.Position.Z, 0.01f, "the eye on the ground" );
+			Assert.AreEqual( -0.7071f, forward.Y, 1e-3f, "towards the point" );
+			Assert.AreEqual( -0.7071f, forward.Z, 1e-3f, "45 degrees down, not the 46.47 that looks at height nought" );
+		}
+		finally
+		{
+			(ParkOrbitCameraMode.PointOfInterest, ParkOrbitCameraMode.Yaw, ParkOrbitCameraMode.Zoom) = (point, yaw, zoom);
+		}
+	}
+
+	/// <summary>
+	/// On ground at height nought the look runs through the point itself: the original at point (484.442, 259.319), zoom
+	/// 110, rotation nought, read its forward (0, -0.851, 0.525) through the point (Q435), here (0, 0.525, -0.851); and at 90.
+	/// </summary>
+	[TestMethod]
+	public void OnGroundAtNoughtTheAimRunsThroughThePoint()
+	{
+		var point = new Vector3( 484.442f, 259.319f, 0f );
+		var (eye, aim) = ParkOrbitCameraMode.View( point, 0f, 110f, 0f );
+		var look = aim.Normal;
+
+		Assert.AreEqual( 0.525f, look.Y, 0.001f, "towards the point" );
+		Assert.AreEqual( -0.851f, look.Z, 0.001f, "the zoom's 58.33 degrees down" );
+		Assert.AreEqual( 0f, Vector3.DistanceBetween( point, eye + (look * 110f) ), 0.001f, "the point is the frame's middle" );
+
+		// Turned to the original's 90, the eye stands 57.75 less in x than the point (Q440), so the look runs along +x.
+		var (turnedEye, turnedAim) = ParkOrbitCameraMode.View( point, -MathF.PI / 2f, 110f, 0f );
+		var turned = turnedAim.Normal;
+
+		Assert.AreEqual( 0.525f, turned.X, 0.001f, "at 90, towards the point along x" );
+		Assert.AreEqual( 0f, Vector3.DistanceBetween( point, turnedEye + (turned * 110f) ), 0.001f, "at 90 the point is the frame's middle too" );
 	}
 }
