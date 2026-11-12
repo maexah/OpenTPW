@@ -181,10 +181,10 @@ public class FaithfulGraphicsTests
 		{
 			GameOptions.Current = new() { Faithful = true };
 			Assert.AreEqual( 1, UiText.PrescaleFor( 3.5f ), "the toggle as the game holds it" );
-			Assert.AreEqual( 1, UiText.Plan( new PixelRect( 0, 0, 2000, 400 ), 100, 15, 0, 4f, 1f, TextAlign.Start, TextAlign.Start ).Prescale );
+			Assert.AreEqual( 1, UiText.Plan( new PixelRect( 0, 0, 2000, 400 ), 100, 15, 4f, 1f ).Prescale );
 			GameOptions.Current = new();
 			Assert.AreEqual( 3, UiText.PrescaleFor( 3.5f ) );
-			Assert.AreEqual( 4, UiText.Plan( new PixelRect( 0, 0, 2000, 400 ), 100, 15, 0, 4f, 1f, TextAlign.Start, TextAlign.Start ).Prescale );
+			Assert.AreEqual( 4, UiText.Plan( new PixelRect( 0, 0, 2000, 400 ), 100, 15, 4f, 1f ).Prescale );
 		}
 		finally { GameOptions.Current = was; }
 	}

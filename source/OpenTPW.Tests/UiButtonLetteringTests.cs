@@ -136,43 +136,71 @@ public class UiButtonLetteringTests
 	}
 
 	/// <summary>
-	/// <b>The offset is in interface units, cut toward nought at the screen's size, and moves edges of the text's box</b>
-	/// (<c>0x0048f8c5</c>..<c>0x0048fa0e</c>), each case naming its down alignment: at 1024 x 768 (half a pixel a unit) (2, 1)
-	/// is 1 pixel across and 0 down, and a text centred both ways moves half that; at 800 x 600 nothing moves; a left- and
-	/// top-aligned text moves the whole offset; a right-aligned one moves left, and up by the whole offset bottom-aligned,
-	/// half middle-aligned and not at all top-aligned; a left one bottom-aligned does not move down. Its size is kept.
+	/// <b>The offset is in interface units, cut toward nought at the font set's screen</b> (<c>0x0048f8c5</c>, <c>0x0048f8ff</c>):
+	/// (2, 1) is 1 bitmap pixel across and 0 down at 1024 x 768, nothing at 800 x 600, and -3 units at 1024 wide is -1 (-1.5 cut
+	/// toward nought); drawn 2 times larger, 2 units at 1024 wide is half a bitmap pixel, so 0.
 	/// </summary>
-	/// <remarks>
-	/// <b>Mutations:</b> the offset in the font's pixels (unscaled, or by the font's scale); not cut toward nought; a centred
-	/// text moved the whole offset; a right-aligned text moved right and down; the top edge moved for a right-aligned text.
-	/// </remarks>
+	/// <remarks><b>Mutations:</b> the offset not scaled (units as pixels); floored; the drawn size not used.</remarks>
 	[TestMethod]
-	public void TheOffsetIsInInterfaceUnitsAndMovesEdgesOfTheTextsBox()
+	public void TheOffsetIsInInterfaceUnitsAtTheSetsScreen()
 	{
-		var placed = new Rectangle( 10f, 20f, 30f, 40f );
-
-		Assert.AreEqual( new Rectangle( 10.5f, 20f, 30f, 40f ), UiText.Nudge( placed, 2, 1, 0.5f, TextAlign.Centre, TextAlign.Centre ), "1024 x 768, centre, middle" );
-		Assert.AreEqual( placed, UiText.Nudge( placed, 2, 1, 600f / 1536f, TextAlign.Centre, TextAlign.Centre ), "800 x 600, centre, middle" );
-		Assert.AreEqual( new Rectangle( 12f, 21f, 30f, 40f ), UiText.Nudge( placed, 2, 1, 1f, TextAlign.Start, TextAlign.Start ), "2048 x 1536, left, top" );
-		Assert.AreEqual( new Rectangle( 12f, 20f, 30f, 40f ), UiText.Nudge( placed, 2, 1, 1f, TextAlign.Start, TextAlign.End ), "2048 x 1536, left, bottom" );
-		Assert.AreEqual( new Rectangle( 8f, 19f, 30f, 40f ), UiText.Nudge( placed, 2, 1, 1f, TextAlign.End, TextAlign.End ), "2048 x 1536, right, bottom" );
-		Assert.AreEqual( new Rectangle( 8f, 19.5f, 30f, 40f ), UiText.Nudge( placed, 2, 1, 1f, TextAlign.End, TextAlign.Centre ), "2048 x 1536, right, middle" );
-		Assert.AreEqual( new Rectangle( 8f, 20f, 30f, 40f ), UiText.Nudge( placed, 2, 1, 1f, TextAlign.End, TextAlign.Start ), "2048 x 1536, right, top" );
-		Assert.AreEqual( new Rectangle( 11.5f, 21f, 30f, 40f ), UiText.Nudge( placed, 2, 1, 1.5f, TextAlign.Centre, TextAlign.Start ), "3072 x 2304, centre, top" );
+		Assert.AreEqual( (1, 0), (UiText.OffsetIn( 2, UiText.SetScreenWidth( 768 ), 2048, 1f ), UiText.OffsetIn( 1, 768, 1536, 1f )), "1024 x 768" );
+		Assert.AreEqual( (0, 0), (UiText.OffsetIn( 2, UiText.SetScreenWidth( 600 ), 2048, 1f ), UiText.OffsetIn( 1, 600, 1536, 1f )), "800 x 600" );
+		Assert.AreEqual( -1, UiText.OffsetIn( -3, 1024, 2048, 1f ), "toward nought" );
+		Assert.AreEqual( 0, UiText.OffsetIn( 2, 1024, 2048, 2f ), "drawn twice the size" );
 	}
 
 	/// <summary>
-	/// <b>The offset across narrows a wrapping text's box by itself</b>, in pixels cut toward nought: the renderer breaks at
-	/// the box's right less its left (<c>0x006ae152</c>), and the offset has moved one of those edges in. A box 100 wide
-	/// wraps at 99 at 1024 x 768, 100 at 800 x 600, 97 at 3072 x 2304.
+	/// <b>The offset moves edges of the renderer's box inside the bitmap, never the bitmap</b> (<c>0x0048f8c5</c>..<c>0x0048fa0e</c>),
+	/// each case naming its down alignment, in a wrapping bitmap 100 x 40 with a line 30 x 12 and an offset (2, 3): a left label
+	/// moves 2 across, 3 down top-aligned and none bottom-aligned; a centred one moves half across (35 to 36: the left edge
+	/// alone moves) and 1 down middle-aligned ((37 - 12) / 2 = 12, then 3 + 12 = 15 from 14); a right one moves 2 left, and up
+	/// by the whole 3 bottom-aligned, 1 middle-aligned and none top-aligned (its top stays 0).
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> a centred text moved the whole offset (both edges moved); a right-aligned text moved right and down; the
+	/// top edge moved for a right-aligned text; the bottom edge moved for a left-aligned one.
+	/// </remarks>
+	[TestMethod]
+	public void TheOffsetMovesEdgesOfTheTextsBox()
+	{
+		(int Left, int Top) At( TextAlign across, TextAlign down, int x, int y )
+		{
+			var box = UiText.BoxOf( 100, 40, true, across, x, y );
+			return (UiText.LineLeft( box, 30, 30, across ), UiText.BlockTop( box, 12, down ));
+		}
+
+		Assert.AreEqual( (0, 0), At( TextAlign.Start, TextAlign.Start, 0, 0 ) );
+		Assert.AreEqual( (2, 3), At( TextAlign.Start, TextAlign.Start, 2, 3 ), "left, top" );
+		Assert.AreEqual( (2, 28), At( TextAlign.Start, TextAlign.End, 2, 3 ), "left, bottom" );
+		Assert.AreEqual( ((35, 14), (36, 15)), (At( TextAlign.Centre, TextAlign.Centre, 0, 0 ), At( TextAlign.Centre, TextAlign.Centre, 2, 3 )), "centre, middle" );
+		Assert.AreEqual( ((70, 28), (68, 25)), (At( TextAlign.End, TextAlign.End, 0, 0 ), At( TextAlign.End, TextAlign.End, 2, 3 )), "right, bottom" );
+		Assert.AreEqual( (68, 12), At( TextAlign.End, TextAlign.Centre, 2, 3 ), "right, middle: (37 - 12) / 2 from 14" );
+		Assert.AreEqual( (68, 0), At( TextAlign.End, TextAlign.Start, 2, 3 ), "right, top" );
+	}
+
+	/// <summary>
+	/// <b>The offset across narrows a wrapping text's box by itself</b>, in bitmap pixels cut toward nought: the renderer breaks
+	/// at the box's right less its left (<c>0x006ae152</c>), and the offset has moved one of those edges in. At 2048 x 1536 (set
+	/// 768, a font pixel 2 screen pixels) a box 372 wide wraps at 186; with 2 units across at 185; with 1 at 186 (half a pixel cut).
 	/// </summary>
 	/// <remarks><b>Mutations:</b> the wrap left at the whole box; the offset not cut; narrowed by the offset down.</remarks>
 	[TestMethod]
 	public void TheOffsetAcrossNarrowsTheWrap()
 	{
-		Assert.AreEqual( 99f, UiText.WrapAreaWidth( 100f, 2, 0.5f ) );
-		Assert.AreEqual( 100f, UiText.WrapAreaWidth( 100f, 2, 600f / 1536f ) );
-		Assert.AreEqual( 97f, UiText.WrapAreaWidth( 100f, 2, 1.5f ) );
-		Assert.AreEqual( 100f, UiText.WrapAreaWidth( 100f, 0, 1.5f ) );
+		var screen = Screen.Size;
+
+		try
+		{
+			Screen.Size = new Point2( 2048, 1536 );
+			Assert.AreEqual( 768, UiFonts.SetScreenHeight );
+			Assert.AreEqual( 186, UiText.WrapWidthIn( 372, 1f, 0, 768 ) );
+			Assert.AreEqual( 185, UiText.WrapWidthIn( 372, 1f, 2, 768 ) );
+			Assert.AreEqual( 186, UiText.WrapWidthIn( 372, 1f, 1, 768 ) );
+		}
+		finally
+		{
+			Screen.Size = screen;
+		}
 	}
 }

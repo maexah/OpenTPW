@@ -1868,20 +1868,21 @@ filed the items that cite it.
   the lobby camera's eye, target, right and up. Do Q681's measure first, so the light is judged on the file's own normals. Confirm
   beside the original under Proton: one island, the camera frozen (`X` or `freeze`) at two orbit angles, a lit face's colour
   against the original's; predict it first (ambient 68/255 plus 0xee/255 x max( 0, -d.n ) before the texel), and put the bug back.
-- [ ] **Q771. A text control's bitmap is its box, and the original cuts the text at it; ours never cuts.** From the fork watch
-  2026-10-28 (verify-ui-hud H2, verify-other O2; `ui.md`, "The two-pass text class"). Every text control of the original makes its
-  bitmap once (guard `+0x44`) at its box's size: width (x1 - x0) x `[0xFAA5C4]` / 2048 toward nought (`0x48F47B`..`0x48F49E`,
-  `+0x3C`), height (y1 - y0) x `[0xFAA5C0]` / 1536 toward nought (`0x48F4A2`..`0x48F4C5`, `+0x3E`), allocated by slot `+0x28` =
-  `0x48F3D0` (`0x588940`, texels of the cache's format) in the plain class (vtables `0x6FF320`, `0x6FF500`) and the title class
-  (`0x6FF530`). The glyph blitter `0x6B4AA0` clips each glyph against that bitmap, so text past the box is cut: a line wider than
-  its box loses its end, a block taller than it its lower lines; right alignment's bound is the bitmap's width (`0x48F8BA`),
-  centre's half of it (`0x48F943`), left 0; the title class's grey copy, moved (-2, +2) inside the same bitmap, loses its two left
-  columns on a left-aligned string. Ours (`UiText.Build`) sizes its texture to the text plus its margin, so it never cuts: it
-  differs wherever a string is longer than its box (a longer build name in `VersionLabel`, a long player or park name, a
-  translated string). Count first over Lost Kingdom's screens which controls' text the original does cut (the box tree against the
-  strings' widths, `uitree.py`), then size `UiText`'s texture to the box by the same two divisions and clip at its edge, the grey
-  copy inside it. Confirm beside the original under Proton: one control whose string is wider than its box, predicting the last
-  visible column, and the bug put back.
+- [ ] **Q1448. Photograph Q771's cut text beside the original's.** From Q771 (built in a cloud lane with no display and no
+  original). Under Proton, the stock park at 800 x 600: one control whose string is wider than its box, predicting the last
+  visible column from `UiText.LineLeft` and the bitmap's width, ours the same, then ours with the texture sized to the text
+  (the bug put back). Also look at a purple-skin title left-aligned (its grey copy's two left columns gone), a centred
+  two-line help bar row (each line placed by the block's widest, `UiText.LineLeft`) and the gadget's date (Q1449). Count
+  first over Lost Kingdom's screens which controls the original cuts (`uitree.py`, the box tree against the strings' widths),
+  as Q771 asked; only ours was counted (rebased, off-screen at 1280 x 720: 12 of 139 layouts cut, the gadget's date, money
+  and the build label; the date loses its top row of ink).
+- [ ] **Q1449. Is a text control's bitmap its control's rect or its stream text rect?** From Q771. `+0x3C`/`+0x3E` are
+  (x1 - x0) and (y1 - y0) scaled (`0x48F47B`, `0x48F4A2`); which rectangle the skin reads them from is not read. `UiText`
+  uses `UiControl.TextRect` (op 3) where a control has one. It matters at the gadget's date `0x20`: its text rect is 78 x 16
+  pixels at 800 x 600, the control 98 x 30, so ours now cuts the date, row 448's month.day.year "2.2.2000" (Q527, 68 x 18 font
+  pixels, centred down at -1), at its top and bottom rows: the top row's 18 of 397 ink pixels go, the bottom row holds none.
+  Read it in Ghidra (`0x48F3D0` and the skin's rect), then check the original's date at 800 x 600 for that top row; size the
+  bitmap from the right one.
 - [ ] **Q1444. The new player dialog's help bar over each toggle, photographed in both games.** Split from Q772 (cloud lane
   c81, 2026-11-12), which built the rule from a static read and confirmed it by the console alone. Shoot the original's
   new player dialog with the pointer on each toggle before a pick, after picking Instant Action and after picking Full
@@ -2190,7 +2191,7 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   removed, `particles` against `original/emitters.py`.
 - [ ] **Q1456. A list heading's lettering by state, photographed beside the original's (from Q1163).** Q1163 letters a framed
   heading in (255, 239, 0) throughout, plain under the pointer, moved (2, 1) interface units pressed with the pointer on it
-  and (1, 1) while down (`UiButton.Lettering`, `UiText.Nudge`); the units were read in the run 22 review (`ui.md`, "A text
+  and (1, 1) while down (`UiButton.Lettering`, `UiText.BoxOf`); the units were read in the run 22 review (`ui.md`, "A text
   button's lettering by state", "The offset's units"): at 1024 x 768 a pressed centred heading moves 0 or 1 pixel across and
   none down, at 800 x 600 none. It was read in the console's `control` line in a cloud container, never seen. Hover and hold
   the all-staff list's "Name" heading in both games at 1024 x 768 (`docs/TOOLING.md`, "Hovering and pressing a control

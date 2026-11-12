@@ -42,10 +42,24 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the maintainer's pre-commit hook: grep it by Q-number.
 
-- **Q1288 (a cell's litter drawn, placed and written):** in a cloud container (no Ghidra, no original, no photograph; the run's output was not kept), `ParkLitterTests` (seven, four needing the game) pass, and bugs put back by hand each failed one: the cell id without its one, the reseed taken out, the cell's sprite slot not written, the flags not written, the litter bank not packed, the 0.75 dropped from across, the set's number taken as its picture. Off-screen (`consolerun.py`), drops logged `Litter kind 1 on (47,22): sprite at (476,221), mRandomSeed reseeded with cell 2864 to 0x6e02790d` and kind 5 at (457,212) on (45,21), the save `2 litter dropped`, and `littercheck.py` read both cells of the saved file OK; the census held no `SAVE_PARK_RUNNING_LITTER`. **Not checked:** the litter on screen and beside the original's frame, the saved file loaded from the Load Park list here or in the original, whether `v0` is the bank's top row (Q1504).
+- **Q771 (a text control's bitmap is its box, and the text is cut at it):** built in a cloud container (no Ghidra, no
+  original, no photograph), rebased here onto the review fixes of group K and the run 22 review's VERIFY-17 applied.
+  `UiText`'s texture is the box (`BitmapOf`), lettered by the renderer's rules from `ui.md` and `hud.md`: the label's box
+  (`BoxOf`, the button offset moving its edges inside the bitmap, never the bitmap), the block placed by its widest line and
+  each line in it (`LineLeft`), the grey copy's box moved inside the same bitmap. Tests in `TextBitmapCutTests` (needing the
+  game), `ParkScreenLetteringTests` and `UiButtonLetteringTests` pass, and nine bugs put back by hand here (one-step
+  centring, the layout always or never wrapped, the layout's offset dropped, a right label's top moved, both edges of a
+  centred box moved, the wrap not narrowed, the grey box moved by two edges, the offset floored, a right label moved right
+  and down) each failed one or more. **This changes what is drawn and no frame of it was seen**: an off-screen census on the
+  rebased build (`consolerun.py`, `OPENTPW_TEXT_CENSUS=1`, 1280 x 720, the lobby, the park with its gadget, the buy and hire
+  screens and `screen 3` to `10`) cut 12 of 139 layouts, the gadget's date (6), money (5) and the build label (1). A probe of
+  the font found the date, row 448's "2.2.2000", losing its top row (18 of 397 ink pixels; the bottom row, also cut, holds
+  none; Q1449); the money and the build label were not probed here (the cloud lane's probe found them losing none). Not checked: the glyph blitter's clip at negative x (not read), the offset beside the original (Q1456). The
+  photograph beside the original is Q1448.
 
 ## Numbers (take counts fresh; these go stale within a day)
 
+- Linux, 2026-11-12, Q771 (`capped.sh`; nine tests added, six needing the game; built in a cloud container, rebased onto the review fixes of group K with its review's fixes, re-gated here after Q1288): with the game, 5683 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5685; with no game named, 2461 passed, 0 failed, 3224 skipped.
 - Linux, 2026-11-12, Q1288 (`capped.sh`; litter placed, drawn and written; seven tests added, five needing no game; built in a cloud container, re-gated here after Q992): with the game, 5674 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5676; with no game named, 2458 passed, 0 failed, 3218 skipped.
 - Linux, 2026-11-12, Q992 (`capped.sh`; the script graph records compared; three tests added, two needing no game; built in a cloud container, re-gated here after Q1292): with the game, 5667 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5669; with no game named, 2453 passed, 0 failed, 3216 skipped.
 - Linux, 2026-11-12, Q1292 (`capped.sh`; a mechanic does a waiting upgrade's work; seven tests added, needing the game; built in a cloud container, re-gated here after Q1236): with the game, 5664 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5666; with no game named, 2451 passed, 0 failed, 3215 skipped.

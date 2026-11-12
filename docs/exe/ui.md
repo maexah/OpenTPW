@@ -387,6 +387,31 @@ for a colour alpha under 255, nothing written at c = 0, and the string's texels 
 point filtering, clamp). `UiText` halves the colour (0.5, not 0.533) at half alpha (0.5, not 0.467) and composites Over, so it
 differs at glyph edges and in the copy's tone; Q517.
 
+**The bitmap is the box, so text past it is cut** (fork watch 2026-10-28, verify-ui-hud H2, verify-other O2; built Q771, from
+this page and `hud.md`; the block step and the half's cut read from the listing in the run 22 review, not in Ghidra). Every
+text control makes its bitmap once (guard `+0x44`) at its box's size: (x1 - x0) x `[0xFAA5C4]` / 2048 toward nought
+(`0x48F47B`..`0x48F49E`, `+0x3C`) by (y1 - y0) x `[0xFAA5C0]` / 1536 (`0x48F4A2`..`0x48F4C5`, `+0x3E`), allocated by slot
+`+0x28` = `0x48F3D0` in the plain class (vtables `0x6FF320`, `0x6FF500`) and this one (`0x6FF530`), and draws it at the
+control's corner `+0x18`/`+0x1A` whatever the label's offset (`0x48FBB9`..`0x48FC08`). A line wider than the box loses its end
+(or its start, from the right), a block taller than it its lower lines. The skin hands the renderer a box inside the bitmap
+(`0x48F888`..`0x48FA12`): a wrapping label's spans the bitmap; one that does not wrap is `0x4000` wide, from 0, ending at the
+width (`0x48F8BA`), or centred about the half, the half cut first (`0x48F943` `sar`, then `0x48F94A` takes `0x2000`). The
+renderer places the block first, as wide as its widest line (`+0x80`, the largest kept by `0x6ADD90`): at the box's left, at
+its right less the block, or centred, the difference halved toward nought (`0x6AEC1B`); then each line in the block, centred
+by (block - line) shifted unsigned (`0x6AE675`, never negative). So the widest line stands at width / 2 - 0x2000 + (0x4000 - w)
+/ 2 unwrapped, and a narrower one by the block's place, not its own: lines 31 and 30 wide centred in a bitmap 100 wide both
+stand at 34. A lone wrapped line wider than its bitmap (one glyph in a tiny box) stands at the negative half of the
+difference, -15 for 131 in 101; that the glyph blitter `0x6B4AA0` clips at negative x is not read. The label's offset moves
+edges of that box, never the bitmap ("A text button's lettering by state", "The offset's units"), and the renderer wraps at
+the box's width less it. This copy's grey pass, its box moved (-2, +2), stays inside the same bitmap, so a left-aligned
+string's copy loses its two left columns. **OpenTPW** (`UiText.BitmapOf`, `BoxOf`, `LineLeft`, `BlockTop`, `Letter`): the
+texture is the box over the font's scale times the size drawn, cut toward nought (the original's own at size 1), and lettered
+by those rules; `BitmapFont.Write` drops every texel past an edge. Not read: whether `+0x3C` comes from the control's rect or
+its stream text rect (op 3; `UiControl.TextRect` is used here). That matters at the gadget's date `0x20`, whose text rect
+(182, 1061)-(383, 1103) is 78 x 16 pixels at 800 x 600 against the control's 98 x 30: its date is row 448's month.day.year
+("2.2.2000", Q527), a line 18 high centred in 16 ((16 - 18) / 2 = -1), so its top row and its bottom row are cut: in set 2
+the top row holds 18 of its 397 ink pixels and the bottom row none (a probe of the shipped font, Q771's rebase); Q1449.
+
 ### `UI_SetTitle` (`0x00485d20`), and the buy and hire screens' titles and money
 
 Read 2026-10-25 (Q644, `q644/gd/00485d20.c`). Its arguments are the window, a control id and the text. **Once per
@@ -481,10 +506,11 @@ from the alignment code, not from `0x006ae0f0`'s arguments.
 
 **OpenTPW** (Q1163): a `UiButton` with `LettersByState` letters by its state (`UiButton.Lettering`): `TextColour` at (2, 1)
 pressed with the pointer on it (down or not), else `DownTextColour` at (1, 1) down, else `TextColour` at (0, 0), the pointer
-on it or not; disabled, as it was last lettered. The offset is in interface units, cut toward nought at the virtual screen's
-scale, and moves the text by the edges of its box the label's alignment moves (`UiText.Nudge`): a centred text moves half
-of it, in fractions of a pixel where the original halves in whole ones. A wrapping text breaks at its box less the
-offset across (`UiText.WrapAreaWidth`). A framed list heading (`UiList.AddHeading`
+on it or not; disabled, as it was last lettered. The offset is in interface units, cut toward nought at the screen the font
+set is the original's for (`UiText.OffsetIn`; the bitmap's pixels are that screen's at size 1), and moves edges of the
+renderer's box inside the bitmap (`UiText.BoxOf`) before the block and its lines are placed; the bitmap stays at the box's
+corner, and a state that moves the label letters it again (`UiText.Layout`). A wrapping text breaks at its box less the
+offset across (`UiText.WrapWidthIn`). A framed list heading (`UiList.AddHeading`
 with a frame) letters by state in the colour handed over for both, (255, 239, 0). Every other button keeps its one
 `TextColour` where it lies: the lobby's new player dialog's two `b_ltoggle` options letter black always, which this class's
 white, and black moved (1, 1) when checked, does not explain (Q1457). `UiButton.State` (its mesh part, `Frame + State`) matches the getter but for a press: pressed with the pointer on it it gives

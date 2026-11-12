@@ -1264,8 +1264,13 @@ after its poller starts**, so a key meant inside either line cannot be sent afte
   POLL prints a line only on a change, so the slot's taking and emptying lines carry the tick the park stood at; here
   `sweeps` before and after, `advisor` for `slot=304`, and the log's `post`/`withdraw message=304` lines.
 - **Each text against its box** (Q644): `OPENTPW_TEXT_CENSUS=1` logs every text as it is laid out, `UI text: "<text>" font
-  F, W x H in a box BW x BH, x S` and `OVER` where it passes its box, in any screen; `lib/screentext.py` reads it for the
+  F, W x H in a box BW x BH, x S` and `OVER` where it passes its box, then `; bitmap W x H, text W x H` in font pixels and
+  `, cut` where the bitmap cuts it (Q771: the texture is the box), in any screen; `lib/screentext.py` reads it for the
   buy and hire screens' every tab. The original's own: `q644/orig/run.sh` (the two screens by Q636's route, `FILE=`).
+  Off-screen on a desk with no `xvfb-run` of its own (Q771's rebase): `lib/consolerun.py` with `PATH` led by the unpacked
+  `original/xvfb/root/usr/bin` (its `xvfb-run` and `Xvfb`) and the dotnet folder, `VK_DRIVER_FILES` lavapipe's and
+  `OPENTPW_TEXT_CENSUS=1`, fed `40 park jungle`, `6 pause`, `4 buyscreen`, `4 hirescreen`, `4 screen 3` to `4 screen 10`,
+  `8 quit`; `grep 'UI text:'` counts the layouts and `, cut` the ones the bitmap cuts.
 - **A park screen's title in both games** (Q676): here `control <id>` ends `lettered font F in (r, g, b) with|without the
   edge` for any control holding text (an edit box aside), and `q676/ours.py <out> <bin> <ROUND>` opens all-visitors, all-items and all-staff by
   V, O and E at 800 x 600; the original's by V, A and S, `q676/orig/run.sh`, with `uitree.py PID 0x007c24c8` (the open

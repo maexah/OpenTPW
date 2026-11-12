@@ -265,7 +265,7 @@ internal class UiControl
 	}
 
 	/// <summary>
-	/// The colour its text is lettered in now, and the offset across and down handed to its label in interface units (<see cref="UiText.Nudge"/>):
+	/// The colour its text is lettered in now, and the offset across and down handed to its label in interface units (<see cref="UiText.OffsetIn"/>):
 	/// <see cref="TextColour"/> where it lies, unless a button letters by its state (<see cref="UiButton.LettersByState"/>).
 	/// </summary>
 	internal virtual (UiColour Colour, int Across, int Down) Lettering => (TextColour, 0, 0);
