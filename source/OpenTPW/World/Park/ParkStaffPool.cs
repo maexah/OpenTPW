@@ -69,9 +69,9 @@ public sealed class ParkStaffPool
 
 			Carrying = candidateId;
 
-			// The mode's install sets the carry cursor and hangs a sprite of the candidate under the
-			// pointer, which marks a cell it would refuse in red (0x0046c730, 0x0046c480). Nothing
-			// here shows a carried candidate.
+			// The mode's install sets cursor 9, c_carry (Level.WantedCursor), and hangs a sprite of the
+			// candidate under the pointer, which marks a cell it would refuse with a red square (0x0046c730,
+			// 0x0046c480). The sprite and the square are not built.
 			Unimplemented.Report( "STAFF_CARRY_PREVIEW" );
 
 			return $"carrying {person.Name}, a grade {person.Grade} " +
@@ -102,8 +102,8 @@ public sealed class ParkStaffPool
 	/// with its mode, its preview and its candidate as they were.
 	/// </summary>
 	/// <remarks>
-	/// <b>The refusals here are not the original's.</b> It refuses only by the cell rule, which is not
-	/// built (see <see cref="Hire"/>), and its picker never hands the mode a cell off the map. This park
+	/// <b>Two refusals here are not the original's.</b> It refuses only by the cell rule
+	/// (<see cref="RefusesStaff"/>), and its picker never hands the mode a cell off the map. This park also
 	/// refuses a cell off the map and a kind it packs no picture for, and treats each as the original treats a
 	/// refused cell.
 	/// </remarks>
@@ -138,10 +138,12 @@ public sealed class ParkStaffPool
 	/// </remarks>
 	internal int Hire( ParkPeople people, Candidate candidate, int cellX, int cellY )
 	{
-		// The original takes a worker only on a cell of kind 0, 1, 3 or 9 that is not flagged 0x40 and
-		// whose track record passes two tests (FUN_0046c8e0; docs/exe/park-engine.md, "Putting a candidate
-		// down"). Here any cell on the map takes one.
-		Unimplemented.Report( "STAFF_PLACEMENT_CELL_RULE" );
+		if ( RefusesStaff( people.State, cellX, cellY ) is { } refusal )
+		{
+			// The original hands this to its inert logger and does nothing else (0x0046cb76).
+			Log.Info( $"Staff: cannot place {candidate.Name} at ({cellX},{cellY}) - {refusal}" );
+			return 0;
+		}
 
 		var thingId = people.Hire( candidate, cellX, cellY );
 
@@ -149,6 +151,41 @@ public sealed class ParkStaffPool
 			Take( candidate.Id, out _ );
 
 		return thingId;
+	}
+
+	/// <summary>
+	/// Why the place-staff click refuses a cell, or null where it takes a worker (<c>FUN_0046c8e0</c>,
+	/// <c>0x0046c928</c>..<c>0x0046c974</c>; <c>docs/exe/park-engine.md</c>, "Putting a candidate down"). It refuses a
+	/// cell whose track record, its parent's for a type 12 or 17, is type 11, 13, 16, 18 or 25; one flagged <c>0x40</c>;
+	/// and one whose <c>mType</c> is not 0, 1, 3 or 9.
+	/// </summary>
+	/// <remarks>
+	/// The original's third test, the redirected record is type 25 (<c>FUN_00536450</c>), adds a refusal only for a
+	/// type 12 or 17 record naming no parent, which reads past the map (the last <c>0x28</c> bytes of cell (127,127)'s
+	/// record): decodable, not decoded. That case is counted and not refused on that test here.
+	/// </remarks>
+	internal static string? RefusesStaff( ParkState state, int cellX, int cellY )
+	{
+		var cell = state.Record( cellX, cellY );
+
+		if ( ParkValue.TrackCounts( state, cell ) )
+		{
+			var (parentX, parentY) = MapStep.CellAt( cell.TrackParentId );
+			var type = CellEdge.TrackDefersToParent( cell.TrackType ) ? state.Record( parentX, parentY ).TrackType : cell.TrackType;
+
+			return $"its track record is type {type}";
+		}
+
+		if ( (cell.Flags & ParkPathBuilding.OutsideThePark) != 0 )
+			return "the cell is outside the park";
+
+		if ( CellEdge.TrackDefersToParent( cell.TrackType ) && cell.TrackParentId == 0 )
+			Unimplemented.Report( "STAFF_PLACEMENT_TRACK_PARENT_UNNAMED" );
+
+		if ( cell.Type is not (CellEdge.Nothing or CellEdge.Path or ParkRideChoice.QueueCellType or CellEdge.RideEnd) )
+			return $"the cell is of type {cell.Type}";
+
+		return null;
 	}
 
 	/// <summary>The waiting candidate with this id, or null.</summary>

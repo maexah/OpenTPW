@@ -3803,8 +3803,12 @@ mode down, but `FUN_00485b40`'s message 5 to an open panel is not covered).
 **OpenTPW** (`ParkStaffPool.PlaceCarried`, and `ParkStaffPool.Hire`, which the console's `hire` shares):
 the worker goes up first and the pool loses them second, and a refusal leaves the candidate on the cursor
 and in the pool. **Its refusals are its own**: a cell off the map, a kind the park packs no picture
-for, and any hire while the park has nobody, staff or guest, to copy a walk from. The cell rule is counted, not built (`STAFF_PLACEMENT_CELL_RULE`), and so are the carry cursor, the
-preview and its red square (`STAFF_CARRY_PREVIEW`); both are `docs/QUEUE.md` Q40.
+for, and any hire while the park has nobody, staff or guest, to copy a walk from. The cell rule is the original's
+(`ParkStaffPool.RefusesStaff`, Q40): over Lost Kingdom's save it takes 2,164 cells (type 0 2,074, 1 78, 3 4, 9 8) and
+refuses 572 by their track record, 13,596 outside the park and 52 by type. A type 12 or 17 record naming no parent is
+counted (`STAFF_PLACEMENT_TRACK_PARENT_UNNAMED`) and not refused by the third test, which reads past the map there. A
+carried candidate wears cursor 9 (`c_carry`, `Level.WantedCursor`); the figure under the pointer and the red square are
+counted, not built (`STAFF_CARRY_PREVIEW`, `docs/QUEUE.md` Q1469).
 
 ### The hand's ways out
 

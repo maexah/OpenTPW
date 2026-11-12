@@ -646,7 +646,7 @@ filed the items that cite it.
 - [ ] **Q1045. The figure of a picked-up member at the pointer (`STAFF_PICKED_UP_PREVIEW`).** The type-6 mode's sprite (vtable `0x006fea70`;
   `docs/exe/hud.md`, "The person's windows"): the original hangs a figure of the picked-up member at the pointer (`q1032/orig/a-2-pickup.png`); ours
   counts `STAFF_PICKED_UP_PREVIEW` (ParkPeople.cs) and keeps the plain arrow. Counted since Q432, never queued. Decode first whether type 6 shares the carried
-  figure's sprite path (`0x0046c480` / `0x0046c730`, Q40's fork-watch note H2, which is `STAFF_CARRY_PREVIEW`'s item) or has its own; fold into Q40 if it does.
+  figure's sprite path (`0x0046c480` / `0x0046c730`, Q40's fork-watch note H2; `STAFF_CARRY_PREVIEW`'s item is now Q1469) or has its own; fold into Q1469 if it does.
   Listed in `docs/DOES-NOT.md` beside `STAFF_CARRY_PREVIEW`.
 - [ ] **Q1046. The queue tool's unanchored click (Q860's second read).** In the original an unanchored click in mode 3 first asks
   `FUN_00535670( 3 )` of the cell (`0x00527297`..`0x005272a5`; anchors nothing when it answers 1, not decoded), then empties
@@ -2610,22 +2610,19 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
     thing gives off"): a placed voice inside one gets obstruction and occlusion by a factor, only while EAX is on
     (`[0x00fb2050]`). Not read: the factor `0x006c4c80`, which of the five arguments are x, y and z, and the teardown's release.
     Inferred, unproven: with no EAX 2.0 (a modern DirectSound, Proton) the zones are built and never heard.
-- [ ] **Q40. The place-staff mode's cell rule and its carry preview.** Found by Q6's decode (`park-engine.md`,
-  "Putting a candidate down: the type-5 mode"), so this is a build. The original takes a worker only on a
-  cell of `mType` 0, 1, 3 or 9, not flagged `0x40`, whose track record after the 12/17 parent redirect is
-  not track type 11, 13, 16, 18 or 25; here any cell on the map takes one (`STAFF_PLACEMENT_CELL_RULE`).
-  While a candidate is carried the original shows cursor 9 (`c_carry.ani`), hangs a sprite of their kind
-  in their costume under the pointer and puts a red square on a cell the click would refuse; here the
-  pointer is plain (`STAFF_CARRY_PREVIEW`). Confirm: carry a candidate over a cell the rule refuses, click,
-  still in the hand and the red square photographed; then a path cell, hired.
-  - **Note (play test 2026-10-31):** still no figure at the pointer while placing a hired member (`STAFF_CARRY_PREVIEW` reached). Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
-  - **Note (fork watch 2026-10-31, verify-other H2):** the carried figure: `0x0046c480` takes the point `0x007a1c90`, height
-    less -5.0, heading 4, into `0x00475480`; `0x0046c730` maps type 4 to 8 to kinds 6, 5, 4, 7, 8 (`0x0046c87c`); the sprite
-    script (`0x004766d0`..`0x00476940`, entry `0x15` of `0x0075a418`) stores `0x1200`, sets 6 and plays frames 0 to 3.
-    `0x00542010` adds the terrain (`0x004527f0`) to a hit height that is already absolute, so the original counts the ground
-    twice and the sprite stands at terrain + height + 5: where that lands on screen is unproven, so capture before building
-    and do not "fix" it unseen. Our gap is not the `.FPC` (we pick it only in first person; the preview is simply unbuilt,
-    `ParkStaffPool.cs`); set 6 of 16 `.FPC` banks is a clear 2 x 2 placeholder (FileFormats `sprites.md`).
+- [ ] **Q1468. Photograph the place-staff carry cursor beside the original's (Q40's split piece).** Q40 made a carried
+  candidate wear cursor 9, `c_carry.ani` (`Level.WantedCursor`; the original's OnInstall `0x0046c730`). A cloud lane has no
+  display to photograph, so it was confirmed only by the console's `pointer` (`cursor Carry`). Confirm: pick a candidate on
+  the hire screen, photograph the pointer over the park in both games, and over a cell the rule refuses (the original's
+  cursor should stay `c_carry` there: the decode names no other). If they differ, say how and file it.
+- [ ] **Q1469. The carried candidate's figure and the red square under it (`STAFF_CARRY_PREVIEW`, Q40's leftover).** The
+  place-staff mode's MOVE (`0x0046c480`) hangs a sprite of the candidate's kind in their costume under the pointer and draws
+  one red marker square (texture 1) on a cell the click would refuse (`RefusesStaff` answers which, since Q40). Neither is
+  built; `ParkStaffPool.Carry` counts `STAFF_CARRY_PREVIEW`. Q40's notes above hold the decode so far: the figure's point,
+  height and banks (fork watch H2, where the sprite stands at terrain + height + 5 and its place on screen is unproven), and
+  the play test's report. Not decoded: the red square's height, size and blink, and whether it is the stranded person's square
+  (`FUN_004fa030`). Decode those first, capture the original carrying a candidate over a refused cell and a path cell, then
+  build both. Q1045 (`STAFF_PICKED_UP_PREVIEW`) asks whether type 6 shares this figure's path; fold it here if it does.
 - [ ] **Q43. The number read as a repeat delay is a priority, and the original throttles nothing.** Found by
   Q9's decode (`docs/exe/audio.md`, "How the engine plays an effect: priority, not a repeat delay").
   `SoundCategoryFile.Effect.RepeatDelay` is the effect record's `+0x0c`, which the original reads only as a voice

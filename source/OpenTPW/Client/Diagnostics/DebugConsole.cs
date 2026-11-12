@@ -2051,6 +2051,12 @@ public static class DebugConsole
 
 				break;
 
+			// `carrystaff <candidate>` takes a candidate onto the cursor, the body the hire list's pick reaches; a
+			// `worldclick` then puts them down through the place-staff cell rule.
+			case "carrystaff":
+				Reply( parts.Length > 1 ? ParkStaffPool.Carry( (int)Argument( 1 ) ) : "carrystaff <candidate id> (see `candidates`)" );
+				break;
+
 			// `expire <candidate>` takes a candidate out of the pool now, as a time-out does: the hire list loses that row.
 			case "expire":
 				Reply( Level.Current?.StaffPool is { } expiring && parts.Length > 1 && expiring.Expire( (int)Argument( 1 ) )
