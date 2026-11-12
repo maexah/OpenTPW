@@ -2268,11 +2268,11 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   bought here, loaded in the original. **Needs the desk (2026-10-31):** the original given a file ours wrote with a bought kart (Q858's
   `q858/rebased-fix/autosave.TPWS`: Dino Karts and Splish Splash, each looped): does it load, does the ride run and its sections draw without the
   pieces' models? Lane B may not run the original, so Q858 saw ours only.
-- [ ] **Q1174. One copy: a second path to one game folder through a link takes a second lock.** From Q995. `OneCopy.Name`
-  keys the folder's full path as spelled, so a copy started through a symbolic link (or a junction, or a subst drive) to
-  a folder another copy runs on is not refused, and the two share one `save/`. Resolve the path's links before hashing
-  (every component, not only the last, which is all `Directory.ResolveLinkTarget` does), with a test that makes a link
-  to a temporary folder. Not measured: whether anyone starts the game that way.
+- [ ] **Q1248. One copy: a subst drive to a game folder takes a second lock.** From Q1174. `OneCopy.WithoutLinks` follows
+  symbolic links and junctions, but a drive made by `subst` (or a mapped drive to a local share) is not a link: `S:\` and the
+  folder it stands for hash to two names. Map such a drive to its folder before hashing (`QueryDosDevice`, or the handle's
+  final path, `GetFinalPathNameByHandle`), on Windows only, with a test that runs only there. Not measured: whether anyone
+  starts the game that way. Confirm: on Windows, a copy started on `subst S: <game>` while another runs on the folder is refused.
 - [ ] **Q1179. Alt+L's log says "QuickSave Loaded" before the file is read.** From Q994. `Level.QuickLoadKey` answers
   `Quickload: QuickSave Loaded - <path> is loaded` as it asks for the load; since Q994 the file is read at the scene change, and one
   that will not read is then logged `Load: <path> will not read ...` with the park kept, so the log carries both lines. The original

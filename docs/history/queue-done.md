@@ -12145,6 +12145,18 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q1174. One copy: a second path to one game folder through a link takes a second lock.** From Q995. `OneCopy.Name`
+  keys the folder's full path as spelled, so a copy started through a symbolic link (or a junction, or a subst drive) to
+  a folder another copy runs on is not refused, and the two share one `save/`. Resolve the path's links before hashing
+  (every component, not only the last, which is all `Directory.ResolveLinkTarget` does), with a test that makes a link
+  to a temporary folder. Not measured: whether anyone starts the game that way.
+  **Done 2026-11-12 (cloud lane c32):** `OneCopy.WithoutLinks` follows every link along the full path from the root down
+  (a symbolic link or junction at any component, a relative target read from the link's own folder, a target with links of
+  its own, at most 40 hops so a loop ends), and `OneCopy.Name` hashes that. Five tests (no game needed) make links to a
+  temporary folder; three put-backs (no resolving, the last component only, a relative target read from the working folder)
+  each failed one. In the game (Linux, off-screen): a second start through a link to the folder, and one through a link to its
+  parent, were each refused while the first ran; one through the link once it ended held the same lock name. A subst drive is
+  not a link and is filed as Q1248. Not checked: Windows (a junction, a subst drive), macOS.
 
 ## B. Docs and comments
 

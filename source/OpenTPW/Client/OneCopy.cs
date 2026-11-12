@@ -30,7 +30,8 @@ internal static class OneCopy
 
 	/// <summary>
 	/// The mutex's name for <paramref name="gameFolder"/>: one name for every spelling of one folder (relative or full, with
-	/// or without a closing separator, and in any case where the system's names ignore it), another for another folder.
+	/// or without a closing separator, through a symbolic link or a junction anywhere along it, and in any case where the
+	/// system's names ignore it), another for another folder.
 	/// </summary>
 	public static string Name( string gameFolder )
 		=> Name( gameFolder, OperatingSystem.IsWindows() || OperatingSystem.IsMacOS() );
@@ -38,7 +39,7 @@ internal static class OneCopy
 	/// <summary><see cref="Name(string)"/> with whether case counts given, for a test of both systems' rules on one.</summary>
 	internal static string Name( string gameFolder, bool ignoreCase )
 	{
-		var key = Path.TrimEndingDirectorySeparator( Path.GetFullPath( gameFolder.Trim() ) );
+		var key = Path.TrimEndingDirectorySeparator( WithoutLinks( Path.GetFullPath( gameFolder.Trim() ) ) );
 
 		if ( ignoreCase )
 			key = key.ToUpperInvariant();
@@ -47,6 +48,64 @@ internal static class OneCopy
 		var hash = SHA256.HashData( Encoding.UTF8.GetBytes( key ) );
 
 		return Prefix + Convert.ToHexString( hash, 0, 16 );
+	}
+
+	/// <summary>Links followed in one path before it is taken as it stands: a loop of links ends here.</summary>
+	private const int MaxLinks = 40;
+
+	/// <summary>
+	/// <paramref name="fullPath"/> with every link along it followed, from the root down: a symbolic link or a junction at
+	/// any component, not only the last (which is all <see cref="Directory.ResolveLinkTarget"/> looks at), and a link whose
+	/// target holds links of its own. A component that does not exist, or cannot be read, ends the walk and the rest is kept
+	/// as spelled. A subst drive is not a link and is not followed (Q1248).
+	/// </summary>
+	internal static string WithoutLinks( string fullPath )
+	{
+		var path = fullPath;
+
+		for ( var hops = 0; hops < MaxLinks; hops++ )
+		{
+			var root = Path.GetPathRoot( path ) ?? string.Empty;
+			var parts = path[root.Length..].Split( [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar], StringSplitOptions.RemoveEmptyEntries );
+			var walked = root;
+			string? followed = null;
+
+			for ( var i = 0; i < parts.Length; i++ )
+			{
+				walked = Path.Join( walked, parts[i] );
+
+				string? target;
+
+				try
+				{
+					var info = new DirectoryInfo( walked );
+
+					if ( !info.Exists )
+						break;
+
+					target = info.LinkTarget;
+				}
+				catch ( Exception e ) when ( e is IOException or UnauthorizedAccessException or System.Security.SecurityException )
+				{
+					break;
+				}
+
+				if ( target is null )
+					continue;
+
+				// A relative target is relative to the folder the link sits in; what is left of the path follows it.
+				var into = Path.GetFullPath( target, Path.GetDirectoryName( walked ) ?? root );
+				followed = Path.GetFullPath( Path.Join( [into, .. parts[( i + 1 )..]] ) );
+				break;
+			}
+
+			if ( followed is null )
+				return path;
+
+			path = followed;
+		}
+
+		return path;
 	}
 
 	/// <summary>
