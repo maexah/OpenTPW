@@ -40,7 +40,8 @@ public class ParkDecidingTests
 
 	private static (PeepBehaviour Behaviour, System.Collections.Generic.Dictionary<int, Peep> Guests,
 		System.Collections.Generic.Dictionary<int, PeepWalk> Walks) Run(
-		ParkWorld world, ParkAdmission admission, int turns, bool parkIsClosed = false, int seed = 1234 )
+		ParkWorld world, ParkAdmission admission, int turns, bool parkIsClosed = false, int seed = 1234,
+		Action<System.Collections.Generic.Dictionary<int, Peep>>? first = null )
 	{
 		var behaviour = new PeepBehaviour( parkIsClosed, world.NumberOfVisitorsToDate, new Random( seed ),
 			admission, () => ParkRides.GateIsOpen );
@@ -50,6 +51,8 @@ public class ParkDecidingTests
 		var guests = ParkPeople.PeepsIn( world ).ToDictionary( peep => peep.ThingId );
 		var walks = guests.Values.ToDictionary( peep => peep.ThingId,
 			peep => new PeepWalk( peep.Navigator, blocked ) );
+
+		first?.Invoke( guests );
 
 		for ( var tick = 1; tick <= turns; ++tick )
 		{
@@ -349,7 +352,9 @@ public class ParkDecidingTests
 	/// <para>
 	/// <b>The shipped park is saved open</b>, and this arm is reached once the entry-price screen's door shuts
 	/// it (<see cref="ParkState.SetParkClosed"/>). It is driven here by building <see cref="PeepBehaviour"/>
-	/// from the two facts rather than from a park, which is the same reason the waiting-outside arm is testable.
+	/// from the two facts rather than from a park, with the seven in the archway put in <c>Deciding</c> first:
+	/// left <c>Entering</c>, as saved, a shut park turns them back at the gate (the entering guard, Q861) and
+	/// they never decide at all.
 	/// </para>
 	/// <para>
 	/// Losing <c>BigHappinessChange</c> rather than the medium one is what separates this from every other
@@ -366,9 +371,9 @@ public class ParkDecidingTests
 		var world = Park();
 		var admission = Admission( world );
 
-		// Four hundred turns, as above: the seven have to finish walking to the archway before they can
-		// decide anything at all, and the longest route in this park arrives at turn 108.
-		var (_, guests, _) = Run( world, admission, turns: 400, parkIsClosed: true );
+		// Four hundred turns, as above, the seven deciding from the first, in a park that is shut.
+		var (_, guests, _) = Run( world, admission, turns: 400, parkIsClosed: true,
+			first: all => { foreach ( var id in InTheGateway ) all[id].SetState( PeepState.Deciding, 0, new Random( id ) ); } );
 
 		// The crossing is not the end of it: from there they walk to one of the four cells by the first bus stop
 		// and stand to go home (docs/exe/ride-operation.md, "Q128").

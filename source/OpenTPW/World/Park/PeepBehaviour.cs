@@ -443,14 +443,22 @@ public sealed class PeepBehaviour
 			// Coming through the gate - seven of the thirteen. Arriving is what makes somebody a visitor
 			// (FUN_0051aaf0 at 0x004ffb55, its answer kept at guest +0x1d8).
 			//
-			// The guard this does NOT have is the one at the top of FUN_004ffb20 (0x004ffb2b..0x004ffb42): a
-			// guest whose park has shut under them, or whose gate does not report 1, is sent to a ticket
-			// booth (FUN_004d8610, the draw's low bit) and put in state 2 again. Both halves are asked
-			// (GateWillAdmit), and the entry-price door shuts a running park, so the guard is counted where
-			// it is tested and the walk goes on as before.
+			// The guard comes first (FUN_004ffb20, 0x004ffb2b..0x004ffb42): a guest whose park has shut under
+			// them, or whose gate does not report 1, skips the walk, is sent to one of the two ticket booths by
+			// the draw's low bit (FUN_00516330, FUN_004d8610; the draw is always taken, so a guest already on a
+			// booth may be sent to the other) and is put in state 2 again. ParkOpeningWait is left as it is.
+			// With no admission there are no booths to name, so they stand, as a guest with no fee to judge does.
 			case PeepState.Entering:
 				if ( !GateWillAdmit )
-					Unimplemented.Report( "ENTERING_GATE_GUARD" );
+				{
+					if ( Admission is { } turnedBack )
+					{
+						SendTo( State, peep, walk, EitherOf( turnedBack.TicketBoothA, turnedBack.TicketBoothB ) );
+						peep.SetState( PeepState.HeadingForGate, tick, _random );
+					}
+
+					break;
+				}
 
 				if ( Walked( peep, walk, playing ) == WalkVerdict.Arrived )
 				{

@@ -569,14 +569,6 @@ filed the items that cite it.
   `UiStatBar` in `happygrad.wct` inset 8). The confirm asked for, the staff screen at a known happiness photographed, is
   Q369's (`q369/run-fix2/1-handymen.png` on the desk, `q369/orig/b-1-handymen.png` in the original, both on `q369/skill.TPWS`), made
   before this decode. The maintainer closes it on those frames, or names a fresh photograph.
-- [ ] **Q861. An entering guest turned back at the gate (`ENTERING_GATE_GUARD`).** From Q157, which counts it. `FUN_004ffb20`'s first two tests
-  (`0x004ffb2b`..`0x004ffb42`: `mParkClosed` set, or the gate's status not 1) send the guest to a ticket booth and put them in state 2
-  (`HeadingForGate`) in place of the walk through the gate; `PeepBehaviour`'s `Entering` arm counts it (`!GateWillAdmit`) and walks on. The
-  draw is always taken: `FUN_00516330 & 1` into `FUN_004d8610` (`0x004ffb85`..`0x004ffba1`), then `FUN_004fa530` to that cell, so build it as
-  `EitherOf( TicketBoothA, TicketBoothB )` (the way the gate's own `Entering` turn at line 689 picks), not `BoothFor`, which keeps the booth a
-  guest already stands at; `ParkOpeningWait` untouched. Seen in Q157: `7x ENTERING_GATE_GUARD` after `step 2`, which was not predicted as a
-  number and is the seven guests then in `Entering` (things 32, 33, 34, 36, 37, 40, 41 in `q157/run-final2/run.log`), one turn each. Confirm: the entry-price door shut by a real click with a guest in `Entering`
-  (`q157/confirm.py` has the click), `peeps` on that guest before and after, predicted first; the count leaves the census.
 - [ ] **Q862. A leaver's change of mind (`HEADING_FOR_EXIT_CHANGE_OF_MIND`).** From Q157, which counts it. `FUN_00500a50`'s first test
   (`0x00500a53`..`0x00500a84`: exit level above nought, happiness byte not nought, the park open, `FUN_004fa990`) puts the guest back in
   state 6 with `+0x188` = 0 (the "Make up your mind!" line goes to a debug print). A running game reaches it:
