@@ -42,10 +42,18 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the maintainer's pre-commit hook: grep it by Q-number.
 
-- **Q747 (a second Escape soon after the park-entry cancel shows the key puff over the game menu):** in a cloud container (no Ghidra, no original, no photograph; the run's output was not kept), `ASecondEscapeOpensTheMenuOverThePanelThatHoldsTheFallingPuff`, `EnteringStartsTheKeyPuffOwnedByNoWindowAndACancelHandsItToThePanel` and `SetOwnerHandsAnEffectAndTheEffectItStartedToAWindow` (all needing the game) pass, and three bugs put back by hand (the cancel not handing the puff over, a new Enter not giving the old puff back, `SetOwner` leaving the linked effect) each failed them. Off-screen (`lib/consoledrive.py`, a new Full Simulation player, one `xdotool` call of Return, Escape, Escape 150 ms apart), `windows` read `IslandPanel, GameMenu` and `particles screen` effect 98 with 32 particles `owner IslandPanel, open`, the log `key puff handle 0x10000 handed to the island panel`; with the hand-over taken out the same keys read `owner no window (drawn over all)`. Not checked: a photograph of the menu with no keys over it (no display here; filed as Q1584), and the original's own puff through its menu, which this deviates from on purpose (the original's draws over every window, `docs/exe/lobby.md`, taken from the doc, not read in Ghidra).
+- **Q521 (a person's shadow at high detail in the orbit view, their own picture, unfogged):** built in a cloud container
+  (no Ghidra, no original, no photograph; the runs' output was not kept). Checked: `TheOrbitViewAtHighCastsTheBodysOwnPictureUnfogged`
+  (needs the game) and the updated `EachTierCastsItsKindInEachView` and `EachShadowPipelineHasItsFlags` pass, and three bugs put back
+  by hand (the old counted-not-drawn rule, first person's 0.25 lift, the silhouette's grey colour) each failed it; an off-screen run
+  at high (`save/Config.tcf` quality 2) logged `kind OrbitOwnPicture drawn 18 ... darkness 103 colour 0x67000000 lift 0.6` with no
+  `SPRITE_SHADOW_OWN_PICTURE` in the census, and one at medium kept `kind Silhouette drawn 18 ... colour 0xff989898`. Not checked:
+  what is drawn (no display to photograph; split as Q1588), and whether the original's non-`0x40000` arm sets no depth write
+  (taken from the item's text; needs Ghidra).
 
 ## Numbers (take counts fresh; these go stale within a day)
 
+- Linux, 2026-11-12, Q521 (`capped.sh`; a person's shadow at high detail in the orbit view; one test added, needing the game; built in a cloud container, re-gated here after Q747): with the game, 5771 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5773; with no game named, 2489 passed, 0 failed, 3284 skipped.
 - Linux, 2026-11-12, Q747 (`capped.sh`; the Escape puff after the entry cancel; two tests added, needing the game; built in a cloud container, re-gated here after Q448): with the game, 5770 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5772; with no game named, 2489 passed, 0 failed, 3283 skipped.
 - Linux, 2026-11-12, Q448 (`capped.sh`; ride script REPAIREFFECT and BUMP 17; eight tests added, seven needing no game; built in a cloud container, re-gated here after Q684): with the game, 5768 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5770; with no game named, 2489 passed, 0 failed, 3281 skipped.
 - Linux, 2026-11-12, Q684 (`capped.sh`; the map's overlay switches and pickers, first piece; five tests added, needing the game; built in a cloud container, merged by an agent onto Q683 and here after the a11 photo pack): with the game, 5760 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5762; with no game named, 2482 passed, 0 failed, 3280 skipped.

@@ -2684,11 +2684,12 @@ with `0x00565f90` (`0x0058994e`), which under `0x2000|0x4000` calls `Fog_VertexS
 with a = darkness/255 × the texel's alpha, and **over ground fogged whole the shadow is the fog colour: it vanishes**. At tier 0
 (`0x20000`) the walk draws the sprite alone. The grouped pass's `SpriteShadow_Draw` non-`0x40000` arm is the same own-picture
 draw (texture `[[sprite+0x28]]` at `0x005899c1`, colour the darkness word at `0x00589aec`) added with `0x00566220`, unfogged;
-only that arm is high detail's in the orbit view (Q521). Nothing yet measured it with a person in the band (code read).
+only that arm is high detail's in the orbit view (built, Q521: no frame of it in either game yet, Q1588). Nothing yet measured it with a person in the band (code read).
 OpenTPW: `ParkPersonShadows` (the geometry, tier, darkness, colour and `KindFor`), `ParkGuestSprites.WriteShadow` (one a body
 drawn), `HeightfieldFile.CornerPlaneAt`, `MaterialFlags.Multiply` for the silhouette; in first person (`ParkGuestSprites.FirstPerson`)
 the shadow is the body's atlas picture in `OwnPictureColour`, alpha-blended, no depth write, through `people.shader`'s fog, at any
-tier but 0; the own picture of tiers 2 and 3 in the orbit view is counted, `SPRITE_SHADOW_OWN_PICTURE` (Q521). **Not the same**
+tier but 0; at tiers 2 and 3 in the orbit view (`ParkPersonShadows.Kind.OrbitOwnPicture`, Q521) the same atlas picture in the same
+colour and pipeline, lifted 0.6 and unfogged (the people's draw is handed no fog band outside first person). **Not the same**
 in first person: all the shadows are drawn after all the bodies, where the original's walk adds each after its own body (differs
 only where a shadow overlaps another person's graded edge; the walk's batch sort is unread). Measured (`run2`): 0.595 of every channel, his far end 24.5 up and 27.7 right
 (scaled to 768) on a reflected pose, 26.7 and 25.6 on the original's unreflected one (`run1`). **Not the same**: a tool's squares are drawn before the people here and write depth 1.5 over the land, so a

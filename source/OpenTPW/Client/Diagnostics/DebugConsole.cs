@@ -1567,11 +1567,16 @@ public static class DebugConsole
 					var travels = Level.Current?.ParkLight?.Travels;
 					var darkness = travels is { } t ? ParkPersonShadows.Darkness( t ) : null;
 
-					Reply( $"shadows: tier {ParkPersonShadows.Tier( Level.DetailFile )} ({Level.DetailFile} SPRITESHADOW) "
+					var tier = ParkPersonShadows.Tier( Level.DetailFile );
+					var shadowKind = ParkPersonShadows.KindFor( tier, sprites?.FirstPerson ?? false );
+					var colour = darkness is not { } d ? 0u
+						: ParkPersonShadows.IsOwnPicture( shadowKind ) ? ParkPersonShadows.OwnPictureColour( d ) : ParkPersonShadows.Colour( d );
+
+					Reply( $"shadows: tier {tier} ({Level.DetailFile} SPRITESHADOW) kind {shadowKind} "
 						+ $"{(ParkGuestSprites.DebugShadowsHidden ? "hidden" : "drawn")} {sprites?.ShadowsDrawn.Count ?? 0} "
 						+ $"light {travels?.ToString() ?? "none"} darkness {darkness?.ToString() ?? "none"} "
-						+ $"colour 0x{(darkness is { } d ? ParkPersonShadows.Colour( d ) : 0u):x8} "
-						+ $"lift {(ParkCamcorderCameraMode.Active ? ParkPersonShadows.FirstPersonLift : ParkPersonShadows.Lift)}" );
+						+ $"colour 0x{colour:x8} "
+						+ $"lift {(shadowKind == ParkPersonShadows.Kind.FirstPersonOwnPicture ? ParkPersonShadows.FirstPersonLift : ParkPersonShadows.Lift)}" );
 
 					foreach ( var (who, corners) in sprites?.ShadowsDrawn ?? [] )
 					{

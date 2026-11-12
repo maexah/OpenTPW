@@ -88,7 +88,7 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// What the people's and the shadows' draws hand people.shader. World space already, so the model matrix is identity -
 	/// the quads were turned to face the camera as they were written. Both are fogged in first person, as the original's
 	/// sprite batch fogs them (SpriteBatch_AddQuad, and FUN_00589770's shadow through FUN_00565f90, under render-word
-	/// 0x2000; docs/exe/park-engine.md, "First person's fog"). The orbit view's silhouette shadow is unfogged there.
+	/// 0x2000; docs/exe/park-engine.md, "First person's fog"). The orbit view's shadows, silhouette and own picture, are unfogged there.
 	/// </summary>
 	internal static ObjectUniformBuffer DrawUniforms() => new()
 	{
@@ -337,7 +337,7 @@ public sealed class ParkGuestSprites : ModelEntity
 		{
 			0 => $"Shadows: {OpenTPW.Level.DetailFile}'s SPRITESHADOW 0, so nobody casts a shadow",
 			1 => $"Shadows: {OpenTPW.Level.DetailFile}'s SPRITESHADOW 1, so every person casts the {ParkPersonShadows.Silhouette} silhouette",
-			_ => $"Shadows: {OpenTPW.Level.DetailFile}'s SPRITESHADOW {_shadowTier}, the person's own picture: drawn in first person, not built elsewhere (none drawn)"
+			_ => $"Shadows: {OpenTPW.Level.DetailFile}'s SPRITESHADOW {_shadowTier}, so every person casts their own picture, unfogged in the orbit view"
 		} );
 
 		Current = this;
@@ -631,8 +631,9 @@ public sealed class ParkGuestSprites : ModelEntity
 
 	/// <summary>
 	/// The shadows' mesh, a quad a person: in the orbit view at medium's tier the silhouette multiplied onto what lies
-	/// under it, tested against depth and writing none, both faces drawn (<see cref="ParkPersonShadows"/>); in first person
-	/// at any tier but 0 the atlas (the bodies' own pictures) alpha-blended, again writing no depth. The shader is the
+	/// under it, tested against depth and writing none, both faces drawn (<see cref="ParkPersonShadows"/>); at high's tiers
+	/// in the orbit view, and in first person at any tier but 0, the atlas (the bodies' own pictures) alpha-blended, again
+	/// writing no depth. The shader is the
 	/// people's: the picture times the vertex colour, dropped under alpha 16, as the original's word <c>0x...13</c>
 	/// keeps the silhouette's alpha test, and fogged by <c>vFog</c> in first person, as <c>FUN_00589770</c>'s is.
 	/// <para>
@@ -653,7 +654,7 @@ public sealed class ParkGuestSprites : ModelEntity
 
 		var kind = ParkPersonShadows.KindFor( _shadowTier, FirstPerson );
 
-		if ( kind is not (ParkPersonShadows.Kind.Silhouette or ParkPersonShadows.Kind.FirstPersonOwnPicture) || _people.Count == 0 )
+		if ( kind == ParkPersonShadows.Kind.None || _people.Count == 0 )
 			return;
 
 		var indices = new uint[_people.Count * 6];
@@ -665,9 +666,8 @@ public sealed class ParkGuestSprites : ModelEntity
 			(indices[at + 3], indices[at + 4], indices[at + 5]) = (i * 4, (i * 4) + 2, (i * 4) + 3);
 		}
 
-		var firstPerson = kind == ParkPersonShadows.Kind.FirstPersonOwnPicture;
 		var material = new Material( PeopleShader, ShadowMaterialFor( kind ) );
-		material.Set( "Color", firstPerson ? (Texture)_atlas! : _silhouette ??= new Texture( ParkPersonShadows.Silhouette ) );
+		material.Set( "Color", ParkPersonShadows.IsOwnPicture( kind ) ? (Texture)_atlas! : _silhouette ??= new Texture( ParkPersonShadows.Silhouette ) );
 
 		_shadowModel = new Model( _shadowVertices, indices, material );
 		_shadowModel.EnableFrequentUpdates( _shadowVertices );
@@ -684,9 +684,9 @@ public sealed class ParkGuestSprites : ModelEntity
 
 	/// <summary>The pipeline a <paramref name="kind"/> of shadow is drawn with.</summary>
 	internal static MaterialFlags ShadowMaterialFor( ParkPersonShadows.Kind kind )
-		=> kind == ParkPersonShadows.Kind.FirstPersonOwnPicture ? OwnPictureShadowMaterial : SilhouetteShadowMaterial;
+		=> ParkPersonShadows.IsOwnPicture( kind ) ? OwnPictureShadowMaterial : SilhouetteShadowMaterial;
 
-	/// <summary>First person's own-picture shadow: the people's alpha blend with no depth written (word <c>0x556</c> | <c>0x800</c>, <c>0x00589845</c>), no multiply.</summary>
+	/// <summary>The own-picture shadow's, first person's and the orbit view's at high: the people's alpha blend with no depth written (word <c>0x556</c> | <c>0x800</c>, <c>0x00589845</c>), no multiply.</summary>
 	internal const MaterialFlags OwnPictureShadowMaterial = PeopleMaterial | MaterialFlags.DisableDepthWrite;
 
 	/// <summary>
@@ -998,30 +998,24 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// <summary>
 	/// A body's shadow written at the frame's next free shadow, the picture's foot on <paramref name="centre"/>'s place
 	/// (<see cref="ParkPersonShadows.Corners"/>), with a park light travelling downwards and room left: the silhouette at
-	/// medium's tier in the orbit view, or in first person the body's own atlas picture in black at the darkness alpha
-	/// (<see cref="ParkPersonShadows.Kind"/>). The orbit view's own picture of tier 2 and 3 is counted and draws none.
+	/// medium's tier in the orbit view, or the body's own atlas picture in black at the darkness alpha at high's tiers
+	/// there and at any tier in first person (<see cref="ParkPersonShadows.Kind"/>). Only first person's is lifted 0.25
+	/// (render word <c>0x2000</c>, <c>0x00576a81</c>); the orbit view's both stand 0.6 over the land.
 	/// </summary>
 	private void WriteShadow( int thingId, Vector3 centre, Region picture, bool mirrored, Vector3? travels, HeightfieldFile? field )
 	{
 		var kind = ParkPersonShadows.KindFor( _shadowTier, FirstPerson );
-
-		if ( kind == ParkPersonShadows.Kind.OwnPictureNotBuilt )
-		{
-			Unimplemented.Report( "SPRITE_SHADOW_OWN_PICTURE" );
-			return;
-		}
-
 		var index = _shadowsDrawn.Count;
 
 		if ( kind == ParkPersonShadows.Kind.None || travels is not { } light || ParkPersonShadows.Darkness( light ) is not { } darkness
 			|| (index * 4) + 3 >= _shadowVertices.Length )
 			return;
 
-		var firstPerson = kind == ParkPersonShadows.Kind.FirstPersonOwnPicture;
+		var ownPicture = ParkPersonShadows.IsOwnPicture( kind );
 		var corners = _shadowVertices.AsSpan( index * 4, 4 );
-		var lift = firstPerson ? ParkPersonShadows.FirstPersonLift : ParkPersonShadows.Lift;
-		var colour = firstPerson ? ParkPersonShadows.OwnPictureColour( darkness ) : ParkPersonShadows.Colour( darkness );
-		(float, float, float, float)? uv = firstPerson ? (picture.Left, picture.Top, picture.Right, picture.Bottom) : null;
+		var lift = kind == ParkPersonShadows.Kind.FirstPersonOwnPicture ? ParkPersonShadows.FirstPersonLift : ParkPersonShadows.Lift;
+		var colour = ownPicture ? ParkPersonShadows.OwnPictureColour( darkness ) : ParkPersonShadows.Colour( darkness );
+		(float, float, float, float)? uv = ownPicture ? (picture.Left, picture.Top, picture.Right, picture.Bottom) : null;
 
 		if ( !ParkPersonShadows.Corners( corners, new Vector2( centre.X, centre.Y ), picture.Width, picture.Height, picture.OriginX,
 			mirrored, light, ( x, y ) => field?.CornerPlaneAt( x, y ) ?? 0f, lift, colour, uv ) )

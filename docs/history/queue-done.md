@@ -14462,3 +14462,11 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `ParticleSystem.SetOwner( int handle, UiWindow? owner )` beside `Hide`, so it is still drawn over the panel and the menu's
   dimming then covers it. Said at the site (`IslandPanel.cs`) and in `lobby.md` meanwhile. Confirm: Enter then Escape twice
   in quick succession, a screenshot of the menu with no keys over it.
+- [x] **Q521. A person's shadow at high detail in the orbit view: their own picture, unfogged.** From Q480, narrowed by
+  the run 4 review (first person's own-picture shadow, `FUN_00589770`, is built: `ParkPersonShadows.KindFor`). `SPRITESHADOW`
+  2 and 3 (`high.sam` sets 2) have `SpriteShadow_Draw`'s non-`0x40000` arm (added with `0x566220`, unfogged) use the
+  person's own picture with the darkness word `0x67000000` as its colour and the picture's own blend (no multiply),
+  counted here `SPRITE_SHADOW_OWN_PICTURE` (`ParkGuestSprites.WriteShadow`) and drawing none. Build it on first person's:
+  add the unfogged orbit kind to `KindFor` and reuse `OwnPictureShadowMaterial`. Confirm at high quality in both games
+  (the original by its Options screen) by a frame pair at one camera.
+  Done 2026-11-12 (cloud lane c111): `ParkPersonShadows.Kind.OrbitOwnPicture`; moved here by hand, as the queue sweep refused (Q1111 and Q452 listed open and done). The photograph is Q1588.
