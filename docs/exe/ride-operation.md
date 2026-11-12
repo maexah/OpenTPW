@@ -1788,6 +1788,20 @@ said at the site: no counted arm ends the turn; nothing clears a test (the jump'
 counts on every turn it holds; the bin's route is not asked. The fireworks' script variable is not read. The console's
 `need` sets `vomit`, `litter` or `prankery`.
 
+**Q225: the litter arm (c) and the bin errand are built** (`PeepBehaviour.CountBeforeLeaving`, `SetOffForABin`,
+`BinErrand`, `DropLitter`; `ParkState.DropLitter`), from this page's (c), "A cell's litter" and "The bin errand", with no
+Ghidra on the lane. Litter 90 or more: the chain walked for the nearest `HoldsLitter` thing under squared distance 9, the route
+to its `mEntryPos` asked of each nearer one, the routed bin to `MajorDest` and state 9, the turn ended; none, kind
+1 + r % 5 on the guest's cell on a fresh draw, litter nought, and on to (d). State 9 walks; arrived with a bin named, the
+bin's script `VAR_TRIGGER` = 1 (the original's variable 0, by name) and litter nought; arrived with none or given up, the
+drop; then state 6. **Not built (Q1288):** the litter's sprite and its place (the cell-id reseed and two draws), so nothing is
+drawn and the park's generator is not reseeded; a park file written after a drop does not carry it (the writer writes the
+cells' records, not the running litter). The happy jump and the vomit are still counted and do not end the turn, so the litter
+arm runs on turns the original would end at (a) or (b). A bin with `mEntryPos` nought is counted (`LITTER_BIN_WITHOUT_ENTRY`)
+and passed over; Lost Kingdom's one bin has one. Off-screen on the shipped park (`consolerun.py`, cloud lane c42, output not
+kept): a guest made at (46,31) at litter 90 set off for bin 17 on sweep 882 and put it in on 904, `VAR_TRIGGER` read 1 seven
+times a quarter-second apart, then 0; one at (47,22) dropped kind 3 there on 882, `cell 47 22` then `litter 3`.
+
 Predicted and read in Lost Kingdom (`q111confirm.py`, `q111/run1`). The stock park left alone 120 s: vomit, litter,
 pranks and fireworks all nought as predicted, the happy jump 0 (0 to 40 predicted), an entertainer beside 4 (0 to 60).
 Then every guest set to happiness 90, litter 90 and illness 100 for 20 s, litter being every deciding turn: **33 turns
@@ -3384,7 +3398,7 @@ use that dirties a toilet swaps 1 for 6 and the clean swaps them back; the conso
 An entertainer's and a guard's is stamped where they are hired, moved before their turn on the sweep that finds them
 on another cell than `Staff.RecordedCell` (`ParkPeople.MoveEffect`), and taken off round that cell as they are
 fired; `staff` prints the cell recorded. Measured in `saves.md`, "OpenTPW's writer, the staff's region effects".
-**Not built:** no litter is dropped, fireworks' is not taken off on their spent turn (`FIREWORKS_SPENT_REGION_EFFECT`, counted at
+**Not built:** litter dropped by a guest (Q225) stamps nothing, as kinds 1 to 5 stamp nothing; the sick's and the stink bomb's are not dropped (Q226, Q228); fireworks' is not taken off on their spent turn (`FIREWORKS_SPENT_REGION_EFFECT`, counted at
 their purchase; a sale always takes it off), and the guest's needs turn adds the cell's first three words (Q668), and
 the chooser still divides by the file's attraction word.
 

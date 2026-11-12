@@ -119,36 +119,134 @@ public class ParkDecidingArmsTests
 	}
 
 	/// <summary>
-	/// <b>Litter at 90 is counted as the bin's errand inside three cells of a bin, and as dropped outside</b>
-	/// (<c>0x004fedb3</c>, <c>FUN_00500dc0</c> with 3: squared distance under 9).
+	/// A guest deciding on (x, y) as <see cref="DecidingAt"/> makes one, with their litter at <paramref name="litter"/>,
+	/// and the bins they put it in recorded.
+	/// </summary>
+	private (Peep Guest, PeepWalk Walk, Action<int> Turn, ParkPeople People, System.Collections.Generic.List<int> Told) LitteredAt(
+		int x, int y, int seed, float litter )
+	{
+		var world = Park();
+		var people = new ParkPeople( world );
+		var guest = people.Guests[people.Admit( x, y )];
+		var walk = people.AnyWalkFor( guest.ThingId )!;
+		var told = new System.Collections.Generic.List<int>();
+		var behaviour = new PeepBehaviour( world, new Random( seed ),
+			new ParkAdmission( new ParkBalance( "jungle", easyMode: true ), world.Economy!.Value.AdmissionFee ),
+			state: people.State )
+		{
+			TriggerBin = bin => told.Add( bin.ThingId )
+		};
+
+		guest.SetState( PeepState.Deciding, tick: 1, new Random( 1 ) );
+		guest.Happiness = 50f;
+		guest.PrankeryIndex = 0;
+		guest.Vomit = 0f;
+		guest.Litter = litter;
+
+		return (guest, walk, tick => behaviour.Step( guest, walk, playing: null, tick ), people, told);
+	}
+
+	/// <summary>Turns until the guest is out of the bin errand, at most <paramref name="most"/>; answers how many.</summary>
+	private static int UntilTheErrandEnds( Peep guest, Action<int> turn, int from, int most = 4000 )
+	{
+		for ( var tick = from; tick < from + most; ++tick )
+		{
+			turn( tick );
+
+			if ( guest.State != PeepState.GoingToMinorDestination )
+				return tick - from + 1;
+		}
+
+		return -1;
+	}
+
+	/// <summary>
+	/// <b>Litter at 90 inside three cells of a routable bin sends the guest to it</b> (<c>0x004fedb3</c>, <c>FUN_00500dc0</c>
+	/// with 3: squared distance under 9): state 9 and the bin in <see cref="Peep.MajorDest"/>, the litter still carried and
+	/// the turn ended before the split; then the errand walks to the bin's entrance, tells the bin once, zeroes the litter and decides
+	/// again, dropping nothing. At 89.9, the byte 89, the turn goes on to the split.
 	/// </summary>
 	[TestMethod]
-	public void LitterIsCountedForTheBinInReachAndForTheGroundOutOfIt()
+	public void LitterInReachOfTheBinIsWalkedToItAndPutIn()
 	{
-		var seed = SeedWhere( roll => roll % 3 == 2 );
-		var (errand, dropped) = (Counted( "DECIDE_LITTER_BIN_ERRAND" ), Counted( "DECIDE_LITTER_DROPPED" ));
+		// An arm-1 roll: a turn that went on past the errand would set them wandering.
+		var seed = SeedWhere( roll => roll % 3 == 1 );
+
+		var (guest, walk, turn, people, told) = LitteredAt( BinX + 2, BinY + 2, seed, litter: 89.9f );
+		turn( 2 );
+		Assert.AreEqual( (PeepState.Wandering, 0, 89.9f), (guest.State, (int)guest.MajorDest, guest.Litter), "the byte 89: the split's wander" );
 
 		// Two cells east and two south: squared distance 8.
-		var (guest, turn, _) = DecidingAt( BinX + 2, BinY + 2, seed );
-		guest.Litter = 89.9f;
+		(guest, walk, turn, people, told) = LitteredAt( BinX + 2, BinY + 2, seed, litter: 90f );
 		turn( 2 );
-		Assert.AreEqual( (errand, dropped), (Counted( "DECIDE_LITTER_BIN_ERRAND" ), Counted( "DECIDE_LITTER_DROPPED" )), "the byte 89" );
+		Assert.AreEqual( (PeepState.GoingToMinorDestination, 17, 90f), (guest.State, (int)guest.MajorDest, guest.Litter),
+			"squared distance 8: off to the bin, litter still carried" );
 
-		guest.Litter = 90f;
-		turn( 3 );
-		Assert.AreEqual( (errand + 1, dropped), (Counted( "DECIDE_LITTER_BIN_ERRAND" ), Counted( "DECIDE_LITTER_DROPPED" )), "squared distance 8" );
+		var turns = UntilTheErrandEnds( guest, turn, 3 );
+		var entry = MapStep.CellAt( people.State.ObjectsInChainOrder().Single( thing => thing.ThingId == 17 ).EntryPos );
+
+		Assert.IsTrue( turns > 1, $"the errand should end, and not on its first turn: {turns}" );
+		Assert.AreEqual( (PeepState.Deciding, 0f), (guest.State, guest.Litter), "the litter is in the bin and they decide again" );
+		CollectionAssert.AreEqual( new[] { 17 }, told, "the bin told once" );
+		Assert.AreEqual( entry, walk.Position.Cell, "standing on the bin's entrance cell" );
+		Assert.AreEqual( 0, people.State.LitteredCells, "and nothing dropped" );
+	}
+
+	/// <summary>
+	/// <b>With no bin in reach the litter goes on the guest's cell</b>, of kind 1 + r % 5 on a fresh draw after the turn's
+	/// own (<c>0x004fee0e</c>..<c>0x004fee51</c>), their litter nought, and the turn goes on, the guest still deciding. A
+	/// cell already littered keeps what it holds, and the guest's litter is nought all the same (<c>0x004d93fc</c>).
+	/// </summary>
+	[TestMethod]
+	public void LitterOutOfReachOfABinIsDroppedOnTheCell()
+	{
+		// An arm-2 roll, and a second roll whose kind is neither the first roll's nor its remainder without the one.
+		var seed = Enumerable.Range( 0, 2000 ).First( candidate =>
+		{
+			var random = new Random( candidate );
+			var (first, second) = (random.Next(), random.Next());
+
+			return first % 3 == 2 && second % 5 == 3 && first % 5 != 3 && first % 5 != 4;
+		} );
 
 		// Three cells east: squared distance 9, which is not under 9.
-		(guest, turn, _) = DecidingAt( BinX + 3, BinY, seed );
-		guest.Litter = 90f;
+		var (guest, walk, turn, people, told) = LitteredAt( BinX + 3, BinY, seed, litter: 90f );
+		var (x, y) = walk.Position.Cell;
 		turn( 2 );
-		Assert.AreEqual( (errand + 1, dropped + 1), (Counted( "DECIDE_LITTER_BIN_ERRAND" ), Counted( "DECIDE_LITTER_DROPPED" )), "squared distance 9" );
 
-		// Beside the bin, well inside the fireworks' reach: a bin is not fireworks, and the save has none.
-		var watched = Counted( "DECIDE_WATCH_FIREWORKS" );
-		(_, turn, _) = DecidingAt( BinX + 1, BinY + 1, seed );
+		Assert.AreEqual( (PeepState.Deciding, 0, 0f), (guest.State, (int)guest.MajorDest, guest.Litter), "dropped, still deciding" );
+		Assert.AreEqual( 4, people.State.CellAt( x, y ).Litter, "kind 1 + 3, of the second draw" );
+		Assert.AreEqual( 1, people.State.LitteredCells );
+		Assert.AreEqual( 0, told.Count );
+
+		// The same cell holding kind 2 already: it keeps it.
+		(guest, walk, turn, people, _) = LitteredAt( BinX + 3, BinY, seed, litter: 95f );
+		people.State.CellAt( x, y ).Litter = 2;
 		turn( 2 );
-		Assert.AreEqual( watched, Counted( "DECIDE_WATCH_FIREWORKS" ) );
+
+		Assert.AreEqual( (2, 0f), (people.State.CellAt( x, y ).Litter, guest.Litter ), "a littered cell keeps its litter" );
+	}
+
+	/// <summary>
+	/// <b>An errand that arrives with no bin named drops the litter where it stands</b> (<c>0x004fff8c</c>..<c>0x004fffca</c>):
+	/// the bin is not told, the litter is on the arrival cell, and the guest decides again.
+	/// </summary>
+	[TestMethod]
+	public void AnErrandArrivingWithNoBinNamedDropsTheLitter()
+	{
+		var seed = SeedWhere( roll => roll % 3 == 2 );
+		var (guest, walk, turn, people, told) = LitteredAt( BinX + 2, BinY + 2, seed, litter: 100f );
+		turn( 2 );
+		Assert.AreEqual( PeepState.GoingToMinorDestination, guest.State );
+
+		guest.MajorDest = 0;
+		var turns = UntilTheErrandEnds( guest, turn, 3 );
+
+		Assert.IsTrue( turns > 0 );
+		Assert.AreEqual( (PeepState.Deciding, 0f), (guest.State, guest.Litter) );
+		Assert.AreEqual( 0, told.Count, "no bin told" );
+		Assert.AreNotEqual( 0, people.State.CellAt( walk.Position.Cell.X, walk.Position.Cell.Y ).Litter, "dropped on arrival" );
+		Assert.AreEqual( 1, people.State.LitteredCells );
 	}
 
 	/// <summary>

@@ -21,8 +21,8 @@ namespace OpenTPW;
 /// takings and costs are read by the park file's writer and the censuses, and the bank's red tick by
 /// <see cref="MonthsInTheRed"/> and the console. A ride's operation reads the per-object
 /// nominee and the gate reads the cells' occupant lists; the cells' litter is read by the advisor's
-/// <see cref="LitterShare"/> and by <see cref="LitteredCells"/>, which only tests call, and nothing in play drops or sweeps
-/// it, because the guests' drop and the handyman's litter search are not built (<see cref="StaffBehaviour"/>).
+/// <see cref="LitterShare"/> and by <see cref="LitteredCells"/>; a guest drops it (<see cref="DropLitter"/>) and nothing in play sweeps
+/// it, because the handyman's litter search is not built (<see cref="StaffBehaviour"/>).
 /// </para>
 /// </summary>
 public sealed class ParkState
@@ -2447,6 +2447,34 @@ public sealed class ParkState
 			_beingLoaded.Remove( objectId );
 		else
 			_beingLoaded[objectId] = personId;
+	}
+
+	/// <summary>
+	/// A cell's litter - <c>FUN_004d93b0( cell, kind )</c> (<c>docs/exe/ride-operation.md</c>, "A cell's litter"): nothing
+	/// on a cell that already holds some, else the kind and the collector nought. Answers whether it was dropped.
+	/// </summary>
+	/// <remarks>
+	/// <b>Not built: the sprite</b>, whose place the original takes by reseeding the park's generator with the cell id
+	/// and drawing twice (Q1288); so this neither reseeds nor draws <see cref="RandomSeed"/>. Only kinds 1 to 5 reach it,
+	/// so kind 7's and 8's region effects and kind 8's particle are not built (the sick and the stink bomb, Q226, Q228).
+	/// The online visit's refusal does not arise: there is none.
+	/// </remarks>
+	internal bool DropLitter( int x, int y, int kind )
+	{
+		if ( !OnMap( x, y ) )
+			return false;
+
+		ref var cell = ref CellAt( x, y );
+
+		if ( cell.Litter != 0 )
+			return false;
+
+		Log.Info( $"Littering cell {x}, {y}" );
+
+		cell.Litter = kind;
+		cell.LitterCollector = 0;
+
+		return true;
 	}
 
 	/// <summary>How many cells hold litter, which is what a park's cleanliness comes to.</summary>
