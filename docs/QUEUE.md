@@ -2248,17 +2248,13 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   `BaseFileSystem.WriteAllBytes`) is not taken for a park here, but the original's own `.TPW*` search would take it, the folder being
   shared, and nothing deletes it: decide whether the next start deletes it (it is ours, never the player's park) and say so in the log.
   Confirm: (1) to (4) in both games; (5) a planted `.tmp`, a start, and the original's Load list after.
-- [ ] **Q1160. The unjoined queue's tag is about the ride, and a polled line's thing reaches its tag.** From the fork watch
-  2026-11-12 (`verify-advisor.md` A1). In the original a polled record's speech (`FUN_0059b620`) asks the score callback again
-  through `FUN_0059c0a0` and writes the thing it left (the balance object's `+4` and `+8`) into the record where not nought
-  (`0x0059b6cf`..`0x0059b6e4`), so event `0x18` carries it to the tag (`advisor-park.md`, "The message record" and "A queue not
-  joined to a path"). Row 113's callback leaves `FUN_004ccb00`'s ride, so the tag's type-3 button puts the camera on that ride;
-  row 140's leaves bus stop B's packed cell (`0x0059f4dd`), which its tag's type-4 button turns into a camera move
-  (`FUN_004868d0`, `hud.md`); rows 86-89 and 141 leave a handle too (`0x0059e4b2`.., `0x0059f54e`). Ours sends the posted
-  subject, nought, for every polled line (`ParkAdvisorMessages`, the `said` event; said at the site), so row 113's button does
-  nothing. Give row 113's said event the ride `ParkFacts.UnjoinedQueue` finds at the speech, and rows 140, 86-89 and 141 theirs
-  when they are built. Confirm in the original first: Q324's `queue-fix.TPWS`, row 113 said on tick 996, click the tag's locate
-  button (by the bytes the camera goes to thing 43, the Aztec Mayhem); then ours beside it.
+- [ ] **Q1264. Rows 86-89, 140 and 141: the thing each score leaves reaches its tag.** From Q1160 (its "when they are
+  built" part). The speech writes the thing a row's score leaves into the record's thing (`FUN_0059b620`, `0x0059b6cf`;
+  `ParkAdvisorMessages.ThingOf`), which Q1160 built for row 113 alone. Rows 86-89 (`0x0059e4b2`..) and 141
+  (`0x0059f54e`) leave a handle, and row 140 bus stop B's packed cell (`0x0059f4dd`), which its tag's type-4 button
+  turns into a camera move (`FUN_004868d0`, `hud.md`); none of the six is built. As each is built, give `ThingOf` its
+  case (and the dword at the balance object's `+8`, the record's `+4`, where its score leaves one), with a test whose
+  said event carries it.
 - [ ] **Q1161. The camcorder's keys turn, and its turn rate and walk speed are the original's.** From the fork watch 2026-11-12
   (`verify-other.md` L2, `verify-world.md` M3, M4). The original's first person is read in `park-engine.md`, "The walk's keys,
   turn and speed": Left and keypad 9, Right and keypad 7 turn at 1.2 radians a second; Up, Down and keypads 1 and 3 walk; the

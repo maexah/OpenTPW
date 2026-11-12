@@ -13307,3 +13307,14 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   -10000 answered "costs 3000 and the park has -7000 - sound 0xaf"; `put 40 70` at 100000 built it. Not read: which of
   `0x816d50`/`0x81b604` the move's click honours (taken as the carry's). Not observed in the original (no original in the
   lane). **Done 2026-11-12** (cloud lane c34, `alexah/1013-moved-ticket-ride-money-test`).
+- [x] **Q1160. The unjoined queue's tag is about the ride, and a polled line's thing reaches its tag.** From the fork watch
+  2026-11-12 (`verify-advisor.md` A1). In the original a polled record's speech (`FUN_0059b620`) asks the score callback again
+  through `FUN_0059c0a0` and writes the thing it left (the balance object's `+4` and `+8`) into the record where not nought
+  (`0x0059b6cf`..`0x0059b6e4`), so event `0x18` carries it to the tag (`advisor-park.md`, "The message record" and "A queue not
+  joined to a path"). Row 113's callback leaves `FUN_004ccb00`'s ride, so the tag's type-3 button puts the camera on that ride;
+  row 140's leaves bus stop B's packed cell (`0x0059f4dd`), which its tag's type-4 button turns into a camera move
+  (`FUN_004868d0`, `hud.md`); rows 86-89 and 141 leave a handle too (`0x0059e4b2`.., `0x0059f54e`). Ours sends the posted
+  subject, nought, for every polled line (`ParkAdvisorMessages`, the `said` event; said at the site), so row 113's button does
+  nothing. Give row 113's said event the ride `ParkFacts.UnjoinedQueue` finds at the speech, and rows 140, 86-89 and 141 theirs
+  when they are built. Confirm in the original first: Q324's `queue-fix.TPWS`, row 113 said on tick 996, click the tag's locate
+  button (by the bytes the camera goes to thing 43, the Aztec Mayhem); then ours beside it.
