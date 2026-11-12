@@ -25,8 +25,16 @@ namespace OpenTPW.Tests;
 [TestClass]
 public class ParkCamcorderWalkTests
 {
+	/// <summary>The console's walk steps on <see cref="Time.Delta"/>: every walk here is at 60 frames a second.</summary>
+	[TestInitialize]
+	public void SixtyFramesASecond() => Time.Delta = 1f / 60f;
+
 	[TestCleanup]
-	public void ForgetTheWalk() => ParkCamcorderCameraMode.Forget();
+	public void ForgetTheWalk()
+	{
+		ParkCamcorderCameraMode.Forget();
+		Time.Delta = 0f;
+	}
 
 	/// <summary>An edge test that shuts nothing, which is the control every refusal is measured against.</summary>
 	private static bool NothingIsShut( int x, int y, StepDirection direction ) => false;
@@ -45,6 +53,41 @@ public class ParkCamcorderWalkTests
 
 	/// <summary>The cell a position is in.</summary>
 	private static (int X, int Y) Cell( Vector3 at ) => ((int)MathF.Floor( at.X / 10f ), (int)MathF.Floor( at.Y / 10f ));
+
+	/// <summary>
+	/// <b>The console's walk steps on <see cref="Time.Delta"/></b> (rule 10): ten frames of a twentieth of a second
+	/// walk half a second, 20 units at <c>WalkSpeed</c>'s 40 a second, and a paused clock walks nothing. No park is on
+	/// show, so each step is the plain one, taken whole.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the old fixed <c>WalkSpeed / 60f</c> walks 6.67 units, and walks them paused too.</remarks>
+	[TestMethod]
+	public void TheDebugWalkStepsOnTheFrameTime()
+	{
+		var onShow = Level.Current;
+
+		try
+		{
+			Level.Current = null;
+			ParkCamcorderCameraMode.Yaw = 0f;
+
+			ParkCamcorderCameraMode.Stand = new Vector3( 500f, 500f, 0f );
+			Time.Delta = 0.05f;
+			ParkCamcorderCameraMode.DebugWalk( 1f, 0f, 10 );
+
+			Assert.AreEqual( 500f, ParkCamcorderCameraMode.Stand.X, 0.0001f );
+			Assert.AreEqual( 520f, ParkCamcorderCameraMode.Stand.Y, 0.001f, "half a second at 40 units a second" );
+
+			ParkCamcorderCameraMode.Stand = new Vector3( 500f, 500f, 0f );
+			Time.Delta = 0f;
+			ParkCamcorderCameraMode.DebugWalk( 1f, 0f, 10 );
+
+			Assert.AreEqual( new Vector3( 500f, 500f, 0f ), ParkCamcorderCameraMode.Stand, "a paused clock walks nothing" );
+		}
+		finally
+		{
+			Level.Current = onShow;
+		}
+	}
 
 	/// <summary>
 	/// A step that crosses no boundary is taken whole. If this failed, every other test here would be

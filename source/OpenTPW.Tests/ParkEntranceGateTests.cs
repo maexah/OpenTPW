@@ -21,8 +21,16 @@ public class ParkEntranceGateTests
 	private const int DrinksShop = 1203;
 	private const int BalloonShop = 1209;
 
+	/// <summary>The console's walk steps on <see cref="Time.Delta"/>: every walk here is at 60 frames a second.</summary>
+	[TestInitialize]
+	public void SixtyFramesASecond() => Time.Delta = 1f / 60f;
+
 	[TestCleanup]
-	public void ForgetTheWalk() => ParkCamcorderCameraMode.Forget();
+	public void ForgetTheWalk()
+	{
+		ParkCamcorderCameraMode.Forget();
+		Time.Delta = 0f;
+	}
 
 	/// <summary>
 	/// <b>Lost Kingdom's eight entrances answer as the original's memory reads them</b> (<c>q140/orig/probe.log</c>):

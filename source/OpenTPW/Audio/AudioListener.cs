@@ -69,6 +69,7 @@ internal readonly record struct AudioListener( Vector3 Position, Vector3 Right, 
 	/// QMixer's SetDistanceMapping - but it never applied any of it to the lobby, which it played
 	/// entirely flat at (0,0,0). So there is no original lobby behaviour to restore here, and this is
 	/// a choice made to be defensible rather than a recovery.
+	/// </para>
 	/// <para>
 	/// <b>data\sound.sam's RadiusInfo[n].MINRADIUS is not that model's inner radius.</b> MINRADIUS feeds FUN_0051c700, a sound-detail ladder whose value reaches a
 	/// software per-voice level through FUN_006b8180 and an obstacle test (FUN_006c4c80) that uses
@@ -76,7 +77,6 @@ internal readonly record struct AudioListener( Vector3 Position, Vector3 Right, 
 	/// are the three numbers a voice's channel set-up writes (0x006bc410): 2.0, the voice's range and
 	/// 0.8, and the mixer's law for them is <see cref="RangeGain"/>, which a voice with a range of its
 	/// own takes instead of this one.
-	/// </para>
 	/// </para>
 	/// </summary>
 	public float AttenuationTo( Vector3 source )
