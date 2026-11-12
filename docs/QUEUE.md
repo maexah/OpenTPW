@@ -2419,11 +2419,6 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   and a non-matching one does not. Borrowed from Rootstock (github.com/Mazhron/rootstock-os); nothing else of it is
   taken. Alexah's yes 2026-10-01, for after the weekly reset. No game run.
 
-- [ ] **Q292. Cut `docs/VERIFYING.md` to its rules.** At Alexah's word (2026-10-11). The page is 770 lines, each
-  rule with the story of the mistake behind it; `MEMORY-DIET.md` set it 85. Each rule keeps its number and one
-  line of why, and its story moves, as written, to `docs/history/`. No rule is dropped or renumbered: every page
-  and note that cites a rule by number must still find it (grep `rule [0-9]` first). No game run.
-
 - [ ] **Q293. Three `FUN_` labels Ghidra has not disassembled, and nineteen names the docs do not use.** From the
   week-end audit (stage 1). `ride-operation.md`'s rows on the loans name `FUN_004d0970`, `FUN_004d0a00` and
   `FUN_004d0810`, which are undefined bytes in the Ghidra project, so nobody has read them there: disassemble at

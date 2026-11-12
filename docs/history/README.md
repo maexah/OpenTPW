@@ -15,6 +15,7 @@ index artifacts and point at what is still open.
 | `queue-done.md` | Every ticked item of `../QUEUE.md`, verbatim, in queue order under its section heading. The pre-commit hook moves each finished item here in the commit that ticks it (`tools/maintainer/queue-sweep.py`). |
 | `not-verified.md` | What each finished item did not confirm on screen, verbatim from `../STATUS.md`, newest first. The pre-commit hook moves every account but the newest there (`tools/maintainer/status-sweep.py`). |
 | `fileformats-docs-ledger.md` | The FileFormats docs clone's per-commit ledger to 2026-09-21, and its 2026-09-18 audit, moved from memory on 2026-09-24. The clone's `git log` is authoritative; the rules it carried are in `../README.md`, "The FileFormats docs clone". |
+| `verifying-stories.md` | Every rule of `../VERIFYING.md` with the story of the mistake behind it, word for word as that page held it on 2026-11-12, when Q292 cut it to one line a rule. Grep the rule's number; `../VERIFYING.md` holds the rule. |
 
 ## How to read it
 

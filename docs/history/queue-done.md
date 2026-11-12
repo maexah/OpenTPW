@@ -12260,6 +12260,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   No game run.
   Done 2026-10-11 on Alexah's word, at the week-end audit's close: the file is `docs/history/CLEANUP-PLAN.md`, as it was
   written, and `docs/history/README.md` lists it.
+- [x] **Q292. Cut `docs/VERIFYING.md` to its rules.** At Alexah's word (2026-10-11). The page is 770 lines, each
+  rule with the story of the mistake behind it; `MEMORY-DIET.md` set it 85. Each rule keeps its number and one
+  line of why, and its story moves, as written, to `docs/history/`. No rule is dropped or renumbered: every page
+  and note that cites a rule by number must still find it (grep `rule [0-9]` first). No game run. **Done
+  2026-11-12** (cloud lane c40, `alexah/1019-verifying-rules-only`): the page is 195 lines, each of the 130 rules one
+  line under its own group and number, "Start here" and the adding-a-rule note kept; every rule's text and the page's
+  opening paragraphs moved word for word to `docs/history/verifying-stories.md` (720 lines checked present, each
+  rule's block whole). 85 lines cannot hold 130 one-line rules; the item's own "one line of why" was kept over that
+  figure. 67 citations by number across the repo (40 distinct rules) were listed before the cut and each finds its
+  rule on the new page; dropping rule 91 by hand made the check name it.
 
 ## C. Alexah's list: cause known, one session each
 
