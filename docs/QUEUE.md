@@ -1582,6 +1582,12 @@ filed the items that cite it.
   are the same arms), then set the latch there in `CarryPassLatched` and drop the count. No jungle item's exit faces off
   the map where its entrance does not (`TheCarrysPassFindsAnEndFacingOffTheMap`), so the exit's store is reached only
   if the entrance's test does not return first: read that too.
+- [ ] **Q1414. Q536's patrol edges, photographed.** From Q536 (accepted by the Sentinel on the console census and tests;
+  the cloud lane had no display to photograph). On the desk: the stock park, the staff locator following a member whose
+  patrol edges show (Ctrl+S and the mechanics' button, `TOOLING.md`, "Recipes", Q532/Q540), then `money balance -100` and
+  `move 13 48 31` (refused: "costs 500 and the park has 473", the Belly Bounce held), then `drop`. Predict, and photograph
+  beside `strip`'s `| patrol N` markers: the edges red (1) while it is held and still red after the drop (`tool` latch 1);
+  blue again once a tool is armed and put away. If the original is to hand, read `[0x00816d50]` at the same steps.
 - [ ] **Q1413. A moved ticket ride's hover: latch and pointer.** From Q536. The carry's pass skips its money test for a
   ride with a golden-ticket cost not yet bought (`0x005235e6`..`0x0052360b`), so by the decode a moved one sets neither
   `d50` nor `d5c` in the hover; ours leaves the latch clear there (`CarryPassLatched`) but `Level.CarryCursor` shows
