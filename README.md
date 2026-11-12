@@ -167,8 +167,9 @@ If something else goes wrong before the game's main loop begins, the box names t
 is, and OpenTPW then exits. With no display there is no box, only the log and the terminal. The original had no such box
 (a deviation). Started from a terminal, the same lines are printed there too. The Windows download opens no terminal window of its own.
 If an error stops the game once it is running, a box titled "OpenTPW stopped" names it and says where the log is, and
-OpenTPW exits. Nothing is saved as it stops (not the park, not the player), so a half-changed park is never written over
-a good save: your last save is kept as it was. This is OpenTPW's own too.
+OpenTPW exits; the sound stops first. Nothing is saved as it stops (not the park, not the player), so a half-changed park is never written over
+a good save: your last save is kept as it was. An error while the game is closing, as it saves the park and then the
+player, says either may not have been saved. This is OpenTPW's own too.
 
 **Reporting a problem.** Every start writes `console.log` in the game's folder, beside `save`. If the game's folder cannot be
 written, or OpenTPW cannot find the game, it is in your own data folder instead (`%AppData%\OpenTPW` on Windows,

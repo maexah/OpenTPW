@@ -82,7 +82,8 @@ public class Time
 	/// </summary>
 	public static int StepFrames { get; set; }
 
-	private const float StepDelta = 1f / 60f;
+	/// <summary>The length of a frame run by `step`, and of each of the console walk's steps: a sixtieth of a second.</summary>
+	internal const float StepDelta = 1f / 60f;
 
 	/// <summary>
 	/// The same frame, without the <see cref="LongestFrame"/> clamp: what the frame really took.

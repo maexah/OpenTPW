@@ -16,9 +16,15 @@ public class Program
 		// Before anything can open a native library - see NativeLibraries.
 		NativeLibraries.Register();
 
+		Guarded( () => Game.Run( args ) );
+	}
+
+	/// <summary>The game run under Main's two last catches, a failed start's and a failed run's; apart so a test can hand it a run that throws.</summary>
+	internal static void Guarded( Action run )
+	{
 		try
 		{
-			Game.Run( args );
+			run();
 		}
 		catch ( Exception e ) when ( StartFailure.IsFailedStart( e ) )
 		{

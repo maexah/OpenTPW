@@ -1759,9 +1759,9 @@ public static class DebugConsole
 			// StandAt - and so crosses no cell edge at all, and what happens BETWEEN two cells is the question.
 			//
 			// It reaches ParkCamcorderCameraMode.Step, the same body Walk() runs with the real keys, so
-			// only the reading of Input is skipped. Each of the frames is as long as the frame the
-			// command runs in (Time.Delta), so 60 is a second of walking at 60 frames a second, and a
-			// paused clock walks nothing.
+			// only the reading of Input is skipped. Each of the N frames is a fixed sixtieth of a second
+			// (Time.StepDelta), whatever the real frame rate, so 60 is a second of walking, 40 units, and
+			// it walks under `pause` too: an instrument, as `step` is (ParkCamcorderCameraMode.DebugWalk).
 			case "walk":
 				if ( !ParkCamcorderCameraMode.Active )
 				{
@@ -1778,9 +1778,7 @@ public static class DebugConsole
 				ParkCamcorderCameraMode.DebugWalk( Argument( 1 ), Argument( 2 ),
 					parts.Length > 3 ? (int)Argument( 3 ) : 60 );
 
-				Reply( Time.Delta > 0f
-					? ParkCamcorderCameraMode.State()
-					: $"walk: the clock is paused, so no step was taken; {ParkCamcorderCameraMode.State()}" );
+				Reply( ParkCamcorderCameraMode.State() );
 				break;
 
 			// What the pointer is over. The instrument for every verb that starts by pointing at the

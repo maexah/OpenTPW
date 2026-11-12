@@ -7,17 +7,26 @@ namespace OpenTPW;
 /// One copy of the game at a time on one game folder, as the original lets one copy run (Q995).
 ///
 /// <para>
-/// The original's <c>WinMain_Main</c> calls 0x0045f640 first (0x0045a97f), which makes a named mutex with
-/// <c>CreateMutexA</c> and answers 0 when <c>GetLastError</c> says it was there already, and the game then leaves
-/// (<c>docs/exe/boot.md</c>, "WinMain"). Here the mutex is keyed by the game folder, never machine-wide: two copies of
-/// the game in two folders each have their own save folder and log, and both run (a harness runs lanes side by side
-/// that way). The original's name is not known (0x7a2508 is outside the file's bytes), so the name is OpenTPW's own.
+/// The original's <c>WinMain_Main</c> calls 0x0045f640 first (0x0045a97f), which checks the installer's registry key and
+/// then makes a named mutex with <c>CreateMutexA</c>, answering 0 when <c>GetLastError</c> says it was there already, and
+/// the game then leaves (<c>docs/exe/boot.md</c>, "WinMain"). The original's name is <c>TPWMutex</c> (the static string at
+/// 0x007a2500, built from 0x007477f0), one name per Windows session. Here the name is OpenTPW's own, keyed by the game
+/// folder: two copies of the game in two folders each have their own save folder and log, and both run (a harness runs
+/// lanes side by side that way).
 /// </para>
 /// <para>
 /// It is taken before <see cref="ConsoleLog.Open"/>, so a refused copy never rotates the running copy's console.log;
 /// it keeps no log file at all. The name has <c>Global\</c> ahead of it: on Linux and macOS a plain name is kept for one
-/// terminal session, and two terminals would each start a copy. A mutex that cannot be made or opened (another user's,
-/// a name the system refuses) is logged and the game runs: a lock that cannot be told is not a reason to refuse.
+/// terminal session, and two terminals would each start a copy. <b>A deviation on Windows</b>: there <c>Global\</c> is
+/// one name for every session, so a copy on the same folder in another session (the same user through Remote Desktop)
+/// is refused where the original's per-session name lets it run. A mutex that cannot be made or opened (another user's,
+/// a name the system refuses) is logged and the game runs, as the original's runs on a null handle (0x0045f673): a lock
+/// that cannot be told is not a reason to refuse.
+/// </para>
+/// <para>
+/// <b>Not covered</b>: two game folders whose own <c>save\</c> cannot be written both save in the player's one data
+/// folder (<see cref="SaveHome.PlayersFolder"/>) and log there (<see cref="ConsoleLog.Open"/>), so two copies on two
+/// such folders take two locks and share one save folder and one log.
 /// </para>
 /// </summary>
 internal static class OneCopy

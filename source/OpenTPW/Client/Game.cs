@@ -170,6 +170,8 @@ internal static class Game
 		StartFailure.Started = true;
 		Render.Run();
 
+		// An exception from here on comes while the park and the player are being written (RunFailure.ClosingSaved).
+		RunFailure.Closing = true;
 		LeaveOnClose();
 
 		Audio.Shutdown();

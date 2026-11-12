@@ -2,10 +2,12 @@
 """consolerun.py <outdir> <bin> <game> <script>: OpenTPW run off-screen under xvfb-run with the debug console, fed a script.
 
 A bare feeder for a machine without python-xlib (a cloud lane): needs only xvfb-run and the build, and no private game
+folder or `ref` player. Where those are set up, prefer parkrun.py with OFFSCREEN = True (README.md). <bin> is the build's
 folder (OpenTPW.dll), <game> the game folder, <script> a text file of lines `SECS COMMAND`: each command is written to the
 console's stdin, then the run waits SECS seconds; `#` starts a comment. The run first waits 25 s for the lobby. A command
-that starts with `!` is not the console's: the rest is run in a shell with DISPLAY set to the run's own X server, its output
-in stdout.txt after `!!! ` (Q994: a real key press where the console has none; focus the window first,
+that starts with `!` is not the console's: the rest is run in a shell with DISPLAY and XAUTHORITY set to the run's own Xvfb, its output
+in stdout.txt after `!!! `; where that Xvfb cannot be found in the run's session (consoledrive.run_display), the line is
+refused and logged, never run on the caller's DISPLAY, which on a desk is the desktop (AGENTS.md rule 12) (Q994: a real key press where the console has none; focus the window first,
 `xdotool windowfocus --sync`, docs/TOOLING.md has the line).
 
 The game never runs on <game> itself: it runs on <outdir>/game, links to <game>'s entries with a COPY of its save/ (empty
@@ -16,6 +18,9 @@ OPENTPW_NO_MESSAGE_BOX=1 and OPENTPW_LOG_DIR=<outdir>. Everything the game print
 <outdir>/stdout.txt. End the script with `8 quit`; whatever is still running 20 s after the last line (the game, Xvfb,
 xvfb-run) is sent SIGTERM as one process group, and SIGKILL 5 s later. No memory cap: on a desk use gamedrive.py's."""
 import hashlib, os, shutil, signal, subprocess, sys, threading, time
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from consoledrive import run_display
 
 out, binp, game, script = sys.argv[1:5]
 out = os.path.abspath(out); game = os.path.abspath(game)
@@ -58,19 +63,6 @@ def pump():
 
 threading.Thread(target=pump, daemon=True).start()
 
-def xenv():
-    """The X display xvfb-run gave the run, DISPLAY and XAUTHORITY, from a process of the run that has them."""
-    for pid in filter(str.isdigit, os.listdir("/proc")):
-        try:
-            if os.getsid(int(pid)) != p.pid:
-                continue
-            found = dict(v.decode().split("=", 1) for v in open(f"/proc/{pid}/environ", "rb").read().split(b"\0")
-                         if v.startswith((b"DISPLAY=", b"XAUTHORITY=")))
-            if "DISPLAY" in found:
-                return found
-        except (OSError, ProcessLookupError, ValueError):
-            pass
-    return {}
 time.sleep(25)
 for line in open(script):
     line = line.split("#", 1)[0].strip()
@@ -79,7 +71,13 @@ for line in open(script):
     secs, cmd = line.split(" ", 1)
     log.write(f">>> {cmd}\n"); log.flush()
     if cmd.startswith("!"):
-        shell = subprocess.run(cmd[1:], shell=True, env=dict(env, **xenv()), stdout=subprocess.PIPE,
+        found = run_display(p.pid)
+        if found is None:
+            log.write("!!! refused: the run's own Xvfb was not found in its session, so nothing was run\n"); log.flush()
+            print(f"consolerun: refused `{cmd}`, the run's own Xvfb was not found")
+            time.sleep(float(secs))
+            continue
+        shell = subprocess.run(cmd[1:], shell=True, env=dict(env, **found), stdout=subprocess.PIPE,
                                stderr=subprocess.STDOUT, text=True)
         log.write("".join(f"!!! {l}\n" for l in shell.stdout.splitlines()) + f"!!! exit {shell.returncode}\n"); log.flush()
         time.sleep(float(secs))

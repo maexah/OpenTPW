@@ -96,6 +96,96 @@ public class RunFailureTests
 		Assert.AreEqual( $"Run failure: no message box, {StartFailure.SuppressVariable} is set: head | reason", lines.Single() );
 	}
 
+	/// <summary>
+	/// <b>An exception out of the loop is Main's last catch's</b>: it does not leave <c>Program.Main</c>, it is logged with
+	/// its stack, the box (kept off) names the first exception, and the exit code is 1; one out of the close after the loop
+	/// says the park and the player may not have been saved, in place of nothing saved.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the run failure's catch taken out of <c>Program.Guarded</c> lets the exception out; the box
+	/// composed from the exception caught and not the first names the later one; the closing line never chosen says nothing was saved.</remarks>
+	[TestMethod]
+	public void AnExceptionOutOfTheLoopIsMainsLastCatch()
+	{
+		var error = Console.Error;
+		var output = Console.Out;
+		var exitCode = Environment.ExitCode;
+		var wasStarted = StartFailure.Started;
+		var suppressed = Environment.GetEnvironmentVariable( StartFailure.SuppressVariable );
+		var written = new System.IO.StringWriter();
+
+		try
+		{
+			Log ??= new();
+			Console.SetError( written );
+			Console.SetOut( written );
+			Environment.SetEnvironmentVariable( StartFailure.SuppressVariable, "1" );
+			RunFailure.ResetForTest();
+			StartFailure.Started = true;
+			Environment.ExitCode = 0;
+
+			// The cause, then a second exception thrown as the stack unwinds (a Dispose on the loop's stack).
+			Program.Guarded( () =>
+			{
+				try
+				{
+					throw new InvalidOperationException( "a frame went wrong" );
+				}
+				finally
+				{
+					throw new ObjectDisposedException( "unwinding" );
+				}
+			} );
+
+			Assert.AreEqual( 1, Environment.ExitCode );
+			StringAssert.Contains( written.ToString(), "Run failure: the game stops on an unhandled exception: System.InvalidOperationException: a frame went wrong" );
+			StringAssert.Contains( written.ToString(), $"Run failure: no message box, {StartFailure.SuppressVariable} is set: {RunFailure.Head} |  | A frame went wrong | {RunFailure.NothingSaved}" );
+
+			RunFailure.ResetForTest();
+			Environment.ExitCode = 0;
+			Program.Guarded( () =>
+			{
+				RunFailure.Closing = true;
+				throw new System.IO.IOException( "the player's file would not write" );
+			} );
+
+			Assert.AreEqual( 1, Environment.ExitCode );
+			StringAssert.Contains( written.ToString(), $"The player's file would not write | {RunFailure.ClosingSaved}" );
+		}
+		finally
+		{
+			Console.SetError( error );
+			Console.SetOut( output );
+			Environment.SetEnvironmentVariable( StartFailure.SuppressVariable, suppressed );
+			Environment.ExitCode = exitCode;
+			StartFailure.Started = wasStarted;
+			RunFailure.ResetForTest();
+		}
+	}
+
+	/// <summary><b>The sound stops before the box opens</b>, and the exit code is set by then.</summary>
+	/// <remarks><b>Mutation:</b> the box shown before the shutdown (the sound playing on under it) fails.</remarks>
+	[TestMethod]
+	public void TheAudioIsClosedBeforeTheBoxOpens()
+	{
+		var exitCode = Environment.ExitCode;
+		var order = new List<string>();
+
+		try
+		{
+			RunFailure.ResetForTest();
+			Environment.ExitCode = 0;
+
+			RunFailure.End( new InvalidOperationException( "a frame went wrong" ), () => order.Add( "audio closed" ),
+				message => order.Add( $"box, exit code {Environment.ExitCode}: {message.Split( '\n' )[2]}" ) );
+
+			CollectionAssert.AreEqual( new[] { "audio closed", "box, exit code 1: A frame went wrong" }, order );
+		}
+		finally
+		{
+			Environment.ExitCode = exitCode;
+		}
+	}
+
 	/// <summary><b>The run ends with exit code 1 when the audio closes, and when closing it throws too</b> (logged, not let out of Main).</summary>
 	/// <remarks><b>Mutation:</b> no exit code set, or the shutdown's exception let through, fails a step.</remarks>
 	[TestMethod]

@@ -340,7 +340,7 @@ public class ParkLoadScreenTests
 	/// <b>A park asked for by file is read from that file</b>, not from the newest in the folder: the older file is
 	/// the shipped park's copy, 755, and the newer one will not read.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> the file ignored reads the newer one and gives nothing.</remarks>
+	/// <remarks><b>Mutations:</b> the file ignored (the newest entered instead) reads the newer one, which gives a world made fresh.</remarks>
 	[TestMethod]
 	public void AParkAskedForByFileIsReadFromThatFile()
 	{
@@ -352,7 +352,8 @@ public class ParkLoadScreenTests
 		var balance = new ParkBalance( "jungle", easyMode: Level.InstantAction );
 		var catalogue = new ParkItemCatalogue( "jungle", instantAction: Level.InstantAction );
 
-		var park = Level.CreatePark( "jungle", balance, catalogue, Path.Join( "users", "1Test", "jungle", "Old Park.TPWS" ) );
+		var file = Path.Join( "users", "1Test", "jungle", "Old Park.TPWS" );
+		var park = Level.EnterPark( "jungle", balance, catalogue, new Level.ParkStart( file, Level.ReadParkAhead( "jungle", file ), false ) );
 
 		Assert.IsInstanceOfType( park, typeof( ParkWorld ) );
 		Assert.AreEqual( 755, park!.GameTick );

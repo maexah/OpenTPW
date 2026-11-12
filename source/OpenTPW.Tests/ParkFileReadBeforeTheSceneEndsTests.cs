@@ -215,6 +215,34 @@ public class ParkFileReadBeforeTheSceneEndsTests
 		return (key, said.Where( line => line.Contains( "Quickload:" ) ).ToArray());
 	}
 
+	/// <summary>
+	/// <b>A file read ahead takes its particle density when the park is built from it, and not before</b>: reading it takes
+	/// nothing into the running game, and the build runs the park at the file's 500 where the options' are 1000
+	/// (<c>docs/exe/park.md</c>, "A park's particles").
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the read-ahead branch's <c>TakeParticleDensity</c> deleted leaves 1000 (every park loaded from
+	/// a row, Alt+L or Restart Park at the options' density); the density taken in <c>ReadParkAhead</c> gives 500 before the build.</remarks>
+	[TestMethod]
+	public void AFileReadAheadTakesItsParticleDensityWhenTheParkIsBuilt()
+	{
+		File.WriteAllBytes( Path.Combine( Jungle, "jungle.TPWS" ), FileSystem.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
+		var system = new ParticleSystem( "Particle/Tp2.plb", 1000 );
+
+		try
+		{
+			var ahead = Level.ReadParkAhead( "jungle", Path.Join( "users", "1Test", "jungle", "jungle.TPWS" ) );
+			Assert.IsNotNull( ahead );
+			Assert.AreEqual( 1000, system.Density, "reading ahead takes nothing into the running game" );
+
+			Enter( new Level.ParkStart( "jungle.TPWS", ahead, false ) );
+			Assert.AreEqual( 500, system.Density, "the park is built at its file's density" );
+		}
+		finally
+		{
+			system.Shutdown();
+		}
+	}
+
 	/// <summary>The park asked for, changed to: what was done, and what the build was handed.</summary>
 	private static string Change( string file, out Level.ParkStart? built )
 	{

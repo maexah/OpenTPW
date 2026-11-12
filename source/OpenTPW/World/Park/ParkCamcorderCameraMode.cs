@@ -509,16 +509,22 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 	}
 
 	/// <summary>
-	/// Walks <paramref name="frames"/> steps at the ordinary walking speed, each as long as this frame
-	/// (<see cref="Time.Delta"/>, rule 10), for the debug console - the capture this camera's collision has
-	/// to be confirmed by cannot be taken with <see cref="StandAt"/>, which puts the viewer down rather than
-	/// walking them there and so crosses no cell edge at all. A paused clock reads a zero delta, so it walks
-	/// nothing.
+	/// Walks <paramref name="frames"/> steps at the ordinary walking speed, for the debug console - the capture
+	/// this camera's collision has to be confirmed by cannot be taken with <see cref="StandAt"/>, which puts the
+	/// viewer down rather than walking them there and so crosses no cell edge at all.
+	///
+	/// <para>
+	/// <b>An instrument, not motion</b>: it runs <paramref name="frames"/> simulated frames of
+	/// <see cref="Time.StepDelta"/> inside one real frame, as the console's <c>step</c> runs its frames, so the walk
+	/// is the same at any frame rate (60 is 40 units, a second of walking) and is taken under <c>pause</c> as
+	/// <c>camera</c> and <c>camcorder</c> act there. Rule 10's per-frame motion is <see cref="Walk"/>'s, on
+	/// <see cref="Time.Delta"/>.
+	/// </para>
 	/// </summary>
 	internal static void DebugWalk( float forward, float right, int frames )
 	{
 		for ( var frame = 0; frame < frames; ++frame )
-			Step( forward, right, WalkSpeed * Time.Delta );
+			Step( forward, right, WalkSpeed * Time.StepDelta );
 	}
 
 	/// <summary>

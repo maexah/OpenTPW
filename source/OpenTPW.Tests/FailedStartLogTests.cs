@@ -161,6 +161,51 @@ public class FailedStartLogTests
 	}
 
 	/// <summary>
+	/// <b>A second copy, another process, on a folder this one holds is refused</b> (Q995): the lock is the system's, not the
+	/// process's. This process holds the folder's mutex; the program started on the same folder says so, exits 1 and leaves no
+	/// console.log. Let go, the same start passes the lock and goes on to fail at the window (no display), which does write one.
+	/// Linux only: with no display variable the control's start has no window to open.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> a lock kept per process (a name that folds in the process id, or a static set of held names)
+	/// lets the child pass the lock: it fails at the window instead and writes a log.</remarks>
+	[TestMethod]
+	public void ACopyStartedOnAFolderAnotherProcessHoldsIsRefused()
+	{
+		if ( !OperatingSystem.IsLinux() )
+			Assert.Inconclusive( "skipped: only Linux can be given no display to fail on" );
+
+		var folder = Scratch();
+		var logs = Path.Join( folder, "logs" );
+		var game = Path.Join( folder, "game" );
+
+		try
+		{
+			Directory.CreateDirectory( Path.Join( game, "data", "levels" ) );
+
+			Dictionary<string, string?> Variables() => new() { ["OPENTPW_LOG_DIR"] = logs, ["DISPLAY"] = null, ["WAYLAND_DISPLAY"] = null };
+
+			using ( var held = OneCopy.Open( game, out var unknown ) )
+			{
+				Assert.IsNotNull( held, unknown ?? "this process holds the folder" );
+
+				var (exit, output) = Start( folder, Variables(), "--game", game );
+
+				Assert.AreEqual( 1, exit, output );
+				StringAssert.Contains( output, "Another copy of OpenTPW is already running", output );
+				Assert.IsFalse( output.Contains( "Unhandled exception:" ), "refused before the window: " + output );
+				Assert.IsFalse( File.Exists( Path.Join( logs, ConsoleLog.FileName ) ), "a refused copy keeps no log" );
+			}
+
+			var (after, afterOutput) = Start( folder, Variables(), "--game", game );
+
+			Assert.AreEqual( 1, after, afterOutput );
+			Assert.IsFalse( afterOutput.Contains( "Another copy of OpenTPW is already running" ), "let go, the lock is passed: " + afterOutput );
+			StringAssert.Contains( File.ReadAllText( Path.Join( logs, ConsoleLog.FileName ) ), "Unhandled exception:", "and the start goes on to the window" );
+		}
+		finally { Directory.Delete( folder, true ); }
+	}
+
+	/// <summary>
 	/// An exception before the main loop is logged, answered by the box (kept off here) and ends the run with exit 1 (Q978).
 	/// Linux only: with no display variable SDL has no window to make, which is the exception; elsewhere the same start would
 	/// open a window on whoever runs the suite.

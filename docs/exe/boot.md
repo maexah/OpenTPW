@@ -4,7 +4,7 @@ How the original game boots: `WinMain` takes a single-instance lock, builds the 
 
 ## WinMain — `WinMain_Main` 0x0045a960
 
-1. 0x0045f640 takes a `CreateMutexA` lock, so only one copy runs. OpenTPW takes one keyed per game folder (its full path with every link along it followed, Q1174), before its log opens, and says why in a box where the original quits without a word (`OneCopy`, Q995).
+1. 0x0045f640 first checks the installer's registry key: 0x0045f6b0 opens `HKLM\software\Bullfrog Productions Ltd\Theme Park World` (HKLM only, `0x005f8b05`; `RegCreateKeyExA`, so an open-or-create, `0x005f8bdc`) and reads its `Language` value (`RegQueryValueExA` in 0x005f8c50); where either fails it posts error 0 (`0x00405710` on `0x00785de8`, `0x0045f649..0x0045f654`) and answers 0. Then it takes the lock: `CreateMutexA( NULL, TRUE, "TPWMutex" )` (`0x0045f65c..0x0045f666`; the name is the static string at `0x007a2500`, built by 0x0045d8a0 from `0x007477f0`), unprefixed, so one name per Windows session. `GetLastError` 0xb7 (`0x0045f67b`) posts error 1, closes the handle (`0x0045f699`) and answers 0; a null handle (`0x0045f673`) answers 1, so a lock that could not be made lets the game run. On 0, WinMain goes straight to its teardown (`0x0045a986`). **Both refusals are silent**: the error reporter 0x00405750 (called at `0x0045ad2b`) would show the language module's string 3 in a `MessageBoxW` (case 1, `0x0040579b`), but returns at `0x0040576a` while the language table's loaded flag `[0x0078b530]` is 0, and that is set only at the end of 0x00419710 (`0x0041a580`), which runs after the lock. The exit code is WinMain's answer, the `MSG`'s `wParam` (`0x0045ad41`), never written on that path: whatever the stack held. OpenTPW takes a lock keyed per game folder (`Global\` and a hash of its full path with every link along it followed, Q1174; one name for every session), before its log opens, and says why in a box where the original quits without a word, exit code 1 (`OneCopy`, Q995). It reads no registry.
 2. Setup: creates players (`Players_Construct`); sets the flag word (`Flags_LoadDefaults`); reads `save\config.tcf` (0x00424930); registers `MSWHEEL_ROLLMSG`. The install's `safemode.bat` copies `safemode.tcf`, 32 bytes, over `config.tcf`.
 3. Message loop (`GetMessageA` once, `0x0045ab2a`; `PeekMessageA` here and in three other loops, `FUN_00479260`,
    `FUN_004798e0` and `FUN_005f86e0`, whose waits are not traced; Q194). When idle and running (`DAT_007a1a14` bit 1):
@@ -245,8 +245,9 @@ Observed with GE-Proton 10-34 (Wine 10); `docs/TOOLING.md` has the recipe.
   place, `DriverEntry` fails with `c0000001` instead. Both failures come before any disc check.
 - **Without the installer's registry values the game quits silently**, before the disc check. With
   `HKLM\Software\Bullfrog Productions Ltd\Theme Park World` (32-bit view) `Language` = `0x409`, `Version` = `"1.1"`,
-  `BuildTypeCode` = 0 (what the installer writes), it continues. Which of the three it reads was not isolated; a
-  `+reg` trace would settle it.
+  `BuildTypeCode` = 0 (what the installer writes), it continues. The first read is `Language`, by 0x0045f6b0 before the
+  single-instance lock (WinMain, step 1), and its failure is silent; whether `Version` and `BuildTypeCode` are read
+  elsewhere was not checked.
 - **The disc check** needs a drive of type `DRIVE_CDROM`: `HKLM\Software\Wine\Drives` `d:` = `cdrom` (64-bit view),
   plus a label. Wine reads a folder drive's label from `.windows-label`; an `.iso` given as the `d::` device yields no
   label. The check accepts the disc's own label, `TPWORLD`.
@@ -263,7 +264,7 @@ Evidence is a Ghidra trace of `/testme.exe` throughout; the column names what in
 | Address | Original name | What it is | Evidence |
 |---|---|---|---|
 | 0x0045a960 | `WinMain_Main` | Entry point: lock, setup, message loop, shutdown. | Decompile |
-| 0x0045f640 | | Takes the `CreateMutexA` single-instance lock. | Import call |
+| 0x0045f640 | | The registry check (0x0045f6b0, `Language` under HKLM), then the `CreateMutexA` single-instance lock named `TPWMutex` (`0x007477f0`); answers 0 to quit on either failure, silently. | Import call, disassembly |
 | 0x00449df0 | `Flags_LoadDefaults` | Sets the flag word `DAT_007a1a8c` to 0xc0e15. | Decompile |
 | 0x00424930 | | Reads `save\config.tcf`. | Filename string |
 | 0x00419710 | | Loads language and string tables, the keyboard shortcuts and the `.bf4` fonts (13 slots of one resolution set; `lobby.md`) from `Data\Language\`. | Decompilation |

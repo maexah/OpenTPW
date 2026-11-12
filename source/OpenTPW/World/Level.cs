@@ -612,25 +612,17 @@ public class Level
 	/// ships beside the level is read, the file a new Instant Action player's folder is given. The original has a
 	/// player on every entry.
 	/// </remarks>
-	/// <param name="parkFile">
-	/// A park file in the save folder to read instead, the row clicked on the Load Park screen (0x005ac5d0). One that
-	/// will not read gives null here; the game never builds a park from one, because <see cref="Game"/> reads the file
-	/// before the running park's scene ends and keeps that park where it will not (<see cref="ReadParkFile"/>).
-	/// </param>
 	/// <remarks>
 	/// <b>Entering with a file that will not read makes the world fresh</b>, as the original's new world stands where
 	/// <c>FUN_00414d40</c> fails before its teardown and <c>FUN_005accf0</c> drops the answer (<c>0x005ad054</c>; state 9 goes on,
 	/// <c>0x0054f12b</c>; <c>docs/exe/saves.md</c>, "The load"). <b>A deviation, the original's undefined case filled</b>: a
-	/// file whose body will not inflate, or whose modules will not read at all, passes the original's checks and its
-	/// teardown and ends in failure 6 with the state "(possibly) inconsistent"; here every failure of the read is
-	/// taken before anything is built, so it too makes the world fresh. A file read in part is a park, as before.
+	/// file whose body will not inflate passes the original's checks and its teardown and ends in failure 6 with the state
+	/// "(possibly) inconsistent"; here that read throws before anything is built, so it too makes the world fresh. A file
+	/// whose body inflates is a park, read in part where a module stops (<see cref="ParkWorld.Problem"/>), as before.
+	/// A file chosen from a park (a Load Park row, Alt+L, Restart Park) is not read here: <see cref="ReadParkAhead"/>.
 	/// </remarks>
-	internal static IParkInitialState? CreatePark( string theme, ParkBalance balance, ParkItemCatalogue catalogue,
-		string? parkFile = null )
+	internal static IParkInitialState? CreatePark( string theme, ParkBalance balance, ParkItemCatalogue catalogue )
 	{
-		if ( parkFile != null )
-			return ReadPark( theme, SaveFileSystem, parkFile );
-
 		if ( Players.Roster.Current is not { } player )
 			return ReadPark( theme, FileSystem, $"levels/{theme.ToLowerInvariant()}/Easymode.TPWI" );
 

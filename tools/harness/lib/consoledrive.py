@@ -4,13 +4,43 @@
 consolerun.py's interactive sibling for a cloud lane (no python-xlib, Q862): a run script imports it, starts the game with
 `Drive(out, bin, game)`, then `ask(command, until)` sends one console command and returns the lines printed up to the
 first one matching the regex `until` (or the timeout); `key(name)` and `click(x, y)` are real X events by xdotool on the
-run's own Xvfb display; `quit()` ends the run and kills what is left. Everything the game prints is in <out>/stdout.txt,
+run's own Xvfb display, and on no other: each is refused where `run_display` cannot find that Xvfb in the run's session; `quit()` ends the run and kills what is left. Everything the game prints is in <out>/stdout.txt,
 each command after `>>> `.
 
 As consolerun.py, the game never runs on <game> itself: <out>/game links to <game>'s entries with a COPY of its save/
 (empty where it has none), XDG_DATA_HOME is <out>/xdg, and <game>'s save/ is checksummed either side (AGENTS.md rule
 12). Sets SDL_AUDIODRIVER=dummy, OPENTPW_DEBUG_CONSOLE=1, OPENTPW_NO_MESSAGE_BOX=1 and OPENTPW_LOG_DIR=<out>."""
 import hashlib, os, queue, re, shutil, signal, subprocess, threading, time
+
+
+def run_display(sid):
+    """The run's own X display, {DISPLAY, XAUTHORITY}, or None: the X server must be an Xvfb in the run's session `sid`
+    (xvfb-run started with start_new_session=True, so its pid is the session's), its display and `-auth` file read from that
+    Xvfb's own command line, and the game's process (the one whose command line names OpenTPW.dll) in that session must
+    have been given the same two. Nothing is taken from the caller's environment or from xvfb-run's shell, which inherits
+    the caller's DISPLAY: on a desk that is the desktop's. A caller that gets None sends no X event (AGENTS.md rule 12)."""
+    xvfb = game = None
+    for pid in filter(str.isdigit, os.listdir("/proc")):
+        try:
+            if os.getsid(int(pid)) != sid:
+                continue
+            argv = [a.decode() for a in open(f"/proc/{pid}/cmdline", "rb").read().split(b"\0") if a]
+            if not argv:
+                continue
+            if os.path.basename(argv[0]) == "Xvfb":
+                display = next((a for a in argv[1:] if a.startswith(":")), None)
+                auth = argv[argv.index("-auth") + 1] if "-auth" in argv[:-1] else None
+                if display and auth:
+                    xvfb = (display, auth)
+            elif any(a.endswith("OpenTPW.dll") for a in argv):
+                seen = dict(v.decode().split("=", 1) for v in open(f"/proc/{pid}/environ", "rb").read().split(b"\0")
+                            if v.startswith((b"DISPLAY=", b"XAUTHORITY=")))
+                game = (seen.get("DISPLAY"), seen.get("XAUTHORITY"))
+        except (OSError, ProcessLookupError, ValueError, UnicodeDecodeError):
+            pass
+    if xvfb is None or game != xvfb:
+        return None
+    return {"DISPLAY": xvfb[0], "XAUTHORITY": xvfb[1]}
 
 
 def _save_sum(folder):
@@ -80,8 +110,14 @@ class Drive:
         time.sleep(secs); return self.drain()
 
     def _xdotool(self, *args):
-        env = dict(os.environ, DISPLAY=self.display, XAUTHORITY=self.auth)
-        subprocess.run(["xdotool", *args], env=env, check=False)
+        """xdotool on the run's own Xvfb only (run_display): where :97 is not this run's server (Xvfb failed to start on
+        it, another server holds it), nothing is sent and the refusal is logged."""
+        found = run_display(self.p.pid)
+        if found != {"DISPLAY": self.display, "XAUTHORITY": self.auth}:
+            self.log.write(f"!!! refused xdotool {' '.join(args)}: {self.display} is not this run's Xvfb ({found})\n"); self.log.flush()
+            print(f"consoledrive: xdotool refused, {self.display} is not this run's Xvfb ({found})")
+            return
+        subprocess.run(["xdotool", *args], env=dict(os.environ, **found), check=False)
 
     def key(self, name): self._xdotool("key", name)
 

@@ -624,7 +624,7 @@ height of the screen its font set is drawn for, plus 6. The original at 640 by 4
 (`GAME8.bf4`, 11), read from its memory.
 
 **One deviation, said at the site.** A row's click ends the park's scene and builds it again from the file behind
-the loading screen (`Game.RequestParkLoad( theme, file )`, `Level.CreatePark`'s `parkFile`), where the original
+the loading screen (`Game.RequestParkLoad( theme, file )`, the file read by `Level.ReadParkAhead` and handed on in `Level.ParkStart`), where the original
 reads the file over the running park. **A file that will not read keeps the running park** (Q994): `Game.ChangeSceneIfAsked`
 reads the file asked for whole before anything is taken down (`Level.ReadParkAhead`), and one that will not read ends the ask
 there, logging `Load: <path> will not read, so nothing is taken down and the running scene goes on`: the clock, the calendar's
@@ -632,7 +632,12 @@ year and the screens stand, as the original's load fails before its teardown (`F
 then built from the file read there, never read a second time. This is every load from a park: a Load Park row, Alt+L and
 Restart Park. **A deviation, the original's undefined case filled**: a file whose header reads and whose body will not
 inflate passes the original's checks and its teardown and ends in failure 6 with the state "(possibly) inconsistent"; here
-any failure of the read keeps the park. A file read in part (a module that stops partway) is a park, as before. Row `0x16`, the second Load, is reached by
+a read that throws (the open, the preamble, the block, the inflate) keeps the park. A file read in part (a module that stops partway) is a park, as before.
+The original's kept park is not wholly untouched: `FUN_00416240` copies the file's 32-byte block to `0x00802080`
+(`rep movs`, `0x0041637b`), the mask the next save writes (`0x00416102`) and `0x0051ab4d` and `0x0051ac60` keep, after
+`FUN_0051ab60`'s check and before its own magic check (`0x004163cb`, failure 6), so a file that fails after the copy (that
+magic check, and the pre-teardown checks from `0x00414ec1` to the memory file's write, failure 3 at `0x00414fde`) leaves the
+running park with that file's mask, where ours keeps the park's own; the preamble's failure 8 (`0x00416355`) comes before the copy. Row `0x16`, the second Load, is reached by
 nothing here. **The list's scrollbar is built** (Q918; `hud.md`, "The list's scrollbar"): the stream's track, arrows and thumb, shown for a folder
 longer than the window; a park loaded from the list, or entered, opens where its file's camera stood (`TakeSaved`, below, "Loading the modules", Camera).
 

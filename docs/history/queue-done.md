@@ -13067,8 +13067,8 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   (`RunFailure`, a deviation in the manner of Q978): its filter logs `Run failure: the game stops on an unhandled
   exception:` and the stack before anything unwinds, an SDL box titled "OpenTPW stopped" names the cause's first line, says
   nothing was saved and where the log is (`Run failure: ...` log lines, `OPENTPW_NO_MESSAGE_BOX` keeps it off), the audio
-  device is closed and the exit code is 1. Nothing is saved: neither the park's leaving nor the players' save runs, as a
-  frame that threw may have left them half-changed. The debug console's `throw` is the instrument. Seen off-screen in a
+  device is closed and the exit code is 1. Nothing is saved for an exception out of the loop: neither the park's leaving nor the players' save runs, as a
+  frame that threw may have left them half-changed (one out of the close comes as they are written: the run 22 review's fix says so in the box). The debug console's `throw` is the instrument. Seen off-screen in a
   cloud container (the stock jungle park, `throw`: the log line and stack, the suppressed box's line, exit code 1, nothing
   written to the run's `save/` after it); not seen: the box itself, Windows and macOS, an exception on another thread
   (still the runtime's), and what the original does when its loop fails (not in `docs/exe/`, no Ghidra).
