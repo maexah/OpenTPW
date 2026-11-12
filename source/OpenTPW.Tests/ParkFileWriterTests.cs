@@ -2523,7 +2523,7 @@ public class ParkFileWriterTests
 			for ( var tick = 1; tick < 5000 && GameCalendar.Days < 3; ++tick )
 			{
 				GameCalendar.Update( tick );
-				weather.Turn();
+				weather.Turn( tick );
 			}
 
 			var written = weather.Written( file );
@@ -2595,7 +2595,7 @@ public class ParkFileWriterTests
 			for ( var sweep = 1; sweep <= 5; ++sweep )
 			{
 				GameCalendar.Update( sweep );
-				weather.Turn();
+				weather.Turn( sweep );
 			}
 
 			Assert.AreEqual( -5, weather.Written( null ).ThunderCountdown );

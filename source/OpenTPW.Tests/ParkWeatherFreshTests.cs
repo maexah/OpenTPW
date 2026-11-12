@@ -93,7 +93,7 @@ public class ParkWeatherFreshTests
 			var rolled = weather.Quality;
 
 			GameCalendar.Update( 1 );
-			weather.Turn();
+			weather.Turn( 1 );
 
 			var forecast = weather.Forecast;
 			var first = weather.Written( null );
@@ -107,7 +107,7 @@ public class ParkWeatherFreshTests
 			for ( var sweep = 2; sweep <= 92; ++sweep )
 			{
 				GameCalendar.Update( sweep );
-				weather.Turn();
+				weather.Turn( sweep );
 			}
 
 			Assert.AreEqual( (rolled, forecast), (weather.Quality, weather.Forecast), "stood to sweep 92" );
@@ -115,7 +115,7 @@ public class ParkWeatherFreshTests
 			Assert.AreEqual( 0L, weather.Written( null ).LastChanged );
 
 			GameCalendar.Update( 93 );
-			weather.Turn();
+			weather.Turn( 93 );
 
 			var delivered = Math.Clamp( forecast, 1, 100 );
 			var turned = weather.Written( null );
@@ -149,7 +149,7 @@ public class ParkWeatherFreshTests
 			Assert.AreNotEqual( 0L, weather.Written( null ).LastChanged );
 
 			GameCalendar.Update( 1 );
-			weather.Turn();
+			weather.Turn( 1 );
 
 			Assert.AreEqual( -1, weather.Forecast );
 
@@ -158,7 +158,7 @@ public class ParkWeatherFreshTests
 			for ( var sweep = 2; sweep <= 120 && first == 0; ++sweep )
 			{
 				GameCalendar.Update( sweep );
-				weather.Turn();
+				weather.Turn( sweep );
 
 				if ( weather.Forecast >= 0 )
 					first = sweep;

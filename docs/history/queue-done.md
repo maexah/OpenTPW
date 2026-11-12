@@ -12145,6 +12145,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q1165. The arrival manager reads this sweep's rain (from Q570).** From the run 22 review of Q570 (`review22/q570`,
+  finding 1). In the original the weather (thing 7) turns in the sweep's walk, before the tail, and the tail's arrival
+  manager then reads its drops (`FUN_004cf5b0`, `0x004cf609` World_Weather, `0x004cf60e` `mov ecx,[eax+0x30]`, k 0.8 or 1.2
+  at `0x00700368`/`0x00700364`), so a load is sized with this sweep's rain. Ours runs the arrival manager in
+  `ParkPeople.Sweep` (`StepArrivals`, `Raining()`) before `ParkLoop.Tail`'s `weather.Turn()`, so on the sweep where the drops
+  cross nought a load is sized with the previous turn's rain (a third more or fewer guests). Said at `ParkLoop.Tail` and in
+  `weather.md`. A possible fix: turn the weather in `ParkPeople.Sweep` before `StepArrivals`, its day read from the date of
+  `State.GameTick` and not from the compared `GameCalendar.Days`. Test: a sweep whose turn starts or stops the rain sizes
+  its load with the new drops' k. Confirm: the weather's and the arrivals' log lines on the sweep the rain starts, read
+  against the original's drops and load at that sweep.
 
 ## B. Docs and comments
 

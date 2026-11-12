@@ -1111,7 +1111,6 @@ filed the items that cite it.
   starts on animation 0, which its remarks give as a deviation no shipped bank reaches. Dead by content today:
   build it as the original's or leave the count, on Alexah's word.
 
-
 - [ ] **Q1316. The handyman loaded walking to litter or sweeping: his walk off photographed, and the job itself (from Q1154).**
   Q1154 made one loaded in state 8 or 9 fall to idle (`StaffBehaviour.Step`'s default arm, counted as
   `HANDYMAN_LITTER_STATE_8` and `_9`, a deviation said at the site) and confirmed it by census only, off-screen in a cloud
@@ -2243,16 +2242,14 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   finance and park-info toggles and the list headings' buttons letter one way always. First read which of Lost Kingdom's
   buttons are of the class (their layouts' controls), then build the states. Confirm: hover and press one toggle in both
   games, photographs side by side.
-- [ ] **Q1165. The arrival manager reads this sweep's rain (from Q570).** From the run 22 review of Q570 (`review22/q570`,
-  finding 1). In the original the weather (thing 7) turns in the sweep's walk, before the tail, and the tail's arrival
-  manager then reads its drops (`FUN_004cf5b0`, `0x004cf609` World_Weather, `0x004cf60e` `mov ecx,[eax+0x30]`, k 0.8 or 1.2
-  at `0x00700368`/`0x00700364`), so a load is sized with this sweep's rain. Ours runs the arrival manager in
-  `ParkPeople.Sweep` (`StepArrivals`, `Raining()`) before `ParkLoop.Tail`'s `weather.Turn()`, so on the sweep where the drops
-  cross nought a load is sized with the previous turn's rain (a third more or fewer guests). Said at `ParkLoop.Tail` and in
-  `weather.md`. A possible fix: turn the weather in `ParkPeople.Sweep` before `StepArrivals`, its day read from the date of
-  `State.GameTick` and not from the compared `GameCalendar.Days`. Test: a sweep whose turn starts or stops the rain sizes
-  its load with the new drops' k. Confirm: the weather's and the arrivals' log lines on the sweep the rain starts, read
-  against the original's drops and load at that sweep.
+- [ ] **Q1652. The arrival manager's rain read against the original (from Q1165).** Q1165 turned ours' weather in the
+  sweep's walk, before the arrival manager, and confirmed it off-screen in ours only (a cloud lane: no original, no
+  Proton, no Ghidra; `docs/STATUS.md`, "Not verified", has its log lines: Lost Kingdom paused, `clock 1263`, `weather
+  20`, one sweep logged `8 arriving on mGameTick 1264 ... in rain` with `drops=20`; with `weather 78` over 20 drops, `13
+  ... no rain` with `drops=0`). Confirm in the original under Proton (`docs/TOOLING.md`, "The original under Proton"):
+  on the sweep its rain starts, read its drops (`[weather thing + 0x30]`, `0x004cf60e`) and the load's size (the arrival
+  loads' ring, `+0x216d8`) against ours' on the same sweep; and in Ghidra, whether any thing of the stock park turns
+  between the weather (thing 7) and the advisor (thing 3), since ours turns none there.
 - [ ] **Q1166. A looped Layer I voice's later passes start one frame in.** From the run 22 review of Q659 (`review22/q659`,
   `VERIFY-6.md` F1). In the original a looped voice of an in-memory bank (BANK byte +9 bit 0x1; `0x006ba690`,
   `0x006ba725`) rewinds through `0x006c84a0`, which for Layer I decodes and drops 0x300 bytes (`0x006c84b5`..`0x006c84cc`),

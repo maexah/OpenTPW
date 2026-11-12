@@ -221,7 +221,7 @@ public sealed class ParkWeather : Entity
 
 		// The original's constructor rolls a quality and stores it unapplied (0x00511fc4), its stamps nought and
 		// its wind 90 at 0.5, and a fresh park stands so: dry until its first forecast lands.
-		Quality = Roll();
+		Quality = Roll( GameCalendar.Season );
 		WindDirection = ConstructedWind;
 		WindForce = ConstructedForce;
 
@@ -313,14 +313,19 @@ public sealed class ParkWeather : Entity
 	internal int Turns { get; private set; }
 
 	/// <summary>
-	/// One weather tick - the body of FUN_00512880 - taken in the sweep's tail after the calendar's compare
-	/// (<see cref="ParkLoop"/> says why there), so it reads the date of its own sweep.
+	/// One weather tick - the body of FUN_00512880 - taken in the sweep's walk before the advisor's turn and the arrival
+	/// manager's (<see cref="ParkPeople.Sweep"/>), so a load is sized with this turn's drops. It reads the day and the
+	/// season of <paramref name="gameTick"/>, the sweep's own <c>mGameTick</c>, as the compare after it will set them
+	/// (<see cref="GameCalendar.DaysAt"/>), as the original's reads the live clock (<c>0x005128cd</c>, <c>0x005129be</c>).
 	/// </summary>
-	internal void Turn()
+	internal void Turn( int gameTick )
 	{
 		++Turns;
-		Deliver();
-		Schedule();
+
+		var day = GameCalendar.DaysAt( gameTick );
+
+		Deliver( day );
+		Schedule( day, GameCalendar.SeasonAt( gameTick ) );
 		StepRain();
 		Strike();
 		Thunder();
@@ -330,16 +335,16 @@ public sealed class ParkWeather : Entity
 	/// A forecast that has come due is applied and cleared. The original keeps the pending quality in
 	/// the thing's own forecast record at +0x20..+0x2c and tests the flag byte at +0x2c first thing.
 	/// </summary>
-	private void Deliver()
+	private void Deliver( int day )
 	{
-		if ( Forecast < 0 || GameCalendar.Days < _forecastDueDay )
+		if ( Forecast < 0 || day < _forecastDueDay )
 			return;
 
 		Apply( Forecast );
 
 		Forecast = -1;
 		_forecastDueDay = -1;
-		_lastChangedDay = GameCalendar.Days;
+		_lastChangedDay = day;
 	}
 
 	/// <summary>
@@ -364,18 +369,18 @@ public sealed class ParkWeather : Entity
 	/// is <b>not established</b>; only that it schedules this way.
 	/// </para>
 	/// </summary>
-	private void Schedule()
+	private void Schedule( int day, int season )
 	{
 		if ( Forecast >= 0 )
 			return;
 
 		var lead = Math.Max( _daysBetweenChanges - _daysOfWarning, 0 );
 
-		if ( _lastChanged != 0 && GameCalendar.Days < _lastChangedDay + lead )
+		if ( _lastChanged != 0 && day < _lastChangedDay + lead )
 			return;
 
-		Forecast = Roll();
-		_forecastDueDay = GameCalendar.Days + _daysOfWarning;
+		Forecast = Roll( season );
+		_forecastDueDay = day + _daysOfWarning;
 
 		var made = CalendarStamp();
 		_lastForecast = (made, ForecastDue( made, _daysOfWarning ), Forecast);
@@ -398,10 +403,8 @@ public sealed class ParkWeather : Entity
 	/// A quality for the season, from FUN_00512e10: usually the season's average give or take its
 	/// tolerance, but every so often a wholly random one instead.
 	/// </summary>
-	private int Roll()
+	private int Roll( int season )
 	{
-		var season = GameCalendar.Season;
-
 		if ( _rng.Next( 100 ) < _exceptional[season] )
 			return _rng.Next( 100 );
 

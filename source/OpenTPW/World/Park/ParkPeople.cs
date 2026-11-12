@@ -2373,9 +2373,10 @@ public sealed partial class ParkPeople : Entity
 	/// <summary>
 	/// The thing sweep (<c>FUN_00516380</c>, <c>0x0054f7bb</c>): one turn of every guest, member of staff and ride, which the
 	/// park's loop runs on every eighth 31 ms tick (<see cref="ThingTickEvery"/>), at most <see cref="SweepsAFrame"/> a frame.
-	/// <paramref name="tick"/> is the 31 ms tick's number, which only the sprites' clock reads.
+	/// <paramref name="tick"/> is the 31 ms tick's number, which only the sprites' clock reads; <paramref name="weather"/>
+	/// takes its turn in the walk, before the advisor's and the arrival manager's.
 	/// </summary>
-	internal void Sweep( int tick )
+	internal void Sweep( int tick, ParkWeather? weather = null )
 	{
 		++SweepsRun;
 
@@ -2524,6 +2525,14 @@ public sealed partial class ParkPeople : Entity
 
 		TakeTheRidesTurns( thingTick );
 		RetryGateClose();
+
+		// The weather's turn, thing 7's (FUN_00512880, FUN_0050b360's arm 0xf): after the guests' and the rides', which read
+		// the drops it left last sweep, and before the advisor's, thing 3's, the list being swept newest first; so the
+		// arrival manager in the tail sizes a load with this turn's drops (0x004cf60e). It reads the date of this sweep's
+		// mGameTick, which the compare after the sweep does not change (docs/exe/weather.md, "The calendar"). The original
+		// skips the walk, its weather with it, in world state 4, the park's end (0x0051639e); ours turns the weather whatever
+		// the state: gate it here when Q404 builds the end.
+		weather?.Turn( State.GameTick );
 
 		// The advisor's turn is the walk's last: he is a thing (model 11, FUN_0050b360's arm 0xb), the list is
 		// swept newest first, and the two things made before him have no arm, so a message posted on any

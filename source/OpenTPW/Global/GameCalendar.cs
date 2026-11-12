@@ -106,7 +106,20 @@ public static class GameCalendar
 	/// broken spot in the game's own style beats copying the breakage.
 	/// </para>
 	/// </summary>
-	public static int Season => Math.Clamp( Now.Month / 3, 0, 3 );
+	public static int Season => SeasonOf( Now );
+
+	/// <summary>
+	/// The <see cref="Days"/> the compare of <paramref name="gameTick"/> sets: as it stands, or one more where that tick's
+	/// date is on another day than the last compare's. The weather, which turns in the sweep before the compare, reads its
+	/// day by this, as the original's reads the date of the live <c>mGameTick</c> (<c>FUN_004f8690</c>, <c>0x004f86a1</c>).
+	/// </summary>
+	public static int DaysAt( int gameTick )
+		=> gameTick != Counter && DateOf( gameTick ).Day != _dayAtLastUpdate ? Days + 1 : Days;
+
+	/// <summary>The <see cref="Season"/> of <paramref name="gameTick"/>'s date (<c>FUN_004f8770</c> from the live <c>mGameTick</c>, <c>0x004f8781</c>).</summary>
+	public static int SeasonAt( int gameTick ) => SeasonOf( DateOf( gameTick ) );
+
+	private static int SeasonOf( DateTime date ) => Math.Clamp( date.Month / 3, 0, 3 );
 
 	// The clock's mMonthAtLastUpdate (1-based here), mDayAtLastUpdate and the year at +0x18.
 	private static int _dayAtLastUpdate;

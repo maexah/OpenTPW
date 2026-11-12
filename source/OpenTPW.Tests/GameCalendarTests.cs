@@ -286,4 +286,28 @@ public class GameCalendarTests
 		GameCalendar.Rebase( 4, LostKingdom with { FunnySecsPerRealSec = 0 } );
 		Assert.AreEqual( new DateTime( 2000, 1, 1, 4, 10, 0 ), GameCalendar.Now );
 	}
+
+	/// <summary>
+	/// <b>A sweep's own tick is read ahead of its compare</b>, as the weather reads it in the sweep's walk (Q1165): compared on
+	/// 1382, 29 February 2000 23:35, tick 1383 is 1 March 00:37, one day edge on and season 1 where the compared date's is 0; tick
+	/// 1382 is the day as compared; and once 1383 is compared it reads as the compare set it.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> <see cref="GameCalendar.DaysAt"/> without the edge to come; <see cref="GameCalendar.SeasonAt"/>
+	/// from the compared date.</remarks>
+	[TestMethod]
+	public void ASweepsTickIsReadAheadOfItsCompare()
+	{
+		Assert.IsTrue( SweepUntil( () => GameCalendar.Counter == 1382 ) );
+		Assert.AreEqual( new DateTime( 2000, 2, 29, 23, 35, 0 ), GameCalendar.Now );
+
+		var days = GameCalendar.Days;
+
+		Assert.AreEqual( (days + 1, 1, 0), (GameCalendar.DaysAt( 1383 ), GameCalendar.SeasonAt( 1383 ), GameCalendar.Season) );
+		Assert.AreEqual( days, GameCalendar.DaysAt( 1382 ) );
+
+		GameCalendar.Update( 1383 );
+
+		Assert.AreEqual( (days + 1, 1), (GameCalendar.Days, GameCalendar.Season) );
+		Assert.AreEqual( (days + 1, 1), (GameCalendar.DaysAt( 1383 ), GameCalendar.SeasonAt( 1383 )) );
+	}
 }

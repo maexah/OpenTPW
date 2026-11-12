@@ -9,7 +9,8 @@ namespace OpenTPW.Tests;
 
 /// <summary>
 /// The sweep's tail in the park's loop (<see cref="ParkLoop"/>): after each sweep the calendar's compare and its turns, as the
-/// original's tail compares at the end of every sweep (<c>0x00516695</c> -> <c>0x004d7b3b</c>), then the weather's turn. Driven
+/// original's tail compares at the end of every sweep (<c>0x00516695</c> -> <c>0x004d7b3b</c>); and the weather's turn in the
+/// sweep's walk, before the arrival manager's (<see cref="ParkPeople.Sweep"/>). Driven
 /// through Lost Kingdom's file a frame at a time, as <see cref="GameClock"/> hands the loop its ticks.
 /// </summary>
 [TestClass]
@@ -157,8 +158,8 @@ public class ParkSweepTailTests
 	/// sweep and the forecast lands on the sweep whose compare turns its fifth day edge, 93, one sweep a frame
 	/// (<c>docs/exe/weather.md</c>, "A park's first days": the original's on 94, by instants, Q529).
 	/// </summary>
-	/// <remarks><b>Mutations:</b> the weather's turn before the compare, which reads the day before the first edge and lands on
-	/// 71.</remarks>
+	/// <remarks><b>Mutations:</b> the weather's turn, before the compare, reading the compared day (<see cref="GameCalendar.Days"/>)
+	/// and not its own sweep's (<see cref="GameCalendar.DaysAt"/>), which is a day behind from the first edge and lands on 71.</remarks>
 	[TestMethod]
 	public void AFreshParksFirstForecastLandsOnTheSweepOfItsDay()
 	{
@@ -189,6 +190,72 @@ public class ParkSweepTailTests
 		{
 			Close( park );
 		}
+	}
+
+	/// <summary>The wait's mark put ahead of the clock, so the next sweep finds a load due (the wait wraps).</summary>
+	private static void MakeALoadDue( Park park )
+		=> typeof( ParkPeople ).GetField( "_arrivalMark", BindingFlags.Instance | BindingFlags.NonPublic )!
+			.SetValue( park.People, park.State.GameTick + 8 );
+
+	/// <summary>
+	/// A load called on one sweep of Lost Kingdom's file, its weather forced to <paramref name="before"/> a sweep ahead
+	/// (none where null) and to <paramref name="quality"/> just ahead of the load's sweep: the drops after that sweep's turn,
+	/// the load's size, and what the arrival manager would size it at in rain and in fair weather.
+	/// </summary>
+	private static (int Drops, int Size, int Rain, int Fair) LoadOn( int? before, int quality )
+	{
+		using var clock = new SimulationClockScope();
+		Park? park = null;
+
+		try
+		{
+			park = Open();
+
+			if ( before is { } first )
+			{
+				park.Weather.DebugQuality( first );
+				Frame( park, ParkPeople.ThingTickEvery );
+				Assert.IsFalse( park.People.LoadHeld, "no load before the load's sweep" );
+			}
+
+			var dropsBefore = park.Weather.Drops;
+			park.Weather.DebugQuality( quality );
+			MakeALoadDue( park );
+			Frame( park, ParkPeople.ThingTickEvery );
+
+			Assert.IsTrue( park.People.LoadHeld, $"a load called, the drops {dropsBefore} before its sweep" );
+			var worth = park.People.Behaviour.ParkExcitement;
+
+			return (park.Weather.Drops, park.People.StillToDrop, park.People.LoadSize( worth, true ), park.People.LoadSize( worth, false ));
+		}
+		finally
+		{
+			Close( park );
+		}
+	}
+
+	/// <summary>
+	/// <b>A sweep whose weather turn starts or stops the rain sizes its load with the new drops</b> (Q1165): the original's
+	/// weather, thing 7, turns in the sweep's walk and its arrival manager reads the drops after it, in the tail
+	/// (<c>FUN_004cf5b0</c>, <c>0x004cf60e</c>: k 0.8 in rain, 1.2 without, <c>0x00700368</c>/<c>0x00700364</c>). Lost
+	/// Kingdom's file, a load made due: dry with a rain quality of 20 forced just before, the sweep's turn takes the drops
+	/// from nought to 20 and the load is the rain's 3; raining 20 drops with a dry 78 forced just before, the turn takes
+	/// them to nought and the load is the fair weather's 4 (a park handed no catalogue, so worth less than the stock park's 13).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the weather turned after the sweep, in the loop's tail (4 and 3, one turn behind); the
+	/// weather not turned on the sweep at all.</remarks>
+	[TestMethod]
+	public void ASweepWhoseTurnStartsOrStopsTheRainSizesItsLoadWithTheNewDrops()
+	{
+		var starts = LoadOn( null, 20 );
+
+		Assert.AreEqual( (3, 4), (starts.Rain, starts.Fair), "the load in rain and without" );
+		Assert.AreEqual( (20, 3), (starts.Drops, starts.Size), "the rain started on the load's sweep: the rain's k" );
+
+		var stops = LoadOn( 20, 78 );
+
+		Assert.AreEqual( (3, 4), (stops.Rain, stops.Fair), "the load in rain and without" );
+		Assert.AreEqual( (0, 4), (stops.Drops, stops.Size), "the rain stopped on the load's sweep: the fair weather's k" );
 	}
 
 	/// <summary>An entity that reads the park's clock at its turn in the walk.</summary>

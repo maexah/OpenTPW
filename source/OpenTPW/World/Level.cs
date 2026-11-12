@@ -1874,9 +1874,9 @@ public class Level
 
 	/// <summary>
 	/// The world's part of a frame: a park's loop takes the frame's ticks one at a time through every system before anything
-	/// is done once a frame, as the original's loop runs before its frame's work (<see cref="ParkLoop"/>), each sweep followed
-	/// by <see cref="SweepTail"/> and the weather's turn; then every entity's once-a-frame work, which so sees all the frame's
-	/// ticks taken.
+	/// is done once a frame, as the original's loop runs before its frame's work (<see cref="ParkLoop"/>), the weather turning
+	/// in each sweep and each sweep followed by <see cref="SweepTail"/>; then every entity's once-a-frame work, which so sees
+	/// all the frame's ticks taken.
 	/// </summary>
 	private void RunTheWorld()
 	{
