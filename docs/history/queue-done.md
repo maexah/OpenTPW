@@ -12260,6 +12260,13 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   No game run.
   Done 2026-10-11 on Alexah's word, at the week-end audit's close: the file is `docs/history/CLEANUP-PLAN.md`, as it was
   written, and `docs/history/README.md` lists it.
+- [x] **Q14. Comment sweep of the cleanup commits.** Replace history-voice comments with what the code does now,
+  found by member because line numbers go stale. Left: `AudioListener.AttenuationTo`'s summary nests a `<para>`
+  inside a `<para>`, and `ParkCamcorderCameraMode.DebugWalk` steps a per-frame `WalkSpeed / 60f`; make it use
+  `Time.Delta` (rule 10). No game run.
+  Done 2026-11-12 (cloud lane c24): the `<para>` closed before the next one opens; `DebugWalk` steps
+  `WalkSpeed * Time.Delta` each frame, so a paused clock walks nothing and the console's `walk` says so; test
+  `TheDebugWalkStepsOnTheFrameTime`, and the walk tests pin a 1/60 s frame.
 
 ## C. Alexah's list: cause known, one session each
 

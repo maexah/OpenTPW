@@ -2388,10 +2388,6 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
 
 ## B. Docs and comments
 
-- [ ] **Q14. Comment sweep of the cleanup commits.** Replace history-voice comments with what the code does now,
-  found by member because line numbers go stale. Left: `AudioListener.AttenuationTo`'s summary nests a `<para>`
-  inside a `<para>`, and `ParkCamcorderCameraMode.DebugWalk` steps a per-frame `WalkSpeed / 60f`; make it use
-  `Time.Delta` (rule 10). No game run.
 - [ ] **Q81. The FileFormats docs still disagree with themselves and with the game.** From the clone's 2026-09-18
   audit, as the 2026-09-24 staleness audit found it (`docs/history/fileformats-docs-ledger.md`). Most of it is fixed,
   and every branch that held a fix is merged into the clone's master, so no page exists in two versions and the

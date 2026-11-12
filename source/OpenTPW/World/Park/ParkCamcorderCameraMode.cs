@@ -509,14 +509,16 @@ public sealed class ParkCamcorderCameraMode : CameraMode
 	}
 
 	/// <summary>
-	/// Walks for a number of frames at the ordinary walking speed, for the debug console - the capture
-	/// this camera's collision has to be confirmed by cannot be taken with <see cref="StandAt"/>, which
-	/// puts the viewer down rather than walking them there and so crosses no cell edge at all.
+	/// Walks <paramref name="frames"/> steps at the ordinary walking speed, each as long as this frame
+	/// (<see cref="Time.Delta"/>, rule 10), for the debug console - the capture this camera's collision has
+	/// to be confirmed by cannot be taken with <see cref="StandAt"/>, which puts the viewer down rather than
+	/// walking them there and so crosses no cell edge at all. A paused clock reads a zero delta, so it walks
+	/// nothing.
 	/// </summary>
 	internal static void DebugWalk( float forward, float right, int frames )
 	{
 		for ( var frame = 0; frame < frames; ++frame )
-			Step( forward, right, WalkSpeed / 60f );
+			Step( forward, right, WalkSpeed * Time.Delta );
 	}
 
 	/// <summary>
