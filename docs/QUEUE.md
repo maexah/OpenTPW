@@ -3416,9 +3416,10 @@ state machine.
     `FUN_004504c0( 1, 0 )` at `0x5d8503` after naming the "lobby" folder (`0x5d84c7`, `0xf816c0`), which loads `%s\Terrain`
     `base.md2` (`0x450523`) into `[0x79fcb4]`, the terrain base model a park uses: the original's lobby loads it as its land
     model. Not read: whether its sea meshes are drawn each frame.
-- [ ] **Q79. Robustness (plan item 12, the rest).** Atomic save writes exist (`BaseFileSystem.WriteAllBytes`) and
-  input is dropped while unfocused (Q42). Open: top-level error containment (nothing catches a failure of the run loop; a failed start is `StartFailure`, Q978),
-  and easing the render rate and music while the window is unfocused.
+- [ ] **Q1208. Ease the render rate and the music while the window is unfocused (Q79's leftover).** From Q79's split.
+  Input is dropped while unfocused (Q42), but the loop still draws as fast as it may and the music plays on at full
+  volume. Settle first what the original does on `WM_ACTIVATEAPP` (its frame pacing and its sound) from the disassembly,
+  then match it, or say the deviation at the site.
 - [ ] **Q80. Two tests the lobby audit asked for (plan item 13, the rest).** A save round trip against a real
   game-written file (it wants a sitting with the original to make one), and `LobbyScript` over the four shipped island
   scripts. Sound categories are covered by `SoundCategoryTests`.

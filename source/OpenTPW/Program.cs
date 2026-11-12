@@ -25,8 +25,8 @@ public class Program
 		catch ( Exception e ) when ( StartFailure.IsFailedStart( e ) )
 		{
 			// Before the main loop, nobody is watching a terminal: the filter has logged the exception and its stack
-			// before anything unwound, and the box has the message of the first one. An exception once the loop runs is not
-			// caught here and is reported as it always was.
+			// before anything unwound, and the box has the message of the first one. An exception once the loop runs is the
+			// next catch's.
 
 			// An exception ahead of the game folder's being found leaves no log yet: keep it where a failed look does.
 			if ( ConsoleLog.Path.Length == 0 )
@@ -35,6 +35,12 @@ public class Program
 			StartFailure.Show( StartFailure.Compose( StartFailure.First ?? e, ConsoleLog.Path ) );
 
 			Environment.ExitCode = 1;
+		}
+		catch ( Exception e ) when ( RunFailure.IsRunFailure( e ) )
+		{
+			// Once the loop runs (Q79, a deviation): the filter has logged it, and this says so in a box, saves nothing and
+			// ends with exit code 1 rather than the runtime's crash - see RunFailure.
+			RunFailure.End( e );
 		}
 	}
 }

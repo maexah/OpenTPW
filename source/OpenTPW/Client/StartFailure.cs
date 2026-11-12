@@ -144,24 +144,31 @@ internal static class StartFailure
 	/// Shows <paramref name="message"/> in an error box and answers whether SDL did. The log is told which, so a
 	/// start that showed nothing says why.
 	/// </summary>
-	public static bool Show( string message ) => Show( message, ShowWithSdl, line => Log.Info( line ), line => Log.Warning( line ) );
+	public static bool Show( string message ) => Show( message, Title, Label );
+
+	/// <summary><see cref="Show(string)"/> under another title, its log lines opening with <paramref name="label"/>: a failure once the game runs (<see cref="RunFailure"/>).</summary>
+	internal static bool Show( string message, string title, string label )
+		=> Show( message, text => ShowWithSdl( title, text ), line => Log.Info( line ), line => Log.Warning( line ), label );
+
+	/// <summary>What the log's lines of a failed start's box open with.</summary>
+	public const string Label = "Start failure";
 
 	/// <summary>The SDL box: null where it was shown, else what SDL said. Throws where SDL itself would not load.</summary>
-	private static unsafe string? ShowWithSdl( string message )
+	private static unsafe string? ShowWithSdl( string title, string message )
 	{
 		var sdl = NeoVeldrid.Sdl2.Sdl2Window.SdlInstance;
 
-		return sdl.ShowSimpleMessageBox( (uint)Silk.NET.SDL.MessageBoxFlags.Error, Title, message, (Silk.NET.SDL.Window*)null ) == 0
+		return sdl.ShowSimpleMessageBox( (uint)Silk.NET.SDL.MessageBoxFlags.Error, title, message, (Silk.NET.SDL.Window*)null ) == 0
 			? null
 			: sdl.GetErrorS();
 	}
 
 	/// <summary><see cref="Show(string)"/> with the box and the log's two lines given, for a test. The box is handed the message wrapped; the log's line has it whole.</summary>
-	internal static bool Show( string message, Func<string, string?> box, Action<string> info, Action<string> warn )
+	internal static bool Show( string message, Func<string, string?> box, Action<string> info, Action<string> warn, string label = Label )
 	{
 		if ( Environment.GetEnvironmentVariable( SuppressVariable ) is { Length: > 0 } )
 		{
-			info( $"Start failure: no message box, {SuppressVariable} is set: {message.ReplaceLineEndings( " | " )}" );
+			info( $"{label}: no message box, {SuppressVariable} is set: {message.ReplaceLineEndings( " | " )}" );
 			return false;
 		}
 
@@ -174,24 +181,24 @@ internal static class StartFailure
 		catch ( Exception e )
 		{
 			// SDL itself would not load: the log and the terminal are all there is.
-			warn( $"Start failure: no message box, SDL could not be used ({e.GetType().Name}: {e.Message})" );
+			warn( $"{label}: no message box, SDL could not be used ({e.GetType().Name}: {e.Message})" );
 			return false;
 		}
 
 		if ( error is not null )
 		{
-			warn( $"Start failure: no message box, SDL said '{error}'" );
+			warn( $"{label}: no message box, SDL said '{error}'" );
 			return false;
 		}
 
 		// Outside the try: the log's hook may draw (the loading screen's), and a throw from it says nothing about the box, which was shown.
 		try
 		{
-			info( "Start failure: message box shown" );
+			info( $"{label}: message box shown" );
 		}
 		catch ( Exception e )
 		{
-			Console.Error.WriteLine( $"Start failure: the log's hook threw after the box line ({e.GetType().Name}: {e.Message})" );
+			Console.Error.WriteLine( $"{label}: the log's hook threw after the box line ({e.GetType().Name}: {e.Message})" );
 		}
 
 		return true;
