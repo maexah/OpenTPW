@@ -30,8 +30,9 @@ namespace OpenTPW;
 /// belong to the player, in their gms.dat (<see cref="PlayerOptions"/>), with the movie volume again - the
 /// player's copy wins when they are picked. Every gms.dat written takes the options as they stand.
 /// <para>
-/// The six that are OpenTPW's own - <see cref="DisplayMode"/>, <see cref="FullScreenSize"/>,
-/// <see cref="Faithful"/>, <see cref="Gpu"/>, <see cref="UpdateCheck"/> and <see cref="NoticesTold"/> - go in a third file, save\opentpw.cfg (<see cref="SaveFolder.LoadDisplay"/>), rather than into fields the
+/// The eight that are OpenTPW's own - <see cref="DisplayMode"/>, <see cref="FullScreenSize"/>,
+/// <see cref="Faithful"/>, <see cref="Gpu"/>, <see cref="UpdateCheck"/>, <see cref="NoticesTold"/>, <see cref="VSync"/> and
+/// <see cref="FrameLimit"/> - go in a third file, save\opentpw.cfg (<see cref="SaveFolder.LoadDisplay"/>), rather than into fields the
 /// original's own file has no room for. That way Config.tcf stays a file the original can still read.
 /// </para>
 /// </para>
@@ -102,6 +103,21 @@ internal sealed class GameOptions
 	/// to be told again.
 	/// </summary>
 	public HashSet<string> NoticesTold { get; } = new( StringComparer.OrdinalIgnoreCase );
+
+	/// <summary>
+	/// Whether each frame waits for the display's refresh as it is presented (Q19, <see cref="FramePacing"/>). <b>OpenTPW's own</b>,
+	/// on by default; opentpw.cfg's <c>vsync off</c> turns it off. Read once as the game starts, before the device is made
+	/// (<see cref="SaveFolder.LoadDisplay"/>); the Options screen has no row for it yet (Q1592).
+	/// </summary>
+	public bool VSync { get; set; } = true;
+
+	/// <summary>
+	/// The frame limit (Q19): frames a second, at least <see cref="FramePacing.LowestLimit"/>, or <see cref="FramePacing.Unlimited"/>.
+	/// <b>OpenTPW's own</b>; opentpw.cfg's <c>framelimit</c> line sets it. With no line it is <see cref="FramePacing.NotChosen"/>,
+	/// and the start takes the monitor's refresh rate (<see cref="FramePacing.FirstLimit"/>), which the next write of the file keeps.
+	/// The Options screen has no row for it yet (Q1592).
+	/// </summary>
+	public int FrameLimit { get; set; } = FramePacing.NotChosen;
 
 	/// <summary>+0x08: low, medium or high, as 0, 1 or 2.</summary>
 	public int GraphicsQuality { get; set; } = 1;

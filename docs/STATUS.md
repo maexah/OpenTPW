@@ -42,17 +42,11 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the maintainer's pre-commit hook: grep it by Q-number.
 
-- **Q521 (a person's shadow at high detail in the orbit view, their own picture, unfogged):** built in a cloud container
-  (no Ghidra, no original, no photograph; the runs' output was not kept). Checked: `TheOrbitViewAtHighCastsTheBodysOwnPictureUnfogged`
-  (needs the game) and the updated `EachTierCastsItsKindInEachView` and `EachShadowPipelineHasItsFlags` pass, and three bugs put back
-  by hand (the old counted-not-drawn rule, first person's 0.25 lift, the silhouette's grey colour) each failed it; an off-screen run
-  at high (`save/Config.tcf` quality 2) logged `kind OrbitOwnPicture drawn 18 ... darkness 103 colour 0x67000000 lift 0.6` with no
-  `SPRITE_SHADOW_OWN_PICTURE` in the census, and one at medium kept `kind Silhouette drawn 18 ... colour 0xff989898`. Not checked:
-  what is drawn (no display to photograph; split as Q1588), and whether the original's non-`0x40000` arm sets no depth write
-  (taken from the item's text; needs Ghidra).
+- **Q19 (VSync and a frame limiter; the Options row split off as Q1592):** in a cloud container (no Ghidra, no original, no photograph; the run's output was not kept), the eight `FramePacingTests` (needing no game) pass, and seven bugs put back by hand (a fixed first limit, no floor at 30, VSync ignored, the due counted from the frame's start, no wait, the `vsync` line not read, the `framelimit` line not clamped) each failed one or more. Off-screen (`consolerun.py`, llvmpipe, a copied build at a 512 x 384 window, its own `opentpw.cfg`), the `Frames:` line read 22.68 ms a frame unlimited, 35.23 ms at `framelimit 30` (33.3 without its one 303 ms start-up hitch) and 26.22 ms at `framelimit 40` (25.0 without it), as predicted; a first launch logged the 60 taken where SDL says the refresh rate is 0 and wrote `framelimit 60`. Not checked: VSync's own pacing (Xvfb has no refresh to wait on), a real monitor's refresh rate being read, and the sleep's precision on Windows (SDL's timer resolution) or macOS; no Options row exists to photograph.
 
 ## Numbers (take counts fresh; these go stale within a day)
 
+- Linux, 2026-11-12, Q19 (`capped.sh`; VSync and a frame limiter; eight tests added, none needing the game; built in a cloud container, re-gated here after Q521): with the game, 5779 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5781; with no game named, 2497 passed, 0 failed, 3284 skipped.
 - Linux, 2026-11-12, Q521 (`capped.sh`; a person's shadow at high detail in the orbit view; one test added, needing the game; built in a cloud container, re-gated here after Q747): with the game, 5771 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5773; with no game named, 2489 passed, 0 failed, 3284 skipped.
 - Linux, 2026-11-12, Q747 (`capped.sh`; the Escape puff after the entry cancel; two tests added, needing the game; built in a cloud container, re-gated here after Q448): with the game, 5770 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5772; with no game named, 2489 passed, 0 failed, 3283 skipped.
 - Linux, 2026-11-12, Q448 (`capped.sh`; ride script REPAIREFFECT and BUMP 17; eight tests added, seven needing no game; built in a cloud container, re-gated here after Q684): with the game, 5768 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5770; with no game named, 2489 passed, 0 failed, 3281 skipped.
