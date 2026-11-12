@@ -3265,6 +3265,12 @@ customer (`mNumCustomers` `+0x1a0` nought, `0x004e2390`) and its item's descript
 whatever the object's level) is above nought (`0x004e23b2`); otherwise the first year's figure. So a new object's first customer lowers it. It is *not* a flat
 half. The same expression is packaged as `FUN_004e2400` and shown on the object's own window before the
 player sells, which is UITEXT 23 **"Scrap value"**.
+**OpenTPW** (Q1054): `ParkScrap.Percent` is the percentage and `ParkScrap.Value` the `price * percent / 100`; every reader
+named here calls them: the sale's refund (`ParkBuilding.Sell`, read before the thing leaves the state), a bare kart or water
+station's two pieces on a sale (`ParkTrackPieces.SellBareStation`: each piece `cost * % / 100`, then `2 * cost * % / 100`
+withdrawn, `0x00528179`), the queue drain's one-cell debit (`ParkPathBuilding.DrainQueue`, `0x00527fe8`), the track tool's per-piece refund (`ParkTrackTool.TakeBack`), the queue cell's
+(`ParkPathBuilding.QueueRefund`) and the object and shop windows' scrap row (`FUN_004e2400`). The windows' figure is not
+yet photographed beside the original's (Q1344).
 
 **Delete does NOT go through the interaction-mode system** - `FUN_0048cd10` calls `FUN_0052f200(0x33,1)`
 and then the map-click apply directly. Of the window's sell and move, only MOVE builds a mode (the ride window's

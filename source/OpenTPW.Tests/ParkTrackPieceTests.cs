@@ -174,6 +174,23 @@ public class ParkTrackPieceTests
 		Assert.AreEqual( 0xc, state.Record( 23, 20 ).TrackType, "op 0x83 stamps a water piece's other cells 0xc too (0x00538895)" );
 	}
 
+	/// <summary>
+	/// <b>At a percentage the two moves can differ by one</b>: each mouth piece refunds <c>cost * % / 100</c> (<c>FUN_0053b280</c>), then
+	/// <c>2 * cost * % / 100</c> is withdrawn (<c>0x00528179</c>); water's 250 at 33 per cent is 82 twice in and 165 out, the
+	/// balance one lower.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> one figure for both moves answers nought, the balance 1000; the whole price answers nought too.</remarks>
+	[TestMethod]
+	public void SellingABareStationAtAPercentageRefundsEachPieceAndWithdrawsTheTwo()
+	{
+		var state = new ParkState( parkIsClosed: false, visitorsToDate: 0, balance: 1000 );
+
+		ParkTrackPieces.LayStation( state, 2, 30, 24, 0 );
+
+		Assert.AreEqual( -1, ParkTrackPieces.SellBareStation( state, 2, 30, 24, 250, 33 ) );
+		Assert.AreEqual( 999, state.Balance );
+	}
+
 	[TestMethod]
 	public void SellingABareStationClearsItAndPaysNothingNet()
 	{
@@ -181,7 +198,7 @@ public class ParkTrackPieceTests
 
 		ParkTrackPieces.LayStation( state, 1, 30, 24, 0 );
 
-		Assert.AreEqual( 0, ParkTrackPieces.SellBareStation( state, 1, 30, 24, 200 ) );
+		Assert.AreEqual( 0, ParkTrackPieces.SellBareStation( state, 1, 30, 24, 200, 100 ) );
 
 		for ( var x = 26; x <= 37; ++x )
 		{
@@ -201,7 +218,7 @@ public class ParkTrackPieceTests
 		ParkTrackPieces.LayStation( state, 1, 30, 24, 0 );
 		state.SetRecord( 34, 25, state.Record( 34, 25 ) with { TrackNeighbours = 0x50, TrackDirection = 0x10 } );
 
-		Assert.IsNull( ParkTrackPieces.SellBareStation( state, 1, 30, 24, 200 ) );
+		Assert.IsNull( ParkTrackPieces.SellBareStation( state, 1, 30, 24, 200, 100 ) );
 		Assert.AreEqual( 0xb, state.Record( 34, 25 ).TrackType );
 
 		var other = new ParkState( parkIsClosed: false, visitorsToDate: 0 );
@@ -209,14 +226,14 @@ public class ParkTrackPieceTests
 		ParkTrackPieces.LayStation( other, 1, 30, 24, 0 );
 		other.SetRecord( 34, 27, other.Record( 34, 27 ) with { TrackType = 0xb, TrackParentId = 3103, TrackNeighbours = 0x01 } );
 
-		Assert.IsNull( ParkTrackPieces.SellBareStation( other, 1, 30, 24, 200 ), "a fifth anchor" );
+		Assert.IsNull( ParkTrackPieces.SellBareStation( other, 1, 30, 24, 200, 100 ), "a fifth anchor" );
 
 		var short_ = new ParkState( parkIsClosed: false, visitorsToDate: 0 );
 
 		ParkTrackPieces.LayStation( short_, 1, 30, 24, 0 );
 		short_.SetRecord( 30, 25, short_.Record( 30, 25 ) with { TrackType = 0, TrackParentId = 0 } );
 
-		Assert.IsNull( ParkTrackPieces.SellBareStation( short_, 1, 30, 24, 200 ), "a station section short" );
+		Assert.IsNull( ParkTrackPieces.SellBareStation( short_, 1, 30, 24, 200, 100 ), "a station section short" );
 		Assert.AreEqual( 0xb, short_.Record( 34, 25 ).TrackType );
 	}
 

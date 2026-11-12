@@ -12145,6 +12145,13 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q1054. The scrap percentage is built but its other readers still use the whole price (Q1052's tail).** **Done 2026-11-12 (cloud lane c56):** every reader calls `ParkScrap.Percent` and `ParkScrap.Value` (the sale, a bare station's two pieces, the track tool's pieces, the queue cell, both windows' scrap row); `SCRAP_VALUE_DEPRECIATION` is gone; the windows' photograph beside the original's is Q1344. `ParkScrap.Percent( now, built, customers, tier, item )` answers `FUN_004e2290`, and only
+  the queue cell's refund calls it. Three places still take the build price and count `SCRAP_VALUE_DEPRECIATION`: `ParkBuilding.Sell`'s refund (`price * percent / 100`,
+  `FUN_004dd0a0`), `ParkTrackTool.Remove`'s per-piece refund (`ParkTrackTool.cs`, the "scrap percentage" comment) and the object and shop windows' scrap row (`FUN_004e2400`: percent x `+0x1b8` / 100, `ParkObjectWindow`, `ParkShopWindow`).
+  The original shows the figure: Mumbo with 8 users and 19 days reads `Scrap value $ 500`, with none and 4 days `$ 1000` (`q1052/orig/run3/21-window.png`, `run4/09-window.png`); ours' window letters `$ 1000`
+  for both. Call `ParkScrap.Percent` with the thing's `Built`, `RingsFor( thing ).NumCustomers` and `UpgradeLevel`, and confirm a sale's balance step and the window's figure beside the original's.
+  Also counted: a queue cell whose owner ride cannot be found refunds its whole price (`QUEUE_REFUND_OWNER_NOT_FOUND`, `ParkPathBuilding.QueueRefund`; `FUN_004d99e0` answers thing nought there and the
+  original reads whatever thing nought holds), not met in play.
 
 ## B. Docs and comments
 

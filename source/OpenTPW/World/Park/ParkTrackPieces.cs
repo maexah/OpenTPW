@@ -257,12 +257,13 @@ public sealed class ParkTrackPieces : Entity
 
 	/// <summary>
 	/// What a sale of a kart or water ride does to its track, where all it owns is the station and the two mouths it was
-	/// bought with: each cell of the four anchors cleared, the two mouths refunded at their price and two pieces' worth
-	/// withdrawn (<c>FUN_00527ee0</c>, <c>0x00528179</c>; the refund's percentage is the scrap value's, taken as the whole,
-	/// as the sale's own is). Answers null where the ride owns more track, which is not cleared (<c>SALE_TRACK_TEARDOWN</c>),
-	/// else the money the two moves come to (nought).
+	/// bought with: each cell of the four anchors cleared, the two mouths refunded at the ride's scrap
+	/// <paramref name="percent"/> of their price each (<c>FUN_0053b280</c>, <see cref="ParkScrap.Value"/>) and two pieces'
+	/// worth withdrawn at the same percentage, <c>2 * price * percent / 100</c> (<c>FUN_00527ee0</c>, <c>0x00528179</c>), so
+	/// the two can differ by one where a piece's share does not divide evenly. Answers null where the ride owns more track,
+	/// which is not cleared (<c>SALE_TRACK_TEARDOWN</c>), else the balance's change.
 	/// </summary>
-	public static int? SellBareStation( ParkState state, int trackType, int x, int y, int price )
+	public static int? SellBareStation( ParkState state, int trackType, int x, int y, int price, int percent )
 	{
 		var owner = (ushort)MapStep.CellId( x, y );
 		var anchors = new List<(int X, int Y)>();
@@ -299,10 +300,13 @@ public sealed class ParkTrackPieces : Entity
 			}
 		}
 
-		state.Deposit( 2 * price );
-		state.Spend( 2 * price );
+		var refunded = 2 * ParkScrap.Value( price, percent );
+		var withdrawn = 2 * price * percent / 100;
 
-		return 0;
+		state.Deposit( refunded );
+		state.Spend( withdrawn );
+
+		return refunded - withdrawn;
 	}
 
 	/// <summary>What one new piece of a kart or water ride's track costs in the park now loaded - <c>Costs.KartTrackCell</c>

@@ -1194,10 +1194,12 @@ public static class ParkTrackTool
 	/// mode 0x35 its two clicks lay op <c>0x32</c> (<c>Track_ClearCell</c>, <c>0x0053b280</c>) over every anchor from the
 	/// run's end back to its start, each given the step toward the start (<c>FUN_0053aac0</c> from <c>0x00524960</c>), then
 	/// the mouth is tidied (<c>FUN_0052fc80</c>), its bend broken where the list is back at its first entry. A piece the run
-	/// laid falls below nought and goes, refunding its price; the start, which the run bumped, keeps its piece.
+	/// laid falls below nought and goes, refunding its <paramref name="price"/> at the ride's scrap <paramref name="percent"/>
+	/// (<see cref="ParkScrap.Percent(ParkState, ParkWorld.CatalogueObject, ParkItemCatalogue.Item)"/>); the start, which the
+	/// run bumped, keeps its piece.
 	/// </summary>
 	public static TakenBack TakeBack( ParkState state, ParkWorld.CatalogueObject ride, (int X, int Y) end, (int X, int Y) start,
-		int price, bool backToFirst )
+		int price, int percent, bool backToFirst )
 	{
 		var station = ParkTrackPieces.StationOf( ride.CellX, ride.CellY, ride.Angle );
 		var (cells, dx, dy) = CellsOf( end, start );
@@ -1205,7 +1207,7 @@ public static class ParkTrackTool
 		var refunded = 0;
 
 		foreach ( var at in cells )
-			refunded += ClearCell( state, at, (dx, dy), station.Mouth, station.OtherMouth, price, ref removed );
+			refunded += ClearCell( state, at, (dx, dy), station.Mouth, station.OtherMouth, price, percent, ref removed );
 
 		TidyMouth( state, station.Mouth, backToFirst );
 
@@ -1216,12 +1218,12 @@ public static class ParkTrackTool
 	/// Op <c>0x32</c> on one anchor, <c>Track_ClearCell( dx, dy, 1 )</c>: its overlap counter down by one (to −1 outright on
 	/// a step of nought but at the mouth); on a cell with one way on, unless a mouth, the link back toward the cells already
 	/// cleared goes, and a bend left with one link takes the way out of it; on a crossing that way's bit and both links on
-	/// the step's axis go. Below nought, and no mouth, the piece goes: its price refunded (<c>0x0053b603</c>..
+	/// the step's axis go. Below nought, and no mouth, the piece goes: its price at the percentage refunded (<c>0x0053b603</c>..
 	/// <c>0x0053b627</c>), each link let go at both ends, a neighbour left with one link turned to lead out of it, the anchor
 	/// and the cells of its two by two made bare and retiled to row <c>0x37</c>. The mouth then links back to its station.
 	/// </summary>
 	private static int ClearCell( ParkState state, (int X, int Y) at, (int Dx, int Dy) step, (int X, int Y) mouth,
-		(int X, int Y) otherMouth, int price, ref int removed )
+		(int X, int Y) otherMouth, int price, int percent, ref int removed )
 	{
 		if ( !ParkState.OnMap( at.X, at.Y ) )
 			return 0;
@@ -1280,7 +1282,7 @@ public static class ParkTrackTool
 
 			if ( cell.TrackOverlapCounter < 0 && !guarded )
 			{
-				refund = Remove( state, at, price );
+				refund = Remove( state, at, price, percent );
 				++removed;
 			}
 		}
@@ -1292,18 +1294,17 @@ public static class ParkTrackTool
 	}
 
 	/// <summary>The removal of <see cref="ClearCell"/>: answers the refund.</summary>
-	private static int Remove( ParkState state, (int X, int Y) at, int price )
+	private static int Remove( ParkState state, (int X, int Y) at, int price, int percent )
 	{
 		var cell = state.Record( at.X, at.Y ) with { TrackOverlapCounter = 0 };
 		var refund = 0;
 
 		// The refund is the price at the ride's scrap percentage (FUN_004e2290), 100 for a ride under thirty days old with
-		// no customer; ParkScrap.Percent computes it and is not yet applied here (Q1054), so the whole price comes back.
+		// no customer (0x0053b603..0x0053b627).
 		if ( cell.TrackType != 0x19 && price > 0 )
 		{
-			Unimplemented.Report( "SCRAP_VALUE_DEPRECIATION" );
-			state.Deposit( price );
-			refund = price;
+			refund = ParkScrap.Value( price, percent );
+			state.Deposit( refund );
 		}
 
 		foreach ( var bit in Bits )
@@ -1480,15 +1481,16 @@ public static class ParkTrackTool
 			|| !catalogue.TryGet( ride.CatalogueId, out var item ) )
 			return $"backspace: thing {ParkBuildMode.Serves} is gone";
 
-		return BacktrackOn( state, ride, ParkTrackPieces.PieceCost( level, item.TrackType ) );
+		return BacktrackOn( state, ride, ParkTrackPieces.PieceCost( level, item.TrackType ), ParkScrap.Percent( state, ride, item ) );
 	}
 
 	/// <summary>
 	/// <see cref="Backtrack"/> on a park and a ride, the list of run ends being <see cref="ParkBuildMode.Pending"/>: the last
 	/// run is popped, taken back and the anchor put at its start; the mouth's bend is broken where the list is then back at
-	/// its first entry (<c>FUN_0052fc80( count == 1 )</c>, <c>0x0052ff6e</c>..<c>0x00530005</c>).
+	/// its first entry (<c>FUN_0052fc80( count == 1 )</c>, <c>0x0052ff6e</c>..<c>0x00530005</c>). Each piece removed gives back
+	/// <paramref name="percent"/>, the ride's scrap percentage, of <paramref name="price"/>.
 	/// </summary>
-	internal static string BacktrackOn( ParkState state, ParkWorld.CatalogueObject ride, int price )
+	internal static string BacktrackOn( ParkState state, ParkWorld.CatalogueObject ride, int price, int percent )
 	{
 		var mouth = ParkTrackPieces.StationOf( ride.CellX, ride.CellY, ride.Angle ).Mouth;
 
@@ -1504,7 +1506,7 @@ public static class ParkTrackTool
 		}
 
 		var balance = state.Balance;
-		var taken = TakeBack( state, ride, end, start, price, backToFirst: ParkBuildMode.Pending.Count == 1 );
+		var taken = TakeBack( state, ride, end, start, price, percent, backToFirst: ParkBuildMode.Pending.Count == 1 );
 
 		ParkBuildMode.AnchorAt( start.X, start.Y );
 		ParkTrackPieces.Current?.Rebuild();

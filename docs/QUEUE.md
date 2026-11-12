@@ -605,13 +605,13 @@ filed the items that cite it.
   scales it by the age bucket's percentage (`FUN_004e2290`: `percent x +0x1b8 / 100`, the original's "$ 250"), `SCRAP_VALUE_DEPRECIATION`, counted
   where something is sold, at the shop window's scrap row and at the object window's. The percentage is built since Q1052
   (`ParkScrap.Percent`, `ItemDescriptionFile.ScrapValueAt`: the item's four-year `ScrapValueYear1`..`4` picked by the age, 100 only under 30 days with no customer yet); the row
-  and the sales that still count `SCRAP_VALUE_DEPRECIATION` are Q1054's.
+  and the sales that still counted `SCRAP_VALUE_DEPRECIATION` were Q1054's (built 2026-11-12; the photograph is Q1344's).
   (The object window's Age row is built: UITEXT 433, "{P8} days".) `ParkEntryPriceScreen`'s heading
   `0x4f3af` is empty, and its remark says "left empty and counted"; the original titles it with the name of the thing
   at world `+0x1da732`, `mParkGates` (`ParkWorld`), and its help row 191 reads "Park name - left-click to edit", so
   the title is the park's name and its edit is Q28's. The name is lettered by `UI_SetTitle` (`0x00485d20`, called at `0x00498e4c`): yellow, with the edge, in
   the stream's rect widened by half its width either side (749..1221 to 513..1457), where ours letters the empty heading white (Q676). `ParkGadget.ShowDate` prints the machine's short date (Q527). `ParkBuyScreen`'s description panel `0x1ea` draws its frame and the footprint picture, and neither the item's turning model nor its kind row `0x1ec`.
-  **Counted since Q865** (each where it is drawn: `SCRAP_VALUE_DEPRECIATION` at the object window's scrap row,
+  **Counted since Q865** (each where it is drawn: `SCRAP_VALUE_DEPRECIATION` at the object window's scrap row, gone since Q1054,
   `ENTRY_PRICE_TITLE_PARK_NAME`, `GADGET_DATE_UITEXT_448`, `BUY_SCREEN_ITEM_MODEL` and `BUY_SCREEN_ITEM_KIND_ROW`, the last two for every row the panel is filled for, land and mystery rows too); **what is left is each build**,
   and a count goes when its build lands: scale the scrap row by `FUN_004e2400`; letter the
   park's name in the heading (`UI_SetTitle`); write the date from UITEXT 448; turn the item's model in the buy panel and write its kind row `0x1ec` (`ITEMTYPES.str`, item `+0x90`). Three rows are model-and-string pairs of their own (`FUN_004ab1b0`, `0x004ab55f`..`0x004ab654`, `FUN_00486410` then `FUN_00485b00`): a mystery ride builds item 100 and writes UITEXT `0x89` "??? Mystery Ride! ???"; Buy Land (row -1) builds item 101 and writes `0x86` "Buy Land"; Clear Land (row -2) builds item 102 and writes `0x87` "Clear Land".
@@ -662,13 +662,12 @@ filed the items that cite it.
 - [ ] **Q1053. A sideshow's or feature's window, when built, must not offer the queue button (Q1038's tail).** The queue button is the ride window's (`FUN_004af200( 0 )`,
   `park-engine.md`, "Editing a queue"). Not checked in the original: the stock park holds no sideshow to open, and the windows are unbuilt (Q31b, Q960, Q961). When one is
   built, open a bought sideshow's window in the original and read whether it has the button.
-- [ ] **Q1054. The scrap percentage is built but its other readers still use the whole price (Q1052's tail).** `ParkScrap.Percent( now, built, customers, tier, item )` answers `FUN_004e2290`, and only
-  the queue cell's refund calls it. Three places still take the build price and count `SCRAP_VALUE_DEPRECIATION`: `ParkBuilding.Sell`'s refund (`price * percent / 100`,
-  `FUN_004dd0a0`), `ParkTrackTool.Remove`'s per-piece refund (`ParkTrackTool.cs`, the "scrap percentage" comment) and the object and shop windows' scrap row (`FUN_004e2400`: percent x `+0x1b8` / 100, `ParkObjectWindow`, `ParkShopWindow`).
-  The original shows the figure: Mumbo with 8 users and 19 days reads `Scrap value $ 500`, with none and 4 days `$ 1000` (`q1052/orig/run3/21-window.png`, `run4/09-window.png`); ours' window letters `$ 1000`
-  for both. Call `ParkScrap.Percent` with the thing's `Built`, `RingsFor( thing ).NumCustomers` and `UpgradeLevel`, and confirm a sale's balance step and the window's figure beside the original's.
-  Also counted: a queue cell whose owner ride cannot be found refunds its whole price (`QUEUE_REFUND_OWNER_NOT_FOUND`, `ParkPathBuilding.QueueRefund`; `FUN_004d99e0` answers thing nought there and the
-  original reads whatever thing nought holds), not met in play.
+- [ ] **Q1344. The scrap row's figure photographed beside the original's (Q1054's split piece).** Since Q1054 the object window
+  (`ParkObjectWindow`, `0x3e23`) and the shop window (`ParkShopWindow`, `0xc07d`) letter `FUN_004e2400`, the build price at
+  `ParkScrap.Percent`, and tests pin the stock Belly Bounce's "$ 500" and a new unused thing's "$ 1000". Not photographed: Q1054
+  ran in a cloud container with no display to look at and no original. Open the same file's Mumbo window with 8 users and 19 days
+  (the original's `Scrap value $ 500`, `q1052/orig/run3/21-window.png`) and with none and 4 days (`$ 1000`, `run4/09-window.png`)
+  and photograph ours beside them; then a stock shop's window beside the original's.
 - [ ] **Q1018. The original's bolt is updated a second time in some frames, 4 to 6 ms after the first.** Found by Q1044's poll (`q1044/orig/run1/a-load.log`, `run2/a-load.log`): of the poll lines, 197 (run 1) and 150 (run 2) show `FUN_0057ff60` called again with `dt` at `+0x9d9c` of 4 to 6 ms, after 997 and 567 of 25 ms or more: about one frame in five. Each call takes the clock's ms since the last call off every bolt, packs a fresh grey and builds the bolt (`0x0057ec50`). Not decoded: who calls it a second time (`0x00576dab`'s caller, or another), and whether the second call draws the bolt again, an additive second quad in the same frame that would make such a frame brighter than its one polled grey says. Ours draws one grey a frame and ages a bolt once. Decode first (`watch.sh` on `+0x9d9c`'s writers; `boltpoll.py`, `boltaim.py`), then film with `record.sh` and read whether a frame with a short second call is brighter.
 - [ ] **Q212. The ride window's other statuses. Decode first.** Found by the 2026-10-04 review (`u7-ride-door-6`,
   `-7`, `-9`, `-10`). `FUN_00485f60` answers (80/100/255) 5..9 for a ride waiting for an upgrade, `0xb`..`0xf` for a toilet's
@@ -3420,7 +3419,7 @@ Back to the advisor in a park; saving a fresh park is Q783, in section A. Also l
   - `BACKSPACE_DELETE_SOUND_0x5F` (`ParkPathBuilding.cs`)
   - `EDIT_QUEUE_ADVISOR_0xCB` (`ParkPathBuilding.cs`)
   - `QUEUE_DRAIN_ADVISOR_0xCB` (`ParkPathBuilding.cs`; `ride-operation.md`)
-  - `QUEUE_DRAIN_DEBIT_DEPRECIATION` (`ParkPathBuilding.cs`; `ride-operation.md`)
+  - `QUEUE_DRAIN_DEBIT_DEPRECIATION` (`ParkPathBuilding.cs`; `ride-operation.md`): built by Q1054, the count gone
   - `QUEUE_END_WALK_UNBOUNDED` (`ParkPathBuilding.cs`; `ride-operation.md`)
   - `QUEUE_DRAIN_CLEARS_ANOTHER_KIND` (`ParkPathBuilding.cs`; `ride-operation.md`)
   - `BACKSPACE_QUEUE_ADVISOR_0xCB` (`ParkPathBuilding.cs`; `ride-operation.md`, `park-engine.md`)

@@ -857,13 +857,40 @@ public class ParkTrackToolTests
 		foreach ( var at in new[] { (34, 25), (34, 25), (34, 29), (28, 29) } )
 			ParkBuildMode.Push( at.Item1, at.Item2 );
 
-		var said = ParkTrackTool.BacktrackOn( state, ride, 200 );
+		var said = ParkTrackTool.BacktrackOn( state, ride, 200, 100 );
 
 		Assert.IsTrue( said.Contains( "3 piece(s) removed, 600 refunded" ), said );
 		Assert.AreEqual( ((34, 29), 3), (ParkBuildMode.Anchor, ParkBuildMode.Pending.Count) );
 		Assert.AreEqual( 53122, state.Balance );
 		Assert.AreEqual( ((byte)0x50, (byte)0x10), (state.Record( 34, 25 ).TrackNeighbours, state.Record( 34, 25 ).TrackDirection), "the mouth's bend stays" );
 		Assert.AreEqual( ((byte)0x01, (byte)0x10, (short)0, 1, 180), Piece( state, 34, 29 ) );
+	}
+
+	/// <summary>
+	/// <b>Each piece taken back refunds the ride's scrap percentage of its price</b> (<c>0x0053b603</c>..<c>0x0053b627</c>): at 33 per
+	/// cent a piece of 200 gives 66, the three 198, where the whole price gives 600; a water piece of 250 gives 82.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the whole price fails the kart row (600); a divide rounding up fails the water row (250 at 33 per
+	/// cent, 82 a piece: 249 for 246).</remarks>
+	[TestMethod]
+	public void APieceTakenBackRefundsTheRidesPercentOfItsPrice()
+	{
+		var (state, ride) = Standing( 1, 30, 24 );
+		ParkTrackTool.LayRun( state, 0xb, Owner, (34, 25), (34, 29), 200 );
+		ParkTrackTool.LayRun( state, 0xb, Owner, (34, 29), (28, 29), 200 );
+		var before = state.Balance;
+
+		var taken = ParkTrackTool.TakeBack( state, ride, (28, 29), (34, 29), 200, 33, backToFirst: false );
+
+		Assert.AreEqual( (3, 198), (taken.Removed, taken.Refunded) );
+		Assert.AreEqual( before + 198, state.Balance );
+
+		var (water, boat) = Standing( 2, 18, 18, 47452 );
+		var owner = (ushort)MapStep.CellId( 18, 18 );
+		ParkTrackTool.LayRun( water, 0x10, owner, (22, 19), (22, 23), 250 );
+		ParkTrackTool.LayRun( water, 0x10, owner, (22, 23), (16, 23), 250 );
+
+		Assert.AreEqual( (3, 246), ParkTrackTool.TakeBack( water, boat, (16, 23), (22, 23), 250, 33, backToFirst: false ) is var w ? (w.Removed, w.Refunded) : default );
 	}
 
 	/// <summary>
@@ -879,13 +906,13 @@ public class ParkTrackToolTests
 		ParkBuildMode.Push( 34, 25 );
 		ParkBuildMode.Push( 34, 25 );
 
-		ParkTrackTool.BacktrackOn( state, ride, 200 );
+		ParkTrackTool.BacktrackOn( state, ride, 200, 100 );
 
 		Assert.AreEqual( 1, ParkBuildMode.Pending.Count );
 		Assert.AreEqual( ((byte)0x40, (byte)0x04), (state.Record( 34, 25 ).TrackNeighbours, state.Record( 34, 25 ).TrackDirection), "the bend is broken" );
 		Assert.AreEqual( (byte)0x10, state.Record( 34, 27 ).TrackNeighbours, "at both ends" );
 
-		Assert.IsTrue( ParkTrackTool.BacktrackOn( state, ride, 200 ).Contains( "nothing laid" ), "the first entry is never popped" );
+		Assert.IsTrue( ParkTrackTool.BacktrackOn( state, ride, 200, 100 ).Contains( "nothing laid" ), "the first entry is never popped" );
 	}
 
 	/// <summary>A water run taken back: three pieces of 250 refunded, the start an end again in the water kit's family.</summary>
@@ -902,7 +929,7 @@ public class ParkTrackToolTests
 			ParkBuildMode.Push( at.Item1, at.Item2 );
 
 		var before = state.Balance;
-		var said = ParkTrackTool.BacktrackOn( state, ride, 250 );
+		var said = ParkTrackTool.BacktrackOn( state, ride, 250, 100 );
 
 		Assert.IsTrue( said.Contains( "3 piece(s) removed, 750 refunded" ), said );
 		Assert.AreEqual( before + 750, state.Balance );
@@ -922,7 +949,7 @@ public class ParkTrackToolTests
 		ParkTrackTool.LayRun( state, 0xb, Owner, (34, 29), (28, 29), 200 );
 		Assert.AreEqual( 52522, state.Balance );
 
-		var taken = ParkTrackTool.TakeBack( state, ride, (28, 29), (34, 29), 200, backToFirst: false );
+		var taken = ParkTrackTool.TakeBack( state, ride, (28, 29), (34, 29), 200, 100, backToFirst: false );
 
 		Assert.AreEqual( (3, 600), (taken.Removed, taken.Refunded) );
 		Assert.AreEqual( 53122, state.Balance );
@@ -949,7 +976,7 @@ public class ParkTrackToolTests
 		var bought = Piece( state, 34, 25 );
 
 		ParkTrackTool.LayRun( state, 0xb, Owner, (34, 25), (34, 29), 200 );
-		var taken = ParkTrackTool.TakeBack( state, ride, (34, 29), (34, 25), 200, backToFirst: false );
+		var taken = ParkTrackTool.TakeBack( state, ride, (34, 29), (34, 25), 200, 100, backToFirst: false );
 
 		Assert.AreEqual( (2, 400), (taken.Removed, taken.Refunded) );
 		Assert.AreEqual( 53522, state.Balance );
@@ -971,7 +998,7 @@ public class ParkTrackToolTests
 			TrackNeighbours = 0x55, TrackDirection = 0x14, TrackOverlapCounter = 1
 		} );
 
-		var taken = ParkTrackTool.TakeBack( state, ride, (34, 31), (34, 25), 200, backToFirst: false );
+		var taken = ParkTrackTool.TakeBack( state, ride, (34, 31), (34, 25), 200, 100, backToFirst: false );
 
 		Assert.AreEqual( (2, 400), (taken.Removed, taken.Refunded), "(34,29) and (34,31) go" );
 		Assert.AreEqual( (0xb, (byte)0x44, (byte)0x04, (short)0),
@@ -980,7 +1007,7 @@ public class ParkTrackToolTests
 		Assert.AreEqual( (byte)0x40, state.Record( 34, 25 ).TrackNeighbours, "the mouth lets go of the crossing, which no longer links back" );
 
 		state.SetRecord( 34, 27, state.Record( 34, 27 ) with { TrackOverlapCounter = 1 } );
-		taken = ParkTrackTool.TakeBack( state, ride, (34, 27), (34, 27), 200, backToFirst: false );
+		taken = ParkTrackTool.TakeBack( state, ride, (34, 27), (34, 27), 200, 100, backToFirst: false );
 		Assert.AreEqual( (1, 200), (taken.Removed, taken.Refunded), "a step of nought removes it whatever its counter" );
 		Assert.AreEqual( 0, state.Record( 34, 27 ).TrackType );
 	}
@@ -997,7 +1024,7 @@ public class ParkTrackToolTests
 		ParkTrackTool.LayRun( state, 0xb, Owner, (34, 29), (28, 29), 200 );
 		state.SetRecord( 32, 29, state.Record( 32, 29 ) with { TrackOverlapCounter = 1 } );
 
-		var taken = ParkTrackTool.TakeBack( state, ride, (28, 29), (34, 29), 200, backToFirst: false );
+		var taken = ParkTrackTool.TakeBack( state, ride, (28, 29), (34, 29), 200, 100, backToFirst: false );
 
 		Assert.AreEqual( (2, 400), (taken.Removed, taken.Refunded) );
 		Assert.AreEqual( ((byte)0x01, (byte)0x10, (short)0, 1, 180), Piece( state, 34, 29 ) );
@@ -1011,7 +1038,7 @@ public class ParkTrackToolTests
 		var (state, ride) = Standing( 1, 30, 24 );
 		state.SetRecord( 34, 25, state.Record( 34, 25 ) with { TrackDirection = 0x40 } );
 
-		ParkTrackTool.TakeBack( state, ride, (34, 25), (34, 25), 200, backToFirst: false );
+		ParkTrackTool.TakeBack( state, ride, (34, 25), (34, 25), 200, 100, backToFirst: false );
 
 		Assert.AreEqual( ((byte)0x40, (byte)0x04), (state.Record( 34, 25 ).TrackNeighbours, state.Record( 34, 25 ).TrackDirection) );
 	}
@@ -1023,10 +1050,10 @@ public class ParkTrackToolTests
 		var (state, ride) = Standing( 1, 30, 24 );
 		ParkTrackTool.LayRun( state, 0xb, Owner, (34, 25), (34, 29), 200 );
 
-		ParkTrackTool.TakeBack( state, ride, (34, 25), (34, 25), 200, backToFirst: false );
+		ParkTrackTool.TakeBack( state, ride, (34, 25), (34, 25), 200, 100, backToFirst: false );
 		Assert.AreEqual( (byte)0x50, state.Record( 34, 25 ).TrackNeighbours, "not at the first entry: the bend stays" );
 
-		ParkTrackTool.TakeBack( state, ride, (34, 25), (34, 25), 200, backToFirst: true );
+		ParkTrackTool.TakeBack( state, ride, (34, 25), (34, 25), 200, 100, backToFirst: true );
 		Assert.AreEqual( ((byte)0x40, (byte)0x04), (state.Record( 34, 25 ).TrackNeighbours, state.Record( 34, 25 ).TrackDirection) );
 		Assert.AreEqual( (byte)0x10, state.Record( 34, 27 ).TrackNeighbours, "its link back let go" );
 		Assert.AreEqual( (short)-1, state.Record( 34, 25 ).TrackOverlapCounter, "the mouth's counter goes below nought and stays" );

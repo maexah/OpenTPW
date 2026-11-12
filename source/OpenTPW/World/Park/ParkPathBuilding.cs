@@ -185,8 +185,7 @@ public static class ParkPathBuilding
 		if ( Level.Current is { Catalogue: { } catalogue }
 			&& state.TryObject( OwnerOf( state, cell ), out var owner )
 			&& catalogue.TryGet( owner.CatalogueId, out var item ) )
-			return (int)((uint)(price * ParkScrap.Percent( state.CalendarNow, owner.Built, state.RingsFor( owner.ThingId ).NumCustomers,
-				owner.UpgradeLevel, item )) / 100);
+			return ParkScrap.Value( price, ParkScrap.Percent( state, owner, item ) );
 
 		Unimplemented.Report( "QUEUE_REFUND_OWNER_NOT_FOUND" );
 
@@ -1449,11 +1448,12 @@ public static class ParkPathBuilding
 	/// it goes as the far end of the last run (<c>docs/exe/ride-operation.md</c>, "The sale's drain").
 	/// </para>
 	/// <para>
-	/// <b>Then one cell's worth is taken back</b> (<c>FUN_004d01f0</c>), the node the placer laid for nothing,
-	/// so the Belly Bounce's four return three.
+	/// <b>Then one cell's worth is taken back</b> (<c>FUN_004d01f0</c>), the node the placer laid for nothing, at the
+	/// thing's scrap <paramref name="percent"/> as the cells' refunds are (<c>0x00527fe8</c>), so a queue of four returns
+	/// three cells' worth.
 	/// </para>
 	/// </remarks>
-	internal static int DrainQueue( ParkState state, IParkInitialState park, ParkWorld.CatalogueObject placed )
+	internal static int DrainQueue( ParkState state, IParkInitialState park, ParkWorld.CatalogueObject placed, int percent )
 	{
 		var (_, cached) = ParkRideChoice.QueueCellsFor( park, placed );
 		var pending = QueueEnds( state, park, placed );
@@ -1489,14 +1489,13 @@ public static class ParkPathBuilding
 		// measures nothing.
 		Unimplemented.Report( "QUEUE_DRAIN_ADVISOR_0xCB" );
 
-		// The debit is the bank's withdrawal (0x00528007), gated on mWithdrawalsEnabled there. The original also scales
-		// it by the object's per-age percentage (FUN_004e2290, 0x00527fe8), which nothing here keeps, so this takes the
-		// full price.
-		Unimplemented.Report( "QUEUE_DRAIN_DEBIT_DEPRECIATION" );
+		// The debit is the bank's withdrawal (0x00528007), gated on mWithdrawalsEnabled there, of one cell's price at the
+		// thing's scrap percentage (FUN_004e2290, 0x00527fe8).
+		var debit = ParkScrap.Value( price, percent );
 
-		state.Spend( price );
+		state.Spend( debit );
 
-		return refunded - price;
+		return refunded - debit;
 	}
 
 	/// <summary>
