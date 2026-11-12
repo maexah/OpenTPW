@@ -931,7 +931,11 @@ public static class ParkPathBuilding
 			return "path: a park has to be loaded";
 
 		var price = CellCost( level );
-		var strip = PathStrip( state, park, clickX, clickY, price );
+		var strip = PathStrip( state, park, clickX, clickY, price, out var latched );
+
+		// The click's own pass over its cell leaves the latch, as the original's hover passes between the press and the
+		// release do (the money arm, 0x00535931): an empty-hand click armed the tool, which cleared it, just before.
+		ParkBuildMode.RefusalLatched = latched;
 
 		if ( strip.Count == 0 )
 		{

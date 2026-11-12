@@ -1637,14 +1637,11 @@ filed the items that cite it.
   and out of first person packs the guest atlas again (about 0.45 s by the load figure, not measured). Measure a camcorder switch with and without the cut (`graphics faithful` in a private game
   folder's `save/opentpw.cfg`); if it is felt, make `CutLevels` cheaper (a 256-entry table, one row loop a level). Said at
   `Texture.LevelsFor` and in `docs/exe/textures.md`, "What the cut costs".
-- [ ] **Q535. An empty-hand path click takes the latch from its own pass.** From the run 5 review (Q532 1). Between
-  the press and the release the original runs mode-1 hover passes over the clicked cell, so an empty-hand click on
-  ground whose one cell is unaffordable leaves `DAT_00816d50` 1 (the money arm, `0x00535931`); ours arms (which clears
-  the latch, as the install's pass does at `0x0046d5e8`) and leaves it 0. Give `PathStrip` an out `latched`, as
-  `ParkPathBuilding.Strip( x, y, out latched )` has, and have `RunPath` store it in `ParkBuildMode.RefusalLatched`
-  after `Arm`. Confirm with the original (the stock park, an unaffordable single cell, `d50` read at
-  `q532/orig/a-run.out`'s addresses) and a test whose price a wrong rule gets wrong. Said at the site
-  (`ParkBuildMode.Arm`).
+- [ ] **Q1364. Q535's empty-hand latch, watched in the original.** From Q535 (built in a cloud lane with no original).
+  On the stock park, bank held at 19 (`thingpoke.py`, `TOOLING.md`, "Recipes", Q542), click bare (10,10) with the hand
+  empty and read `[0x00816d50]` at `q532/orig/a-run.out`'s addresses: predicted 1; at 20, predicted 0 after the anchor.
+  Then open the mechanics' locator: predicted texture 1 after the refusal (red edges), beside OpenTPW's `strip`
+  `| patrol 48` markers and a screenshot of each.
 - [ ] **Q536. A carried item's passes set the latch.** From the run 5 review (Q532 2). Mode 4's pass clears
   `DAT_00816d50` at `0x005234f2` and sets it and `d5c` at `0x0052365c`/`0x00523662` each tick when the item's
   BuildPrice (`+0x1b8`) is above the bank's balance, unless the golden-ticket cost `+0xc4` is positive and
