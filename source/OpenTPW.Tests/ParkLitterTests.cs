@@ -55,7 +55,7 @@ public class ParkLitterTests
 	/// generator not touched. The writer is handed the one drop.
 	/// </summary>
 	/// <remarks><b>Mutations:</b> the reseed taken out of <c>DropLitter</c> (the generator keeps nought); the reseed after the
-	/// refusal of a littered cell.</remarks>
+	/// refusal of a littered cell; the reseed added to the generator's word (<c>RandomSeed + CellId</c>).</remarks>
 	[TestMethod]
 	public void ADropReseedsTheParksGeneratorAndASecondDropThereDoesNothing()
 	{
@@ -74,6 +74,14 @@ public class ParkLitterTests
 
 		Assert.IsFalse( state.DropLitter( 47, 22, 5 ) );
 		Assert.AreEqual( (drawn, 3), (state.RandomSeed, state.CellAt( 47, 22 ).Litter), "a littered cell keeps its litter and the generator" );
+
+		// The reseed replaces what the generator held: from a drawn, non-nought seed the drop leaves the same word.
+		var drawnFirst = new ParkState( null );
+
+		drawnFirst.Draw();
+		Assert.AreNotEqual( 0u, drawnFirst.RandomSeed );
+		Assert.IsTrue( drawnFirst.DropLitter( 47, 22, 3 ) );
+		Assert.AreEqual( 0x6e02790du, drawnFirst.RandomSeed, "the cell's reseed, whatever the generator held" );
 	}
 
 	/// <summary>
@@ -186,7 +194,7 @@ public class ParkLitterTests
 	/// cell's litter 3, collector nought, no particle and a sprite slot that names a sprite of kind 11, bank 0, set 2, frame 0,
 	/// at (476, 0, 221), on program 1402 resting on 1409, run (state 2), flags <c>0x80000</c> and the set's frames a direction;
 	/// the slot is the lowest the file leaves empty. A park state made from that file draws the litter where the sprite stands,
-	/// and the file read once more is written again unchanged in its litter: the drop is the file's now.
+	/// and a park state made from it hands the writer no drop and counts nothing: the drop is the file's now.
 	/// </summary>
 	/// <remarks><b>Mutations:</b> the cell's sprite slot not written; the flags not written.</remarks>
 	[TestMethod]
@@ -204,9 +212,9 @@ public class ParkLitterTests
 
 		Assert.IsTrue( running.DropLitter( 47, 22, 3 ) );
 
-		var dropped = running.DroppedLitter( shipped, kind => kind == 3 ? 1 : null );
+		var dropped = running.DroppedLitter( shipped, kind => kind == 3 ? 2 : null );
 
-		Assert.AreEqual( new ParkWorld.WrittenLitter( cell, 3, 476f, 221f, 1 ), dropped.Single() );
+		Assert.AreEqual( new ParkWorld.WrittenLitter( cell, 3, 476f, 221f, 2 ), dropped.Single() );
 
 		var people = new ParkPeople( shipped );
 		var body = ParkFileWriter.Body( shipped, new ParkFileWriter.Running( shipped.GameTick, false, 0, 0, shipped.Camera.Saved!.Value,
@@ -227,7 +235,7 @@ public class ParkLitterTests
 
 		Assert.AreEqual( new ParkWorld.Sprite( slot, 11, 0, 2, 476f, 0f, 221f, 0, 0, 0xff, 2, 1402, 1409 ), sprite );
 		Assert.AreEqual( 0x80000, written.SpriteFlagsOf( slot ) );
-		Assert.AreEqual( 1, written.SpriteStateWordsOf( slot ).FramesPerDirection );
+		Assert.AreEqual( 2, written.SpriteStateWordsOf( slot ).FramesPerDirection, "the set byte handed (2 here, so the fallback of 1 would not pass)" );
 		Assert.AreEqual( 0, Enumerable.Range( 0, ParkWorld.MapSize * ParkWorld.MapSize ).Count( i => i != cell && written.Cells[i].Litter != shipped.Cells[i].Litter ),
 			"no other cell's litter moves" );
 

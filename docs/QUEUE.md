@@ -1011,10 +1011,9 @@ filed the items that cite it.
   `DurationOfUpgrade[l + 1] x WorkDuration` sweeps; every `Rides.sam` gives 0, 2, 4, no item overrides it) and the tier
   record's sixteen offsets as `docs/exe/ride-operation.md`, "State `0xd`", gives them.
 
-- [ ] **Q1485. Q1292 confirmed in Ghidra, in both games and on screen (desk lane; the rest of Q1292).** Cloud lane c91 had
-  no Ghidra, no original and no photograph. Read in Ghidra: the schema record at `0x00744b30` whose offset is `0x3c` in
-  an `Upgrades` tier is `DurationOfUpgrade`; the write at `0x004df966` is the level plus one; the order of the upgrade
-  arm's writes (`0x004df966`..`0x004dfbdf`). Then the stock park with the Belly Bounce written to state 2
+- [ ] **Q1485. Q1292 confirmed in both games and on screen (desk lane; the rest of Q1292).** Cloud lane c91 had
+  no original and no photograph (the schema record, `0x00746660`, and the arm's order of writes are read since, in the
+  run 22 review: `ride-operation.md`, "The mechanic's repair"). The stock park with the Belly Bounce written to state 2
   (`parkfile.thing_set( src, dst, 13, 200, '<i', 2 )`) loaded in both games: mechanic 26's `mDurationOfRepair` on his
   arrival (60 here), the sweeps to the end, the ride's level, speed, capacity and duration and the balance after (level 1,
   75, 7, 30, 400 less here), and a photograph of the upgraded ride beside the original's.
@@ -1500,7 +1499,7 @@ filed the items that cite it.
   original's patrol squares (and any tool's) are drawn over the people's shadows, which show through them
   (`q480/orig/a-2-on.png`: Mike's shadow on the squares darkens 0.556, 0.716, 0.835); ours draws `ParkBuildMarkers`
   before the people, writing depth 1.5 over the land, so a shadow 0.6 over it is hidden (`q480/run2/4-on.png`: 0 pixels
-  changed with `shadows 0`). Decode where the original draws its marker squares against the sprite list's two passes
+  changed with `shadows 0`); a cell's litter, drawn at the same 0.6 since Q1288, is hidden there the same way. Decode where the original draws its marker squares against the sprite list's two passes
   (and whether they write depth over the people's feet, Q477), then order ours to match. Confirm by the locator open on
   Mike in both games, a frame pair with shadows on and off (`lib/shadowdiff.py`).
 - [ ] **Q521. A person's shadow at high detail in the orbit view: their own picture, unfogged.** From Q480, narrowed by

@@ -26,7 +26,7 @@ OpenTPW re-implements the engine of Theme Park World (1999) so it runs on modern
 - **Lost Kingdom runs.** Instant Action starts the park the game ships, already built. Full Simulation starts it as an empty park. Guests arrive, queue, ride and buy things. Most of its rides, shops and sideshows run.
 - **You can build and manage.** Buy, sell and move rides, lay paths and queues, hire, train and place staff, set the entry price and research new rides.
 - **Saving works.** Save, Load, Restart Park and the quicksave keys. A Full Simulation park started empty is saved too. Not saved yet: coasters bought in a park, and the pieces of a kart or water ride's track as models (a bought kart or water ride is saved, with its track).
-- **Not built yet:** loans, and a park ending when the money runs out. The other three islands are not worked on yet.
+- **Not built yet:** loans, and the screen a park ends on (six months in the red ends the park, with no end screen yet). The other three islands are not worked on yet.
 
 [`docs/STATUS.md`](docs/STATUS.md) lists everything that works and everything that does not.
 

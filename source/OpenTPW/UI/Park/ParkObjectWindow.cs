@@ -1047,8 +1047,10 @@ internal sealed class ParkObjectWindow : UiWindow, IStatusBox, IObjectWindowStep
 	/// ride (<c>Button_SetDown</c>, <c>0x004ad606</c>..<c>0x004ad622</c>).
 	/// </summary>
 	/// <remarks>
-	/// The original sets the verbs when the window is given a thing and when its status changes
-	/// (<c>0x004ae0e0</c>..<c>0x004ae0fb</c>); this sets them every frame, which lands on the same settings.
+	/// DEVIATION: the original re-reads the status only when <c>FUN_004ade40</c> runs (the 4000 ms timer, <c>0x004af64c</c>;
+	/// the door's click, <c>0x004af871</c>) and when the window is given a thing (<c>0x004ae975</c>), and sets the verbs on a
+	/// change (<c>0x004ae0e0</c>..<c>0x004ae0fb</c>), so its verbs and door follow a status change up to 4 s late; this sets
+	/// them every frame.
 	/// </remarks>
 	private void ShowTheDoor()
 	{

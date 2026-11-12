@@ -549,6 +549,49 @@ public class ParkFileWriterTests
 	}
 
 	/// <summary>
+	/// The level hands the writer a drop with the people (Q1288; <c>Level.WritePark</c>): the shipped park saved through the level
+	/// after a drop of kind 3 on (47,22), with its people, holds that cell's litter 3 and a sprite of kind 11 at (476, 0, 221) in
+	/// the slot the cell names, and counts nothing, where with no people (above) the drop is counted and not written.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the level hands the writer no litter (the cell clean, the sprite missing); <c>droppedWritten</c>
+	/// handed as false (counted, 1).</remarks>
+	[TestMethod]
+	public void TheLevelWritesADropWithThePeople()
+	{
+		SetCurrentPlayer( new Player( 0, "Test", new PlayerFile { InstantAction = true } ) );
+
+		var people = new ParkPeople( shipped );
+		var state = people.State;
+		var cell = (22 * ParkWorld.MapSize) + 47;
+		int Counted() => Unimplemented.Summary.FirstOrDefault( gap => gap.What == "SAVE_PARK_RUNNING_LITTER" ).Times;
+
+		try
+		{
+			Assert.AreEqual( 0, shipped.Cells[cell].Litter, "(47,22) is clean in the shipped park" );
+			Assert.IsTrue( state.DropLitter( 47, 22, 3 ) );
+
+			Unimplemented.Forget();
+			Level.WritePark( shipped, state, "jungle", "Littered", people );
+
+			var written = Read( File.ReadAllBytes( Path.Combine( Jungle, "Littered.TPWS" ) ) );
+			var back = written.Cells[cell];
+
+			Assert.AreEqual( 0, Counted(), "written, so not counted" );
+			Assert.AreEqual( 3, back.Litter );
+			Assert.AreNotEqual( 0, back.LitterSprite, "the cell names its sprite" );
+
+			var sprite = written.Sprites.Single( held => held.Slot == back.LitterSprite );
+
+			Assert.AreEqual( (11, 476f, 0f, 221f), (sprite.Type, sprite.X, sprite.Height, sprite.Y) );
+		}
+		finally
+		{
+			Entity.ApplyDeletions();
+			TestRun.DeleteEvery<ParkPeople>();
+		}
+	}
+
+	/// <summary>
 	/// The level hands the writer the analyser's rings of the recently researched as the running park holds them: a push
 	/// into the shops' ring is written, the other three stay the shipped file's, never pushed.
 	/// </summary>

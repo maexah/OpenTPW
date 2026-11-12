@@ -46,6 +46,7 @@ Only the item just landed is here. Every earlier item's account is in `docs/hist
 
 ## Numbers (take counts fresh; these go stale within a day)
 
+- Linux, 2026-11-12, review fixes group O (`capped.sh`; four tests added, needing the game; after Q210): with the game, 5701 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5703; with no game named, 2462 passed, 0 failed, 3241 skipped.
 - Linux, 2026-11-12, Q210 (`capped.sh`; the hoardings' terrain rectangle and base-vertex gate; one test added, needing the game; built in a cloud container, re-gated here after Q960): with the game, 5697 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5699; with no game named, 2462 passed, 0 failed, 3237 skipped.
 - Linux, 2026-11-12, Q960 (`capped.sh`; the sideshow window's settings, first piece; five tests added, four needing the game; built in a cloud container, re-gated here after Q37): with the game, 5696 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5698; with no game named, 2462 passed, 0 failed, 3236 skipped.
 - Linux, 2026-11-12, Q37 (`capped.sh`; eight tests added, needing the game; built in lane B, merged here after Q771): with the game, 5691 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5693; with no game named, 2461 passed, 0 failed, 3232 skipped.

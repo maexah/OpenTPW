@@ -3062,7 +3062,7 @@ over the file's value**: every load left the file's standing.
 | A load | the file's | the same |
 | A file saved here after a purchase, and after its sale | reads this game's stamp | written at 73,516 |
 | A vehicle made at its first summons | stamps it, and its slot holds the new thing | the same (Q342): an object on cell (0,0), written with its slot |
-| Which vehicle a leaver's summons draws | `% 3` of the save's seed: the third in every load of one file | one step of the save's seed, which nothing else here draws (Q443): from the stock seed the bus first, every run, stamping nothing |
+| Which vehicle a leaver's summons draws | `% 3` of the save's seed: the third in every load of one file | one step of the save's seed, which only a litter drop also reseeds and draws here (Q443, Q1288): from the stock seed the bus first unless a drop has reseeded it, stamping nothing |
 | The nine rows that read it | scored | rows 60, 71, 73 and 74 built ("A poor selection of rides", "A poor selection of shops", "A park with rides and no shop", "Too few shops for the park's size"); the other five not built, not read |
 
 **Not built or not seen.** Five of the nine rows (row 74 is "Too few shops for the park's size"; rows 60, 71 and 73 are "A poor selection of rides", "A poor

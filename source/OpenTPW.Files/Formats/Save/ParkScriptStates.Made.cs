@@ -72,7 +72,7 @@ public sealed partial class ParkScriptStates
 		Dword( 0x30, made.Speed );
 		Dword( TimerDeadlineDword, (int)script.TimerDeadline );
 		Dword( ModelHandleDword, modelHandle );
-		Dword( 0x36, -1 );
+		Dword( ReverbDword, script.Reverb ?? -1 );
 		PutInt16( record, 0xe4, 1000 );
 		PutInt16( record, 0xe6, 0xffff );
 

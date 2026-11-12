@@ -944,6 +944,10 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// <summary>
 	/// The litter's vertices, room for <paramref name="quads"/>, and <paramref name="withModel"/> its mesh over the atlas: the
 	/// people's shader and alpha test, both faces, depth tested and not written (the flat arm's <c>0x800</c>, <c>0x00589e85</c>).
+	/// <para>
+	/// <b>A deviation: under a tool's squares the litter is hidden</b>, as the shadows are (Q520): <see cref="ParkBuildMarkers"/>
+	/// draws before the people and writes depth 1.5 over the land, so litter 0.6 over it fails the test there.
+	/// </para>
 	/// </summary>
 	private void BuildLitter( int quads, bool withModel )
 	{
@@ -1934,6 +1938,9 @@ public sealed class ParkGuestSprites : ModelEntity
 		// The silhouette came by its path, so the texture cache may be holding it for another: only the model goes.
 		_shadowModel?.Delete();
 		_shadowModel = null;
+
+		_litterModel?.Delete();
+		_litterModel = null;
 	}
 
 	/// <summary>

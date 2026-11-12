@@ -2617,8 +2617,8 @@ public sealed partial class ParkPeople : Entity
 	/// <summary>
 	/// The needs turn's thought (<c>0x00501913</c>..<c>0x0050192d</c>): one draw of the park's generator, and one
 	/// time in ten the thought the needs pick (<see cref="Thoughts.PickFromNeeds"/>), set with no sound argument.
-	/// The draw comes from the arrivals' generator here, not the park's (<see cref="ParkState.RandomSeed"/>, which only
-	/// the leavers' summons draws).
+	/// The draw comes from the arrivals' generator here, not the park's (<see cref="ParkState.RandomSeed"/>, drawn by
+	/// the leavers' summons and a litter drop).
 	/// </summary>
 	private void ThinkOfNeeds( Peep peep )
 	{

@@ -6,7 +6,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace OpenTPW.Tests;
 
 /// <summary>
-/// <c>SETREVERB</c> (<c>0x0055649c</c>; <c>docs/exe/audio.md</c>, "The reverb") stores its operand at the script's
+/// <c>SETREVERB</c> (<c>0x0055649c</c>; <c>docs/exe/audio.md</c>, "The reverb") stores its resolved operand at the script's
 /// <c>+0xd8</c> and nothing else; reverb being cut, the store is counted under a name of its own,
 /// <c>SCRIPT_REVERB_LEVEL</c>, no longer as a gap at the dispatch's default (Q1236, from Q580).
 /// </summary>
@@ -63,7 +63,8 @@ public class RideScriptReverbTests
 	/// </summary>
 	/// <remarks>
 	/// <b>Mutations:</b> the case left out (null, the dispatch's default counted, a gap); a store of non-zero only (8 kept);
-	/// the operand's word unsigned (65,535); no count (0); counted as a gap (<see cref="RideScript.NotImplemented"/> 3).
+	/// the operand's word unsigned (65,535); no count (0); counted as a gap (<see cref="RideScript.NotImplemented"/> 3); the level
+	/// starting at null or nought (not the loader's -1).
 	/// </remarks>
 	[TestMethod]
 	public void EachLiteralIsStoredAndCounted()
@@ -73,7 +74,7 @@ public class RideScriptReverbTests
 			Word( Opcode.SETREVERB ), 0,
 			Word( Opcode.END ) );
 
-		Assert.IsNull( script.Reverb, "nothing stored before the first" );
+		Assert.AreEqual( -1, script.Reverb, "the loader's -1 before the first (0x00558c59)" );
 
 		var before = Times( "SCRIPT_REVERB_LEVEL" );
 		script.Turn( 0f );
@@ -90,25 +91,24 @@ public class RideScriptReverbTests
 	}
 
 	/// <summary>
-	/// <b>A variable operand stores nothing and is counted as a gap</b>, <c>SETREVERB_VARIABLE_OPERAND</c>: whether the original
-	/// resolves it or stores the raw word, as <c>TURBO</c> does, is not read, and no shipped script names one.
+	/// <b>A variable operand stores the variable's value</b>: the handler resolves it through the shared resolver
+	/// (<c>0x005564a7</c> -> <c>FUN_005573a0</c>), as every operand here is (<c>RideScript.Value</c>), and counts the store.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> the variable resolved (5 stored); its index stored (0); not counted (0, no gap).</remarks>
+	/// <remarks><b>Mutations:</b> a variable stores nothing (-1, the old counted gap); its index stored (0); the raw word stored;
+	/// not counted (0).</remarks>
 	[TestMethod]
-	public void AVariableOperandIsCountedAndStoresNothing()
+	public void AVariableOperandStoresTheVariablesValue()
 	{
 		var script = Script( 1,
 			Word( Opcode.COPY ), Var( 0 ), 5,
 			Word( Opcode.SETREVERB ), Var( 0 ),
 			Word( Opcode.END ) );
 
-		var before = Times( "SETREVERB_VARIABLE_OPERAND" );
 		var stored = Times( "SCRIPT_REVERB_LEVEL" );
 		script.Turn( 0f );
 
-		Assert.IsNull( script.Reverb, "nothing stored" );
-		Assert.AreEqual( 1, Times( "SETREVERB_VARIABLE_OPERAND" ) - before, "counted once" );
-		Assert.AreEqual( 0, Times( "SCRIPT_REVERB_LEVEL" ) - stored, "and not as a store" );
-		Assert.AreEqual( 1, script.NotImplemented, "a gap of the script's" );
+		Assert.AreEqual( 5, script.Reverb, "the variable's value" );
+		Assert.AreEqual( 1, Times( "SCRIPT_REVERB_LEVEL" ) - stored, "counted as a store" );
+		Assert.AreEqual( 0, script.NotImplemented, "not a gap" );
 	}
 }

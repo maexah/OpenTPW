@@ -247,7 +247,7 @@ his own cell is not held against the entry. OpenTPW's `ArriveAtTheRide` asks all
 
 **State `0xd`.** The setter queues animation `0x12` and sets `+0x214` (`mDurationOfRepair`): for a repair
 `(100 - the State of repair's byte) x MechanicConstsPerGrade.WorkDuration / 100` in whole sweeps
-(`0x004da42a`; 80, 60, 40, 30, 20 by grade, `0x0078542c`), for an upgrade the dword at descriptor `+0x1fc + 0x40 x` the ride's byte `+0x50` (`0x004da409`; the item by `FUN_004dd4e0`), times the same `WorkDuration` (`0x004da410`), not divided by 100 (`0x004da3e8`..`0x004da418`). That dword is `+0x3c` into tier l + 1's record (the records start at `Upgrades[0].CostOfResearch`, `+0x180`), the record's last: **`Upgrades[l + 1].DurationOfUpgrade`** (Q1292). Named from the compiled schema as OpenTPW holds it (`ItemDescriptionFile.Schema`, read record by record at `0x00744b30`), which lists a tier's nought-and-up keys in record order, `CostOfUpgrade` (`+0x38`) then `DurationOfUpgrade`, with every other slot of the 16 already placed (`+0x04` the bounded `EstimatedPriceVariance`, `+0x24` `RedLineDuration` by the same order); the offset of the key's own schema record was not re-read in Ghidra. Every `Rides.sam` of the four themes gives tiers 0, 1 and 2 the values 0, 2 and 4, which no item overrides, so a ride at level nought takes 2 x `WorkDuration` (160 sweeps for a grade nought mechanic, 40 for grade 4) and one at level 1, 4 x.
+(`0x004da42a`; 80, 60, 40, 30, 20 by grade, `0x0078542c`), for an upgrade the dword at descriptor `+0x1fc + 0x40 x` the ride's byte `+0x50` (`0x004da409`; the item by `FUN_004dd4e0`), times the same `WorkDuration` (`0x004da410`), not divided by 100 (`0x004da3e8`..`0x004da418`). That dword is `+0x3c` into tier l + 1's record (the records start at `Upgrades[0].CostOfResearch`, `+0x180`), the record's last: **`Upgrades[l + 1].DurationOfUpgrade`** (Q1292). Named from the compiled schema as OpenTPW holds it (`ItemDescriptionFile.Schema`, read record by record at `0x00744b30`), which lists a tier's nought-and-up keys in record order, `CostOfUpgrade` (`+0x38`) then `DurationOfUpgrade`, with every other slot of the 16 already placed (`+0x04` the bounded `EstimatedPriceVariance`, `+0x24` `RedLineDuration` by the same order); the key's own schema record is `0x00746660` (type 5, named inline), the last of the tier's 16 four-byte leaves, after `CostOfUpgrade` at `0x00746624`. Every `Rides.sam` of the four themes gives tiers 0, 1 and 2 the values 0, 2 and 4, which no item overrides, so a ride at level nought takes 2 x `WorkDuration` (160 sweeps for a grade nought mechanic, 40 for grade 4) and one at level 1, 4 x.
 `FUN_004da830`, a turn: a turn of work (`FUN_00506760`); the count down one while it is not nought; at nought,
 on a ride of state 1, `VAR_BREAKSTAT` is written nought (`FUN_004e03f0`) and the turn ends there while
 `VAR_BROKEN` still reads above nought (`FUN_004e0410`, "Ride has finished fix anim" when it does not); then
@@ -256,7 +256,7 @@ on a ride of state 1, `VAR_BREAKSTAT` is written nought (`FUN_004e03f0`) and the
 **The ride's side, `FUN_004df8f0`.** `+0x44` = 100, `VAR_WORN` 0, the assigned member (`+0x5e`) and
 `mRequestedService` nought. Not waiting for an upgrade: `VAR_BREAKSTAT` 0 and the hoardings down
 (`FUN_004547c0`). Then the open's tail whatever its state, logging "Opening non-openable ride" five times for
-one that was broken down: `mCanLoad` 1, hoardings down, `VAR_RIDECLOSED` 0, SetState(0); and a type 3 track
+one broken down, condemned or just upgraded (the guard, `0x004dfc19`..`0x004dfc31`, reads states 1, 4 and 2): `mCanLoad` 1, hoardings down, `VAR_RIDECLOSED` 0, SetState(0); and a type 3 track
 whose circuit is not closed is shut again.
 
 **In both games** (`saves.md`, "OpenTPW's writer, the mechanic's job"): a Hot Pot broken in a go had mechanic
@@ -271,7 +271,8 @@ and `InitDuration` held as the constructor holds them (`0x004dfa9b`..`0x004dfbdf
 held to Min/MaxCapacity when they sum above nought, duration's low byte held to Min/MaxDuration), each written to the
 thing and its script only where the tier's own is above nought; `VAR_BREAKSTAT` and the hoardings are the broken arm's,
 not this one's; then the open's tail. The Belly Bounce from level nought: 75, 7 and 30, and 400 withdrawn. The order
-of these writes inside the arm is not read; the result is the same in any order.
+of these writes inside the arm is as listed: the level (`0x004df966`), the sprite (`0x004dfa54`), the cost (`0x004dfa96`),
+the speed, the capacity (`0x004dfaf6`), the duration (`0x004dfbdf`).
 
 **Where OpenTPW differs.** The upgrade's effect sprite (`0x004dfa54`) is not drawn, counted (`RIDE_UPGRADE_EFFECT`).
 A completion with no item, or whose level would pass the third tier, is counted and leaves the ride
@@ -3392,7 +3393,8 @@ still drawn from the deciding turn's own generator, so the reseed does not decid
 `PeepBehaviour.DropLitter`). Each littered cell with a sprite is drawn as one flat quad of `SPR_LI`'s set for its kind (the
 set's one picture: set 6 holds picture 7, set 7 picture 6), by the corners above, at the land under the anchor plus 0.6 (0.25
 in first person), with the people's shader and alpha test, both faces, depth tested and not written, before the people,
-never pulled and never picked. A loaded cell's sprite is the file's at its first handle; a littered cell whose handle names
+never pulled and never picked. A deviation: under a tool's squares the litter is hidden, as the people's shadows are
+(`ParkBuildMarkers` writes depth over the land first; Q520). A loaded cell's sprite is the file's at its first handle; a littered cell whose handle names
 no sprite is not drawn, with one warning for the load. **Not read here**, so taken as the decoder gives it: whether `v0` is
 the bank's top row. `SAVE_PARK_RUNNING_LITTER` now counts only a save with no people to write the drop with, or a change
 nothing makes yet (litter taken away or claimed: nothing sweeps it). The file side is `saves.md`, "OpenTPW's writer, a cell's

@@ -4528,7 +4528,7 @@ Read 2026-11-12 (Q1105) in `testme.objdump`, and whole in Ghidra (Q1112: named `
 `0x0065d9dd`, flag `+0x48` bit 0). The window's thing is `[0x007c2658]` and its item is `FUN_004dd4e0`, the descriptor
 found by the thing's word `+0xe`. It runs each time the window is given a thing, on opening and on each arrow (`FUN_004ae940`, vtable `+4`, `0x004ae975`; the arrows call it at `0x0048cca5`), and whenever the window's status `+8` changes. That status is
 `FUN_00485f60( thing, 2 )`, compared and stored at `0x004ae0e0`..`0x004ae0fb` (the statuses are in
-[ride-window-door.md](ride-window-door.md)). `b_erase` is never touched.
+[ride-window-door.md](ride-window-door.md)), inside `FUN_004ade40`, the window's refill, which runs only on its 4000 ms timer (`0x004af64c`), after the door's click (`0x004af871`) and at `0x004ae4c3`/`0x004ae50d`: so the verbs and the door follow a status change up to 4 s late, and an `mCanLoad` change with no status change moves no door through `FUN_004ad4e0`. `b_erase` is never touched.
 
 - **Status 3, condemned** (`0x004ad509`..`0x004ad5a8`): `UI_SetVisible( 0 )` on the other seven, door, queue, track,
   call-mechanic, move, ride-it and upgrade, and nothing else.
@@ -4597,7 +4597,7 @@ door ` down`. Both draw the bomb alone under red CONDEMNED, the call button as i
 for an available mechanic" (status `0x12`, a mechanic in the park and none assigned), and the greyed door under orange
 TRACK INCOMPLETE (`orig/b-2-bouncewindow.png`, `c-3-callmech.png`, `d-2-splashwindow.png`; `run2/window-condemned.png`,
 `window-called.png`, `window-trackincomplete.png`). Ours sets them in `ParkObjectWindow.ShowTheVerbs` on
-`ParkClosedStatus.For`, every frame where the original sets them on a change.
+`ParkClosedStatus.For`, every frame. A DEVIATION: the original re-reads the status only when `FUN_004ade40` runs (the 4000 ms timer `0x004af64c`, the door's click `0x004af871`) and on a new thing (`0x004ae975`), so its verbs follow a status change up to 4 s late.
 
 **The shared base's three ids.** `FUN_0048cea0( stream, handler, a, b, c )` is called here as
 `(0x00755150, FUN_004af600, 0x3e24, 0x3e15, 0x3e25)`: `a` is the preview panel, kept at `this[6]` and

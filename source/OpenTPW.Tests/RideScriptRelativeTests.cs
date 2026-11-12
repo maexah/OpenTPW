@@ -325,8 +325,10 @@ public class RideScriptRelativeTests
 
 	/// <summary>
 	/// <b>A child takes its parent's model nodes too</b>, the same object: the nodes are the other half of <c>+0xc8</c>, which
-	/// a child's <c>ADDOBJ</c> places its effect on (Mumbo's <c>Effects.rse</c>, the TV Sim's <c>torches.rse</c>).
+	/// a child's <c>ADDOBJ</c> places its effect on (Mumbo's <c>Effects.rse</c>, the TV Sim's <c>torches.rse</c>). A sound script
+	/// takes none (<c>SPAWNSOUND</c> stores <c>+0x14</c> alone, <c>0x00555255</c>).
 	/// </summary>
+	/// <remarks><b>Mutations:</b> the child's nodes not copied; <c>SPAWNSOUND</c> copying them.</remarks>
 	[TestMethod]
 	public void AChildTakesItsParentsModelNodes()
 	{
@@ -335,7 +337,8 @@ public class RideScriptRelativeTests
 		using var stream = new MemoryStream( data.ReadAllBytes( $"{item.Directory}/{item.Stem}.MD2" ) );
 		var nodes = new RideNodes( new ModelFile( stream ), item.Stem, false, [] );
 
-		var parent = Script( 0, ["Effects.rse"], Word( Opcode.SPAWNCHILD ), Str( 0 ), Word( Opcode.END ) );
+		var parent = Script( 0, ["Effects.rse", "EventMap.rse"], Word( Opcode.SPAWNCHILD ), Str( 0 ), Word( Opcode.SPAWNSOUND ), Str( Offset( ["Effects.rse"], 1 ) ),
+			Word( Opcode.END ) );
 		var scheduler = new RideScriptScheduler { Loader = _ => Script( 1, [], Word( Opcode.END ) ) };
 
 		parent.Nodes = nodes;
@@ -346,6 +349,11 @@ public class RideScriptRelativeTests
 
 		Assert.IsNotNull( child, "nothing was spawned, so this proves nothing" );
 		Assert.AreSame( nodes, child!.Nodes, "the child places its effects on its parent's model" );
+
+		var sound = scheduler.Find( parent.SoundChildId );
+
+		Assert.IsNotNull( sound, "no sound script was spawned, so this proves nothing" );
+		Assert.IsNull( sound!.Nodes, "a sound script takes no nodes" );
 	}
 
 	/// <summary>

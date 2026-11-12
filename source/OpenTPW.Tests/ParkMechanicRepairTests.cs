@@ -625,6 +625,29 @@ public class ParkMechanicRepairTests
 	}
 
 	/// <summary>
+	/// The duration is the tier reached's: the Belly Bounce's three tiers all start at 30, so it is given 40 and 50 at tiers 1
+	/// and 2 (inside its Min/MaxDuration), and an upgrade from level 1 takes 50, where tier nought's or the old tier's would give
+	/// 30 or 40.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the duration from tier nought; from the old level.</remarks>
+	[TestMethod]
+	public void TheDurationIsTheReachedTiers()
+	{
+		var bounce = (Catalogue().TryGet( 1100, out var item ) ? item : default) with { InitDuration1 = 40, InitDuration2 = 50 };
+
+		Assert.IsTrue( bounce.MinDuration <= 40 && bounce.MaxDuration >= 50, "both inside the Bounce's own hold" );
+		Assert.AreEqual( (30, 40, 50), (ParkBuilding.SettingsAt( bounce, 0 ).Duration, ParkBuilding.SettingsAt( bounce, 1 ).Duration,
+			ParkBuilding.SettingsAt( bounce, 2 ).Duration) );
+
+		var state = new ParkState( World() );
+
+		Change( state, Bounce, ride => ride with { State = 2, UpgradeLevel = 1 } );
+		ParkRideOperation.Repair( state, BounceScript(), Bounce, item: bounce );
+
+		Assert.AreEqual( 50, Thing( state, Bounce ).OperatingDuration, "tier 2's" );
+	}
+
+	/// <summary>
 	/// A tier whose own settings are nought leaves the thing's as they were (<c>0x004dfa9b</c>..<c>0x004dfbdf</c>):
 	/// the Jungle Spray, a sideshow whose tiers state none, keeps its 3 and is still paid for, nought.
 	/// </summary>

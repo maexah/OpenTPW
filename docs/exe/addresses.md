@@ -357,7 +357,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004adf28` | FUN_004ade40: Users last month handed to its painter as a number through +0x1c | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004adf40` | FUN_004ade40, the object window: its Age is FUN_004dd670, printed signed | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004ae0da` | FUN_004ade40: Scrap value handed to its painter as a number through +0x1c | OpenTPW/UI/Park/ParkObjectWindow.cs  |
-| `0x004ae0e0` | The ride window's update: the status `FUN_00485f60( thing, 2 )` compared with `+8` and stored, the verbs set again on a change (from here) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
+| `0x004ae0e0` | FUN_004ade40, the ride window's 4 s refill (timer `0x004af64c`, the door's click `0x004af871`): the status `FUN_00485f60( thing, 2 )` compared with `+8` and stored, the verbs set again on a change (from here) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004ae0fb` | The status compare (to here) | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004af440` | The object windows' shared base, vtable `+0x3c`: writes the three buffered values onto the ride | OpenTPW/UI/Park/ParkObjectWindow.cs  |
 | `0x004af63b` | Ride window handler FUN_004af600: message 0x10 with 0x80080, the 4000 ms timer's tick, refills the figures (FUN_004ade40) | OpenTPW/UI/Park/ParkObjectWindow.cs  |

@@ -64,6 +64,10 @@ namespace OpenTPW;
 /// <c>+0xc0</c>, dword 48: the speed word. A <c>SPAWNCHILD</c> child holds its parent's, a <c>SPAWNSOUND</c> child the loader's 50
 /// (<see cref="ParkScriptStates.LoaderSpeed"/>; 97 of 97 children and 125 of 125 sound children in the 766 distinct park files on the desk).
 /// </param>
+/// <param name="Reverb">
+/// <c>+0xd8</c>, dword 54: the reverb level <c>SETREVERB</c> stores, the loader's -1 (<c>0x00558c59</c>) before one. The
+/// engine's reader writes nothing over it after the raw struct (<c>FUN_005597a0</c>), so a load holds the file's.
+/// </param>
 /// <param name="Directory">
 /// The folder the script was loaded from, the string after the head table (<c>data\levels\jungle\Rides\mumbo\</c>), without its
 /// nought; a child holds its parent's (97 of 97 children and 125 of 125 sound children in the same files). Null only where a record was made without a save.
@@ -74,7 +78,7 @@ public readonly record struct SavedScript( int Handle, int Position, int BodyWor
 	int[]? Heads = null, SavedLimboSlot[]? Limbo = null, int InLimbo = 0,
 	SavedBounceSlot[]? Bounce = null, int Bouncing = 0, int BounceBase = 0, int BounceNode = 0,
 	SavedWalkSlot[]? Walk = null, int Thing = 0, int ModelHandle = 0, SavedEffect[]? Effects = null,
-	int Child = 0, int Parent = 0, int SoundChild = 0, int Speed = 0, string? Directory = null );
+	int Child = 0, int Parent = 0, int SoundChild = 0, int Speed = 0, string? Directory = null, int Reverb = -1 );
 
 /// <summary>
 /// One record of a script's object list, an effect <c>ADDOBJ</c> started (<c>docs/exe/saves.md</c>, "OpenTPW's
@@ -118,13 +122,15 @@ public readonly record struct SavedWalkSlot( short WalkNode, short HeadNode, sho
 ///
 /// <para>
 /// <paramref name="Speed"/> is the speed word (<c>+0xc0</c>, a 16-bit field) as the script stands; null leaves the file's.
+/// <paramref name="Reverb"/> is the reverb level (<c>+0xd8</c>) the same way.
 /// </para>
 /// </summary>
 public readonly record struct WrittenScript( int Handle, int Position, int CallIndex, int HeapIndex, int Result,
 	int[] Stack, int[] Variables, uint WaitDeadline, uint AnimationDeadline, int LoopingKey, int AnimationMark,
 	uint TimerDeadline, SavedLimboSlot[]? Limbo, int InLimbo, SavedBounceSlot[]? Bounce, int Bouncing, int BounceBase,
 	int BounceNode, SavedWalkSlot[]? Walk, int[]? Heads, SavedEffect[]? Effects = null,
-	ParkParticles.Spawn?[]? Emitters = null, int Child = -1, int SoundChild = -1, int Parent = -1, int? Speed = null );
+	ParkParticles.Spawn?[]? Emitters = null, int Child = -1, int SoundChild = -1, int Parent = -1, int? Speed = null,
+	int? Reverb = null );
 
 /// <summary>
 /// The <c>RSSE</c> module of a park save: every running script's program counter and variables.
@@ -284,6 +290,9 @@ public sealed partial class ParkScriptStates
 
 	/// <summary>The speed word - <c>+0xc0</c>, so dword 48.</summary>
 	private const int SpeedDword = 48;
+
+	/// <summary>The reverb level <c>SETREVERB</c> stores - <c>+0xd8</c>, so dword 54.</summary>
+	private const int ReverbDword = 54;
 
 	/// <summary>Which block holds limbo, eight bytes a slot, counting the body as nought.</summary>
 	private const int LimboBlock = 4;
@@ -608,7 +617,8 @@ public sealed partial class ParkScriptStates
 			ReadInt32At( start + (BounceNodeDword * 4) ), walk,
 			(ushort)ReadInt16At( start + ThingAt ), ReadInt32At( start + (ModelHandleDword * 4) ), effects,
 			ReadInt32At( start + (ChildDword * 4) ), ReadInt32At( start + (ParentDword * 4) ),
-			ReadInt32At( start + (SoundChildDword * 4) ), (short)ReadInt32At( start + (SpeedDword * 4) ), directory );
+			ReadInt32At( start + (SoundChildDword * 4) ), (short)ReadInt32At( start + (SpeedDword * 4) ), directory,
+			ReadInt32At( start + (ReverbDword * 4) ) );
 
 		if ( !_byHandle.TryAdd( handle, saved ) )
 			throw new InvalidDataException( $"two saved scripts both call themselves handle {handle}" );
@@ -684,6 +694,9 @@ public sealed partial class ParkScriptStates
 
 			if ( script.Speed is { } speed )
 				PutInt16( body, at + (SpeedDword * 4), (short)speed );
+
+			if ( script.Reverb is { } reverb )
+				PutInt32( body, at + (ReverbDword * 4), reverb );
 
 			if ( script.Child >= 0 )
 				PutInt32( body, at + (ChildDword * 4), script.Child );

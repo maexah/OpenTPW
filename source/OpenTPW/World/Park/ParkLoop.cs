@@ -140,7 +140,7 @@ internal static class ParkLoop
 	/// so each such step's handoff is counted: <c>CAMERA_RIDE_REVERB</c> while the camera is in a ride's view
 	/// (<see cref="ParkRideViewCameraMode.Active"/>, the End's alone in this build), <c>CAMERA_NO_RIDE_REVERB</c> otherwise.
 	/// With no ride under the camera the original still hands the level's <c>Sound.Reverb</c> (0 in Lost Kingdom;
-	/// <c>0x0055a477</c>, <c>0x0055a4c5</c>), since <c>0x0042a4e0</c> answers 0 outside the ride view's bit 4.
+	/// <c>0x0055a477</c>, <c>0x0055a4c5</c>), since <c>0x0042a4e0</c> answers 0 outside the ride view's <c>gui_CameraFlags &amp; 0x4</c>.
 	/// </summary>
 	internal static void HandTheReverb( int tick )
 	{

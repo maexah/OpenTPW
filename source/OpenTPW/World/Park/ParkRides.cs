@@ -1005,6 +1005,9 @@ public sealed class ParkRides : Entity
 		// The word as the file holds it (FUN_005597a0 reads the record raw and writes no +0xc0 after it; docs/exe/park.md, "What a loaded script holds").
 		script.Speed = saved.Speed;
 
+		// And the reverb level the same way (+0xd8; the record's, -1 where no SETREVERB had run).
+		script.Reverb = saved.Reverb;
+
 		// A script whose saved array is a different length from the one it declares is not the script this
 		// record belongs to. Said rather than silently truncated, because the slots would still be written.
 		if ( saved.Variables.Length != script.Variables.Count )
@@ -1625,8 +1628,9 @@ public sealed class ParkRides : Entity
 	/// <remarks>
 	/// <para>
 	/// <b>The engine sizes a head table for every script with a thing and a model</b> (<c>FUN_005587f0</c>); only
-	/// <c>ADDHEAD</c> and <c>DELHEAD</c> read it, so a script without either is given none here, nor one from a save,
-	/// which changes nothing it does.
+	/// <c>ADDHEAD</c> and <c>DELHEAD</c> read it, so a script without either is given none here, nor one from a save, which
+	/// changes nothing it does, but a bought thing's record is written with no head table where the original's holds one
+	/// (the TV Sim's 27): counted at the writer (<see cref="RideScript.Made"/>). A loaded record keeps the file's.
 	/// </para>
 	/// <para>
 	/// A vehicle made at its summons comes through <c>BindNew</c> and is given its nodes as its model's file stands

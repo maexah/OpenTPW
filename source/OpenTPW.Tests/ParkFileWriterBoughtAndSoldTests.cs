@@ -1033,6 +1033,34 @@ public class ParkFileWriterBoughtAndSoldTests
 	}
 
 	/// <summary>
+	/// <b>A bought TV Sim's script is written with no head table, and that is counted</b> (<c>SAVE_SCRIPT_HEAD_TABLE</c>): it
+	/// carries no <c>ADDHEAD</c> or <c>DELHEAD</c>, so it is given none, where the engine's loader sizes one from its model's
+	/// head nodes (<c>0x00558d6e</c>..<c>0x00558e0b</c>; the original's file holds 27). A Crazy Ape, which hangs heads, has its
+	/// table and counts nothing.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> not counted; counted for every made script.</remarks>
+	[TestMethod]
+	public void ABoughtScriptWithNoHeadTableIsCountedAtTheWriter()
+	{
+		var rides = Bind( shipped );
+		var state = new ParkState( shipped );
+		var tv = rides.Scheduler.Find( rides.ScriptFor( Buy( state, rides, SimulatorItem, 20, 60 ).ThingId ) )!;
+		var ape = rides.Scheduler.Find( rides.ScriptFor( Buy( state, rides, CrazyApe, 60, 60 ).ThingId ) )!;
+		int Counted() => Unimplemented.Summary.FirstOrDefault( gap => gap.What == "SAVE_SCRIPT_HEAD_TABLE" ).Times;
+
+		Assert.IsFalse( tv.UsesHeads );
+		Assert.AreEqual( 0, tv.HeadSlots );
+		Assert.IsTrue( tv.Nodes?.HeadCount() > 0, "its model has head nodes" );
+		Assert.IsTrue( ape.UsesHeads && ape.HeadSlots > 0 );
+
+		Unimplemented.Forget();
+		Assert.AreEqual( ape.HeadSlots, ape.Made( reading => (uint)reading, "x" ).Script.Heads!.Length );
+		Assert.AreEqual( 0, Counted(), "the Ape's table is written" );
+		Assert.AreEqual( 0, tv.Made( reading => (uint)reading, "x" ).Script.Heads!.Length, "the TV Sim's has none" );
+		Assert.AreEqual( 1, Counted(), "and that one is counted" );
+	}
+
+	/// <summary>
 	/// A bought ride with a script it made, written, and the file given that script's record and the parent's link to it
 	/// (a played park's file has both, as the original writes them).
 	/// </summary>
@@ -1174,6 +1202,42 @@ public class ParkFileWriterBoughtAndSoldTests
 		Assert.AreEqual( 80, changed.ScriptStates.For( bounce )!.Value.Speed, "the window's new word" );
 		Assert.IsTrue( words.Where( word => word.Key != bounce ).All( word => changed.ScriptStates.For( word.Key )!.Value.Speed == word.Value ),
 			"and no other script's moved" );
+	}
+
+	/// <summary>
+	/// <b>A script's reverb level goes through the save</b> (<c>+0xd8</c>, dword <c>0x36</c>; the struct is written raw,
+	/// <c>FUN_00559350</c>): a bought thing's script is written with the level it stands at, the loader's -1 where none was
+	/// stored, a loaded script's level changed since is written over the file's while the others keep theirs, and the next
+	/// load puts it back. An Inca Totem's <c>SETREVERB 3</c> (<c>Totem.RSE</c> word 126) is the Lost Kingdom case.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> <c>MadeRecord</c> writing -1 whatever the level; <c>Put</c> leaving the file's; <c>RideScript.Written</c>
+	/// handing no level; the load not seeding it (<c>Resume</c>).</remarks>
+	[TestMethod]
+	public void AScriptsReverbLevelIsWrittenAndLoadedBack()
+	{
+		var ape = Ape();
+		var three = ape.Script! with { Script = ape.Script.Script with { Reverb = 3 } };
+
+		Assert.AreEqual( 3, Int( ParkScriptStates.MadeRecord( three, 91 ), 0xd8 ), "a bought thing's script: the level it stands at" );
+		Assert.AreEqual( -1, Int( ParkScriptStates.MadeRecord( ape.Script, 91 ), 0xd8 ), "none handed: the loader's -1" );
+		Assert.AreEqual( 3, Written( Things( [ape with { Script = three }] ), out _ ).ScriptStates.For( 16 )!.Value.Reverb, "and it reads back" );
+
+		var rides = Bind( shipped );
+		var levels = shipped.ScriptStates.Order.ToDictionary( handle => handle, handle => shipped.ScriptStates.For( handle )!.Value.Reverb );
+
+		Assert.IsTrue( levels.All( level => rides.Scheduler.Find( level.Key ) is not { } script || script.Reverb == level.Value ), "the load puts back the level the file holds" );
+
+		var bounce = shipped.ScriptStates.Order.Single( handle => shipped.ScriptStates.For( handle )!.Value.Speed == 60 );
+
+		Assert.AreNotEqual( 3, levels[bounce], "the file's is not the one about to be stored" );
+		rides.Scheduler.Find( bounce )!.Reverb = 3;
+
+		var changed = Resaved( shipped, rides );
+
+		Assert.AreEqual( 3, changed.ScriptStates.For( bounce )!.Value.Reverb, "the level stored since the load" );
+		Assert.IsTrue( levels.Where( level => level.Key != bounce ).All( level => changed.ScriptStates.For( level.Key )!.Value.Reverb == level.Value ),
+			"and no other script's moved" );
+		Assert.AreEqual( 3, Bind( changed ).Scheduler.Find( bounce )!.Reverb, "the next load seeds it" );
 	}
 
 	/// <summary>The loaded park written as it runs: the file's own body under <paramref name="loaded"/>, its scripts and things as <paramref name="rides"/> has them, read back.</summary>

@@ -1082,7 +1082,7 @@ OpenTPW runs written over and records added and taken out. **Afresh** means writ
 
 | Part | Play here changes | A writer here |
 |---|---|---|
-| The header | `mGameTick`, `mParkClosed`, `mNumberOfVisitorsToDate`, `mWorldState` (4 once the park has ended, Q404); the five staff heads and `mFirstObject` as things are made and gone; the arrival vehicles' handles | patched. `mRandomSeed` is the park's generator as it stands (`ParkState.RandomSeed`), which only the leavers' summons draws here: every other system keeps a generator of its own (Q443) |
+| The header | `mGameTick`, `mParkClosed`, `mNumberOfVisitorsToDate`, `mWorldState` (4 once the park has ended, Q404); the five staff heads and `mFirstObject` as things are made and gone; the arrival vehicles' handles | patched. `mRandomSeed` is the park's generator as it stands (`ParkState.RandomSeed`), which the leavers' summons draws here and a litter drop reseeds and draws (Q1288): every other system keeps a generator of its own (Q443) |
 | The object controls | an item's standing count and first-build stamp; its researched flag (`+0x10`) and tier (`+0x14`) as the lab has them | patched; the researched flag and tier by `PutLab` (Q701) for each item the lab answers |
 | The staff pool | every candidate, the top-up's counts and mark | written slot for slot from `ParkStaffPool`; an empty slot keeps its bytes and loses `mValid` |
 | The clock and arrival fields | the date, the arrival timer | patched: the timer's mark, count and flag are written, and the clock's `mMonthAtLastUpdate` and `mDayAtLastUpdate` ("OpenTPW's writer, the calendar's fields"); its start, session and rate are the file's |
@@ -1912,7 +1912,10 @@ and the object constructor `FUN_004db090` was read beside the two files.
   as the `.RSE` file holds them, and its tables. The speed word is the object's operating speed, or the
   script creator's 50 where that is nought. The directory is OpenTPW's own path, in lower case (`rides`). A walk slot and a bounce slot
   are written whole, in use or let go ("OpenTPW's writer, a walk slot let go", "a bounce slot let go"), and the effects it
-  has started follow its guard ("OpenTPW's writer, a script's started effects"). A gone
+  has started follow its guard ("OpenTPW's writer, a script's started effects"). The reverb level (`+0xd8`) is the
+  script's, -1 where no `SETREVERB` has run. **A deviation:** a script with no `ADDHEAD` or `DELHEAD` is written with no head
+  table (`+0x4c` nought), where the loader sizes one from the model's head nodes (`0x00558d6e`..`0x00558e0b`; a bought TV
+  Sim's holds 27 in the original's file); counted, `SAVE_SCRIPT_HEAD_TABLE`, where its nodes were read. A gone
   thing's records, its own and any its script started, are taken out, and the count the records are walked by
   is kept.
 - **A made model** (`ParkThingStates.Plan`, `MadeRecord`, `Splice`): the slot at the cursor, the lowest empty
@@ -2420,10 +2423,11 @@ a record made as the constructor makes one (`FUN_004758f0`, on the lowest free s
 first turn, so kind 11, bank 0, set (`+0xb4`) the kind's slot, frame 0, alpha 255, place (x, 0, y), `+0x0c` the kind's record
 (1382 + 10 × slot), `+0x08` that plus 7 (resting on the jump), flags `0x80000`, state 2 and shown, its stack empty; then the
 cell's litter block: `mLitter` the kind, `mLitterCollector` nought, the first `mLitterScript` the sprite's slot, the second
-nought. A cell the file already holds litter on, or with no map record, is refused. **Deviations:** the slot is the lowest free
-at the save, where the original's is the lowest at the drop; state 2, shown and alpha 255 are what a run program and the
-constructor leave on other sprites (the heads', above), not compared on a litter sprite of the original's; `mTimeMarkedForLitterCollection`
-is left as the file's (nought on a clean cell). With no people to write (the people stage not run) the drop is not written and
+nought. A cell the file already holds litter on, or with no map record, is refused. **Measured** (run 22 review, the original's own
+files of `q899/files.txt` read with `parkfile.py`): all 72 litter sprites there hold state 2, shown 1, alpha 255, interval 62,
+room 20, `+0xbc` 1, facing 0, frame 0, flags `0x80000`, pc = program + 7, as this writes. **Deviations:** the slot is the lowest
+free at the save, where the original's is the lowest at the drop; `mTimeMarkedForLitterCollection` is left as the file's
+(nought on a clean cell). With no people to write (the people stage not run) the drop is not written and
 is counted, `SAVE_PARK_RUNNING_LITTER`.
 
 **Read back.** The reader takes both handles (`ParkWorld.MapCell.LitterSprite`, `LitterParticle`); a park state made from the
@@ -3820,8 +3824,8 @@ order is the file's links', not the ids'**: the order `ParkState.ObjectsInChainO
 
 **Still not the original's, each said where it is:**
 
-- An upgrade job, the advisor's message and a coaster's circuit test are counted (`ride-operation.md`, "The
-  mechanic's repair", "Where OpenTPW differs").
+- A coaster's circuit test after the open (`OPEN_GUARD_COASTER_TRACK_RECORD`) and an upgrade's effect sprite
+  (`RIDE_UPGRADE_EFFECT`) are counted (`ride-operation.md`, "The mechanic's repair", "Where OpenTPW differs").
 - A ride wears by running (Q303, `ride-operation.md`, "A ride's wear"), and a Belly Bounce worn to nought was
   mended in a game run: 30 sweeps of repair at the mechanic's grade. A count between nought and the whole was in
   no game run: the tests alone.

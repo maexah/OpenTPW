@@ -55,6 +55,7 @@ public class ParkRideWindowStatusTests
 	{
 		Assert.AreEqual( 0, StatusOf( Open( valid: 0 ) ), "a flat ride's mIsTrackRideValid is not read" );
 		Assert.AreEqual( 0, StatusOf( Open( valid: 1 ), trackType: 1 ) );
+		Assert.AreEqual( 0, StatusOf( Open( valid: 0 ), trackType: 3 ), "a coaster's goes to its track record (0x004861c0's case 3), not +0x2c" );
 	}
 
 	[TestMethod]
@@ -107,20 +108,18 @@ public class ParkRideWindowStatusTests
 	[TestMethod]
 	public void EachStatusHasItsRowAndColour()
 	{
-		Assert.AreEqual( 367, ParkClosedStatus.Row( 3 ) );
-		Assert.AreEqual( 386, ParkClosedStatus.Row( 0x19 ) );
-		Assert.AreEqual( 387, ParkClosedStatus.Row( 0x1a ) );
-		Assert.AreEqual( 372, ParkClosedStatus.Row( 5 ) );
-		Assert.AreEqual( 369, ParkClosedStatus.Row( 8 ) );
-		Assert.AreEqual( 384, ParkClosedStatus.Row( 0x11 ) );
-		Assert.AreEqual( 382, ParkClosedStatus.Row( 0x12 ) );
-		Assert.AreEqual( 381, ParkClosedStatus.Row( 0x14 ) );
-		Assert.AreEqual( 375, ParkClosedStatus.Row( 0xe ) );
-		Assert.AreEqual( 0, ParkClosedStatus.Row( 0 ) );
+		// The whole table at 0x0074fbc0, one row a status from nought to 0x1a, read from the executable.
+		int[] rows = [0, 365, 366, 367, 368, 372, 370, 371, 369, 373, 374, 378, 376, 377, 375, 379, 380, 384, 382, 383, 381, 385, 388, 389, 390, 386, 387];
+
+		CollectionAssert.AreEqual( rows, Enumerable.Range( 0, rows.Length ).Select( ParkClosedStatus.Row ).ToArray() );
+		Assert.AreEqual( 0, ParkClosedStatus.Row( 0x1b ), "past the table" );
 		Assert.AreEqual( new UiColour( 255, 50, 30 ), ParkClosedStatus.Colour( 3 ) );
 		Assert.AreEqual( new UiColour( 80, 100, 255 ), ParkClosedStatus.Colour( 0x11 ) );
 		Assert.AreEqual( new UiColour( 80, 100, 255 ), ParkClosedStatus.Colour( 4 ) );
 		Assert.AreEqual( new UiColour( 255, 150, 30 ), ParkClosedStatus.Colour( 0x19 ) );
+		Assert.AreEqual( new UiColour( 255, 50, 30 ), ParkClosedStatus.Colour( 2 ), "broken down is red, as condemned" );
+		Assert.AreEqual( new UiColour( 80, 100, 255 ), ParkClosedStatus.Colour( 0x15 ), "the blue runs to 0x15" );
+		Assert.AreEqual( new UiColour( 255, 150, 30 ), ParkClosedStatus.Colour( 0x16 ), "and the orange from 0x16" );
 		Assert.IsFalse( ParkClosedStatus.CallsTheMechanic( 0x10 ) );
 		Assert.IsTrue( ParkClosedStatus.CallsTheMechanic( 0x11 ) );
 		Assert.IsTrue( ParkClosedStatus.CallsTheMechanic( 0x15 ) );

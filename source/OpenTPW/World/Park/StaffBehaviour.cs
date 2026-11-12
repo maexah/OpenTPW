@@ -1415,10 +1415,10 @@ public sealed class StaffBehaviour
 	}
 
 	/// <summary>The mechanic's thing model.</summary>
-	internal const int MechanicModel = 4;
+	private const int MechanicModel = 4;
 
 	/// <summary>The handyman's thing model.</summary>
-	internal const int HandymanModel = 5;
+	private const int HandymanModel = 5;
 
 	/// <summary>The entertainer's thing model.</summary>
 	private const int EntertainerModel = 6;

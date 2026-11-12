@@ -1270,13 +1270,18 @@ Ten handlers, and **every one reaches another script by ID through one global re
 before its seeds. **`+0x74` is seeded to -1** (`puVar7[0x1d] = 0xffffffff`, `0x00558c4c`; `NAME` is `0x0055429a`) and `FINDSCRIPTRAND` skips a negative, which is what makes "has never run `NAME`" different from "is called whatever is at offset 0"; **31 of the 308 never name themselves**. **`+0x38` keeps its trailing backslash** and the concatenation is a plain `strcat`, so a reimplementation using `Path.Combine` doubles the separator.
 
 **What a child holds, against OpenTPW** (Q992; the addresses from the fork watch 2026-10-31, `verify-world.md` M11, not
-read again in Ghidra). A child is made by the loader with no thing, so everything it holds past the copy is the cleared
-frame's: no head table at `+0x30`, nothing at `+0x9c`. `RideScript.SpawnChild` copies the parent's id, the thing and the
+read again in Ghidra). A child's loader was handed a thing word of 0 (`0x00555115`, `0x00409cd0`), so it holds nothing
+the loader takes from a thing: no head table (`+0x30`/`+0x4c`), no `+0xd4` zone, no model until the copy; the loader's own
+seeds it holds as every script does (`0x00558c04`..`0x00558c71`: -1 at `+0x74` and `+0xd8`, 1000 at `+0x88`/`+0x8a`/`+0xe4`,
+50 at `+0xc0`, 1 at `+0x70`, `0xffff` at `+0xa8`/`+0xe6`). The copy then writes the parent's `+0xac`, `+0x9c`, `+0xb4` and
+`+0xc8` (`0x0055516b`..`0x0055519a`); `+0x9c` is nought at every shipped spawn because no spawner carries `TOUR`. `RideScript.SpawnChild` copies the parent's id, the thing and the
 model (its player and its nodes) and leaves `+0x9c` (`TOUR`'s record) and `+0xb4` (no reader decoded) uncopied: **dead by
 CONTENT**, measured over the 308 `.RSE` (2026-11-12): the 20 `SPAWNCHILD`s of 16 parents spawn 16 files, none carrying
 `TOUR`, `BUMP`, `COAST`, `ADDHEAD` or `DELHEAD`, and no parent carries `TOUR`, so `+0x9c` is nought at every shipped
 spawn. For the same reason a child has no `TrackRide` or `Bumpers` in OpenTPW, which the engine's `BUMP` would reach
-through the copied thing (`0x0055470b`). `SPAWNSOUND` stores `+0x14` alone (`0x00555255`) and its script holds no thing or
+through the copied thing (`0x0055470b`), and the scheduler's push of a due child's word into its thing's track ride
+(`0x005517f2`..`0x00551844`, `FUN_00545180`), which Halloween's `bumper.RSE` child (`effects.RSE`) reaches, carries its
+parent's word, pushed at the end of the same visit (`0x00551888`), into a pure set: no difference. `SPAWNSOUND` stores `+0x14` alone (`0x00555255`) and its script holds no thing or
 model in either. A child's speed word is not copied: the scheduler pushes the parent's into it after each due turn
 (`0x00551888`, `RideScriptScheduler`), in both games. Tests: `RideScriptRelativeTests.AChildTakesItsParentsThingAndModelAndNoHeadTableAndASoundScriptTakesNothing`,
 `AChildTakesItsParentsModelNodes`.

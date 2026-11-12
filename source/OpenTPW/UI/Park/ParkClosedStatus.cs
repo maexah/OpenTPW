@@ -41,13 +41,13 @@ internal static class ParkClosedStatus
 
 		// Waiting for an upgrade (0x004e03e0), the mechanics asked: 5 to 9.
 		if ( ride.State == 2 )
-			return Served( ride, staff, StaffBehaviour.MechanicModel, 5 );
+			return Served( ride, staff, ParkPeople.MechanicModel, 5 );
 
 		// A service requested (+0x64): a toilet asks the handymen, 0xb to 0xf, anything else the mechanics, 0x11 to 0x15.
 		if ( ride.RequestedService != 0 )
 			return ride.IsToilet
-				? Served( ride, staff, StaffBehaviour.HandymanModel, 0xb )
-				: Served( ride, staff, StaffBehaviour.MechanicModel, 0x11 );
+				? Served( ride, staff, ParkPeople.HandymanModel, 0xb )
+				: Served( ride, staff, ParkPeople.MechanicModel, 0x11 );
 
 		// Broken down (0x004e0370): repairs in progress while the assignee is at work, else broken down, assigned or not.
 		if ( ride.State == 1 )
@@ -103,9 +103,9 @@ internal static class ParkClosedStatus
 	/// </summary>
 	private static bool AtWork( ParkWorld.CatalogueObject ride, Staffing staff )
 		=> Assigned( ride, staff ) != 0 && staff.ById( ride.AssignedStaff ) is { } member
-			&& (member.Model == StaffBehaviour.MechanicModel
+			&& (member.Model == ParkPeople.MechanicModel
 				? member.ObjectToRepair == ride.ThingId && member.Activity == StaffActivity.Repairing
-				: member.Model == StaffBehaviour.HandymanModel
+				: member.Model == ParkPeople.HandymanModel
 					&& member.ToiletToClean == ride.ThingId && member.Activity == StaffActivity.Cleaning);
 
 	/// <summary>Whether <c>FUN_004ad4e0</c> sets <c>b_callmech</c> down: the mechanic's statuses, <c>0x11</c> to <c>0x15</c>.</summary>

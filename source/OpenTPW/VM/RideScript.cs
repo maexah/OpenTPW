@@ -767,10 +767,10 @@ public sealed class RideScript
 	public int NotImplemented { get; private set; }
 
 	/// <summary>
-	/// The reverb level the latest <c>SETREVERB</c> stored (script <c>+0xd8</c>), or null before the first: the original's
-	/// value before one is not read (<see cref="SetReverb"/>).
+	/// The reverb level, script <c>+0xd8</c>: the loader's -1 (<c>0x00558c59</c>) until the latest <c>SETREVERB</c> stores
+	/// one (<see cref="SetReverb"/>), or as a park file holds it, which the load seeds and the writer writes back.
 	/// </summary>
-	public int? Reverb { get; private set; }
+	public int Reverb { get; internal set; } = -1;
 
 	/// <summary>The milliseconds the latest <c>WAIT</c> or <c>WAITANIM</c> armed itself for (<see cref="Wait"/>, <see cref="AnimationWait"/>), for the <c>scripts</c> census; nought before the first.</summary>
 	public int LastWait { get; private set; }
@@ -1308,7 +1308,7 @@ public sealed class RideScript
 				(short)slot.State, slot.Flags, slot.Facing ) )],
 			Heads: [.. _heads],
 			Effects: Effects?.Written(),
-			Emitters: WrittenEmitters(), Speed: Speed );
+			Emitters: WrittenEmitters(), Speed: Speed, Reverb: Reverb );
 	}
 
 	/// <summary>
@@ -1671,8 +1671,19 @@ public sealed class RideScript
 	/// its <c>.RSE</c> file and the offset of its name.
 	/// </summary>
 	/// <param name="directory">The folder it was loaded from, as the engine keeps it at <c>+0x38</c>.</param>
+	/// <remarks>
+	/// A script with no <c>ADDHEAD</c> or <c>DELHEAD</c> is given no head table here, where the engine's loader sizes one for
+	/// every script whose thing's model has head nodes (<c>FUN_005587f0</c>, <c>0x00558d6e</c>..<c>0x00558e0b</c>), so its
+	/// record is written with <c>+0x4c</c> nought and no head block: the TV Sim's holds 27 in the original's. Counted,
+	/// <c>SAVE_SCRIPT_HEAD_TABLE</c>, where its nodes were read and hold one; a script whose nodes were not read is not.
+	/// </remarks>
 	internal MadeScript Made( Func<float, uint> reading, string directory )
-		=> new( Written( reading ), ThingId, _file.Body, _file.StringBlob, _nameOffset, _file.TimeSlice, Speed, directory, _hadATurn );
+	{
+		if ( _heads.Length == 0 && Nodes?.HeadCount() > 0 )
+			Unimplemented.Report( "SAVE_SCRIPT_HEAD_TABLE" );
+
+		return new( Written( reading ), ThingId, _file.Body, _file.StringBlob, _nameOffset, _file.TimeSlice, Speed, directory, _hadATurn );
+	}
 
 	/// <summary>
 	/// Whether it has had a turn: the engine sets its turn's budget, <c>+0x98</c>, from <c>+0x94</c> as each turn begins
@@ -3838,22 +3849,13 @@ public sealed class RideScript
 	}
 
 	/// <summary>
-	/// <c>SETREVERB</c> (<c>0x0055649c</c>): stores its operand as the script's reverb level, <c>+0xd8</c>, and does
-	/// nothing else (<c>docs/exe/audio.md</c>, "The reverb"). The level is read only by the camera's reverb handoff,
-	/// which is cut, so the store is counted, <c>SCRIPT_REVERB_LEVEL</c>. Whether the original resolves a variable
-	/// operand or stores the raw word, as <c>TURBO</c> does, is not read: all 21 uses in the 308 shipped scripts are
-	/// literals (0, 1, 3, 8, 9), where the two agree, and a variable is counted, <c>SETREVERB_VARIABLE_OPERAND</c>, and
-	/// stores nothing.
+	/// <c>SETREVERB</c> (<c>0x0055649c</c>): resolves its operand (<c>0x005564a7</c> -> <c>FUN_005573a0</c>: a variable's value,
+	/// else the low 16 bits signed) and stores it as the script's reverb level, <c>+0xd8</c>, and does nothing else
+	/// (<c>docs/exe/audio.md</c>, "The reverb"). The level is read only by the camera's reverb handoff, which is cut, so the
+	/// store is counted, <c>SCRIPT_REVERB_LEVEL</c>; the park file's writer carries it.
 	/// </summary>
 	private void SetReverb( RideOperand operand )
 	{
-		if ( operand.Kind == RideOperandKind.Variable )
-		{
-			++NotImplemented;
-			Unimplemented.Report( "SETREVERB_VARIABLE_OPERAND" );
-			return;
-		}
-
 		Reverb = Value( operand );
 		Unimplemented.Report( "SCRIPT_REVERB_LEVEL" );
 	}
