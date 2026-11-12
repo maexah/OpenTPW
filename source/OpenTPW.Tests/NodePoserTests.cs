@@ -315,7 +315,7 @@ public class NodePoserTests
 	}
 
 	/// <summary>
-	/// <see cref="LobbyModel.Pose"/> sends a clip through the tree by <see cref="NodePoser.Drives(AnimationFile, int)"/> with the model's mesh
+	/// <see cref="LobbyModel.Pose"/> (its <see cref="LobbyModel.PoseMeshes"/>) sends a clip through the tree by <see cref="NodePoser.Drives(AnimationFile, int)"/> with the model's mesh
 	/// count, not by the mesh-blind <see cref="NodePoser.Drives(AnimationFile)"/>. A <c>LobbyModel</c> needs the graphics device to be made,
 	/// so the wiring is read from the source, as <c>ParkCoasterPylonsTests</c> reads its own.
 	/// </summary>
@@ -325,7 +325,7 @@ public class NodePoserTests
 	{
 		var text = System.IO.File.ReadAllText( System.IO.Path.Join( RepoFiles.Root(), "source", "OpenTPW", "World", "Lobby", "LobbyModel.cs" ) );
 
-		StringAssert.Contains( text, "if ( NodePoser.Drives( animation, Entities.Length ) )" );
+		StringAssert.Contains( text, "if ( NodePoser.Drives( animation, entities.Length ) )" );
 		StringAssert.Contains( text, "Clips.Count( clip => NodePoser.Drives( clip, Entities.Length ) )" );
 		Assert.IsFalse( text.Contains( "NodePoser.Drives( animation ) )", StringComparison.Ordinal ), "no mesh-blind dispatch is left" );
 	}

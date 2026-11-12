@@ -13626,3 +13626,22 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   2 fumes (Halloween), and no walk node hangs under one (`docs/exe/park.md`). The count and the routed-node list behind
   it are gone from `RideNodes`; `ANodeARouteCarriesIsFollowedAndNotCounted` finds the bus's sound node carried 4 s into
   `Busm1` where the drawn tree puts it, off its rest, with no count. Not checked: the original (no Ghidra or Proton here).
+- [x] **Q574. One node tree for every channel of a drawn model.** From the run 6 review of Q554 (`VERIFY-13.md`, Q554 2). The engine
+  keeps one matrix per node for all of a model's channels; ours poses a clip that moves nodes through `NodePoser` and
+  places every mesh from it (`LobbyModel.PlacePosed`), and a clip that only turns through `MeshRotator`, so a
+  rotation-only clip on a channel posed before a node-moving one is drawn at rest until it is posed again, the next frame
+  (said at `LobbyModel.Pose`). No Lost Kingdom model shows it: the Inca Totem's rotation-only channels are 1 to 3, above
+  its node-moving channel 0; other themes not swept. Sweep every multi-channel script's roles against its clips; where a
+  model is reached, pose every clip of a model that has a node-moving clip through the one tree.
+  **Swept, and no model is reached in a way that draws differently, so the code fix is not built (rule 3, dead by
+  CONTENT).** The defect as written is gone since Q1010: a turn-only clip on an earlier channel is handed to the tree by
+  the node-moving clip's pose (`MeshRotator.TakeHeld`). The other order, a turn-only clip on a LATER channel, turns its
+  meshes over what the tree placed, which is one tree's answer wherever nothing above or under the turned mesh moves.
+  The sweep (`tools/harness/dotnet/channelclips`, all four themes; `OneTreeSweepTests`): 9 models run more than one
+  channel; the scripts' starts by (channel, role, entry) give 36 turn-only/tree pairs on two channels, all the Inca
+  Totem's (role 5.1 to 5.9 on channels 1 to 3 after roles 0, 5.0, 9 and 10 on channel 0); 27 share a mesh, always the
+  turned mesh itself (8 to 10, under `tp_ground`, which nothing moves, nothing under them), none above or under it. The
+  old comment at `LobbyModel.Pose` named the wrong order as the risk; its branch is now `LobbyModel.PoseMeshes` (no
+  change in behaviour) and says this. Off-screen run (a bought Totem, opened and broken down by `scriptvar`): the tree's
+  rows and the drawn rows of meshes 8 to 10 agree mid-ride. Not read: whether the original poses a held channel each
+  frame (Q1384). **Done 2026-11-12** (cloud lane c66, `alexah/1045-one-tree-sweep`).

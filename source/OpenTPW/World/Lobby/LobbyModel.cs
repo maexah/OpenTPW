@@ -916,6 +916,35 @@ public sealed class LobbyModel : IChannelPosed
 	}
 
 	/// <summary>
+	/// The meshes' half of <see cref="Pose"/>: a clip that moves nodes through the tree (<see cref="PoseThroughTree"/>, the tree made by
+	/// <paramref name="poser"/> at its first such clip), any other through <paramref name="rotator"/>.
+	/// <para>
+	/// <b>Two posers where the original keeps one matrix a node</b> (Q574). A clip that only turns, on a channel posed before a
+	/// node-moving one, is handed to the tree by that pose (<see cref="MeshRotator.TakeHeld"/>). One on a later channel turns its
+	/// meshes over what the tree placed, which draws as one tree would where nothing above or under the turned mesh moves:
+	/// the Inca Totem's channels 1 to 3 over channel 0 (meshes 8 to 10 under an unmoved <c>tp_ground</c>), the one such model in the
+	/// four themes (<c>tools/harness/dotnet/channelclips</c>, <c>OneTreeSweepTests</c>). Where a tree clip moved a node above or under a
+	/// mesh a later channel turns alone, the rotator would drop that move: dead by CONTENT, no shipped model has one.
+	/// </para>
+	/// </summary>
+	internal static void PoseMeshes( ModelEntity[] entities, MeshRotator? rotator, Func<NodePoser> poser, bool additive,
+		AnimationFile animation, float frame, float scale, Quaternion rotation, Vector3 origin )
+	{
+		if ( NodePoser.Drives( animation, entities.Length ) )
+		{
+			PoseThroughTree( entities, rotator, poser(), animation, frame, scale, rotation, origin );
+			return;
+		}
+
+		// FUN_00470d10 composes an additive model's rotation key with the node's own; not decoded, and MeshRotator would
+		// replace the turn. The 49 such clips are the coaster pylons' and their kin's; a pylon model is posed through PoseNodes, not here, and the ones that turn a node past the meshes go to NodePoser above.
+		if ( additive && animation.RotationTracks.Count > 0 )
+			Unimplemented.Report( "ANIM_ADDITIVE_ROTATION" );
+
+		rotator?.Pose( animation, frame );
+	}
+
+	/// <summary>
 	/// Poses <paramref name="animation"/> through the node tree and places the meshes from it. What a clip that turned meshes alone left
 	/// (<see cref="MeshRotator.TakeHeld"/>) is handed to the tree first, so the pose starts from it.
 	/// </summary>
@@ -955,24 +984,7 @@ public sealed class LobbyModel : IChannelPosed
 	/// </summary>
 	public void Pose( AnimationFile animation, float frame )
 	{
-		if ( NodePoser.Drives( animation, Entities.Length ) )
-		{
-			// Every mesh from the one tree. Not the original's, whose tree holds every channel's turns: a clip that only
-			// turns, on a channel posed before this one, is drawn at rest until it is posed again, the next frame. No Lost
-			// Kingdom model plays one on a channel below a clip that moves nodes (the Inca Totem's are channels 1 to 3).
-			var poser = Poser();
-
-			PoseThroughTree( Entities, Rotator, poser, animation, frame, _scale, _placedRotation, _placedOrigin );
-		}
-		else
-		{
-			// FUN_00470d10 composes an additive model's rotation key with the node's own; not decoded, and MeshRotator would
-			// replace the turn. The 49 such clips are the coaster pylons' and their kin's; a pylon model is posed through PoseNodes, not here, and the ones that turn a node past the meshes go to NodePoser above.
-			if ( _additive && animation.RotationTracks.Count > 0 )
-				Unimplemented.Report( "ANIM_ADDITIVE_ROTATION" );
-
-			Rotator?.Pose( animation, frame );
-		}
+		PoseMeshes( Entities, Rotator, Poser, _additive, animation, frame, _scale, _placedRotation, _placedOrigin );
 
 		// Held at whatever the last entry before this frame said, and left alone entirely before the
 		// first - which is what VisibleAt answers null for, and what the engine does by simply not
