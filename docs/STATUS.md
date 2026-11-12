@@ -43,14 +43,6 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the maintainer's pre-commit hook: grep it by Q-number.
 
 - **Q18 (the dimmer drawn over the advisor):** in a cloud container (no Ghidra, no original, no display; the run's output was not kept), `AdvisorUnderDimmerTests` (five, needing no game) pass, and six bugs put back by hand (the hook never called, kept after its first call, run before the hidden test, no depth clear in it, the overlays also drawn on top, the overlays left out whenever a modal window is open) each failed one. An off-screen park run (`consolerun.py`, `park jungle`, `speech 5`, `menu`, `windows`) counted the overlays under a dimmer only while the game menu was open with him shown and paused (0, then 33 and 51 frames, last GameMenu, on top held at 1037), and on top only after it closed (under held at 101, on top 1082 then 1104). Not photographed: what he looks like under the dimmer is Q1460. The buy screen draws no dimmer and is unchanged.
-  output was not kept), six tests pass (one changed, five added: `SixMonthsInTheRedEndThePark`, `AParkClimbedOutOnDepositsDoesNotEnd`,
-  `AnEndedParksStateIsWrittenAndReadBack`, `TheEndBreaksTheRidesGuestsChooseAndCommandsTheGateTwo`,
-  `InAnEndedParkNobodyTakesATurnAndTheClockGoesOn`, `TheWeatherTurnsInNoSweepOfAnEndedPark`; the two music and crowd tests
-  now set the running state), and ten bugs put back by hand each failed one. An off-screen run (`consolerun.py`, the
-  recipe in `docs/TOOLING.md`) ended the stock park on tick 5611: world state 4, `VAR_BREAKSTAT` 1 on objects 23, 22, 21,
-  16, 14 and 13, the gate's command 2 with the door open, the wages paid after, the clock 5614 to 5618 with the guests'
-  turns unchanged. Not seen: the end screen (Q1424, counted), and nothing run beside the original; what the end's set,
-  the advisor's record `0x6a`, the render flag and the delete list are in the disassembly is Q1425.
 
 ## Numbers (take counts fresh; these go stale within a day)
 
