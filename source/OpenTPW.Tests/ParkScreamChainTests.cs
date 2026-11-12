@@ -533,6 +533,105 @@ public class ParkScreamChainTests
 		Assert.AreEqual( next + (chain.Gap / 1000f), chain.NextAt, 0.0005f, "its wait counted from that pass" );
 	}
 
+	/// <summary>A driver whose children each get a voice of their own, never handed to the mixer, so a stop is seen on it.</summary>
+	private static (ParkScreams Screams, List<Voice> Voices) VoicedDriver( Random random )
+	{
+		var bank = SoundBank.Load( "global", "Sound/Kids" );
+
+		Assert.IsNotNull( bank, "global/Sound/KidsHD.sdt is the bank cat_kids names, and it ships" );
+
+		var voices = new List<Voice>();
+		var variations = new Dictionary<int, IReadOnlyList<SoundCategoryFile.Variation>>();
+		var screams = new ParkScreams(
+			effect => variations.TryGetValue( effect, out var known ) ? known : variations[effect] = Kids( effect ),
+			( chain, variation ) =>
+			{
+				var voice = new Voice( bank![0]!, 0.5f, loop: false, 0f, AudioBus.Effects, Here );
+
+				voices.Add( voice );
+				return voice;
+			},
+			() => Here,
+			random );
+
+		return (screams, voices);
+	}
+
+	/// <summary>Draws nought every time: each wait its variation's shorter bound, each zone the first.</summary>
+	private sealed class Noughts : Random
+	{
+		public override int Next( int maxValue ) => 0;
+
+		public override long NextInt64( long maxValue ) => 0;
+	}
+
+	/// <summary>
+	/// <b>A stop on the pass that empties a chain's list cuts no child</b>: the prune deletes the newest child without
+	/// stopping its channel (<c>0x006bdc3e</c>) and the stop walks only the list (<c>0x006bd9b0</c>). Two rides hold effect
+	/// 71; the frame falls in the first's due millisecond, so its child is pruned and let go, and both stop then: the first's
+	/// child plays on, the second's, still in its list, is cut.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> the prune keeping the voice (the stop cuts it); the stop cutting a chain's child whatever its list
+	/// holds; no stop of a child still in the list.
+	/// </remarks>
+	[TestMethod]
+	public void AStopOnTheEmptyPassCutsNoChild()
+	{
+		var (screams, voices) = VoicedDriver( new Random( 1 ) );
+		var first = screams.Start( 13, 0x47, 1, 20, Here, now: 100f );
+		var second = screams.Start( 43, 0x47, 1, 20, Here, now: 100.5f );
+		var inside = first.NextAt + 0.0002f;
+
+		Assert.AreEqual( ParkAudio.Milliseconds( first.NextAt ), ParkAudio.Milliseconds( inside ), "the frame falls in the first's due millisecond" );
+		Assert.IsTrue( ParkAudio.Milliseconds( inside ) < ParkAudio.Milliseconds( second.NextAt ), "and before the second's" );
+
+		screams.Pump( inside );
+
+		Assert.AreEqual( (1, 1), (first.Plays, second.Plays), "no child made on that pass" );
+		Assert.IsTrue( first.ListEmpty && !second.ListEmpty, "the first's list pruned empty, the second's not" );
+		Assert.IsNull( first.Voice, "the pruned child let go" );
+
+		screams.Stop( 13 );
+		screams.Stop( 43 );
+
+		Assert.AreEqual( 2, voices.Count );
+		Assert.IsTrue( voices[0].Playing, "the pruned child's sample is not cut by the stop" );
+		Assert.IsFalse( voices[1].Playing, "the child still in the second's list is" );
+	}
+
+	/// <summary>
+	/// <b>A child whose wait is nought is pruned in the pass that makes it</b>: its time is the pass's own
+	/// (<c>0x006c3ac5</c>), and the tick's prune (<c>now &gt;= +0x1c</c>, <c>0x006bdc23</c>) follows its extend with the one
+	/// clock reading. Effect 74's waits are 0 to 500 ms; drawn nought, the chain's first child leaves its list empty as it is
+	/// made, a stop then cuts nothing, and a chain not stopped makes its next child on the next pass, from the empty list.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> no prune after the start's child; no prune after a tick's extend; the pruned child's voice kept.
+	/// </remarks>
+	[TestMethod]
+	public void AChildWithNoWaitIsPrunedInThePassThatMakesIt()
+	{
+		var (screams, voices) = VoicedDriver( new Noughts() );
+		var stopped = screams.Start( 13, 0x4a, 8, 20, Here, now: 100f );
+
+		Assert.AreEqual( (1, 0), (stopped.Plays, stopped.Gap), "its first child, with a wait of nought" );
+		Assert.IsTrue( stopped.ListEmpty, "pruned in the pass that made it" );
+		Assert.IsNull( stopped.Voice );
+
+		screams.Stop( 13 );
+		Assert.IsTrue( voices[0].Playing, "a stop then cuts nothing" );
+
+		var going = screams.Start( 43, 0x4a, 8, 20, Here, now: 100f );
+
+		screams.Pump( 100.016f );
+
+		Assert.AreEqual( (2, 0), (going.Plays, going.Gap), "the next pass makes its child from the empty list, again with no wait" );
+		Assert.IsTrue( going.ListEmpty, "and prunes it in that pass" );
+		Assert.IsNull( going.Voice );
+		Assert.IsTrue( voices[1].Playing && voices[2].Playing, "both let go, neither stopped" );
+	}
+
 	/// <summary>
 	/// <b>The park's music, through <c>ParkAudio.OnUpdate</c> as the game runs it</b> (<c>docs/exe/park-engine.md</c>,
 	/// "The music's level"). The level is set only on a step whose count has its low five bits nought, from the
@@ -1422,7 +1521,8 @@ public class ParkScreamChainTests
 
 			for ( var frame = 0; frame < 900; ++frame )
 			{
-				if ( frame == 450 )
+				// Not on a pass whose list is pruned empty, whose child's voice is let go (Q1178).
+				if ( frame >= 450 && level == 90 && !chain.ListEmpty )
 				{
 					level = 20;
 
@@ -1446,6 +1546,18 @@ public class ParkScreamChainTests
 			Assert.AreEqual( 1, chain.Variation, "and a child after it takes level 20's variation" );
 			Assert.AreEqual( children.Select( child => child.Name ).Distinct().Count(), park.ScreamSamplesHeard,
 				"the census counts every sample the children played" );
+
+			// A stop on a pass that pruned the list empty cuts nothing (AStopOnTheEmptyPassCutsNoChild): stop on a pass that did not.
+			while ( chain.ListEmpty )
+			{
+				var plays = chain.Plays;
+
+				Frame( held: false );
+				park.Update();
+
+				if ( chain.Plays != plays )
+					IsTheNewestChild();
+			}
 
 			var newest = children[^1];
 			var before = children[^2];
@@ -1511,10 +1623,17 @@ public class ParkScreamChainTests
 			void IsPitched()
 			{
 				Assert.IsTrue( chain.Pitch is >= 0 and <= 5, $"a pitch of {chain.Pitch}" );
+				pitches.Add( chain.Pitch );
+
+				// A child drawn a wait of nought is pruned in the pass that makes it, its voice let go (Q1178).
+				if ( chain.Voice is null )
+				{
+					Assert.IsTrue( chain.Gap == 0 && chain.ListEmpty, $"a child with no voice had a wait of {chain.Gap} ms" );
+					return;
+				}
+
 				Assert.AreEqual( ParkCarSounds.Rate( chain.Pitch ), (float)chain.Voice!.Rate, 0.000001f, $"the rate of pitch {chain.Pitch}" );
 				Assert.AreEqual( 35f / 60f * 0.33f, chain.Voice.Volume, 0.0001f, "at the volume it had" );
-
-				pitches.Add( chain.Pitch );
 			}
 
 			IsPitched();

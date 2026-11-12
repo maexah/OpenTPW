@@ -12145,6 +12145,15 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q1178. A chain's stop on its empty pass.** From Q654. On a child's due millisecond the original's prune deletes
+  the newest child (`0x006bdc23`, `0x006bdc3e`), so a stop that pass finds no child to cut (`0x006bd9b0` walks only the
+  list, `0x006bd9ba`..`0x006bda04`: read in the listing), and the pruned child's channel is not stopped (`0x006bdc3e`;
+  whether it plays out is not traced: `docs/exe/audio.md`, "Pruning", says only "most likely"). The list empties the same
+  way when a child's own wait is nought: its time is the pass's own (`0x006c3ac5`), so the prune in the pass that makes
+  it deletes it (`0x006bdc23`; effect 74's 0-500 ms wait draws nought once in 500). Here both chains keep the pruned
+  child's voice until the next child is made: `ParkScreams.Stop` and `ParkAudio.StopScriptSound` cut it. Let the pruned
+  child go on the empty pass, on both paths (`Chain.Voice`, `ScriptVoice.Voice`), with a test that stops a chain on that
+  pass.
 
 ## B. Docs and comments
 

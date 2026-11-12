@@ -60,7 +60,7 @@ internal sealed class ParkScreams
 		public int Plays;
 
 		/// <summary>
-		/// Whether the chain's list holds no child: as it is made, and when its newest child is pruned on the very
+		/// Whether the chain's list holds no child: as it is made, and when its newest child is pruned (its voice let go, <c>0x006bdc3e</c>) on the very
 		/// millisecond it is due, which <c>HeldChain_Extend</c> passes over (<c>now &gt; +0x1c</c>, <c>0x006bdb88</c>) and
 		/// <c>HeldChain_Prune</c> does not (<c>now &gt;= +0x1c</c>, <c>0x006bdc23</c>). The next pass in range makes its child
 		/// as a first (<c>HeldChain_HeadOrFirstChild</c>, <c>0x006bdb10</c>): a scream's effect has a key (parameter 6) and
@@ -69,8 +69,9 @@ internal sealed class ParkScreams
 		public bool ListEmpty = true;
 
 		/// <summary>
-		/// The newest child's voice, which is the one a stop cuts. An older child is let go without
-		/// being stopped, as the original prunes one (<c>0x006bdc3e</c>), so its sample plays out.
+		/// The newest child's voice while it is in the list, which is the one a stop cuts; null once the list is empty
+		/// (<see cref="ListEmpty"/>). A pruned child is let go without being stopped, as the original prunes one
+		/// (<c>0x006bdc3e</c>), so its sample plays out.
 		/// </summary>
 		public Voice? Voice;
 
@@ -143,7 +144,10 @@ internal sealed class ParkScreams
 			+ (variations.Count > 0 ? $" of range {variations[chain.RangeVariation].Range:0}" : "") );
 
 		if ( Reached( scriptId, chain ) )
+		{
 			Step( scriptId, chain, now );
+			Prune( scriptId, chain, now );
+		}
 
 		return chain;
 	}
@@ -177,24 +181,30 @@ internal sealed class ParkScreams
 		if ( !Reached( scriptId, chain ) )
 			return;
 
-		if ( chain.ListEmpty )
-		{
+		if ( chain.ListEmpty || ParkAudio.Milliseconds( now ) > ParkAudio.Milliseconds( chain.NextAt ) )
 			Step( scriptId, chain, now );
-			return;
-		}
 
+		Prune( scriptId, chain, now );
+	}
+
+	/// <summary>
+	/// The tick's prune (<c>HeldChain_Prune</c>, <c>now &gt;= +0x1c</c>, <c>0x006bdc23</c>): the newest child, once the clock
+	/// reaches its time, is deleted without its channel being stopped (<c>0x006bdc3e</c>), so a stop on the pass that empties
+	/// the list finds no child to cut (<c>0x006bd9b0</c> walks only the list). It comes on the very millisecond a child is due,
+	/// in the pass that makes a child whose wait is nought (its time is the pass's own, <c>0x006c3ac5</c>), and after an extend
+	/// that made nothing. Whether the device plays the let-go sample out is not traced (<c>docs/exe/audio.md</c>, "Pruning").
+	/// </summary>
+	private static void Prune( int scriptId, Chain chain, float now )
+	{
 		var (ms, due) = (ParkAudio.Milliseconds( now ), ParkAudio.Milliseconds( chain.NextAt ));
 
-		if ( ms > due )
-		{
-			Step( scriptId, chain, now );
-		}
-		else if ( ms == due )
-		{
-			chain.ListEmpty = true;
-			Log.Info( $"Park audio: script {scriptId} scream effect {chain.Effect}, its newest child pruned on the millisecond it was due "
-				+ $"({due} ms) after {chain.Plays} child(ren), its list empty" + (chain.HeldByNothing ? ", held by nothing" : "") );
-		}
+		if ( chain.ListEmpty || ms < due )
+			return;
+
+		chain.ListEmpty = true;
+		chain.Voice = null;
+		Log.Info( $"Park audio: script {scriptId} scream effect {chain.Effect}, its newest child pruned at {ms} ms, its time {due} ms, "
+			+ $"after {chain.Plays} child(ren), its list empty and its voice let go" + (chain.HeldByNothing ? ", held by nothing" : "") );
 	}
 
 	/// <summary>

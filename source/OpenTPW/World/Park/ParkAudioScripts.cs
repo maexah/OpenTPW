@@ -217,7 +217,7 @@ public sealed partial class ParkAudio
 		public int Handle { get; init; }
 
 		/// <summary>
-		/// Whether a chain's list holds no child: as it is made, and when its newest child is pruned on the very
+		/// Whether a chain's list holds no child: as it is made, and when its newest child is pruned (its voice let go, <c>0x006bdc3e</c>) on the very
 		/// millisecond it is due, which <c>HeldChain_Extend</c> passes over (<c>now &gt; +0x1c</c>, <c>0x006bdb88</c>) and
 		/// <c>HeldChain_Prune</c> does not (<c>now &gt;= +0x1c</c>, <c>0x006bdc23</c>). The next pass makes its child as a first.
 		/// </summary>
@@ -251,7 +251,7 @@ public sealed partial class ParkAudio
 		/// <summary>Where it sounds, in whole units of the world, or null for one flagged <c>0x200</c>, which is heard flat.</summary>
 		public Vector3? Place { get; set; }
 
-		/// <summary>The sample playing.</summary>
+		/// <summary>The sample playing: a chain's newest child's while it is in the list, null once the list is empty.</summary>
 		public Voice? Voice { get; set; }
 
 		/// <summary>A plain or music voice's variation, or a chain's newest child's, zero-based, or -1 before its first.</summary>
@@ -409,7 +409,10 @@ public sealed partial class ParkAudio
 
 			// Out of range at the start, its first child waits for the listener (FUN_006b62b0 ticks it no sooner).
 			if ( Reached( sound ) )
+			{
 				NextChainChild( sound );
+				PruneChainChild( sound );
+			}
 		}
 		else
 		{
@@ -516,24 +519,10 @@ public sealed partial class ParkAudio
 				if ( sound.KeptChild is not null )
 					StartKeptChild( sound );
 
-				if ( sound.ListEmpty )
-				{
+				if ( sound.ListEmpty || Milliseconds( Time.Now ) > Milliseconds( sound.NextAt ) )
 					NextChainChild( sound );
-					continue;
-				}
 
-				var (now, due) = (Milliseconds( Time.Now ), Milliseconds( sound.NextAt ));
-
-				if ( now > due )
-				{
-					NextChainChild( sound );
-				}
-				else if ( now == due )
-				{
-					sound.ListEmpty = true;
-					Log.Info( $"Park audio: {sound.Owner}'s {sound.Kind} {sound.Effect}, its newest child pruned on the millisecond it was due, its list empty" );
-				}
-
+				PruneChainChild( sound );
 				continue;
 			}
 
@@ -1029,6 +1018,25 @@ public sealed partial class ParkAudio
 
 		Log.Info( $"Park audio: {sound.Owner}'s {(sound.Held ? "held chain" : "chain")} {sound.Effect}, child {sound.Samples} at {Time.Now:F3} s, sample '{sound.Voice.Name}' variation {next + 1} "
 			+ $"volume {sound.Kept.Volume} plays {sound.Voice.Volume:F4} pitch {sound.Kept.Pitch}, the next in {sound.Wait} ms" );
+	}
+
+	/// <summary>
+	/// The chain's tick's prune (<c>HeldChain_Prune</c>, <c>now &gt;= +0x1c</c>, <c>0x006bdc23</c>): once the clock reaches the
+	/// newest child's time it is deleted without its channel being stopped (<c>0x006bdc3e</c>), so a stop on the pass that
+	/// empties the list finds no child to cut (<c>0x006bd9b0</c> walks only the list). It comes on the very millisecond a child
+	/// is due, in the pass that makes a child whose wait is nought (its time is the pass's own, <c>0x006c3ac5</c>), and after
+	/// an extend that made nothing. Whether the device plays the let-go sample out is not traced (<c>docs/exe/audio.md</c>, "Pruning").
+	/// </summary>
+	private static void PruneChainChild( ScriptVoice sound )
+	{
+		var (now, due) = (Milliseconds( Time.Now ), Milliseconds( sound.NextAt ));
+
+		if ( sound.ListEmpty || now < due )
+			return;
+
+		sound.ListEmpty = true;
+		sound.Voice = null;
+		Log.Info( $"Park audio: {sound.Owner}'s {sound.Kind} {sound.Effect}, its newest child pruned at {now} ms, its time {due} ms, its list empty and its voice let go" );
 	}
 
 	/// <summary>

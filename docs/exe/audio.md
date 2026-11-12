@@ -1342,7 +1342,7 @@ kept and started as the chain is first in range, at a volume, pitch and range of
 as above, the chain's own variation drawn again, and no `0x20` (`ScriptVoice.FirstChildTaken`). A resumed script's
 record of a sound type takes the voice its saved handle names (`RideScript.TakeRestoredSounds`), so its `KILLOBJ`,
 `FADEOBJ`, `SETOBJPARAM` and its end reach it. Every chain here keeps the tick's empty pass on a due millisecond
-(`ScriptVoice.ListEmpty`), the screams' own chain too (`ParkScreams.Chain.ListEmpty`, Q654: in whole milliseconds; its next child, the chain's `0x20` set by its first, draws from its own variation). Counted and not put back, each a voice:
+(`ScriptVoice.ListEmpty`), the screams' own chain too (`ParkScreams.Chain.ListEmpty`, Q654: in whole milliseconds; its next child, the chain's `0x20` set by its first, draws from its own variation), and both let the pruned child's voice go on that pass, so a stop then cuts nothing (`0x006bdc3e`, `0x006bd9b0`), and prune a child whose wait is nought in the pass that makes it (its time the pass's own, `0x006c3ac5`; Q1178). Counted and not put back, each a voice:
 `PARK_FILE_SOUND_VOICE_ONE_SHOT`, `_PLAIN`, `_MUSIC_CLASS` (the crowd's and the music's among them), `_CHAIN`,
 `_CLASS_2`, a held chain of the screams (`_SCREAM`, `ParkScreams`' own), of a category no script plays in
 (`_NO_CATEGORY`), with no such sample (`_NO_SAMPLE`), no key (`_HELD_CHAIN_NO_KEY`), a range or rectangle of its own
