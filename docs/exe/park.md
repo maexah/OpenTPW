@@ -3138,6 +3138,23 @@ listener's own height (`ParkPlacedObjects.Following.Beside`), with its variation
 (`SCAPE_OMP_SOUND_TYPE_3`; no shipped park has either). Every park's file holds the sea, so the other three
 themes start it too; only the jungle was run.
 
+**Out of range and back** (Q737). The fall and the river are one-shots looped (effect flag `0x8`, voice flags `0x6`;
+`audio.md`, "A script's one-shot"): the set-up draws the variation and the sample once and holds them (`0x006bbf60`),
+a pass past the range flags the voice `0x800` and gives its channel up (`0x006bca10` -> `0x006bca70`), the channel's end
+clears the handle and the playing bit and, under `0x800`, not the finished bit (`0x006bbe40`), and a pass in range ticks
+the voice with no channel into a fresh one on its held sample (`0x006bd800` -> `0x006bc410` -> `0x006b9ab0` with handle
+0); a looped voice is never refused nor dropped by time. Here (`ParkAudio.StartPlaced`, `ServePlaced`): the sample is
+drawn at the set-up and held; each frame the listener is asked over the ground's two axes against the record's range,
+and past it the output is stopped and let go; in range a voice with none is given a new looped output from the sample's
+start, its volume drawn again; set up out of range it has none until it is in range, as the original's stood `0x806`
+until the camera came (Q565's run b). The console's `placed` prints each with `away, no output`, its outputs and its
+releases. A cloud lane's run (`lib/consolerun.py`, off-screen, the stock park; predicted first; its output not kept):
+both set up away from the entry's listener at (469, 417); `camera 530 520` gave the fall output 1 on `watfall.mp2` at
+18.67 off, the river 156.84 off and away; `camera 200 200` gave the fall's up "after 1 output(s)", 462.25 off; back,
+output 2 from its start. **Not checked:** whether the original's restarted loop is heard from the sample's start (the
+item's disk-driver capture beside the original's), with no original or Proton in the container; the chain is the
+decode's (`docs/exe/`, read, not re-read in Ghidra).
+
 **Run, 2026-10-10** (`q263/confirm.py`, 3 of 3 predictions, written first in `PREDICTION.txt`). Lost Kingdom at
 the tip, the camera on the fall: `unimplemented` reads `4x SCAPE_OMP_SOUND_TYPE_1` and `2x
 SCAPE_OMP_SOUND_TYPE_3`, the jungle's four and two records, and the frame shows the fall and its spray

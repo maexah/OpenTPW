@@ -111,6 +111,7 @@ public sealed class ParkCarSounds : ParkBumperCars.ISounds
 		if ( held.Voice is null )
 			return null;
 
+		ParkAudio.Current?.PlaysOnOutOfRange( held.Voice, "BUMPER_ENGINE" );
 		Apply( held );
 
 		return held;

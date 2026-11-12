@@ -613,6 +613,8 @@ public sealed partial class ParkAudio : Entity
 		if ( voice == null )
 			return false;
 
+		PlaysOnOutOfRange( voice, "THUNDER" );
+
 		Log.Info( $"Park audio: thunder, effect {ThunderEffect} sample '{voice.Name}' volume {voice.Volume:0.0000} pitch {OneShotPitch} "
 			+ $"at ({at.X:0.0},{at.Y:0.0},{at.Z:0.0}) range {voice.Range ?? 0f:0} gain {voice.DistanceGain:0.0000}" );
 
@@ -922,6 +924,8 @@ public sealed partial class ParkAudio : Entity
 		if ( voice == null )
 			return false;
 
+		PlaysOnOutOfRange( voice, "SINGLE_SCREAM" );
+
 		_screamSamples.Add( voice.Name );
 
 		Log.Info( $"Park audio: single scream, band {band} level {level} speed {speed} effect {effect} "
@@ -956,6 +960,8 @@ public sealed partial class ParkAudio : Entity
 
 		if ( voice == null )
 			return false;
+
+		PlaysOnOutOfRange( voice, "PUT_OFF" );
 
 		Log.Info( $"Park audio: put off, effect {PutOffEffect} sample '{voice.Name}' volume {voice.Volume:0.0000} pitch {OneShotPitch} "
 			+ $"at ({at.X:0.0},{at.Y:0.0},{at.Z:0.0}) range {voice.Range ?? 0f:0} gain {voice.DistanceGain:0.0000}" );
@@ -995,6 +1001,7 @@ public sealed partial class ParkAudio : Entity
 			return false;
 
 		voice.SetRate( ParkCarSounds.Rate( pitch ) );
+		PlaysOnOutOfRange( voice, "STAFF" );
 		StaffSounds = (StaffSounds.Started + 1, StaffSounds.Voiced + (voice.Name.StartsWith( BlankSample ) ? 0 : 1));
 
 		Log.Info( $"Park audio: staff effect 0x{effect:x} sample '{voice.Name}' volume {volume} plays {voice.Volume:0.0000} pitch {pitch} "
@@ -1058,6 +1065,8 @@ public sealed partial class ParkAudio : Entity
 		if ( voice == null )
 			return false;
 
+		PlaysOnOutOfRange( voice, "YAWN" );
+
 		Log.Info( $"Park audio: yawn, effect {YawnEffect} sample '{voice.Name}' volume {voice.Volume:0.0000} pitch {OneShotPitch} "
 			+ $"at ({at.X:0.0},{at.Y:0.0},{at.Z:0.0})" );
 
@@ -1081,6 +1090,8 @@ public sealed partial class ParkAudio : Entity
 
 		if ( voice == null )
 			return false;
+
+		PlaysOnOutOfRange( voice, "CHARGE" );
 
 		Log.Info( $"Park audio: charge, effect {ChargeEffect} sample '{voice.Name}' volume {voice.Volume:0.0000} pitch {OneShotPitch} "
 			+ $"at ({at.X:0.0},{at.Y:0.0},{at.Z:0.0}) range {voice.Range ?? 0f:0}" );
@@ -1163,33 +1174,183 @@ public sealed partial class ParkAudio : Entity
 	internal static float ChannelGain( int volume )
 		=> MathF.Round( volume * EffectsGroupLevel / 100f, MidpointRounding.ToEven ) / MusicGroupLevel * MusicVolume;
 
-	/// <summary>The land's own sounds that are sounding, with what each was started from.</summary>
-	internal IReadOnlyList<(ParkPlacedObjects.Sound Sound, int Volume, Voice? Voice)> Placed => _placed;
+	/// <summary>
+	/// One of the land's own looped sounds (a <c>scape.omp</c> type 1 of an effect flagged <c>0x8</c>; the fall and the
+	/// river): a one-shot voice with voice flags <c>0x6</c>, its variation and sample drawn once at its set-up
+	/// (<c>0x006bbf60</c>) and held for its life, and never dropped by time.
+	/// </summary>
+	internal sealed class PlacedVoice( ParkPlacedObjects.Sound sound )
+	{
+		public ParkPlacedObjects.Sound Sound { get; } = sound;
 
-	private readonly List<(ParkPlacedObjects.Sound Sound, int Volume, Voice? Voice)> _placed = [];
+		/// <summary>The variation its set-up drew, zero-based.</summary>
+		public int Variation { get; init; }
+
+		/// <summary>The sample its set-up drew, which every output plays from its start.</summary>
+		public AudioClip? Clip { get; init; }
+
+		/// <summary>The volume, of a hundred, its newest output drew (<c>0x006bc090</c>).</summary>
+		public int Volume { get; set; }
+
+		/// <summary>The output sounding, or null while it has none (out of range, or nothing to play).</summary>
+		public Voice? Voice { get; set; }
+
+		/// <summary>Whether the listener was last found past its range: the original's voice flag <c>0x800</c>.</summary>
+		public bool Away { get; set; }
+
+		/// <summary>How many outputs it has been given, the first included.</summary>
+		public int Outputs { get; set; }
+
+		/// <summary>How many times it gave its output up by leaving range.</summary>
+		public int Released { get; set; }
+	}
+
+	/// <summary>The land's own looped sounds, each with its output or none.</summary>
+	internal IReadOnlyList<PlacedVoice> Placed => _placed;
+
+	private readonly List<PlacedVoice> _placed = [];
 
 	/// <summary>
 	/// Starts one of the land's own sounds where it stands (<c>FUN_0051c130</c>): a looped voice of the global
-	/// <c>cat_ambient</c>, at its first variation's volume, turned down by the listener's distance inside its
-	/// range. False, and nothing started, for an effect that is not a looped one or has nothing to play.
+	/// <c>cat_ambient</c>, its variation and sample drawn and held, at its variation's volume, turned down by the
+	/// listener's distance inside its range. Given an output at once only in range, as the original's is given a channel
+	/// only by its tick, which a pass makes of a voice in range alone (<see cref="ServePlaced"/>). False, and nothing
+	/// started, for an effect that is not a looped one or has nothing to play.
 	/// </summary>
 	internal bool StartPlaced( ParkPlacedObjects.Sound sound )
 	{
 		if ( !PlaysPlaced( _ambient, sound.Effect ) )
 			return false;
 
-		var header = _ambient!.VariationsOf( sound.Effect )[0];
-		var volume = Controlled( header, 1, 0, 0, _musicRandom );
+		var clip = _ambient!.PickSample( sound.Effect, out var variation, out _ );
+		var placed = new PlacedVoice( sound ) { Variation = Math.Max( variation, 0 ), Clip = clip };
 
-		var voice = _ambient.Play( sound.Effect, ChannelGain( volume ), loop: true, respectDelay: false,
-			bus: AudioBus.Effects, position: sound.Place, range: sound.Range );
+		_placed.Add( placed );
 
-		_placed.Add( (sound, volume, voice) );
+		Log.Info( $"Park audio: the land's own ambient {sound.Effect} set up at ({sound.Place.X:F0},{sound.Place.Y:F0}), "
+			+ $"range {sound.Range:F0}, variation {placed.Variation + 1} sample '{clip?.Name ?? "none"}'" );
 
-		Log.Info( $"Park audio: the land's own ambient {sound.Effect} started at ({sound.Place.X:F0},{sound.Place.Y:F0}), "
-			+ $"range {sound.Range:F0}, volume {volume}" );
+		ServePlaced( placed, Audio.Listener.Position );
 
 		return true;
+	}
+
+	/// <summary>
+	/// Whether <paramref name="place"/> is within <paramref name="range"/> of <paramref name="ears"/> as the sound service's
+	/// pass asks (<c>FUN_006bca10</c>): the squared distance over the ground's two axes alone (<c>FUN_006bb9f0</c>), the
+	/// height left out, not past the range's square.
+	/// </summary>
+	internal static bool InRange( Vector3 place, float range, Vector3 ears )
+	{
+		var x = place.X - ears.X;
+		var y = place.Y - ears.Y;
+
+		return x * x + y * y <= range * range;
+	}
+
+	/// <summary>
+	/// Each of the land's own looped sounds asked whether the listener is in its range (<see cref="ServePlaced(PlacedVoice, Vector3)"/>).
+	/// </summary>
+	private void ServePlaced()
+	{
+		var ears = Audio.Listener.Position;
+
+		foreach ( var placed in _placed )
+			ServePlaced( placed, ears );
+	}
+
+	/// <summary>
+	/// One of the land's own looped sounds served as a pass serves the original's voice. Past its range it is flagged
+	/// <c>0x800</c> and its channel given up (<c>0x006bca10</c> -> <c>0x006bca70</c>), and the channel's end clears its
+	/// handle and its playing bit without the finished bit, which <c>0x800</c> withholds (<c>0x006bbe40</c>): so here the
+	/// output is stopped and let go. In range a voice with no channel is ticked (<c>OneShot_Tick</c>, <c>0x006bd800</c>) and
+	/// built a fresh channel on its held sample (<c>0x006bc410</c> -> <c>0x006b9ab0</c> with handle 0), its volume drawn
+	/// again: here a new output from the sample's start. A looped voice is never refused a start nor dropped by time.
+	/// </summary>
+	internal void ServePlaced( PlacedVoice placed, Vector3 ears )
+	{
+		var sound = placed.Sound;
+		var near = InRange( sound.Place, sound.Range, ears );
+
+		if ( !near )
+		{
+			if ( placed.Away )
+				return;
+
+			placed.Away = true;
+
+			if ( placed.Voice is { } voice )
+			{
+				voice.Stop();
+				placed.Voice = null;
+				++placed.Released;
+			}
+
+			Log.Info( $"Park audio: the land's own ambient {sound.Effect} out of range at ({sound.Place.X:F0},{sound.Place.Y:F0}) "
+				+ $"from ({ears.X:F0},{ears.Y:F0}): no output, after {placed.Outputs} output(s)" );
+
+			return;
+		}
+
+		var again = placed.Away;
+
+		placed.Away = false;
+
+		if ( placed.Voice is not null || placed.Clip is null || _ambient is not { IsValid: true } )
+			return;
+
+		var header = _ambient.VariationsOf( sound.Effect )[placed.Variation];
+
+		placed.Volume = Controlled( header, 1, 0, 0, _musicRandom );
+		placed.Voice = Audio.Play( placed.Clip, ChannelGain( placed.Volume ), loop: true,
+			bus: AudioBus.Effects, position: sound.Place, range: sound.Range );
+
+		if ( placed.Voice is null )
+			return;
+
+		++placed.Outputs;
+
+		Log.Info( $"Park audio: the land's own ambient {sound.Effect} {(again ? "in range again" : "in range")} from ({ears.X:F0},{ears.Y:F0}): "
+			+ $"output {placed.Outputs} on '{placed.Clip.Name}' from its start, volume {placed.Volume}" );
+	}
+
+	/// <summary>
+	/// The placed voices of no script and no ride's scream that still play on unheard out of range, where the original
+	/// gives the channel up (<c>0x006bca70</c>), each with its gap's name and whether its departure has been counted.
+	/// </summary>
+	private readonly List<(Voice Voice, string Gap, bool Counted)> _playingOn = [];
+
+	/// <summary>
+	/// Watches <paramref name="voice"/>, a placed voice whose leaving range is not built, so that each time it is found
+	/// sounding past its range <c>PLACED_VOICE_OUT_OF_RANGE_</c><paramref name="kind"/> is counted
+	/// (<see cref="CountPlayingOn"/>).
+	/// </summary>
+	internal void PlaysOnOutOfRange( Voice? voice, string kind )
+	{
+		if ( voice is { IsPlaced: true, Range: not null } )
+			_playingOn.Add( (voice, $"PLACED_VOICE_OUT_OF_RANGE_{kind}", false) );
+	}
+
+	/// <summary>
+	/// Counts each watched voice (<see cref="PlaysOnOutOfRange"/>) once each time it leaves its range while sounding, over
+	/// the ground's two axes (<see cref="InRange"/>), and lets go of those that have ended.
+	/// </summary>
+	internal void CountPlayingOn()
+	{
+		var ears = Audio.Listener.Position;
+
+		_playingOn.RemoveAll( entry => !entry.Voice.Playing );
+
+		for ( var index = 0; index < _playingOn.Count; ++index )
+		{
+			var (voice, gap, counted) = _playingOn[index];
+			var near = InRange( voice.Place!.Value, voice.Range!.Value, ears );
+
+			if ( !near && !counted )
+				Unimplemented.Report( gap );
+
+			_playingOn[index] = (voice, gap, !near);
+		}
 	}
 
 	/// <summary>Whether <paramref name="effect"/> of <paramref name="category"/> is one a placed record can loop: flagged looped, with a variation to play.</summary>
@@ -1367,6 +1528,7 @@ public sealed partial class ParkAudio : Entity
 				continue;
 
 			following.Voice.SetRate( ParkCarSounds.Rate( following.Kept.Pitch ) );
+			PlaysOnOutOfRange( following.Voice, "FOLLOWING" );
 			++following.Samples;
 
 			Log.Info( $"Park audio: the land's own ambient {following.Sound.Effect}, sample '{following.Voice.Name}' variation {next + 1} "
@@ -1381,13 +1543,15 @@ public sealed partial class ParkAudio : Entity
 		var ears = Camera.Ears;
 		var lines = new List<string> { $"listener ({ears.X:F0},{ears.Y:F0},{ears.Z:F0}), {_placed.Count} placed, {_following.Count} following" };
 
-		foreach ( var (sound, volume, voice) in _placed )
+		foreach ( var placed in _placed )
 		{
+			var (sound, voice) = (placed.Sound, placed.Voice);
 			var distance = (sound.Place - ears).Length;
 
 			lines.Add( $"ambient {sound.Effect} at ({sound.Place.X:F0},{sound.Place.Y:F0},{sound.Place.Z:F0}) range {sound.Range:F0} "
-				+ $"volume {volume} distance {distance:F2} law {AudioListener.RangeGain( distance, sound.Range ):F4} "
-				+ $"gain {voice?.DistanceGain ?? -1f:F4} {(voice is null ? "no voice" : voice.IsHeld ? "held" : voice.Playing ? "sounding" : "ended")}" );
+				+ $"volume {placed.Volume} distance {distance:F2} law {AudioListener.RangeGain( distance, sound.Range ):F4} "
+				+ $"gain {voice?.DistanceGain ?? -1f:F4} {(placed.Away ? "away, no output" : voice is null ? "no voice" : voice.IsHeld ? "held" : voice.Playing ? "sounding" : "ended")} "
+				+ $"outputs {placed.Outputs} released {placed.Released}" );
 		}
 
 		foreach ( var following in _following )
@@ -1432,12 +1596,9 @@ public sealed partial class ParkAudio : Entity
 		_crowd = null;
 		CrowdVoiceHeld = false;
 
-		// The land's own, each a looped voice holding its effect.
-		foreach ( var (sound, _, voice) in _placed )
-		{
-			voice?.FadeOut( StopSeconds );
-			_ambient?.Release( sound.Effect );
-		}
+		// The land's own, each a looped output played straight from its held sample, which holds no effect.
+		foreach ( var placed in _placed )
+			placed.Voice?.FadeOut( StopSeconds );
 
 		_placed.Clear();
 
@@ -1530,7 +1691,9 @@ public sealed partial class ParkAudio : Entity
 		NextCrowdSample();
 		NextRainSample( RainBed, "the rain's bed" );
 		NextRainSample( RainOwn, "the weather's own rain voice" );
+		ServePlaced();
 		ServeFollowing();
+		CountPlayingOn();
 		ServeScriptSounds();
 
 		if ( _music is not { IsValid: true } )

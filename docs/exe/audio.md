@@ -267,8 +267,12 @@ mapping of 2.0, 100.0 and 0.8 and a distance of 50.00, stale as they were read; 
 heard from the midpoint of the eye and the point it looks at (`CameraMode.Ears`), as below. The land's own
 sounds are given their record's range (`park.md`, "The land's own sounds"), and every other placed voice of a
 park its variation's (`SoundCategory.RangeOf`, Q265): a ride's screams and single screams, a guest put off, a
-yawn, the staff's voices, thunder and a bumper ride's engine. A voice out of range plays on unheard, where the
-original gives its channel up, except a ride's scream and a script's plain, music, chain and one-shot voices, which the service
+yawn, the staff's voices, thunder and a bumper ride's engine. The land's own looped sounds (the fall and the river,
+one-shots of voice flags `0x6`) give their output up out of range and are given a fresh one at the sample's start in
+range again (`ParkAudio.ServePlaced`, Q737; `park.md`, "The land's own sounds"). Every other placed voice of no script
+and no ride's scream plays on unheard out of range, where the original gives its channel up, and is counted each time it
+leaves range while sounding (`PLACED_VOICE_OUT_OF_RANGE_` and `THUNDER`, `SINGLE_SCREAM`, `PUT_OFF`, `YAWN`, `CHARGE`,
+`STAFF`, `FOLLOWING` (the gulls and the sea), `BUMPER_ENGINE`; Q1416). A ride's scream and a script's plain, music, chain and one-shot voices the service
 leaves unticked as the original's: a plain or music voice is cut and draws nothing, a chain makes no child ("A voice
 out of range makes nothing next", below), and a one-shot plays nothing and is dropped at its time ("A script's one-shot"). A voice is still panned by a plain left and right. The lobby's placed voices
 are OpenTPW's own and take no range.
