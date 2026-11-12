@@ -1027,7 +1027,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0055374c` | RSSE GETANIM_CH with no model: the flag word zeroed, so +0x48 is stored as it stands | OpenTPW.Tests/RideScriptChannelTests.cs OpenTPW/VM/RideScript.cs  |
 | `0x0055374e` | | OpenTPW/VM/RideScript.cs  |
 | `0x005538eb` | RSSE WAIT4ANIM handler: +0xa4 nought leaves at once; passed, it is cleared and the turn goes on | OpenTPW.Tests/RideScriptClockTests.cs  |
-| `0x00553994` | RSSE RAND: the IDIV by the bound plus one; only a bound of -1 divides by nought | OpenTPW.Tests/RideScriptClockTests.cs OpenTPW/VM/RideScript.cs  |
+| `0x00553994` | RSSE RAND: the MOVSX of the bound's low 16 bits; the IDIV by it plus one (`0x0055399b`) divides by nought only for -1 | OpenTPW.Tests/RideScriptClockTests.cs OpenTPW/VM/RideScript.cs  |
 | `0x005539a9` | RSSE JSR handler | OpenTPW/VM/RideScript.cs  |
 | `0x005539d8` | RSSE JSR: the return address ORed with the label tag 0x20000000 | OpenTPW/VM/RideScript.cs  |
 | `0x00553a07` | RSSE JSR: no stack or no room parks the PC (the jump follows) | OpenTPW.Tests/RideScriptStackTests.cs  |

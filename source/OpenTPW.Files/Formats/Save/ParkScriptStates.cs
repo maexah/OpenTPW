@@ -219,6 +219,12 @@ public sealed partial class ParkScriptStates
 	/// <summary>The next handle's place in the header block.</summary>
 	private const int NextHandleDword = 2;
 
+	/// <summary>The tick counter as <c>FUN_005597a0</c>'s reset leaves it before the block is read over it (<c>0x00559828</c>).</summary>
+	private const int TickReset = 0;
+
+	/// <summary>The next handle as <c>FUN_005597a0</c>'s reset leaves it before the block is read over it (<c>0x00559817</c>).</summary>
+	private const int NextHandleReset = 1;
+
 	/// <summary>The script count's place in the header block, <c>DAT_008791ac</c>, which nothing walks by.</summary>
 	private const int CountDword = 3;
 
@@ -351,13 +357,14 @@ public sealed partial class ParkScriptStates
 
 	/// <summary>
 	/// The scheduler's tick counter as the park was saved, <c>DAT_008791a4</c>: the header block's second dword, which
-	/// <c>FUN_005597a0</c> reads straight over the scheduler's globals (<c>0x005598d7</c>). Nought where it did not read.
+	/// <c>FUN_005597a0</c> reads straight over the scheduler's globals (<c>0x005598d7</c>). Where the block stops inside
+	/// it, its low bytes are the block's and the rest the reset's nought; nought where the module did not read.
 	/// </summary>
 	public int Tick { get; private set; }
 
 	/// <summary>
-	/// The handle the next new script will be given, <c>DAT_008791a8</c>: the header block's third dword. Nought where
-	/// it did not read.
+	/// The handle the next new script will be given, <c>DAT_008791a8</c>: the header block's third dword. Where the block
+	/// stops inside it, its low bytes are the block's and the rest the reset's 1; nought where the module did not read.
 	/// </summary>
 	public int NextHandle { get; private set; }
 
@@ -400,9 +407,10 @@ public sealed partial class ParkScriptStates
 
 		Skip( header );
 
-		// A dword is read only where the block holds all four of its bytes.
-		var tick = header >= (TickDword + 1) * 4 ? ReadInt32At( headerAt + (TickDword * 4) ) : 0;
-		var nextHandle = header >= (NextHandleDword + 1) * 4 ? ReadInt32At( headerAt + (NextHandleDword * 4) ) : 0;
+		// Each byte is the block's where the block reaches it, else the reset's, so a block that stops inside a dword
+		// leaves that dword half the file's.
+		var tick = HeaderDword( headerAt, header, TickDword, TickReset );
+		var nextHandle = HeaderDword( headerAt, header, NextHandleDword, NextHandleReset );
 		Skip( DiscardedDwords * 4 );
 
 		_countAt = _at;
@@ -637,11 +645,11 @@ public sealed partial class ParkScriptStates
 		if ( Problem != null || !ClosedOnGuard || _headerAt < 0 )
 			throw new InvalidOperationException( $"the park file's scripts were not read whole: {Problem}" );
 
-		if ( _headerBytes >= (TickDword + 1) * 4 )
-			PutInt32( body, _headerAt + (TickDword * 4), tick );
-
-		if ( _headerBytes >= (NextHandleDword + 1) * 4 )
-			PutInt32( body, _headerAt + (NextHandleDword * 4), nextHandle );
+		// A deviation: the engine's writer always writes the whole 0x14-byte block (0x00559350), so a park it loaded with a
+		// short block is saved with a whole one. Ours keeps the file's block length and writes each byte of the two dwords
+		// that lies inside it, which the reader reads back; only a hand-made or damaged file has a short block.
+		PutHeaderDword( body, TickDword, tick );
+		PutHeaderDword( body, NextHandleDword, nextHandle );
 
 		var written = 0;
 		var left = 0;
@@ -834,6 +842,33 @@ public sealed partial class ParkScriptStates
 		_at += 4;
 
 		return value;
+	}
+
+	/// <summary>Header dword <paramref name="dword"/>: each byte the block's where the block reaches it, else <paramref name="reset"/>'s.</summary>
+	private int HeaderDword( int headerAt, int header, int dword, int reset )
+	{
+		var value = 0;
+
+		for ( var k = 0; k < 4; ++k )
+		{
+			var at = (dword * 4) + k;
+			var b = at < header ? _data[headerAt + at] : (byte)(reset >> (8 * k));
+			value |= b << (8 * k);
+		}
+
+		return value;
+	}
+
+	/// <summary>The bytes of header dword <paramref name="dword"/> that lie inside the file's block, from <paramref name="value"/>.</summary>
+	private void PutHeaderDword( byte[] body, int dword, int value )
+	{
+		for ( var k = 0; k < 4; ++k )
+		{
+			var at = (dword * 4) + k;
+
+			if ( at < _headerBytes )
+				body[_headerAt + at] = (byte)(value >> (8 * k));
+		}
 	}
 
 	private int ReadInt32At( int offset )

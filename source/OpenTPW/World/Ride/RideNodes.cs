@@ -292,7 +292,7 @@ public sealed class RideNodes
 	/// <summary>Its half, <c>0x00701000</c>.</summary>
 	private const double OctantHalf = 0.5;
 
-	/// <summary>The node file flag <c>0x400</c>, whose lookup record carries runtime flag <c>0x10</c>: its direction is read turned about.</summary>
+	/// <summary>The node file flag <c>0x400</c>, whose lookup record, where it has a position, carries runtime flag <c>0x10</c>: its direction is read turned about.</summary>
 	private const uint TurnedAbout = 0x400;
 
 	/// <summary>

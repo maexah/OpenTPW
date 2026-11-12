@@ -1433,6 +1433,7 @@ public class ParkFileWriterBoughtAndSoldTests
 		var built = ParkBuilding.Build( state, shipped, catalogue, null, null, DrinksShopItem, 43, 30, angle );
 
 		Assert.AreNotEqual( 0, built.ThingId, built.Answer );
+		Assert.AreEqual( 55, (int)state.Record( 43, 30 ).TileIndex, "the sale's tile, which the stamp keeps" );
 
 		var shop = state.Objects.Single( thing => thing.ThingId == built.ThingId );
 

@@ -947,9 +947,9 @@ public static class ParkTrackTool
 	/// The circuit's walk, <c>TrackRide_WalkCircuit( check )</c> (<c>FUN_0052a970</c>): from the station's first section
 	/// along the ride's heading in 2-cell steps, straight on through a straight or a crossing and out of a bend the way its
 	/// links leave it, until it is back where it started (1) or meets a cell that is not track or has under two links (0).
-	/// The heading is the turn's way unless <paramref name="heading"/> names another: the closing click on the mouth while
-	/// the anchor is the mouth passes its opposite where the mouth's walk met no station, as the original's
-	/// <c>ShapeFromOtherMouth</c> leaves it (<c>0x0052cd48</c>; <c>docs/exe/park.md</c>, "The walk").
+	/// The heading is the turn's way unless <paramref name="heading"/> names another: a closing click that laid a run passes
+	/// its opposite where op <c>0x86</c>'s walk from the mouth met no station, as the original's <c>ShapeFromOtherMouth</c>
+	/// leaves it (<c>0x0052cd48</c>; <c>docs/exe/park.md</c>, "The walk").
 	/// Unless checking, the ride's sections go first (<see cref="ParkTrackRideTable.ClearSections"/>) and each cell lays
 	/// one: a bend 5 (links north and east), 6 (north, west), 7 (south, west) or 8 (east, south); a crossing 11; a straight
 	/// 9 east-west or 10 north-south, flagged <c>0x10000</c> on the first two cells, the station's. Checking or not, a bend
@@ -1683,12 +1683,14 @@ public static class ParkTrackTool
 		// where [0x008186c0], the queue node the put-down laid (FUN_0052a050), is still set (mode 3 at the entrance's front,
 		// 0x00526f84..0x00527004); ours always puts the tool away and counts nothing here, as it is not known whether the
 		// original's right click leaves that pointer set (FUN_0052f200 writes it nowhere, its eleven writers are in FUN_00524960).
-		// A click on the mouth while the anchor is the mouth, the mouth's walk meeting no station, walks back towards the other
-		// mouth: op 0x86's ShapeFromOtherMouth wrote the opposite heading there (0x0052cd48); every other closing click walks
-		// the turn's way (docs/exe/park.md, "The walk").
+		// A closing click that laid a run (any click but one that does not move the anchor and is off the mouth), the mouth's
+		// walk then meeting no station, walks back towards the other mouth: op 0x86's ShapeFromOtherMouth wrote the opposite
+		// heading (0x0052cd48); a click that laid none walks the turn's way (docs/exe/park.md, "The walk"). From a fresh build
+		// only the click on the mouth from the mouth reaches the opposite, a run that meets track having to close the loop
+		// (TRACK_RUN_CROSSING); a loaded park whose track has a spur reaches it from a run onto the spur's end.
 		var heading = ParkTrackPieces.HeadingOf( ride.Angle );
 
-		if ( anchor == target && mouth == target && laid.MouthOpen )
+		if ( laid.MouthOpen )
 			heading = (byte)CellEdge.Opposite( heading );
 
 		var (valid, _) = WalkCircuit( state, ride, check: false, heading: heading );

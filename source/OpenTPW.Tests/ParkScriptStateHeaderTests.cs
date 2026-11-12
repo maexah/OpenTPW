@@ -5,9 +5,9 @@ using System.IO;
 namespace OpenTPW.Tests;
 
 /// <summary>
-/// The script module's header block read short. <c>FUN_005597a0</c> reads the block over the scheduler's globals as far
-/// as it goes, so a dword is taken only where the block holds all four of its bytes. These modules are built by hand and
-/// hold no scripts, so they need no game.
+/// The script module's header block read short. <c>FUN_005597a0</c> resets the tick to 0 and the next handle to 1, then
+/// reads exactly the block's bytes over the scheduler's globals, so a dword the block stops inside takes its low bytes from
+/// the block and its high bytes from the reset. These modules are built by hand and hold no scripts, so they need no game.
 /// </summary>
 [TestClass]
 public class ParkScriptStateHeaderTests
@@ -19,28 +19,31 @@ public class ParkScriptStateHeaderTests
 	private const int SavedNextHandle = 16;
 
 	/// <summary>
-	/// <b>Seven bytes hold no tick.</b> The tick's dword runs to byte eight; a rule that reads any block longer than its
-	/// start would take three bytes of the block and one of the discarded dwords after it.
+	/// <b>Seven bytes give the tick three of theirs.</b> The tick's dword runs to byte eight: its low three bytes are the
+	/// block's 0x11 and its top byte the reset's 0, and the next handle is the reset's 1. A rule that takes a dword whole or
+	/// not at all reads 0; one that reads past the block takes 0x11 from the discarded dwords and reads 0x11111111.
 	/// </summary>
 	[TestMethod]
-	public void ABlockThatStopsInsideTheTickReadsNeither()
+	public void ABlockThatStopsInsideTheTickGivesItTheBlocksLowBytes()
 	{
 		var states = new ParkScriptStates( Module( headerBytes: 7 ) );
 
 		Assert.IsNull( states.Problem, "the module reads" );
-		Assert.AreEqual( 0, states.Tick, "the tick's dword is not whole" );
-		Assert.AreEqual( 0, states.NextHandle, "nor the next handle's" );
+		Assert.AreEqual( 0x00111111, states.Tick, "the block's three bytes over the reset's 0" );
+		Assert.AreEqual( 1, states.NextHandle, "the reset's next handle" );
 	}
 
-	/// <summary><b>Eleven bytes hold the tick but not the next handle</b>, whose dword runs to byte twelve.</summary>
+	/// <summary>
+	/// <b>Eleven bytes hold the tick whole and three bytes of the next handle</b>, whose top byte is the reset's 1's, 0.
+	/// </summary>
 	[TestMethod]
-	public void ABlockThatStopsInsideTheNextHandleReadsOnlyTheTick()
+	public void ABlockThatStopsInsideTheNextHandleGivesItTheBlocksLowBytes()
 	{
 		var states = new ParkScriptStates( Module( headerBytes: 11 ) );
 
 		Assert.IsNull( states.Problem, "the module reads" );
 		Assert.AreEqual( SavedTick, states.Tick, "the tick's dword is whole" );
-		Assert.AreEqual( 0, states.NextHandle, "the next handle's is not" );
+		Assert.AreEqual( 0x00111111, states.NextHandle, "the block's three bytes over the reset's 1" );
 	}
 
 	/// <summary>Twelve bytes hold both, which is what keeps the two above from passing on a rule that reads nothing.</summary>
@@ -52,6 +55,26 @@ public class ParkScriptStateHeaderTests
 		Assert.IsNull( states.Problem, "the module reads" );
 		Assert.AreEqual( SavedTick, states.Tick );
 		Assert.AreEqual( SavedNextHandle, states.NextHandle );
+	}
+
+	/// <summary>
+	/// <b>The writer puts back only the bytes the block holds</b>: of an eleven-byte block, the tick whole and the next
+	/// handle's low three bytes, which the reader takes back over the reset's top byte; the first discarded dword after the
+	/// block keeps its 0x11. Writing nothing of a dword the block stops inside reads 0x00111111 back; writing it whole runs
+	/// into the discarded dword.
+	/// </summary>
+	[TestMethod]
+	public void TheWriterPutsBackTheBytesTheBlockHolds()
+	{
+		var module = Module( headerBytes: 11 );
+		var states = new ParkScriptStates( module );
+		var body = (byte[])module.Clone();
+
+		states.Put( body, 7000, 0x0102abcd, [] );
+		var read = new ParkScriptStates( body );
+
+		Assert.AreEqual( (7000, 0x0002abcd), (read.Tick, read.NextHandle) );
+		Assert.AreEqual( (byte)0x11, body[12 + 11], "the discarded dword after the block" );
 	}
 
 	/// <summary>

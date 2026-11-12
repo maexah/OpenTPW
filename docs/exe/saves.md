@@ -2267,13 +2267,20 @@ idle channel with no build marks. The engine binds a clip promoted from a channe
 argument is set (`FUN_004735d0`; otherwise it passes `0x8` and nothing is taken off or bound), which would leave
 exactly those; what the argument is was not traced.
 
-**A lookup record's pair on a model with nothing attached**, 870 of 870: flags `0x1` its file flags meet `0x30`,
-`0x8` they meet `0x580f00` or its item sets `DoHeadProcessing`, `0x10` it has a position and its node's file flags hold `0x400` (`FUN_0044a870`, `0x0044a924`, inside the `0x30` branch), `0x20`
-its node has no child (`FUN_0044aa10`, `0x0044aaa5`); the handle `-1` with a position and nought without. Over every `.md2` the archives hold that reads (2,073 models, 2,410 lookup records), 44 records' nodes carry `0x400`: 28 have a position and so `0x10`, and 16 have none and so not (the Hallowed ogre's `ogrepipe01`, the other three themes' water rides' pipes and tap, the teleport's `end01`; none of Lost Kingdom's, so no jungle record tells the two rules apart; Q275, `ParkModelTablesTests.ARecordWithNoPositionHasNoTurnedAboutFlag`). **The
-shared flags**: `0x1` some record has a position, `0x8` some record's file flags hold `0x2`, and `0x2` where the
-item's model was loaded with the head pass (`FUN_0044ba60`, from `FUN_004629d0` on its `param_5 & 0x80`) and a
-record is a head's (file flag `0x80`): all 17 records of the seven such items, and none of the ferry's four, an
-arrival vehicle's model being loaded without it.
+**A lookup record's pair on a model with nothing attached**, 870 of 870: flags `0x1` its file flags meet `0x30`, `0x8`
+they meet `0x580f00` or its item sets `DoHeadProcessing`, `0x10` it has a position and its node's file flags hold
+`0x400` (`FUN_0044a870`, `0x0044a924`, inside the `0x30` branch), `0x20` its node has no child (`FUN_0044aa10`,
+`0x0044aaa5`); the handle `-1` with a position and nought without. Over every `.md2` the archives hold that reads
+(2,073 models, 2,410 lookup records), 44 records' nodes carry `0x400`: 28 have a position and so `0x10`, and 16 have
+none and so not (three themes' water rides and their add-ons: fantasy `wateride` `tap04`, `beejump` and `honeypot`
+`trackend01`; hallow `wateride` `hw_endpipe01`/`02`, `ogre` `ogrepipe01`/`02`, `hw_end01`/`02`; space `wateride`
+`sw_tube1`, `sw_tube02`, `meteor` `s_tube1`, `s_tubeend01`/`04`, `teleport` `end01`/`02`; none of Lost Kingdom's, so
+no jungle record tells the two rules apart, and no record of the 45 original-written files carries `0x10` at all, so
+the bit is read from the listing (`0x0044a904`, `0x0044a924`), never seen in a file; Q275,
+`ParkModelTablesTests.ARecordWithNoPositionHasNoTurnedAboutFlag`). **The shared flags**: `0x1` some record has a
+position, `0x8` some record's file flags hold `0x2`, and `0x2` where the item's model was loaded with the head pass
+(`FUN_0044ba60`, from `FUN_004629d0` on its `param_5 & 0x80`) and a record is a head's (file flag `0x80`): all 17
+records of the seven such items, and none of the ferry's four, an arrival vehicle's model being loaded without it.
 
 **Not found:** who calls `FUN_004726d0` in play (its one caller, `FUN_0044e380`, runs from a callback the model
 maker stores, on model flag `0x800000`, whose setter was not found); what sets the stale-normals bit's leftovers

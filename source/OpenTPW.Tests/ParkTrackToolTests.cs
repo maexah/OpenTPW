@@ -379,6 +379,55 @@ public class ParkTrackToolTests
 			state.TrackRides.SectionsOf( ride.TrackRide ).ToArray() );
 	}
 
+	/// <summary>
+	/// A closed loop, the anchor on the mouth and the click on it: the mouth's walk meets the station, so the circuit's walk
+	/// keeps the turn's way, answers 1 and lays the loop's ten sections from the station on. Made to fail by reversing the
+	/// heading at every click on the mouth from the mouth, whether the mouth's walk is open or not.
+	/// </summary>
+	[TestMethod]
+	public void AClickOnTheMouthOfAClosedLoopWalksTheTurnsWay()
+	{
+		var (state, ride) = Standing( 1, 30, 24 );
+		ParkTrackTool.LayRun( state, 0xb, Owner, (34, 25), (34, 29), 200 );
+		ParkTrackTool.LayRun( state, 0xb, Owner, (34, 29), (28, 29), 200 );
+		ParkTrackTool.LayRun( state, 0xb, Owner, (28, 29), (28, 25), 200 );
+		ParkTrackTool.Forget();
+		ParkBuildMode.ArmAt( ParkBuildMode.KartTrack, ride.ThingId, 34, 25 );
+		ParkBuildMode.Push( 34, 25 );
+
+		var said = ParkTrackTool.RunOn( state, null, null, ride, 1, 200, 34, 25, true );
+
+		StringAssert.Contains( said, "+0x2c 1" );
+		CollectionAssert.AreEqual( new[]
+		{
+			Section( 9, 1, 30, 25 ), Section( 9, 1, 32, 25 ), Section( 7, 0, 34, 25 ), Section( 10, 0, 34, 27 ),
+			Section( 6, 0, 34, 29 ), Section( 9, 0, 32, 29 ), Section( 9, 0, 30, 29 ), Section( 5, 0, 28, 29 ),
+			Section( 10, 0, 28, 27 ), Section( 8, 0, 28, 25 )
+		}, state.TrackRides.SectionsOf( ride.TrackRide ).ToArray() );
+	}
+
+	/// <summary>
+	/// A run from the mouth that meets a spur of the ride's own track, as a loaded park can hold (an end at (34,29) leading on
+	/// to another at (34,31)): the run meets track and closes the tool, the mouth's walk then ends at the spur's far end, and
+	/// the circuit's walk sets out back towards the other mouth, laying the station's first section alone
+	/// (<c>docs/exe/park.md</c>, "The walk"). Walked the turn's way it would lay more. Made to fail by reversing the heading
+	/// only at a click on the mouth from the mouth.
+	/// </summary>
+	[TestMethod]
+	public void ARunThatMeetsASpurWithTheMouthsWalkOpenWalksBackTowardsTheOtherMouth()
+	{
+		var (state, ride) = Standing( 1, 30, 24 );
+		state.SetRecord( 34, 29, state.Record( 34, 29 ) with { TrackType = 0xb, TrackNeighbours = 0x10, TrackDirection = 0x10, TrackParentId = Owner } );
+		state.SetRecord( 34, 31, state.Record( 34, 31 ) with { TrackType = 0xb, TrackNeighbours = 0x01, TrackDirection = 0x10, TrackParentId = Owner } );
+		ParkBuildMode.ArmAt( ParkBuildMode.KartTrack, ride.ThingId, 34, 25 );
+		ParkBuildMode.Push( 34, 25 );
+
+		var said = ParkTrackTool.RunOn( state, null, null, ride, 1, 200, 34, 29, true );
+
+		Assert.IsTrue( said.Contains( "it met track" ) && said.Contains( "+0x2c 0" ), said );
+		CollectionAssert.AreEqual( new[] { Section( 9, 1, 30, 25 ) }, state.TrackRides.SectionsOf( ride.TrackRide ).ToArray() );
+	}
+
 	/// <summary>A crossing lays section 11 and is gone straight through; an add-on's straight lays 12 or 13.</summary>
 	[TestMethod]
 	public void ACrossingAndAnAddOnLayTheirOwnSections()
