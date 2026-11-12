@@ -86,5 +86,6 @@ except subprocess.TimeoutExpired:
 signal_group(signal.SIGKILL)
 p.wait()
 
+print(f"consolerun: the game's exit code {p.returncode} (negative: ended by that signal, after the last line's 20 s)")
 after = save_sum(game)
 print(f"consolerun: {game}/save {'unchanged' if after == before else 'CHANGED during the run'} ({before} -> {after})")

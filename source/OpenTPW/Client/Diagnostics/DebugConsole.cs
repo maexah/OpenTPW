@@ -3071,6 +3071,11 @@ public static class DebugConsole
 
 				break;
 
+			// An instrument: throws out of the frame, so the run loop's containment is seen ending the game (Q79, RunFailure).
+			case "throw":
+				Reply( "throw: an exception out of the frame" );
+				throw new InvalidOperationException( "the debug console's throw command" );
+
 			case "quit":
 				Reply( "quitting" );
 				Environment.Exit( 0 );

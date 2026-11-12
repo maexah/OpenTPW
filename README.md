@@ -166,6 +166,9 @@ OPENTPW_SYSTEM_SDL=1 dotnet source/OpenTPW/bin/Debug/net10.0/OpenTPW.dll --game 
 If something else goes wrong before the game's main loop begins, the box names the error. Either box says where the log
 is, and OpenTPW then exits. With no display there is no box, only the log and the terminal. The original had no such box
 (a deviation). Started from a terminal, the same lines are printed there too. The Windows download opens no terminal window of its own.
+If an error stops the game once it is running, a box titled "OpenTPW stopped" names it and says where the log is, and
+OpenTPW exits. Nothing is saved as it stops (not the park, not the player), so a half-changed park is never written over
+a good save: your last save is kept as it was. This is OpenTPW's own too.
 
 **Reporting a problem.** Every start writes `console.log` in the game's folder, beside `save`. If the game's folder cannot be
 written, or OpenTPW cannot find the game, it is in your own data folder instead (`%AppData%\OpenTPW` on Windows,
@@ -222,7 +225,7 @@ the console of a Debug build (`dotnet build`); the Release build, which the Wind
 | Changing guests | `arrive`, `admit`, `send`, `load`, `depart`, `happy`, `cash`, `thirst`, `balloon`, `toilet`, `need`, `pin` |
 | Building and staff | `buy`, `put`, `sell`, `move`, `path`, `delpath`, `queue`, `delqueue`, `hire`, `fire`, `pickup`, `putstaff`, `carry`, `drop`, `hand`, `strip`, `tool`, `staffrest`, `forcestrike` |
 | Mouse, keys and windows | `pick`, `pickray`, `click`, `rightclick`, `rmbcancel`, `worldclick`, `hover`, `pointer`, `backspace`, `stall`, `menu`, `buyscreen`, `hirescreen`, `researchscreen`, `openthing`, `shopwindow`, `staffwindow`, `visitorwindow`, `screen`, `windows`, `control`, `state`, `footprint`, `buymoney`, `preview`, `map`, `locator`, `tags`, `helpbar` |
-| Measuring | `stats`, `assets`, `parks`, `huds`, `water`, `size`, `strings`, `thingfill`, `mem`, `unimplemented` |
+| Measuring | `stats`, `assets`, `parks`, `huds`, `water`, `size`, `strings`, `thingfill`, `mem`, `unimplemented`, `throw` (ends the run on an error, as a failure would) |
 
 Each command's arguments are in [`DebugConsole.cs`](source/OpenTPW/Client/Diagnostics/DebugConsole.cs), one `case`
 per command. Add a new command to this table.
