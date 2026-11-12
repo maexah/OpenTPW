@@ -1277,9 +1277,10 @@ public sealed class PeepBehaviour
 	/// </para>
 	/// <para>
 	/// <b>The happy jump comes first and is built</b> (<see cref="JumpsForJoy"/>), ending the turn. <b>Watching an
-	/// entertainer is built</b> and ends the turn (<see cref="Watch"/>). <b>The other arms before the split are
-	/// counted, not built</b>: <see cref="CountBeforeLeaving"/> and <see cref="CountAfterLeaving"/>, either side of the
-	/// leave test as the original has them.
+	/// entertainer is built</b> and ends the turn (<see cref="Watch"/>), and so is the litter arm, in
+	/// <see cref="CountBeforeLeaving"/>. <b>The vomit, the fireworks and the pranks are counted, not built</b>:
+	/// <see cref="CountBeforeLeaving"/> and <see cref="CountAfterLeaving"/>, either side of the leave test as the
+	/// original has them.
 	/// </para>
 	/// </summary>
 	private void Decide( Peep peep, PeepWalk walk, int tick )

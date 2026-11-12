@@ -294,6 +294,61 @@ public class ParkDecidingArmsTests
 	}
 
 	/// <summary>
+	/// <b>A bin in reach whose entrance gets no route is passed over</b> (<c>FUN_00500dc0</c>: the best is taken only on a
+	/// route, <c>0x00500ec0</c>): the guest, refused every route as still stranded, drops the litter on their own cell on the
+	/// same turn and goes on deciding, no bin named and none told.
+	/// </summary>
+	[TestMethod]
+	public void ABinInReachWithNoRouteIsPassedOverAndTheLitterDropped()
+	{
+		var seed = Enumerable.Range( 0, 2000 ).First( candidate =>
+		{
+			var random = new Random( candidate );
+			var (first, second) = (random.Next(), random.Next());
+
+			return first % 3 == 2 && second % 5 == 3;
+		} );
+
+		// Two cells east and two south: squared distance 8, in reach.
+		var (guest, walk, turn, people, told) = LitteredAt( BinX + 2, BinY + 2, seed, litter: 90f );
+		var (x, y) = walk.Position.Cell;
+		// Stamped stranded at the next counter value, newer than every block's stamp: each route is refused.
+		guest.StrandedTime = ParkState.Counter + 1;
+		Unimplemented.Forget();
+		turn( 2 );
+		Assert.AreEqual( 1, Unimplemented.Summary.FirstOrDefault( gap => gap.What == "LITTER_SPRITE_AND_RESEED" ).Times, "the drop's sprite and reseed counted" );
+		Unimplemented.Forget();
+
+		Assert.AreEqual( (PeepState.Deciding, 0, 0f), (guest.State, (int)guest.MajorDest, guest.Litter), "no route: dropped, still deciding" );
+		Assert.AreEqual( 4, people.State.CellAt( x, y ).Litter, "kind 1 + 3, on their own cell" );
+		Assert.AreEqual( 0, told.Count );
+	}
+
+	/// <summary>
+	/// <b>An errand whose walk gives up drops the litter where the guest stands</b> (<c>FUN_004fff20</c>: any answer but
+	/// walking ends it, <c>0x004fff8c</c>..<c>0x004fffca</c>): the bin still named is not told, and they decide again.
+	/// </summary>
+	[TestMethod]
+	public void AnErrandWhoseWalkGivesUpDropsTheLitterWhereTheyStand()
+	{
+		var seed = SeedWhere( roll => roll % 3 == 1 );
+		var (guest, walk, turn, people, told) = LitteredAt( BinX + 2, BinY + 2, seed, litter: 100f );
+		turn( 2 );
+		Assert.AreEqual( (PeepState.GoingToMinorDestination, 17), (guest.State, (int)guest.MajorDest) );
+		turn( 3 );
+		Assert.AreEqual( PeepState.GoingToMinorDestination, guest.State, "still walking after one turn" );
+
+		typeof( PeepNavigator ).GetProperty( nameof( PeepNavigator.CannotReach ) )!.SetValue( guest.Navigator, true );
+		turn( 4 );
+		var (x, y) = walk.Position.Cell;
+
+		Assert.AreEqual( (PeepState.Deciding, 0f), (guest.State, guest.Litter), "given up: the litter dropped, deciding again" );
+		Assert.AreEqual( 0, told.Count, "no bin told" );
+		Assert.AreNotEqual( 0, people.State.CellAt( x, y ).Litter, "dropped where they stand" );
+		Assert.AreEqual( 1, people.State.LitteredCells );
+	}
+
+	/// <summary>
 	/// <b>The save's one litter holder is the bin at (44,29), and nothing in it is fireworks</b>, so the fireworks'
 	/// count is dead by content in Lost Kingdom.
 	/// </summary>

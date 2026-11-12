@@ -496,6 +496,28 @@ public class ParkFileWriterTests
 	}
 
 	/// <summary>
+	/// The running litter is not written (Q1288): a save is counted <c>SAVE_PARK_RUNNING_LITTER</c> once a drop has made
+	/// a cell's litter differ from the file's, and not before.
+	/// </summary>
+	[TestMethod]
+	public void ASaveAfterADropCountsTheRunningLitter()
+	{
+		SetCurrentPlayer( new Player( 0, "Test", new PlayerFile { InstantAction = true } ) );
+
+		var state = new ParkState( shipped );
+		var clean = Enumerable.Range( 0, 128 * 128 ).Select( i => (X: i % 128, Y: i / 128) ).First( cell => state.CellAt( cell.X, cell.Y ).Litter == 0 );
+		int Counted() => Unimplemented.Summary.FirstOrDefault( gap => gap.What == "SAVE_PARK_RUNNING_LITTER" ).Times;
+
+		Unimplemented.Forget();
+		Level.WritePark( shipped, state, "jungle", "Clean" );
+		Assert.AreEqual( 0, Counted(), "the file's litter as it stands" );
+
+		Assert.IsTrue( state.DropLitter( clean.X, clean.Y, 3 ) );
+		Level.WritePark( shipped, state, "jungle", "Littered" );
+		Assert.AreEqual( 1, Counted(), "a drop since the load" );
+	}
+
+	/// <summary>
 	/// The level hands the writer the analyser's rings of the recently researched as the running park holds them: a push
 	/// into the shops' ring is written, the other three stay the shipped file's, never pushed.
 	/// </summary>

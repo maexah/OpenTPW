@@ -993,6 +993,10 @@ public class Level
 			return null;
 		}
 
+		// The cells go out as the file's records: litter dropped or claimed since the load is not written (Q1288).
+		if ( state.LitterDiffersFrom( loaded ) )
+			Unimplemented.Report( "SAVE_PARK_RUNNING_LITTER" );
+
 		var point = ParkOrbitCameraMode.PointOfInterest;
 
 		// The file's rotation turns the other way from the orbit camera's yaw: nought is the same view in both, and a

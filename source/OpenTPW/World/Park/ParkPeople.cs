@@ -1576,10 +1576,6 @@ public sealed partial class ParkPeople : Entity
 	}
 
 	/// <summary>
-	/// Whether another guest on (x, y) holds a balloon, for a prankster's third prank (<c>0x004ff1c8</c>..
-	/// <c>0x004ff1d9</c>: not themselves, a guest, <c>mBalloonScript</c> set).
-	/// </summary>
-	/// <summary>
 	/// A bin's side of a guest's litter put in it: the bin's script's <c>VAR_TRIGGER</c> set to 1, which
 	/// <c>PelBin.RSE</c> waits on, plays its animation for and sets to nought again (<c>docs/exe/ride-operation.md</c>,
 	/// "The bin errand"). A bin with no script, or one declaring no such variable, is told nothing and logged.
@@ -1593,6 +1589,10 @@ public sealed partial class ParkPeople : Entity
 	/// <summary>The bin's script variable a guest's litter sets - the original's variable 0 of the thing's script.</summary>
 	private const string BinTrigger = "VAR_TRIGGER";
 
+	/// <summary>
+	/// Whether another guest on (x, y) holds a balloon, for a prankster's third prank (<c>0x004ff1c8</c>..
+	/// <c>0x004ff1d9</c>: not themselves, a guest, <c>mBalloonScript</c> set).
+	/// </summary>
 	private bool BalloonBeside( Peep prankster, int x, int y )
 	{
 		foreach ( var peep in _peeps )

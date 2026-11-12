@@ -799,7 +799,9 @@ filed the items that cite it.
   and not written, never picked, at the place the reseed of the park's one generator with the cell id and its two draws give
   (and the reseed's effect on that generator, or the departure said at the site); a loaded file's littered cells drawn the
   same (their sprites are the file's sprite table's); and a park file written after a drop carrying the cell's litter and its
-  sprite (the writer writes the cells' records, not the running litter). Confirm: the drawn litter photographed on the desk
+  sprite (the writer writes the cells' records, not the running litter). Counted until then: `LITTER_SPRITE_AND_RESEED` at
+  each drop (`ParkState.DropLitter`), `SAVE_PARK_RUNNING_LITTER` at a save whose running litter differs from the file's
+  (`Level.WritePark`). Confirm: the drawn litter photographed on the desk
   beside a frame the original draws of the same file (`q253/orig/sold-by-the-original.TPWS`, its four littered cells (41,21)
   and (39,22) to (39,24)), and a drop's sprite at the reseed's place. Not tested here: a park with two bins in reach (the
   nearest and the tie), which no Lost Kingdom file holds.

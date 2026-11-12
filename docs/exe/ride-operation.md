@@ -1789,13 +1789,13 @@ What it looks like is not checked here (no display to photograph; Q1340).
 
 **Q111: the arms either side of the leave test are counted**, none built, the listing re-read first-hand
 (`0x004fecb9`..`0x004ff3ae`; the corrections are in the list above). `PeepBehaviour.CountBeforeLeaving` counts
-`DECIDE_HAPPY_SPOT_ANIMATION`, `DECIDE_VOMIT` and, for litter, `DECIDE_LITTER_BIN_ERRAND` with a `HoldsLitter` thing
-inside the reach or `DECIDE_LITTER_DROPPED` without; `CountAfterLeaving` counts `DECIDE_WATCH_FIREWORKS` (dead by
+`DECIDE_HAPPY_SPOT_ANIMATION`, `DECIDE_VOMIT` and, for litter (until Q225, below, which builds the arm),
+`DECIDE_LITTER_BIN_ERRAND` with a `HoldsLitter` thing inside the reach or `DECIDE_LITTER_DROPPED` without; `CountAfterLeaving` counts `DECIDE_WATCH_FIREWORKS` (dead by
 content in Lost Kingdom), else runs the entertainer's arm, **built by Q668** (`PeepBehaviour.Watch`, below), then
 counts `DECIDE_PRANK_STINK_BOMB`, `DECIDE_PRANK_LITTER` or `DECIDE_PRANK_BALLOON`, all on the turn's one draw. **Each
 count is of deciding turns on which the arm's own test held**, and differs from the original's reach in three ways,
 said at the site: no counted arm ends the turn; nothing clears a test (the jump's stamp, the levels zeroed), so a guest
-counts on every turn it holds; the bin's route is not asked. The fireworks' script variable is not read. The console's
+counts on every turn it holds; the bin's route is not asked (until Q225). The fireworks' script variable is not read. The console's
 `need` sets `vomit`, `litter` or `prankery`.
 
 **Q225: the litter arm (c) and the bin errand are built** (`PeepBehaviour.CountBeforeLeaving`, `SetOffForABin`,
@@ -1805,8 +1805,8 @@ to its `mEntryPos` asked of each nearer one, the routed bin to `MajorDest` and s
 1 + r % 5 on the guest's cell on a fresh draw, litter nought, and on to (d). State 9 walks; arrived with a bin named, the
 bin's script `VAR_TRIGGER` = 1 (the original's variable 0, by name) and litter nought; arrived with none or given up, the
 drop; then state 6. **Not built (Q1288):** the litter's sprite and its place (the cell-id reseed and two draws), so nothing is
-drawn and the park's generator is not reseeded; a park file written after a drop does not carry it (the writer writes the
-cells' records, not the running litter). The happy jump and the vomit are still counted and do not end the turn, so the litter
+drawn and the park's generator is not reseeded, counted at each drop as `LITTER_SPRITE_AND_RESEED`; a park file written after
+a drop does not carry it (the writer writes the cells' records, not the running litter), counted as `SAVE_PARK_RUNNING_LITTER`. The happy jump and the vomit are still counted and do not end the turn, so the litter
 arm runs on turns the original would end at (a) or (b). A bin with `mEntryPos` nought is counted (`LITTER_BIN_WITHOUT_ENTRY`)
 and passed over; Lost Kingdom's one bin has one. Off-screen on the shipped park (`consolerun.py`, cloud lane c42, output not
 kept): a guest made at (46,31) at litter 90 set off for bin 17 on sweep 882 and put it in on 904, `VAR_TRIGGER` read 1 seven

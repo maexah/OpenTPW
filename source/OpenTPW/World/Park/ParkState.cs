@@ -2460,8 +2460,9 @@ public sealed class ParkState
 	/// on a cell that already holds some, else the kind and the collector nought. Answers whether it was dropped.
 	/// </summary>
 	/// <remarks>
-	/// <b>Not built: the sprite</b>, whose place the original takes by reseeding the park's generator with the cell id
-	/// and drawing twice (Q1288); so this neither reseeds nor draws <see cref="RandomSeed"/>. Only kinds 1 to 5 reach it,
+	/// <b>Not built: the sprite</b> (<c>0x004d94cb</c>), whose place the original takes by reseeding the park's generator
+	/// with the cell id and drawing twice (Q1288); so this neither reseeds nor draws <see cref="RandomSeed"/>, and counts
+	/// each drop as <c>LITTER_SPRITE_AND_RESEED</c>. Only kinds 1 to 5 reach it,
 	/// so kind 7's and 8's region effects and kind 8's particle are not built (the sick and the stink bomb, Q226, Q228).
 	/// The online visit's refusal does not arise: there is none.
 	/// </remarks>
@@ -2479,8 +2480,27 @@ public sealed class ParkState
 
 		cell.Litter = kind;
 		cell.LitterCollector = 0;
+		// The sprite, its place and the reseed of the park's generator with the cell id (0x004d94cb..0x004d953f).
+		Unimplemented.Report( "LITTER_SPRITE_AND_RESEED" );
 
 		return true;
+	}
+
+	/// <summary>
+	/// Whether any running cell's litter or its collector differs from <paramref name="park"/>'s cells: the writer writes
+	/// the file's cell records, not the running litter (Q1288).
+	/// </summary>
+	internal bool LitterDiffersFrom( IParkInitialState park )
+	{
+		for ( var i = 0; i < _cells.Length; ++i )
+		{
+			var (litter, collector) = i < park.Cells.Count ? (park.Cells[i].Litter, park.Cells[i].LitterCollector) : (0, (ushort)0);
+
+			if ( _cells[i].Litter != litter || _cells[i].LitterCollector != collector )
+				return true;
+		}
+
+		return false;
 	}
 
 	/// <summary>How many cells hold litter, which is what a park's cleanliness comes to.</summary>
