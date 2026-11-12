@@ -1580,7 +1580,7 @@ its global"), which is not the file's order:
 | `0x00785908` | `EAX` | 10 | detail above it sends `0x700b50`; at or below it the reverb preset is forced to 0 |
 | `0x0078590c` | `GEOMETRY` | 20 | not read here |
 | `0x00785910` | `MPEGRATE` | 35 | above it sends 0, else 1 (`0x700b4c`) |
-| `0x00785914` | `DUCKINGLEVEL` | 38 | **a percentage**: the group level times 38 / 100 (`0x0051bdf9`) |
+| `0x00785914` | `DUCKINGLEVEL` | 38 | **a percentage**: the group level times 38 / 100 (`0x0051bdf9`); OpenTPW's advisor ducks to it (`GameOptions.DuckLevel`, Q72) |
 | `0x00785918` | `DROPPABLELEVEL` | 20 | above it sends `0x700b44` |
 | `0x0078591c` | `DEFAULTQUALITY` | 50 | the options constructor's sound detail (`0x004236e9`), passed on at `0x00423850` |
 | `0x00785920` | `FADETOGGLE` | 30 | the fade bit, below |

@@ -32,6 +32,34 @@ public sealed record LobbyScript
 	/// <summary>The park's name as its ISLAND() line gives it - see LobbyIsland for what's shown.</summary>
 	public string ParkName { get; init; } = string.Empty;
 
+	/// <summary>
+	/// The folder the ISLAND() line's two models are in, its second field, as a path under the data folder:
+	/// <c>data\lobby\terrain</c> reads <c>lobby/terrain</c> (<see cref="DataFolder"/>). Empty with no ISLAND() line.
+	/// </summary>
+	public string Directory { get; init; } = string.Empty;
+
+	/// <summary>The island's model, the ISLAND() line's third field (<c>jun_isle</c>): the isle the original builds at <c>+4</c>.</summary>
+	public string IsleModel { get; init; } = string.Empty;
+
+	/// <summary>The gate's model, the line's fourth field (<c>jun_gate</c>): the gate at <c>+8</c> (<c>docs/exe/lobby.md</c>, "Escape cancels the fly-in").</summary>
+	public string GateModel { get; init; } = string.Empty;
+
+	/// <summary>Whether an ISLAND() line named the two models, so <see cref="IslePath"/> and <see cref="GatePath"/> name files.</summary>
+	public bool HasModels => Directory.Length > 0 && IsleModel.Length > 0 && GateModel.Length > 0;
+
+	/// <summary>The isle's <c>.md2</c>: <see cref="Directory"/>/<see cref="IsleModel"/>.</summary>
+	public string IslePath => $"{Directory}/{IsleModel}.md2";
+
+	/// <summary>The gate's <c>.md2</c>: <see cref="Directory"/>/<see cref="GateModel"/>.</summary>
+	public string GatePath => $"{Directory}/{GateModel}.md2";
+
+	/// <summary>
+	/// Where the two models' textures are looked for: the <c>textures</c> folder under <see cref="Directory"/>, where
+	/// <c>lobby.wad</c> keeps them. The subfolder is this program's model loader's convention, as for the flyers, not a
+	/// field of the line.
+	/// </summary>
+	public string TextureDirectory => $"{Directory}/textures";
+
 	/// <summary>Where this island sits around the lobby globe, in degrees.</summary>
 	public float Heading { get; init; }
 
@@ -190,6 +218,9 @@ public sealed record LobbyScript
 				script = script with
 				{
 					Index = Integer( island[0] ),
+					Directory = DataFolder( island[1] ),
+					IsleModel = island[2],
+					GateModel = island[3],
 					ParkName = island[4],
 					Heading = Number( island[5] ),
 					CameraHeight = Number( island[6], Empty.CameraHeight )
@@ -226,6 +257,17 @@ public sealed record LobbyScript
 		}
 
 		return script with { FlyingMeshes = flyers };
+	}
+
+	/// <summary>
+	/// A script's folder as a path under the data folder the file system is mounted on: backslashes turned, the outer
+	/// slashes and a leading <c>data</c> folder dropped, so <c>data\lobby\terrain</c> is <c>lobby/terrain</c>.
+	/// </summary>
+	internal static string DataFolder( string folder )
+	{
+		var path = folder.Replace( '\\', '/' ).Trim( '/' );
+
+		return path.StartsWith( "data/", StringComparison.OrdinalIgnoreCase ) ? path["data/".Length..] : path;
 	}
 
 	/// <summary>
