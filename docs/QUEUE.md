@@ -1119,7 +1119,13 @@ filed the items that cite it.
   handymen) loaded, the `staff` census before and after a few seconds, one of them photographed as he sets off; (2) the
   original's own arms, which carry on with the walk or the sweep (`FUN_004d73c0`'s cases 8 and 9, `0x004d741f`,
   `0x004d742a`) from the saved `mTargetLitterCell` (+503, read by nothing yet), built with the litter search
-  (`HANDYMAN_LITTER_SEARCH`), which they need; decode them in Ghidra first.
+  (`HANDYMAN_LITTER_SEARCH`), which they need. Read from the listing (run 22 review): the load keeps state 8/9, `+0x218`
+  and `+0x214` (`FUN_004d6d60`); case 8, `FUN_004d7580`, tests the cell's saved `mLitterCollector` against his id
+  (`0x004d75a5`) and decides at once when it is not his; case 9, `FUN_004d76a0`, waits `mTimeStartedCleaning +
+  WorkDuration` (`0x004d76c9`), cleans his own cell's litter (`FUN_004d9620`, not read) and decides
+  (`ride-operation.md`, the handyman's "Where OpenTPW differs"). Still to read: `FUN_004d9620`, and whether the litter
+  search (`FUN_004c8ed0`) passes over a claimed cell, since falling to idle in state 8 leaves the cell's
+  `LitterCollector` naming him.
 
 - [ ] **Q287. ParkHireScreen.Selected previews a highlighted candidate's wage with ShowMoney( person.Wage ), and
   Update() calls ShowMoney() with no wage on every frame (WindowStack.OnUpdate).** So the staff-costs preview is

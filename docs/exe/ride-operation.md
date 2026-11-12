@@ -3474,6 +3474,7 @@ does (`0x004e24bc`..`0x004e252a`).
 | The hurry speed on the walk to a toilet | `+0xc2` = 25 | the same, one of the three words `Staff.Pace` sums; taken off on going idle |
 | A mechanic assigned to a thing | kept while his `+0x218` names it | the same (`Staff.ObjectToRepair`; "The mechanic's repair") |
 | The request for service | shuts the object and calls a member | the search and the clean read and clear a saved `+0x64`; no control here sets one on a toilet (the ride window's `b_callmech` draws and reports itself) |
+| Loaded in state 8 or 9 | carries on (the load keeps the state, `+0x218` and `+0x214`, `FUN_004d6d60`): 8 decides at once when the cell's saved `mLitterCollector` is not his (`0x004d75a5`), 9 waits `mTimeStartedCleaning + WorkDuration` (`0x004d76c9`), cleans his own cell's litter (`FUN_004d9620`, not read) and decides | counted (`HANDYMAN_LITTER_STATE_8`, `_9`), falls to idle (Q1154, Q1316) |
 
 ### The clean, in both games
 
