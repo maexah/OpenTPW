@@ -828,6 +828,67 @@ public class ParkScreenTests
 	}
 
 	/// <summary>
+	/// <b>A candidate highlighted by the pointer keeps their wage preview frame on frame</b> (<c>0x401</c>, <c>FUN_0049b650</c>;
+	/// <c>hud.md</c>, "The mini-balance is a MONTHLY ACCOUNT"): over the shipped park's month (cash in 1500, staff costs
+	/// nought, all costs 13175) the second row's wage stands in the staff costs and comes off the balance for five frames
+	/// with the pointer resting, and going back to the first row shows the first wage alone, not the two added up.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> the screen's update lettering the account with no wage each frame; the wage not taken off the
+	/// balance; the wage added to the balance; each preview added onto the last.
+	/// </remarks>
+	[TestMethod]
+	public void AHighlightedCandidatesWagePreviewStandsFrameOnFrameAndComesOffTheBalance()
+	{
+		var stack = APark();
+		var park = AParkOver( stack );
+
+		using var stream = FileSystem.OpenRead( "levels/jungle/Easymode.TPWI" );
+		var world = new ParkWorld( new SaveReader( stream ).ReadFile() );
+		var pool = Level.StaffPoolFor( world, new ParkBalance( "jungle", easyMode: true ), world.GameTick );
+
+		typeof( Level ).GetProperty( nameof( Level.StaffPool ) )!.SetValue( park, pool );
+		typeof( Level ).GetProperty( nameof( Level.ParkState ) )!.SetValue( park, new ParkState( world ) );
+
+		var people = typeof( ParkPeople ).GetProperty( "Current", BindingFlags.Static | BindingFlags.NonPublic )!;
+		var peopleBefore = people.GetValue( null );
+		people.SetValue( null, null );
+
+		// A tab whose first two rows by name have different wages, both non-zero, so a preview that adds up or falls to nought shows.
+		ParkStaffPool.Candidate[] Sorted( int kind ) => pool.OfKind( kind ).OrderBy( person => person.Name, System.StringComparer.Ordinal ).ToArray();
+		var kind = Enumerable.Range( 0, 5 ).First( kind => Sorted( kind ) is { Length: >= 2 } rows && rows[0].Wage != rows[1].Wage && rows[0].Wage > 0 && rows[1].Wage > 0 );
+		var (first, second) = (Sorted( kind )[0], Sorted( kind )[1]);
+
+		var hire = new UI.ParkHireScreen( stack, openOn: kind );
+		stack.Open( hire );
+
+		static IEnumerable<UI.UiControl> Under( UI.UiControl control ) => control.Children.Concat( control.Children.SelectMany( Under ) );
+		string Figures() => string.Join( " / ", new[] { 0x2489, 0x248c, 0x248b, 0x2487 }.Select( id => Under( hire.Root ).Single( control => control.Id == id ).Text ) );
+		string Previewing( int wage ) => $"$ 1500 / $ {wage} / $ 13175 / -$ {11675 + wage}";
+
+		var list = Under( hire.Root ).OfType<UI.UiList>().Single( control => control.Id == 0x248e );
+		Vector2 RowMiddle( int slot ) => new( (list.RowArea.Left + list.RowArea.Right) / 2f, list.RowArea.Top + (slot * list.RowHeight) + (list.RowHeight / 2f) );
+
+		Assert.AreEqual( (first.Id, second.Id), (list.Rows[0].Id, list.Rows[1].Id ), "the rows by name" );
+
+		Pointer( stack, RowMiddle( 1 ), left: false );
+		Assert.AreEqual( second.Id, list.Selected, "the row under the pointer" );
+
+		for ( var frame = 0; frame < 5; frame++ )
+		{
+			Pointer( stack, RowMiddle( 1 ), left: false );
+			Assert.AreEqual( Previewing( second.Wage ), Figures(), $"the second row's wage, frame {frame} after the pick" );
+		}
+
+		Pointer( stack, RowMiddle( 0 ), left: false );
+		Pointer( stack, RowMiddle( 0 ), left: false );
+		Assert.AreEqual( Previewing( first.Wage ), Figures(), "back to the first row: its wage alone" );
+
+		stack.Close( hire );
+		people.SetValue( null, peopleBefore );
+	}
+
+	/// <summary>
 	/// <b>A tabbed screen fills its list once as it opens, once again a tab, and not for the tab already down</b>: each
 	/// opener fills its list and then puts its tab down with <c>FUN_0066a295</c>, which does not reach the tab handler
 	/// that fills on a click. The original's hire and buy fills were hit once each at an opening and once at a tab, and
