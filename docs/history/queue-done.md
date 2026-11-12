@@ -12131,6 +12131,17 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   non-null where the entities step starts), or confirm it in a running game off-screen: the log's particle line before the
   catalogue's effects line, with the swap put back and the order seen to flip.
 - [x] **Q1036. The lobby bolt's brightness over its life. Decode first.** Folded into Q1044 (filed by the Sentinel the same hour from VERIFY-13, which decoded the envelope). From Q1034 and the Sentinel's second reading of Q152's fork review. OpenTPW dims the bolt over its whole life (`Lightning.OnUpdate`: opacity = life^2 x stutter, measured exact in Q1034: the lift in the frame is 78, 32, 13, 4.6 and 2.5 grey levels at 0.1, 0.2, 0.35, 0.4 and 0.45 s of a 0.5 s bolt, so it is out of sight by about 0.4 s), where the original is suspected to hold its bolt at 192 to 255 grey in saw-teeth for the whole 500 ms and cut at the end (the colour pulse `0x0057ee30` in Q1035; a second reading, neither decoded nor run). Decode the pulse's value over a bolt's life for the lobby's arguments (lifetime 500, argument 8), run the original's lobby bolt under Proton (`record.sh`, the island pinned) and write the figures in `docs/exe/weather.md`, "The bolt"; build the envelope only after that, in `Lightning.OnUpdate` and the `Flash` that lifts the lobby's sun and sky (`LobbyWeather`), and read it back with `q1034/confirm2.py` (`stepsweep`). Q1034 changed nothing in `Lightning.cs`.
+- [x] **Q729. A rotation track's last key, held or wrapped.** From the run 7 review (Q599 4's lead). `Anim_FindKey`
+  (`0x00470b60`) takes key 0 as the upper key past a track's last key where its `param_5` is non-zero
+  (`0x00470bee`..`0x00470bf9`), and the rotation call passes 1 (`0x00471c45`), so the original's rotation sampler WRAPS
+  to key 0 between a track's last key and the clip's declared end, where position and scale (param_5 0) hold the last
+  key. `AnimationFile.RotationTrack.Sample` holds the last key (`AnimationFile.cs`, "frame >= FrameIndices[^1]"). Count
+  the rotation tracks whose last key falls before their clip's declared end (a corpus scan over all 2,129 `.md2`); where
+  there are any, and Lost Kingdom's reach one, make `Sample` wrap and confirm one beside the original's frames;
+  otherwise say in `park.md` that none exists and the held last key is dead by CONTENT.
+  Done in Q729: none exists. Of the 2,129 `.md2` (1,278 declare an end) the 3,039 rotation tracks end 2,601 on their
+  clip's declared end, 438 past it and none before it (`RotationLastKeyTests`, `dotnet/cliptracks ... rot`), so the held
+  last key is dead by CONTENT: said in `park.md` (`FUN_00470b60`) and at `RotationTrack.Sample`. Nothing drawn changes.
 
 ## B. Docs and comments
 

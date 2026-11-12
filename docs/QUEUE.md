@@ -1917,14 +1917,6 @@ filed the items that cite it.
   `0x80000000` locks against OpenTPW's unconditional shows, and whether `Dress`'s hidden props include a node in clip
   16's tracks (the map, node 6) on the slot 1 model's first clip, where the original's channel at `0xc` skips
   the call to `FUN_00472310` (the test at `0x00473096`, in `FUN_00472f60`; the call is `0x004730a9`).
-- [ ] **Q729. A rotation track's last key, held or wrapped.** From the run 7 review (Q599 4's lead). `Anim_FindKey`
-  (`0x00470b60`) takes key 0 as the upper key past a track's last key where its `param_5` is non-zero
-  (`0x00470bee`..`0x00470bf9`), and the rotation call passes 1 (`0x00471c45`), so the original's rotation sampler WRAPS
-  to key 0 between a track's last key and the clip's declared end, where position and scale (param_5 0) hold the last
-  key. `AnimationFile.RotationTrack.Sample` holds the last key (`AnimationFile.cs`, "frame >= FrameIndices[^1]"). Count
-  the rotation tracks whose last key falls before their clip's declared end (a corpus scan over all 2,129 `.md2`); where
-  there are any, and Lost Kingdom's reach one, make `Sample` wrap and confirm one beside the original's frames;
-  otherwise say in `park.md` that none exists and the held last key is dead by CONTENT.
 - [ ] **Q731. The swear filter's load after a profile read.** From the run 7 review (Q709 3, VERIFY-11). `FUN_005afd70`
   (`0x005afeba..0x005aff37`): with `+0x25` set, open `Data\Language\<language>\swears.txt` (the language from the
   registry's `Language`, `0x005c0d00`: 0x409 "American", else "English"); when it does not open, clear `+0x25`
