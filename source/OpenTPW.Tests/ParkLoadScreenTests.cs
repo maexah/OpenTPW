@@ -212,6 +212,7 @@ public class ParkLoadScreenTests
 			string.Join( " | ", list.Rows.Select( row => $"{row.Id} {row.Name} {row.Values![0]}" ) ) );
 		Assert.IsTrue( list.SelectsUnderPointer );
 		Assert.AreEqual( 0, list.SortWord, "no sort: the folder's order" );
+		Assert.AreEqual( (0, 0), (list.Selected, list.HighlightSlot), "the add picked the first row (FUN_0066403b), the highlight alone" );
 
 		var controls = Everything( screen.Root ).ToArray();
 

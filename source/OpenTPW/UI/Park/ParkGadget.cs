@@ -1117,8 +1117,7 @@ internal sealed class ParkGadget : UiWindow
 	/// bar out. Type 0x18 opens the entry-price screen (FUN_00498d80) and answers 2: the tag on show is taken off
 	/// the mast as the erase button takes it, and the arm folded away. Types 9 to 0xc open the buy screen on the
 	/// tab the type less 9 names, or pick that tab on the one already open (FUN_004acc70), and answer 2 as well;
-	/// the row of the tag's item the original then selects is counted where a tag names one,
-	/// <c>TAG_BAR_BUY_ITEM_ROW</c>. Types 0xd to 0x11 open the hire screen on the tab the type less 0xd names
+	/// where the tag names an item, its row is then selected (<see cref="ParkBuyScreen.PickItem"/>). Types 0xd to 0x11 open the hire screen on the tab the type less 0xd names
 	/// (FUN_0049bdd0, which destroys the park screen that is open first, the hire screen too, so the screen is
 	/// always built), and answer 2. Type 0x15 opens the Staff Training Budgets screen (FUN_004b2750, nothing where
 	/// it is open already) and answers 2. Type 0x13 runs the research opener (<see cref="ParkResearchOpener"/>) and answers 2.
@@ -1163,12 +1162,14 @@ internal sealed class ParkGadget : UiWindow
 		if ( type is >= BuyFirstTab and <= BuyLastTab )
 		{
 			Log.Info( $"Park gadget: message bar: button type {type} opens the buy screen on tab {type - BuyFirstTab} and takes tag {tag.Row.Id} off" );
-			if ( Stack.Windows.OfType<ParkBuyScreen>().FirstOrDefault() is { } open )
-				open.PickTab( type - BuyFirstTab );
+			if ( Stack.Windows.OfType<ParkBuyScreen>().FirstOrDefault() is not { } screen )
+				Stack.Open( screen = new ParkBuyScreen( Stack, type - BuyFirstTab ) );
 			else
-				Stack.Open( new ParkBuyScreen( Stack, type - BuyFirstTab ) );
+				screen.PickTab( type - BuyFirstTab );
+
+			// Either half of FUN_004acc70 then selects the item's row.
 			if ( tag.Item != 0 )
-				Unimplemented.Report( "TAG_BAR_BUY_ITEM_ROW" );
+				screen.PickItem( tag.Item );
 			EraseTag();
 			return;
 		}

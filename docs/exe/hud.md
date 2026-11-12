@@ -1081,8 +1081,8 @@ Read first-hand for the build (Q200b, 2026-09-30):
   before every numbered visitor.
 - **An add that makes the count 1 selects the first row** (`FUN_0066525c( 0 )` in `FUN_0066403b`). The original's
   visitors list opens with a row highlighted, not always the first ("A right click on a list"). OpenTPW builds the
-  pick for the hire, all-items and all-staff lists ("The first row is picked as a list fills") and counts it for the others
-  (`LIST_FIRST_ROW_SELECTED`, `docs/QUEUE.md` Q232).
+  pick for every list the game builds: the hire, all-items, all-staff, visitors, buy and Load and Save Park lists ("The
+  first row is picked as a list fills"; the last four by Q232).
 - **`FUN_0066525c( slot )`** selects `slot + top` when `slot < visible` and `slot < count`; otherwise, with
   `list+0x48 & 0x100` clear, it returns and the old index stands (the sprite too), and with it set it selects nothing.
   The visitors and the hire lists' flags are `0x291`, the bit clear ("A right click on a list"; the hire list's read
@@ -3323,7 +3323,7 @@ game's two.
 
 **OpenTPW** (Q356): `UiList.PicksFirstRow` builds the add's pick, the top row selected as the first row goes in and its
 index posted; `TakePosted` hands the row standing at that index to `SelectionChanged` when the screen's `Update` calls
-it. The hire, all-items and all-staff (Q382) lists set it; the other lists count the pick (`LIST_FIRST_ROW_SELECTED`, Q232). The picked wage stays in
+it. The hire, all-items and all-staff (Q382) lists set it, and the visitors, buy and Load and Save Park lists (Q232); a list without it counts the pick (`LIST_FIRST_ROW_SELECTED`), and no list the game builds is without it. The picked wage stays in
 Staff costs until the next pick. On the same file (`q356/run-fix2`) the opening logged `Hire list: added 7,11, row 11
 picked` and `Hire screen: candidate 11 grade 3, skill bar 614 of 1024, staff costs 502`, the bar 0.606 with Chris
 Battson's row highlighted, and the mechanics' tab `added 3,8,10, row 8 picked`, candidate 8 grade 2, 409, staff costs
@@ -3341,8 +3341,8 @@ rewrite touches it. So after the add's pick these move it:
 - **A thing handed to the opener.** The opener finds the thing's row (`FUN_00664d2a`, the row whose id it is) and
   selects it with `FUN_00665739` after the fill: the visitors list from the visitor's window's `b_kids` (`FUN_004b7720`,
   button `0x3738`, `[0x007c2658]`), the all-staff list (`FUN_00496620`'s second, from `0x004b5de6` and `0x004b5173`),
-  the four all-items builders, and the buy list from the message bar's buttons 9 to `0xc` (`FUN_0048e0f0`). The
-  visitors, all-staff and all-items ones are built; the buy list's is counted (`TAG_BAR_BUY_ITEM_ROW`).
+  the four all-items builders, and the buy list from the message bar's buttons 9 to `0xc` (`FUN_0048e0f0`). All four
+  are built; the buy list's (Q232, `ParkBuyScreen.PickItem`) queues its `0x401` behind the fill's pick (`UiList.PickPosted`).
   `FUN_00665739` has 17 call sites, 13 outside the list class (`0x4812b2`, `0x4812fa`, `0x481317`, `0x49364e`,
   `0x494386`, `0x494d9b`, `0x494ffd`, `0x49521a`, `0x496896`, `0x4a7940`, `0x4acd3c`, `0x4ad1dd`, `0x4beb4e`, the last
   the online visit's). `FUN_00481100`'s three (`0x4812b2`, `0x4812fa`, `0x481317`) are not identified: it runs every UI
@@ -3390,7 +3390,19 @@ opened by V away from the rows reads `selected index -1` and counts `LIST_FIRST_
 row 3 logs `List 0x1e497: row 39 at 2 picked under the pointer`; closed and opened again under the pointer resting
 there it reads `selected index -1` with no pick (`WindowStack` hands a list the point only on a frame the pointer
 moved), and Down and then Home leave it at -1 (no list takes a key). Neither the pick at rest nor the keys is built or
-counted: Q232.
+counted: Q1428 and Q1429.
+
+**OpenTPW** (Q232, lane c77, a cloud container with no Ghidra, no original and no display to photograph): the
+visitors, buy and Load and Save Park lists set `UiList.PicksFirstRow`. The buy screen's `Update` takes the posted
+`0x401` (`TakePosted`) before its frame arm, so the help bar's item and the panel's wait start on the row sorted first,
+shown half a second later with no pointer on the rows; the visitors and the Load and Save Park lists have the highlight
+alone. A tag's item on the message bar's buy buttons selects its row on either half of the opener
+(`ParkBuyScreen.PickItem`). Off-screen on the stock park (paused, the pointer right of the window's lists, the run's
+output not kept): V opened the visitors list, its rows logged with 42 first and sorted with 38 first, and `control 1e497`
+read `selected index 0 (row 38), sprite on slot 0`; `buyscreen` filled `1104 Aztec Mayhem, 1100 Belly Bounce, 1101
+Crazy Ape, 1102 Rocky Racers`, and two seconds later `footprint` read `row 1104 shown, none waiting, list selection
+1104` and `help item 1104`; `unimplemented` listed no `LIST_FIRST_ROW_SELECTED`. The drawn highlight was not
+photographed beside the original's: Q1430.
 
 #### A tab put down by the opener fills nothing
 

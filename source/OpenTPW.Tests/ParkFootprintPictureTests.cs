@@ -317,6 +317,82 @@ public class ParkFootprintPictureTests
 	}
 
 	/// <summary>
+	/// <b>The buy list opens with its first row picked, and the handler takes it</b> (<c>FUN_0066403b</c>'s
+	/// <c>FUN_0066525c( 0 )</c>, its <c>0x401</c> queued and taken by the arm at <c>0x004aca16</c>): before the screen's
+	/// update nothing waits and the help bar has no item; after it the row sorted first is both, and is shown once it has
+	/// waited more than 500 ms. A tab's fill picks its own first row the same way.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the buy list without the pick; the pick not taken by <c>Update</c>; taken at the fill.</remarks>
+	[TestMethod]
+	public void TheBuyListOpensOnItsFirstRowAndThePanelShowsItHalfASecondLater()
+	{
+		Time.PinWall( 50000 );
+		var (_, screen, _) = BuyScreen();
+		var list = ListOf( screen );
+		var picks = Unimplemented.Summary.FirstOrDefault( entry => entry.What == "LIST_FIRST_ROW_SELECTED" ).Times;
+
+		Assert.IsTrue( list.Rows.Count > 1 );
+		var first = list.Rows[0].Id;
+		Assert.AreEqual( (first, 0), (list.Selected, list.HighlightSlot), "the row sorted first, highlighted on the top slot" );
+		Assert.AreEqual( "help item 0 posted 0", HelpItem( screen ), "posted, not yet taken" );
+		Assert.AreEqual( 0, screen.Previewed );
+
+		screen.Update();
+		Assert.AreEqual( $"help item {first} posted 0", HelpItem( screen ), "taken: the help bar's item" );
+		Assert.AreEqual( $"row 0 shown, row {first} waiting 0 ms", screen.PreviewCensus()[..$"row 0 shown, row {first} waiting 0 ms".Length] );
+
+		Time.PinWall( 50501 );
+		screen.Update();
+		Assert.AreEqual( first, screen.Previewed, "shown after 500 ms" );
+
+		screen.PickTab( 1 );
+		Assert.AreEqual( (list.Rows[0].Id, 0), (list.Selected, list.HighlightSlot), "the shops tab's first row" );
+		Assert.AreNotEqual( first, list.Rows[0].Id );
+		screen.Update();
+		Assert.AreEqual( $"help item {list.Rows[0].Id} posted 0", HelpItem( screen ) );
+		Assert.AreEqual( picks, Unimplemented.Summary.FirstOrDefault( entry => entry.What == "LIST_FIRST_ROW_SELECTED" ).Times,
+			"the pick is built, not counted" );
+	}
+
+	/// <summary>
+	/// <b>The opener's item is selected after the fill</b> (<c>FUN_004acc70( tab, item )</c>: <c>FUN_00664d2a</c>, then
+	/// <c>FUN_00665739</c>): its row is selected, and its <c>0x401</c> is queued behind the fill's
+	/// pick, so the handler ends on the item, not on the first row. An item the tab does not list changes nothing. No
+	/// tab of the shipped park lists more rows than show, so the scroll into view is <c>UiList.Pick</c>'s own (the staff
+	/// list's tests).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the item's row not picked; its 0x401 handed over at once (the fill's pick, taken after it, wins).</remarks>
+	[TestMethod]
+	public void TheOpenersItemIsSelectedAfterTheFillsPick()
+	{
+		Time.PinWall( 60000 );
+		var (catalogue, screen, _) = BuyScreen();
+		var list = ListOf( screen );
+		Assert.IsTrue( list.Rows.Count > 1, "the rides tab has rows to choose between" );
+
+		var last = list.Rows[^1].Id;
+		screen.PickItem( catalogue.All.First( item => list.Rows.All( row => row.Id != item.Id ) ).Id );
+		Assert.AreEqual( (list.Rows[0].Id, 0), (list.Selected, list.ScrollTop), "an item not listed: nothing" );
+
+		screen.PickItem( last );
+		Assert.AreEqual( (last, 0, list.Rows.Count - 1), (list.Selected, list.ScrollTop, list.HighlightSlot), "selected, on its own slot" );
+		Assert.AreEqual( "help item 0 posted 0", HelpItem( screen ), "queued, not handed over" );
+
+		screen.Update();
+		Assert.AreEqual( $"help item {last} posted 0", HelpItem( screen ), "the handler ends on the item" );
+		Time.PinWall( 60501 );
+		screen.Update();
+		Assert.AreEqual( last, screen.Previewed );
+	}
+
+	// The help census without its state, which the poster keeps from screen to screen.
+	private static string HelpItem( ParkBuyScreen screen ) => screen.HelpCensus()[..screen.HelpCensus().IndexOf( " state" )];
+
+	private static UiList ListOf( ParkBuyScreen screen )
+		=> (UiList)typeof( ParkBuyScreen ).GetField( "_list", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic )!
+			.GetValue( screen )!;
+
+	/// <summary>
 	/// <b>The row's wait is real time, not the frame clock's</b> (<c>FUN_0065968e</c> at <c>0x004ac438</c>): five seconds
 	/// on the frame clock show nothing, and 501 ms of real time with the frame clock still show the row.
 	/// </summary>
@@ -326,6 +402,10 @@ public class ParkFootprintPictureTests
 	{
 		var (catalogue, screen, _) = BuyScreen();
 		var aztec = catalogue.All.Single( item => item.Name == "Aztec Mayhem" );
+
+		// The fill's pick of the first row is taken first, as the loop hands the screen its queued 0x401.
+		Time.PinWall( 39000 );
+		screen.Update();
 
 		Time.PinWall( 40000 );
 		screen.RowSelected( aztec.Id );

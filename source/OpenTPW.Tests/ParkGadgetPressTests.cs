@@ -1006,7 +1006,7 @@ public class ParkGadgetPressTests
 	/// is not counted as unbuilt. With the buy screen open on another tab the click picks the type's tab on that
 	/// screen and opens no second one.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> the button counted as unbuilt; the tag left; the arm left out; the screen not opened, opened on the tab last left, or opened twice; the open screen's tab left, or a new screen put in its place; the tab the type itself; the item's row counted for no item, or never.</remarks>
+	/// <remarks><b>Mutations:</b> the button counted as unbuilt; the tag left; the arm left out; the screen not opened, opened on the tab last left, or opened twice; the open screen's tab left, or a new screen put in its place; the tab the type itself; the item's row counted.</remarks>
 	[TestMethod]
 	public void TheBuyButtonOpensTheBuyScreenOnItsTabAndTakesItsTagOff()
 	{
@@ -1054,7 +1054,7 @@ public class ParkGadgetPressTests
 		screens = stack.Windows.OfType<UI.ParkBuyScreen>().ToArray();
 		Assert.AreEqual( (1, 2, true, buttons), (screens.Length, screens[0].Tab, second.Hidden, Times( "TAG_BAR_BUTTON" )) );
 		Assert.AreSame( opened, screens[0], "the screen that was open, not a new one in its place" );
-		Assert.AreEqual( rows + 1, Times( "TAG_BAR_BUY_ITEM_ROW" ), "the item's row is not selected: counted" );
+		Assert.AreEqual( rows, Times( "TAG_BAR_BUY_ITEM_ROW" ), "the item's row is picked, not counted" );
 	}
 
 	/// <summary>

@@ -135,8 +135,12 @@ internal sealed class ParkVisitorsScreen : UiWindow
 			// A row's 0x400 opens the visitor's window on its guest (0x0049351e), which closes this screen.
 			Activated = guest => ParkVisitorWindow.Open( Stack, guest ),
 
-			// The tree's list record carries flag 0x80 (0x00750716): the row under the moving pointer is picked. The
-			// screen's handler (0x00493230) has no 0x401 arm, so the pick is the highlight alone.
+			// The add picks the top row as the first goes in (FUN_0066403b), so each fill highlights the row sorted first.
+			// The screen's handler (0x00493230) has no 0x401 arm: nothing takes the pick, and it is the highlight alone.
+			PicksFirstRow = true,
+
+			// The tree's list record carries flag 0x80 (0x00750716): the row under the moving pointer is picked, the
+			// highlight alone as the add's pick is.
 			SelectsUnderPointer = true,
 
 			// The screen's handler keeps the list's 0x406 (0x00493479).

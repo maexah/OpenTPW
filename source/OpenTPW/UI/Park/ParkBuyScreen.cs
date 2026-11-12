@@ -219,6 +219,10 @@ internal sealed class ParkBuyScreen : UiWindow
 			RowFont = RowFont,
 			ColumnAligns = [TextAlign.Start, TextAlign.End],
 			RowHeight = UiList.RowHeightOf( RowFont ),
+
+			// The add picks the top row as the first goes in (FUN_0066403b) and posts its 0x401, which the handler's arm
+			// takes (0x004aca16) at the next pump: the help bar's item and the panel's wait start on the row sorted first.
+			PicksFirstRow = true,
 			SelectsUnderPointer = true,
 			Activated = Chose,
 			SelectionChanged = RowSelected,
@@ -327,6 +331,13 @@ internal sealed class ParkBuyScreen : UiWindow
 	/// <summary>What FUN_004acc70 does with the screen already open: the list filled with <paramref name="tab"/>'s items and its button put down.</summary>
 	internal void PickTab( int tab ) => Show( tab );
 
+	/// <summary>
+	/// The opener's item, after the fill (<c>FUN_004acc70( tab, item )</c>, both halves): its row is found and selected
+	/// and brought into view (<c>FUN_00664d2a</c>, <c>FUN_00665739</c>), its <c>0x401</c> queued behind the fill's pick
+	/// and taken with it. Nothing where the tab lists no such row.
+	/// </summary>
+	internal void PickItem( int item ) => _list.PickPosted( item );
+
 	/// <summary>The tab shown.</summary>
 	internal int Tab => _tab;
 
@@ -346,8 +357,8 @@ internal sealed class ParkBuyScreen : UiWindow
 
 		_list.Clear();
 
-		// The help bar's item goes with the rows: the original's fill picks the new first row (0x004aca3e), which this
-		// list does not (LIST_FIRST_ROW_SELECTED), so the new tab has no item until the pointer selects one.
+		// The help bar's item goes with the rows: the fill's pick of the new first row is posted, and the 0x401 arm makes
+		// it the item (0x004aca3e) once Update takes it.
 		_helpItem = 0;
 
 		// Each row goes in by the list's sort, in the catalogue's order as the original walks it (FUN_00412e60), so rows
@@ -551,9 +562,8 @@ internal sealed class ParkBuyScreen : UiWindow
 	/// </summary>
 	/// <remarks>
 	/// The wait is milliseconds of real time (<c>FUN_0065968e</c>, <see cref="Time.WallMilliseconds"/>), as the
-	/// interface's click limits are. The original's list also selects its first row as
-	/// it is filled, so there the panel shows the top row half a second after the screen or a tab opens; here a row is
-	/// shown only once the pointer has been over one (<c>UiList.FirstRow</c>).
+	/// interface's click limits are. The list selects its first row as it is filled and posts it
+	/// (<see cref="UiList.PicksFirstRow"/>), so the panel shows the top row half a second after the screen or a tab opens.
 	/// </remarks>
 	internal void RowSelected( int rowId )
 	{
@@ -643,9 +653,8 @@ internal sealed class ParkBuyScreen : UiWindow
 	/// original's state went to -1 over its tabs and headings and over the strips beside the rows (<c>q495/orig/</c>).
 	/// </summary>
 	/// <remarks>
-	/// The original's list picks its first row as it fills, so there the bar speaks of that row as soon as the pointer
-	/// comes onto the rows; this list picks none (<c>LIST_FIRST_ROW_SELECTED</c>, counted as it fills), so nothing is
-	/// posted before the pointer has selected a row, on opening and after each tab change.
+	/// The list picks its first row as it fills (<see cref="UiList.PicksFirstRow"/>), so the bar speaks of that row as
+	/// soon as the pointer comes onto the rows, on opening and after each tab change.
 	/// </remarks>
 	protected internal override (int Row, (int Parameter, string Value)[] Values)? HelpPost()
 	{
@@ -734,6 +743,9 @@ internal sealed class ParkBuyScreen : UiWindow
 
 	protected internal override void Update()
 	{
+		// The loop hands the handler the list's queued 0x401s before the frame message.
+		_list.TakePosted();
+
 		if ( _tick.Owed( Stack.HoldsTimers ) > 0 )
 			Tick();
 
