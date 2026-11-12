@@ -1405,17 +1405,12 @@ filed the items that cite it.
     `0x005dd04c`); the lobby camera's init `FUN_005d8b50` leaves it off (50 / 300 with bit `0x2000` clear, saved and restored at
     `0x005d8da8`..`0x005d8dca`). So wherever fog is on it runs 50 to 250; the fork's 300 exists only with the bit clear. The
     remaining work is the photograph and the build.
-- [ ] **Q503. The build markers load from `textures` at every texture quality.** The original's `FUN_0053d790` calls
-  `FUN_0054dcc0` (0x0053d7b4) and takes `STexture` (`0x00763ee4`) for the three dynamic meshes where it answers 1
-  (texture quality 0 or 1), as `ParkSea` and `ParkFlags` already do through `ParkSea.SmallTextures`. `ParkBuildMarkers.Load`
-  always reads `generic/dynamic/textures/{name}.wct`; `blue.wct` (493 against 211 bytes) and `red.wct` (340 against 122)
-  differ between the folders, `m_link` and `m_end` do not. Pass the quality in, load `stexture` at 0 and 1, and confirm
-  it in the running game at low detail (a screenshot of a build square, before and after). Said at the site in
-  `ParkBuildMarkers.MarkerNames`.
-  - **Note (fork watch 2026-10-31, verify-other M8):** `orange.wct` is in `textures` and `stexture` of all four levels'
-    `dynamic.wad`; `data/generic/dynamic` has none, so the markers must load from the level's. `0x0053567a`..`0x00535681`
-    returns 2 for `0x1f` (slot 2 is `orange`); the call with `0x11f` is `0x00524234`/`0x00524453`. The face's path through
-    `0x00532fc0` is not traced.
+- [ ] **Q1432. The low-detail build squares photographed beside the original.** Q503 loads the markers from
+  `generic/dynamic/stexture` at texture quality 0 and 1 (`ParkBuildMarkers.FolderFor`); blue and red are smaller files
+  there (211 against 493 bytes, 122 against 340), so a build square at low detail should look coarser than at medium.
+  Photograph a path tool's blue and red squares in this game at low detail (quality 0 in `save/Config.tcf`,
+  `docs/TOOLING.md`, "This game at another graphics quality") and at medium, and the original's at low detail beside
+  them, and say whether ours match. Built in a cloud lane with no display, so nothing was photographed.
 - [ ] **Q504. The sea's and the flags' phase is a float that grows without bound, and no one wrap keeps both seamless.**
   `ParkSea.Phase` gains 12 a second off `Time.Delta`; at a high refresh rate the step (12 x Delta) is rounded against the
   float's ulp after hours (numpy float32 at 144 Hz: rate x1.031 from 1.5 h, x0.9375 from 3 h, x1.125 from 6 h, x0.75

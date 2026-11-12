@@ -12145,6 +12145,27 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q503. The build markers load from `textures` at every texture quality.** The original's `FUN_0053d790` calls
+  `FUN_0054dcc0` (0x0053d7b4) and takes `STexture` (`0x00763ee4`) for the three dynamic meshes where it answers 1
+  (texture quality 0 or 1), as `ParkSea` and `ParkFlags` already do through `ParkSea.SmallTextures`. `ParkBuildMarkers.Load`
+  always reads `generic/dynamic/textures/{name}.wct`; `blue.wct` (493 against 211 bytes) and `red.wct` (340 against 122)
+  differ between the folders, `m_link` and `m_end` do not. Pass the quality in, load `stexture` at 0 and 1, and confirm
+  it in the running game at low detail (a screenshot of a build square, before and after). Said at the site in
+  `ParkBuildMarkers.MarkerNames`.
+  - **Note (fork watch 2026-10-31, verify-other M8):** `orange.wct` is in `textures` and `stexture` of all four levels'
+    `dynamic.wad`; `data/generic/dynamic` has none, so the markers must load from the level's. `0x0053567a`..`0x00535681`
+    returns 2 for `0x1f` (slot 2 is `orange`); the call with `0x11f` is `0x00524234`/`0x00524453`. The face's path through
+    `0x00532fc0` is not traced.
+  - Built: `ParkBuildMarkers` takes the texture quality (`Level` passes `TextureQuality()`, as for the sea and the
+    flags) and loads every slot from `generic/dynamic/stexture` at 0 and 1, else `textures` (`FolderFor`,
+    `TexturePaths`), logging `Build markers: 9 textures from <folder>`. Two tests: the folder for each quality and
+    every slot's path, and with the game that low.sam's quality draws blue and red from the 211- and 122-byte files and
+    med.sam's from the 493- and 340-byte ones; two bugs put back by hand (always `textures`; the small copies at 2 as
+    well) each failed both. Off-screen runs (`consolerun.py`, `40 park jungle`): a `save/Config.tcf` at quality 0 logged
+    `Build markers: 9 textures from stexture` beside `low.sam's LIGHTING 0` and the sea and flags from `stexture`; no
+    save (medium) logged `from textures`. Not done: the photograph (no display in the lane), filed as Q1432. `orange`
+    (the note above) is not a drawn slot and is left. **Done 2026-11-12** (cloud lane c78,
+    `alexah/1057-build-markers-stexture`).
 
 ## B. Docs and comments
 

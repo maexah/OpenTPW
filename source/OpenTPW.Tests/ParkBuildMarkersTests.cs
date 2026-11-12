@@ -4,11 +4,51 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace OpenTPW.Tests;
 
 /// <summary>
-/// The queue tool's squares - <see cref="ParkBuildMarkers"/>. No game files needed.
+/// The queue tool's squares - <see cref="ParkBuildMarkers"/>. Only the texture-folder test needs the game.
 /// </summary>
 [TestClass]
 public class ParkBuildMarkersTests
 {
+	/// <summary>
+	/// The markers' textures come from <c>stexture</c> at texture quality 0 and 1 and from <c>textures</c> above, as the
+	/// sea's and the flags' do (<c>FUN_0053d790</c>, <c>0x0053d7b4</c>): every slot, in the material's order.
+	/// </summary>
+	[TestMethod]
+	public void TextureQualityNoughtAndOneLoadTheMarkersFromTheSmallCopies()
+	{
+		Assert.AreEqual( "stexture", ParkBuildMarkers.FolderFor( 0 ) );
+		Assert.AreEqual( "stexture", ParkBuildMarkers.FolderFor( 1 ) );
+		Assert.AreEqual( "textures", ParkBuildMarkers.FolderFor( 2 ) );
+		Assert.AreEqual( "textures", ParkBuildMarkers.FolderFor( 3 ) );
+
+		Assert.AreEqual(
+			"generic/dynamic/stexture/blue.wct generic/dynamic/stexture/red.wct generic/dynamic/stexture/m_link.wct "
+			+ "generic/dynamic/stexture/m_end.wct generic/dynamic/stexture/m_enter.wct generic/dynamic/stexture/m_exit.wct "
+			+ "generic/dynamic/stexture/m_direct.wct generic/dynamic/stexture/m_front.wct generic/dynamic/stexture/m_inout.wct",
+			string.Join( " ", ParkBuildMarkers.TexturePaths( ParkBuildMarkers.FolderFor( 1 ) ) ) );
+	}
+
+	/// <summary>
+	/// At low detail (<c>low.sam</c>'s <c>TEXTUREQUALITY</c>) the blue and red squares are the small files, 211 and 122
+	/// bytes, where medium's are 493 and 340; every slot's file is there in both folders.
+	/// </summary>
+	[TestMethod]
+	public void LowDetailDrawsTheSmallBlueAndRedSquaresAndMediumTheFullOnes()
+	{
+		FileSystem = GameData.Required();
+
+		int Quality( string file ) => int.Parse( new SettingsFile( file )["GraphicalOptions.TEXTUREQUALITY"]! );
+		int[] Sizes( string file ) => ParkBuildMarkers.TexturePaths( ParkBuildMarkers.FolderFor( Quality( file ) ) )
+			.Take( 2 ).Select( path => FileSystem.ReadAllBytes( path ).Length ).ToArray();
+
+		CollectionAssert.AreEqual( new[] { 211, 122 }, Sizes( "/low.sam" ), "low: blue, red" );
+		CollectionAssert.AreEqual( new[] { 493, 340 }, Sizes( "/med.sam" ), "medium: blue, red" );
+
+		foreach ( var folder in new[] { "textures", "stexture" } )
+			foreach ( var path in ParkBuildMarkers.TexturePaths( folder ) )
+				Assert.IsTrue( FileSystem.FileExists( path ), path );
+	}
+
 	/// <summary>
 	/// The wave the queue tool's squares ride on: <c>sin( phase + x + z )</c> in world units, one unit either
 	/// way - the 4,096-entry table <c>FUN_004708d0</c> fills, read at <c>(phase + x + z) * 4096 / 2π</c>.
