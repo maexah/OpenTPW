@@ -4584,7 +4584,7 @@ spends in place of the price. Confirmed on `q709/gms-two.dat` (round B, `q709/ru
 the screen up; the 1 gt click carried; put down, the bank 50000 either side, spent 2 to 3, ride ids [1170], the corner
 "1 x"; `gms.dat` spent 3 [1170] after a save; then "Jurassic Tours" "$ 3000" with its tick (`side-by-side-lists.png`,
 `side-by-side-place.png`). Not built: the price in the hand, "$ 0" there (Q541); the click's advisor message `0xce` or
-`0xc9`, for either arm (Q465); the online arm (no game type 1 here).
+`0xc9`, for either arm (counted as `BUY_SCREEN_PURCHASE_ADVISOR_POST` since Q465; Q1170); the online arm (no game type 1 here).
 
 **A row's name** is `0x00412fb0`'s (called at `0x004ab079`, 0x42 characters). It takes the item's `+0x4f4` when that
 is set and is not "MISSING STRING" (`0x006fd880`): the first of the strings `NAME`, `SIGNA` and `SIGNB` (the table at

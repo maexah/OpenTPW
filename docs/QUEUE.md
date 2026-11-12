@@ -1374,9 +1374,14 @@ filed the items that cite it.
   Q342 1). With ferry and seaplane both made, `ParkWorld.People.cs` writes cell (0,0)'s chain oldest first; the
   original's file (`q257x/orig/fixed-by-the-original.TPWS`) and our running list run newest first. No effect on reading
   back was found.
-- [ ] **Q465. A purchase's advisor post is not counted.** From the week-end audit (`VERIFY-10a.md` Q328 3). Every
-  purchase reaches the original's 0xc9 or 0xce post (`0x004ac67e`..`0x004ac7d9`); ours neither builds nor counts it
-  (`ParkBuyScreen.Chose`). The line is filed under Q420; add the `Unimplemented.Report` (rule 4).
+- [ ] **Q1170. A purchase's advisor post, `0xc9` or `0xce`: decode which, then build.** From Q465, which counts it
+  (`BUY_SCREEN_PURCHASE_ADVISOR_POST` in `ParkBuyScreen.Chose`, once a click that puts the item in the hand). The
+  original posts `0xc9` where the item's `+0x4c` is nought and `FUN_004824d0( 0x80, 0 )` answers nought, else `0xce`
+  (`0x004ac67e`..`0x004ac7d9`, read in the decompiler alone; `docs/exe/hud.md`, "The click"; `advisor-park.md`'s
+  buy-screen section). Neither the item's `+0x4c` nor what that call answers with these arguments is named in
+  `docs/exe/` (`hud.md` names `FUN_004824d0` as the staff lists' next link), and rows 201 and 206 are not decoded.
+  Decode the field, the call and both rows in Ghidra, then post the row the original posts, and confirm with a
+  purchase in both games.
 - [ ] **Q501. A rider's head, a balloon and a thought bubble are drawn the original's size: shown.** From the review of Q470
   (`handoff/review3/VERIFY-6.md`, finding 4): Q470 drew every sprite through `Extent` (the span over
   `Camera.ClipPerWorld`), and the head (`HeadScale` 0.685), the balloon and the thought bubble go through the same

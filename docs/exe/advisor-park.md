@@ -4924,7 +4924,9 @@ shipped park says it at the screen's first opening.
 
 **Also in the handler, read and not built.** A row's click that buys closes the screen and posts `0xc9` where
 the item's `+0x4c` is nought and `FUN_004824d0( 0x80, 0 )` answers nought, and `0xce` otherwise; the two land
-rows post `0x15a` (row -1) and `0x159` (row -2). Read in the decompiler alone.
+rows post `0x15a` (row -1) and `0x159` (row -2). Read in the decompiler alone. Ours counts the purchase's post,
+`BUY_SCREEN_PURCHASE_ADVISOR_POST`, once a click that puts the item in the hand, on the cash and the tickets' arm alike,
+and never on a refused click (`ParkBuyScreen.Chose`; Q465); neither row is built (Q1170).
 
 ### The original (`q328/orig/run.sh <file> a|b|c`, `original/advisor.py ... 0xbc,0xbd`, `tags.py`; predicted first, six of six)
 
@@ -4977,7 +4979,7 @@ names message 188.
 | The withdrawal | the screen's destroy (event `0x14`) | `Closed` |
 | The stock park's first opening | said a tick after the click, no hat, no tag | the same |
 | Closed in the line | cut off, said 0, a cut counted; three cuts and no more | the same |
-| A purchase's `0xc9` and `0xce`, the land rows' `0x159` and `0x15a` | posted | not posted |
+| A purchase's `0xc9` and `0xce`, the land rows' `0x159` and `0x15a` | posted | not posted; the purchase's counted (`BUY_SCREEN_PURCHASE_ADVISOR_POST`) |
 | The other 38 screens' lines | posted as each opens | the hire screen's `0xbd` is ("The hire screen's own line"); the other 37 are not posted |
 
 **Not built or not seen.** The handler's four other posts. In no game run: a purchase or another screen's
