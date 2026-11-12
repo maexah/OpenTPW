@@ -4704,7 +4704,7 @@ view frees the old bubble before its switch, so a thought whose class holds the 
 one away; the hold-off test is unsigned, `mTimeBubbleShown + class × 20 <= mGameTick`. The bubble's removal
 `FUN_0050be40` frees it when `mTimeBubbleShown + 12 < mGameTick`, unsigned; its three callers are the guest's needs
 turn (`0x00501951`, on every needs turn, riding or not), the staff handler on the member's own sweep in four
-(`FUN_00505490`, `0x005054b3`: `(id & 3) == (mGameTick & 3)`) and `FUN_004d7060`. So a bubble lasts 13 to 16 sweeps.
+(`FUN_00505490`, `0x005054b3`: `(id & 3) == (mGameTick & 3)`) and `FUN_004d7060`, the handyman's pre-step, ungated on every sweep (`0x004d70f1`). So a bubble lasts 13 to 16 sweeps, and a handyman's exactly 13.
 The walk tick `FUN_004fa2a0` zeroes `+0x198` after its step (`0x004fa30b`), between loading the give-up flag (`0x004fa301`) and branching on it (`0x004fa311`). The
 route's re-plan: `FUN_0050ed10` reads the block stamp at the walker's position shifted right by twenty
 (`FUN_004d8cd0`), and when the route's stamp `+0x48` is below it calls `FUN_0050f8e0( target, 1 )`, giving up

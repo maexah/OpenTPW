@@ -118,7 +118,8 @@ public sealed class Thoughts
 
 	/// <summary>
 	/// A needs turn's last call, <c>FUN_0050be40</c>: a bubble made more than <see cref="BubbleSweeps"/> sweeps
-	/// ago is freed, unsigned. A person's needs turn is one sweep in four, so a bubble lasts 13 to 16.
+	/// ago is freed, unsigned. A person's needs turn is one sweep in four, so a bubble lasts 13 to 16; a handyman's is
+	/// asked on every sweep as well (<c>FUN_004d7060</c>), so his lasts exactly 13.
 	/// </summary>
 	public void Expire( int gameTick )
 	{

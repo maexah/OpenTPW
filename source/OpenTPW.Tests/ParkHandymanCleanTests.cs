@@ -22,6 +22,9 @@ public class ParkHandymanCleanTests
 	[TestInitialize]
 	public void MountTheGame() => FileSystem = data = GameData.Required();
 
+	[TestCleanup]
+	public void LetThePeopleGo() => TestRun.DeleteEvery<ParkPeople>();
+
 	private const int Handyman = 25;
 
 	private const int OtherMember = 26;
@@ -695,5 +698,50 @@ public class ParkHandymanCleanTests
 			PeepNavigator.WaypointCentre( winner.EntryCellY ) ), member.Navigator.Target, "aimed at the winner again" );
 		Assert.IsTrue( walk.HasRoute, "with a route to it" );
 		Assert.IsTrue( Counted( gap ) > before, "and the difference from the original is counted" );
+	}
+
+	/// <summary>
+	/// A handyman's bubble is taken away on the first sweep more than 12 past its making, every sweep and not his
+	/// own one in four, because his pre-step calls the expiry ungated (<c>FUN_004d7060</c>, <c>0x004d70f1</c>): made
+	/// on 1001, it stands through 1013 and is gone on 1014, where his own sweep in four (id 25, a 1) is 1017. The
+	/// guard's, id 28, waits for his own sweep in four, 1016.
+	/// </summary>
+	[TestMethod]
+	public void AHandymansBubbleGoesOnTheFirstSweepPastTwelveAndAGuardsOnHisOwn()
+	{
+		const int Guard = 28;
+
+		var world = World();
+		var state = new ParkState( world );
+		var people = new ParkPeople( world, Balance(), null, state, random: new Random( 3 ),
+			behaviourRandom: new Random( 4 ), rideRandom: new Random( 5 ), staffRandom: new Random( 6 ) );
+		var handyman = people.ThoughtsOf( Handyman )!;
+		var guard = people.ThoughtsOf( Guard )!;
+		var script = Thoughts.ScriptOf( 0, 8 );
+
+		Assert.AreEqual( ParkPeople.HandymanModel, people.Staff.Single( member => member.ThingId == Handyman ).Model );
+		Assert.AreEqual( ParkPeople.GuardModel, people.Staff.Single( member => member.ThingId == Guard ).Model );
+
+		state.SetGameTick( 1000 );
+		handyman.Restore( 1, 1001, script );
+		guard.Restore( 1, 1001, script );
+
+		for ( var tick = 1001; tick <= 1013; ++tick )
+			people.Sweep( tick * 8 );
+
+		Assert.AreEqual( 1013, state.GameTick );
+		Assert.AreEqual( (0, 8), handyman.Bubble, "12 sweeps past its making, the handyman's stands" );
+		Assert.AreEqual( (0, 8), guard.Bubble, "and the guard's" );
+
+		people.Sweep( 1014 * 8 );
+		Assert.IsNull( handyman.Bubble, "13 past it, on a sweep that is not his own in four, the handyman's goes" );
+		Assert.AreEqual( 1, handyman.Last, "the thought is kept" );
+		Assert.AreEqual( (0, 8), guard.Bubble, "the guard's waits for his own sweep in four" );
+
+		people.Sweep( 1015 * 8 );
+		Assert.AreEqual( (0, 8), guard.Bubble, "1015 is not the guard's either" );
+
+		people.Sweep( 1016 * 8 );
+		Assert.IsNull( guard.Bubble, "1016 is: the guard's goes" );
 	}
 }
