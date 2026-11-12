@@ -984,7 +984,8 @@ cut-off ride (status 23 to 22); a loaded park keeps each ride's saved door. `Par
 
 **Running-game confirmation of the purchase:** a Belly Bounce bought at (57,23) reads `canload 0`, twelve Closed
 panels at progress 1 and "CLOSED: QUEUE NOT CONNECTED"; a queue cell joined to the path at (56,22) gives `canload 1`
-and progress 0 after about 4 s; a guest then boards (`onride 1`).
+and progress 0 after about 4 s; a guest then boards (`onride 1`). The window's door then closes and opens a bought ride as a stock one's: a TV Sim
+bought in the stock park and joined, closed and opened by its door in ours and, given ours' saved file, in the original (`QUEUE.md` Q1104).
 
 #### The closed ride - `FUN_004e0450`
 
