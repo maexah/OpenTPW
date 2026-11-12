@@ -53,6 +53,15 @@ internal sealed class ParkScreams
 		public int Plays;
 
 		/// <summary>
+		/// Whether the chain's list holds no child: as it is made, and when its newest child is pruned on the very
+		/// millisecond it is due, which <c>HeldChain_Extend</c> passes over (<c>now &gt; +0x1c</c>, <c>0x006bdb88</c>) and
+		/// <c>HeldChain_Prune</c> does not (<c>now &gt;= +0x1c</c>, <c>0x006bdc23</c>). The next pass in range makes its child
+		/// as a first (<c>HeldChain_HeadOrFirstChild</c>, <c>0x006bdb10</c>): a scream's effect has a key (parameter 6) and
+		/// its first child set the voice's <c>0x20</c>, so from the second on it draws from its own variation, as any child does.
+		/// </summary>
+		public bool ListEmpty = true;
+
+		/// <summary>
 		/// The newest child's voice, which is the one a stop cuts. An older child is let go without
 		/// being stopped, as the original prunes one (<c>0x006bdc3e</c>), so its sample plays out.
 		/// </summary>
@@ -125,32 +134,50 @@ internal sealed class ParkScreams
 
 	/// <summary>
 	/// Makes the next child of every chain in range whose clock has passed its newest child's time - the
-	/// original's <c>now &gt; +0x1c</c> (<c>0x006bdb88</c>). A chain out of range makes none; in range again its time
-	/// has long passed, so it makes one at once, and the next its wait after that.
+	/// original's <c>now &gt; +0x1c</c> (<c>0x006bdb88</c>), in whole milliseconds as its sound service reads its clock. On
+	/// the very millisecond of that time the tick extends nothing and prunes the child (<c>now &gt;= +0x1c</c>,
+	/// <c>0x006bdc23</c>), so the list is empty for that pass and the next pass makes the child as a first
+	/// (<see cref="Chain.ListEmpty"/>), as a script's own chains do (<see cref="ParkAudio.ScriptVoice.ListEmpty"/>). A chain
+	/// out of range makes none; in range again its time has long passed, so it makes one at once, and the next its wait after that.
 	/// </summary>
 	/// <remarks>
 	/// Called every frame, a park's menu or not. The original's service runs whenever the group volumes are applied
 	/// (<c>0x0051bfab</c>), each frame through a pause, at a rate not measured, and starts a new child on the pass after
 	/// the one that makes it; both put a child here at most a frame from where the original's lands.
-	///
-	/// Not the original's: on the very millisecond of a child's time its tick extends nothing (<c>now &gt; due</c>,
-	/// <c>0x006bdb88</c>) and prunes the child (<c>now &gt;= due</c>, <c>0x006bdc23</c>), so the list is empty for a pass
-	/// and the next child is made as a first. Here a chain waits for <c>now &gt; NextAt</c> and makes it as the next of
-	/// its run, which a script's own chains do not (<see cref="ScriptVoice.ListEmpty"/>).
 	/// </remarks>
 	internal void Pump( float now )
 	{
 		foreach ( var (scriptId, chain) in _chains )
-		{
-			if ( Reached( scriptId, chain ) && (chain.Plays == 0 || now > chain.NextAt) )
-				Step( scriptId, chain, now );
-		}
+			Tick( scriptId, chain, now );
 
 		// A chain nobody holds is still in the engine's voice list, and its tick knows nothing of the handle.
 		foreach ( var (scriptId, chain) in _letGo )
+			Tick( scriptId, chain, now );
+	}
+
+	/// <summary>One chain's tick (<c>0x006bdae0</c>): extend, then prune, with the one clock reading (<c>0x006bdaef</c>, <c>0x006bdaf7</c>).</summary>
+	private void Tick( int scriptId, Chain chain, float now )
+	{
+		if ( !Reached( scriptId, chain ) )
+			return;
+
+		if ( chain.ListEmpty )
 		{
-			if ( Reached( scriptId, chain ) && (chain.Plays == 0 || now > chain.NextAt) )
-				Step( scriptId, chain, now );
+			Step( scriptId, chain, now );
+			return;
+		}
+
+		var (ms, due) = (ParkAudio.Milliseconds( now ), ParkAudio.Milliseconds( chain.NextAt ));
+
+		if ( ms > due )
+		{
+			Step( scriptId, chain, now );
+		}
+		else if ( ms == due )
+		{
+			chain.ListEmpty = true;
+			Log.Info( $"Park audio: script {scriptId} scream effect {chain.Effect}, its newest child pruned on the millisecond it was due "
+				+ $"({due} ms) after {chain.Plays} child(ren), its list empty" + (chain.HeldByNothing ? ", held by nothing" : "") );
 		}
 	}
 
@@ -259,6 +286,9 @@ internal sealed class ParkScreams
 
 		var gap = GapMilliseconds( variations[next], _random );
 
+		var fromEmpty = chain.ListEmpty && chain.Plays > 0;
+
+		chain.ListEmpty = false;
 		chain.Variation = next;
 		chain.Gap = gap;
 		chain.NextAt = now + (gap / 1000f);
@@ -270,6 +300,7 @@ internal sealed class ParkScreams
 
 		Log.Info( $"Park audio: script {scriptId} scream {chain.Plays}, effect {chain.Effect} "
 			+ $"variation {next + 1} sample '{chain.Sample}' pitch {chain.Pitch}, the next in {gap} ms"
+			+ (fromEmpty ? ", made from an empty list" : "")
 			+ (chain.HeldByNothing ? ", held by nothing" : "") + (chain.Voice is null ? ", no voice" : "") );
 	}
 

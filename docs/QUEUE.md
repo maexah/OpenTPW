@@ -1992,14 +1992,12 @@ filed the items that cite it.
   texture again whenever a path changes: now written in place, Q829), and cut it where it is cheap: `Lay` per tile in parallel
   (it is already, 730 ms whole at 32, Q829's `base/run.log`). Confirm with the `[load]` step times before and after, and the frame rate at
   32 beside 16 (not yet measured).
-- [ ] **Q654. The screams' chain on a due millisecond.** From the run 9 review (Q612 M3). The original's chain tick extends nothing
-  when `now == +0x1c` (`0x006bdb88`, `now > due`) and prunes the newest child (`0x006bdc23`, `now >= due`), so the list is
-  empty for a pass and its next child is made as a first (`HeldChain_HeadOrFirstChild`, `docs/exe/audio.md`). Every script
-  chain here keeps that pass (`ScriptVoice.ListEmpty`); `ParkScreams.Pump` waits for `now > NextAt` and makes the next
-  child as the next of its run, so the kids 71 to 73's chains differ on the one millisecond of a child's time (about one
-  child in nine to twenty-five in a script chain's runs, `q612/run5/run.log`). Give `ParkScreams.Chain` the same empty-pass
-  rule, with a test that fails when the pass is skipped, and confirm in a run by the first child's variation after a due
-  millisecond.
+- [ ] **Q1178. A chain's stop on its empty pass.** From Q654. On a child's due millisecond the original's prune deletes
+  the newest child (`0x006bdc23`, `0x006bdc3e`), so a stop that pass finds no child to cut and the sample plays out (read
+  from `docs/exe/audio.md`, "Which variation it plays", not checked in Ghidra). Here both chains keep the pruned child's
+  voice until the next child is made: `ParkScreams.Stop` and `ParkAudio.StopScriptSound` cut it. Check in Ghidra that the
+  stop (`0x006bd9b0`) reaches only the list, then let the pruned child go on the empty pass (`Chain.Voice`,
+  `ScriptVoice.Voice`), with a test that stops a chain on that pass.
 - [ ] **Q655. A sold Loudspeaker's chain carried by a save made without sound.** From the run 9 review (Q612 M4). With no sound
   device `PutBackFileVoices` puts nothing back, so `ParkAudio.FileVoicesLetGo` is empty and `ParkFileWriter` carries every
   voice of the loaded file; a Loudspeaker sold on such a machine is saved with its 177 chain, and that file loaded where

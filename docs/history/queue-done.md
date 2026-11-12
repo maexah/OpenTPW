@@ -12145,6 +12145,14 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q654. The screams' chain on a due millisecond.** From the run 9 review (Q612 M3). The original's chain tick extends nothing
+  when `now == +0x1c` (`0x006bdb88`, `now > due`) and prunes the newest child (`0x006bdc23`, `now >= due`), so the list is
+  empty for a pass and its next child is made as a first (`HeldChain_HeadOrFirstChild`, `docs/exe/audio.md`). Every script
+  chain here keeps that pass (`ScriptVoice.ListEmpty`); `ParkScreams.Pump` waits for `now > NextAt` and makes the next
+  child as the next of its run, so the kids 71 to 73's chains differ on the one millisecond of a child's time (about one
+  child in nine to twenty-five in a script chain's runs, `q612/run5/run.log`). Give `ParkScreams.Chain` the same empty-pass
+  rule, with a test that fails when the pass is skipped, and confirm in a run by the first child's variation after a due
+  millisecond.
 
 ## B. Docs and comments
 

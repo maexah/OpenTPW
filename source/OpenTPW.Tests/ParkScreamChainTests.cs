@@ -465,6 +465,47 @@ public class ParkScreamChainTests
 	}
 
 	/// <summary>
+	/// On the very millisecond a child is due the original's tick extends nothing (<c>now &gt; +0x1c</c>,
+	/// <c>0x006bdb88</c>) and prunes it (<c>now &gt;= +0x1c</c>, <c>0x006bdc23</c>), both in whole milliseconds, so the
+	/// list is empty for that pass, however far into the millisecond the frame falls, and the next pass makes the child as
+	/// a first: with the chain's <c>0x20</c> set by its first child, from its own variation, so where its level sends it
+	/// (Belly Bounce's 20 is variation 2), not the effect's first.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> the time compared as a fraction of a second (a child made inside its due millisecond); a child
+	/// made on the due millisecond; the child after the empty pass taken from the effect's first variation.
+	/// </remarks>
+	[TestMethod]
+	public void AChildDueOnTheMillisecondEmptiesTheListForAPass()
+	{
+		var kids = new SoundCategory( "global", "global/sound", "kids" );
+
+		Assert.AreNotEqual( 0, kids.ParameterOf( 0x47 ), "the scream has a key, so its first child sets 0x20" );
+
+		var (screams, played) = Driver();
+		var chain = screams.Start( 13, 0x47, 1, 20, Here, now: 100f );
+		var due = ParkAudio.Milliseconds( chain.NextAt );
+		var inside = chain.NextAt + 0.0002f;
+
+		Assert.IsTrue( inside > chain.NextAt && ParkAudio.Milliseconds( inside ) == due, "the frame falls past the time, in its millisecond" );
+
+		screams.Pump( inside );
+
+		Assert.AreEqual( 1, chain.Plays, "on the due millisecond no child is made" );
+		Assert.IsTrue( chain.ListEmpty, "and the newest is pruned, the list empty" );
+
+		var next = inside + 0.016f;
+
+		screams.Pump( next );
+
+		Assert.AreEqual( 2, chain.Plays, "the next pass makes the child" );
+		Assert.IsFalse( chain.ListEmpty );
+		CollectionAssert.AreEqual( new[] { 0, 1 }, played.Select( play => play.Variation ).ToArray(),
+			"the first child on variation 1, the one after the empty pass where the level sends it" );
+		Assert.AreEqual( next + (chain.Gap / 1000f), chain.NextAt, 0.0005f, "its wait counted from that pass" );
+	}
+
+	/// <summary>
 	/// <b>The park's music, through <c>ParkAudio.OnUpdate</c> as the game runs it</b> (<c>docs/exe/park-engine.md</c>,
 	/// "The music's level"). The level is set only on a step whose count has its low five bits nought, from the
 	/// guests the park counts then (the ones on a counting cell, Q148), held to 89, and nought while the world's state is 4. A sample is played at the
@@ -1163,7 +1204,8 @@ public class ParkScreamChainTests
 	/// passes inside it. <b>Mutations:</b> taking the pump out of the update, pumping behind the music's guard, not
 	/// pumping while the world is held, giving a child due under the hold a voice (born held, it would start with the
 	/// rest on resume), pumping on another clock, stepping only the first chain or stopping at the first not due, and
-	/// starting a chain's clock anywhere but now, each fail an assertion here. Not pinned: whether the pump comes before
+	/// starting a chain's clock anywhere but now, each fail an assertion here. A frame on a child's due millisecond empties
+	/// the list and the next frame makes the child (<see cref="AChildDueOnTheMillisecondEmptiesTheListForAPass"/>). Not pinned: whether the pump comes before
 	/// or after the hold in the update, which no listener could tell apart, and the debug console's own pause, which the
 	/// update ignores on purpose.
 	/// </remarks>
@@ -1200,7 +1242,7 @@ public class ParkScreamChainTests
 					Start( 43, Here + new Vector3( 40f, 0f, 0f ) );
 
 				var held = frame is >= HoldFrom and < HoldTo;
-				var before = chains.Select( entry => (entry.Chain.NextAt, entry.Chain.Plays, entry.Chain.Unheard) ).ToList();
+				var before = chains.Select( entry => (entry.Chain.NextAt, entry.Chain.Plays, entry.Chain.Unheard, entry.Chain.ListEmpty) ).ToList();
 				List<Voice> voices;
 
 				lock ( Audio.Lock )
@@ -1219,16 +1261,19 @@ public class ParkScreamChainTests
 				for ( var i = 0; i < chains.Count; ++i )
 				{
 					var (script, chain) = chains[i];
-					var (due, plays, unheard) = before[i];
+					var (due, plays, unheard, wasEmpty) = before[i];
+					var (nowMs, dueMs) = (ParkAudio.Milliseconds( Time.Now ), ParkAudio.Milliseconds( due ));
 
 					if ( chain.Plays == plays )
 					{
-						Assert.IsTrue( Time.Now <= due,
-							$"script {script}, frame {frame} at {Time.Now:0.000} s is past the child due at {due:0.000} s, and made none" );
+						Assert.IsFalse( wasEmpty, $"script {script}, frame {frame}: its list was empty, and it made no child" );
+						Assert.IsTrue( nowMs <= dueMs,
+							$"script {script}, frame {frame} at {nowMs} ms is past the child due at {dueMs} ms, and made none" );
+						Assert.AreEqual( nowMs == dueMs, chain.ListEmpty, $"script {script}, frame {frame}: the list empties on the due millisecond alone" );
 						continue;
 					}
 
-					Assert.IsTrue( Time.Now > due, $"script {script}, frame {frame} at {Time.Now:0.000} s made a child due at {due:0.000} s" );
+					Assert.IsTrue( wasEmpty || nowMs > dueMs, $"script {script}, frame {frame} at {nowMs} ms made a child due at {dueMs} ms" );
 					Assert.AreEqual( plays + 1, chain.Plays, "one child at a time" );
 
 					if ( held )
