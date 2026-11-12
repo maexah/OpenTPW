@@ -142,6 +142,9 @@ internal sealed class ParkAdvisorMessages
 	internal const int StaffWindowPatrol = 212;
 	/// <summary>Message 0xc1, posted as the staff member's window hands over the patrol tool (FUN_004b5b50) and withdrawn as any change of build mode puts it away (FUN_0052f200).</summary>
 	internal const int PatrolTool = 193;
+	/// <summary>Message 0xd6, the Backspace tip, posted at the path or queue tool's third anchored click since the counter was last
+	/// reset (0x0052733f..0x0052736d) and withdrawn as any change of build mode puts the tool away (FUN_0052f200, FUN_0052f580).</summary>
+	internal const int BackspaceTip = 0xd6;
 	/// <summary>Message 0x12e, posted as the visitor's window is built (FUN_004b79b0) and withdrawn as it is destroyed (FUN_004b7720, event 0x14).</summary>
 	internal const int VisitorWindow = 302;
 	/// <summary>Message 0xd1, posted as the shop's window is built (FUN_004b0e30) and withdrawn as it is destroyed (FUN_004b0b30, event 0x14).</summary>
@@ -882,6 +885,7 @@ internal sealed class ParkAdvisorMessages
 		new( StaffWindow, "HelpMessage.Score", 411, 384, Lines: 1, Category: Tutorial ),
 		new( StaffWindowPatrol, "HelpMessage.Score", 431, 457, Lines: 1, Category: Tutorial ),
 		new( PatrolTool, "HelpMessage.Score", 412, 385, Lines: 1, Category: Tutorial ),
+		new( BackspaceTip, "HelpMessage.Score", 433, 464, Lines: 1, Category: Tutorial ),
 		new( VisitorWindow, "HelpMessage.Score", 562, 580, Lines: 1, Category: Tutorial ),
 		new( ShopWindow, "HelpMessage.Score", 428, 397, Lines: 1, Category: Tutorial ),
 		new( MapScreen, "HelpMessage.Score", 564, 582, Lines: 1, Category: Tutorial ),

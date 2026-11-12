@@ -292,14 +292,6 @@ public static class ParkPathBuilding
 	internal static void LayingSound( string tool, int x, int y )
 		=> Log.Info( $"{tool}: cat_ui 0x{LayingSoundEffect:x} for the click on ({x},{y}), {(UI.UiSounds.Interface( LayingSoundEffect ) ? "a voice" : "no voice")}" );
 
-	// The click counter is shared with the path tool (0x0052732f..0x0052736d): the latch turns a refused click away first
-	// (0x00524a63 -> 0x005266a3), so only a click the apply arm takes is counted; the third posts advisor 0xd6.
-	private static void CountQueueClick()
-	{
-		if ( ++ParkBuildMode.Clicks == 3 )
-			Unimplemented.Report( "QUEUE_TOOL_ADVISOR_MESSAGE_0xD6" );
-	}
-
 	/// <summary>
 	/// One click of the armed queue tool: a straight run from the anchor to the clicked cell, snapped to
 	/// its longer axis - the original's mode-3 arm of the apply dispatcher (<c>0x00527222</c>..
@@ -358,7 +350,7 @@ public static class ParkPathBuilding
 		// with the advisor's message for a queue left unjoined.
 		if ( toX == fromX && toY == fromY )
 		{
-			CountQueueClick();
+			ParkBuildMode.CountClick();
 			LayingSound( "queue", clickX, clickY );
 
 			var laysTheAnchor = ParkBuildMode.Pending.Count == 1;
@@ -387,7 +379,8 @@ public static class ParkPathBuilding
 			return $"queue: nothing laid - ({refused.X},{refused.Y}) {why}, so the queue tool is put away - {ParkBuildMode.RefusedSound( pressReachedTheTool )}";
 		}
 
-		CountQueueClick();
+		// Counted only past the refusal (0x00524a63 -> 0x005266a3); the counter is the path tool's too (ParkBuildMode.CountClick).
+		ParkBuildMode.CountClick();
 		LayingSound( "queue", clickX, clickY );
 
 		// The click's target is pushed before the passes run (0x005271b7..0x00527655), so the top of the list is the
@@ -1011,8 +1004,7 @@ public static class ParkPathBuilding
 			return $"path: anchored at ({clickX},{clickY}) - click again to lay a run";
 		}
 
-		if ( ++ParkBuildMode.Clicks == 3 )
-			Unimplemented.Report( "PATH_TOOL_ADVISOR_MESSAGE_0xD6" );
+		ParkBuildMode.CountClick();
 
 		var (fromX, fromY) = ParkBuildMode.Anchor;
 		var (toX, toY) = ParkBuildMode.SnapToAxis( clickX, clickY );

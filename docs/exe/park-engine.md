@@ -4357,7 +4357,7 @@ load screen and the Alt+L quick load all load into the running world, none of th
 teardown. Escape, the menu's usual way in, drops the hand first, so the Alt+L quick load is the one route found that
 carries a hand into a reloaded park. Two other callers of `GameMenu_Open` (`0x004be537`, `0x004a2942`) are the online visit's handler (`0x004be3a0`, game type 1) and the F3 view at the park's end (world state 4).
 
-**OpenTPW** (`Level.ForgetPark`, part of `Level.Unload`): `ParkBuildMode.Forget` puts the build tool away, then
+**OpenTPW** (`Level.ForgetPark`, part of `Level.Unload`): `ParkBuildMode.LeavePark` puts the build tool away (keeping the click counter, Q1047), then
 `ParkHand.LetGo` lets go of the hand - the item and the candidate through their `Drop`, a worker through
 `ParkPeople.PutBack` - logged as `Leaving the park:`. Exit To Lobby has already written the park as `autosave.TPWS` by then (`Level.WriteParkOnLeaving`,
 which lets go of the hand itself; `saves.md`, "Leaving a park: the autosave"), and Restart Park reloads through the
@@ -6046,11 +6046,36 @@ printing it as `run total` and a `$` on a square refused for money.
 **A click** (`0x005271b7`..`0x00527655`, on release at the preview's target): any red square lays
 nothing, plays `0xaf` and puts the tool away — the arming click included, so a click outside the park's
 land arms and refuses at once. Otherwise sound `0x65` ("The laying sound", below), then: unanchored, set the anchor, empty the
-pending list, push the cell, advisor `0xb8`; anchored, count the click (advisor `0xd6` at the third,
-`0x00527316`..`0x0052733d`), snap, and if the target is the anchor with a run already laid, put the tool
-away; else push the target and run the passes — `0x87`, the stamp, `0x80`, `0x82`, `0x85`, `0x86`,
+pending list, push the cell, advisor `0xb8` (mode 1 only, `FUN_0052f860( 1 )` at `0x005272d7`), zero the click counter
+`DAT_008186dc` (`0x00527316`); anchored, count the click (`0x0052732f`; advisor `0xd6` at the third, below), snap, and if
+the target is the anchor with a run already laid, put the tool away; else push the target and run the passes — `0x87`, the stamp, `0x80`, `0x82`, `0x85`, `0x86`,
 `0x83`, `0x81`, each over the whole line. A click on the anchor with no run yet lays that one cell,
-whose one-cell walk steps +1 in y, so it flows `0x01`. What each pass does to a path:
+whose one-cell walk steps +1 in y, so it flows `0x01`.
+
+**The third click's advisor `0xd6`** (Q1047). The counter is one global for modes 1 and 3: `0x00527316` is the only
+write of nought in the program and `0x0052732f`..`0x00527338` the only increment (every reference to `0x8186dc` in
+`testme.objdump`), so it outlives a put-away, an Escape and a load (q1038, above) and runs on past three. Equal to 3
+after the increment (`0x00527335`), the arm posts message `0xd6` (`0x0052733f`..`0x0052736d`) through the same record
+the tutorial wrapper `0x00486b00` builds for `0xc1`: `0x00409cd0`, `0x0059b590( 0xd6 )`, `Advisor_Post` about no thing.
+Row `0xd6` is a tutorial row (category 1, both games): response 433, sample 464, one line, the Backspace tip ("if you
+change your mind about the last section of path you placed you can press the back space key...", the transcript at
+`global-speech-transcripts.tsv`). Both setters withdraw it with the other nine when the mode changes, the heavy at
+`0x0052f279` and the light `FUN_0052f580` at `0x0052f5f3` (each behind `cmp [0x0081ae2c], mode`), so a third click
+that puts the tool away (a run onto a path, the anchor clicked) posts it and takes it back in the same click.
+
+**OpenTPW** (`ParkBuildMode.CountClick`, called by `RunPath` and `RunQueue` past the refusal; the row
+`ParkAdvisorMessages.BackspaceTip`; `ParkBuildMode.Arm` withdraws it): the same. `Level.ForgetPark` calls
+`ParkBuildMode.LeavePark`, which keeps the counter and **empties the pending list, a deviation** (the original keeps
+the list across a load too, so a Backspace in the next park before its first click would take up a line between the
+last park's cells). Off-screen on the stock park (`q1047-b5/run2-fixed`): the path tool's third click logged
+`post message=214 subject=0 score=1000 threshold=25 tick=763 result=queued`, the advisor said response 433, sample 464,
+and `tool off` cut him off (`withdraw message=214 cleared=0 cut=1 slaps=1`); two clicks, `park jungle`, then the queue
+edit on (50,22) read `3 pending, 2 clicks` and its first run posted it (`4 pending, 3 clicks`); Q1046's binary read
+`0 clicks` after the load and posted nothing (`run3-control`). Tests: `ParkQueueCounterTests`
+(`TheThirdAnchoredClickPostsTheBackspaceTipAndPuttingTheToolAwayTakesItBack`, `TheFourthClickPostsNothing`,
+`ThePathToolsThirdClickPostsTheSameTip`, `TheClickCounterOutlivesAParkAndTheListDoesNot`).
+
+What each pass does to a path:
 
 | Op | On a path run |
 |---|---|
@@ -6216,7 +6241,7 @@ the list as it is, the click counter `[0x008186dc]` one higher (`run2/b3-anchorc
 (49,22) from (46,22) (a run east over the paths (47,22), (48,22)) and the click on (49,23) from (49,25) each put the tool away, lay nothing and leave every counter as it was, the click counter `[0x008186dc]` too (`c5-east-trace.txt` 6 throughout, `d3-ownqueue.txt` 7: the latch refuses before the apply arm's increment, `0x00524a63` -> `0x005266a3`; ours counted it until this fix),
 the second showing the "no" cursor and "$ 0" in the preview (`run3/c5-east.txt`, `run4/d3-ownqueue.txt`, `d3-hover.png`); both clicks met a cell joined two ways, which the verdict refuses (`0x00535a9b`); an own cell joined
 otherwise is accepted (`0x00535aef`) and stamped +1, not run in the original. The click counter is one word for the whole process: it was 6 at a reloaded park's first click, left by earlier runs and not reset by a load, an Escape or
-the put-away (a fresh start reads 0, 1, 2, 2 as OpenTPW does; Q1047). The pointer's pixel for a cell on a camera set by `setcam.py` is `camera.py --aim`'s, and with a tool armed
+the put-away (a fresh start reads 0, 1, 2, 2 as OpenTPW does; ours keeps it across a load too, Q1047). The pointer's pixel for a cell on a camera set by `setcam.py` is `camera.py --aim`'s, and with a tool armed
 the preview cell `[0x008186b8]`, `[0x008186b4]` follows the pointer, snapped to the anchor's row or column.
 
 **`mFlags & 0x40` marks land outside the park** — the meaning is inferred from a census. `FUN_00536490` sets it as

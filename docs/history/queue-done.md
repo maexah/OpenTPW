@@ -13816,3 +13816,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   over Instant Action; Full Simulation held down 359, let go -1; the dialog's -1 rows put back, 358 or 359 over the chosen
   one throughout. Not photographed, and the original not shot (no original, no display in the lane): Q1444. **Done
   2026-11-12** (cloud lane c81, `alexah/1060-toggle-help-row`).
+- [x] **Q1047. The queue tool's third-click advisor `0xd6` (pre-existing).** The click counter `[0x8186dc]` is shared by modes 1 and 3
+  (`0x0052732f`..`0x0052736d`): it counts every anchored click and posts advisor `0xd6` at the third; its only reset is the
+  unanchored first click. `RunQueue` now counts `QUEUE_TOOL_ADVISOR_MESSAGE_0xD6` at the third click (rule 4); build the advisor
+  post itself with the path tool's `PATH_TOOL_ADVISOR_MESSAGE_0xD6`; the reset at the unanchored click is built (Q1046, `FirstQueueClick`). A refused run's click is not counted (the latch, `0x00524a63`; built). **Also a deviation:** ours zeroes the counter and the pending list at a park unload (`Level.ForgetPark` -> `ParkBuildMode.Forget()`); the original keeps both across a load (`q1038` run2 b3 3 to run3 c0 3, c5 6 to run4 d0 6), which moves the counted `0xd6` after a reload whose next arming is an edit.
+  **Done (lane B, 2026-11-12):** the counter's one reset and one increment read from the whole disassembly, the post's
+  record the tutorial wrapper's, row `0xd6` the Backspace tip (response 433, sample 464), withdrawn by both setters on a
+  change of mode (`park-engine.md`, "The third click's advisor `0xd6`"); built as `ParkBuildMode.CountClick` for both tools,
+  and `Level.ForgetPark` now keeps the counter (`ParkBuildMode.LeavePark`; the pending list is still emptied, a deviation
+  said there). Off-screen on the stock park (`q1047-b5/run2-fixed`, 10 of 10): the path tool's third click logged
+  `post message=214 subject=0 score=1000 threshold=25 tick=763 result=queued`, the advisor said response 433 sample 464
+  (`r5-advisor-says.png`) and `tool off` cut him off (`withdraw message=214 cleared=0 cut=1 slaps=1`); two clicks,
+  `park jungle`, the queue edit on (50,22) read `3 pending, 2 clicks` and its first run posted it at `3 clicks`. Q1046's
+  binary read `0 clicks` after the load and posted nothing (`run3-control`, 8 of 8). Gaps beside it filed as Q1125.

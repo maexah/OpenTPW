@@ -78,10 +78,15 @@ public static class ParkBuildMode
 	/// </summary>
 	public static string Arm( int mode, int serves = 0 )
 	{
-		// A change of mode withdraws ten advisor messages (FUN_0052f200, 0x0052f245..0x0052f326); of them only the
-		// patrol tool's 0xc1 is posted here, so it is the one withdrawn, which cuts the advisor off where he says it.
+		// A change of mode withdraws ten advisor messages (FUN_0052f200, 0x0052f245..0x0052f326; the light setter
+		// FUN_0052f580 the same); of them the patrol tool's 0xc1 and the third click's 0xd6 are posted here, so they are the
+		// ones withdrawn, which cuts the advisor off where he says one.
 		if ( mode != Current && Level.Current?.ParkState?.AdvisorMessages is { } lines )
-			lines.Withdraw( ParkAdvisorMessages.PatrolTool, (long)(GameClock.Now * 1000), () => Advisor.Current?.StopSpeaking() );
+		{
+			var now = (long)(GameClock.Now * 1000);
+			lines.Withdraw( ParkAdvisorMessages.PatrolTool, now, () => Advisor.Current?.StopSpeaking() );
+			lines.Withdraw( ParkAdvisorMessages.BackspaceTip, now, () => Advisor.Current?.StopSpeaking() );
+		}
 
 		// Installing a tool runs a pass under the old mode first, which clears the latch (FUN_0046d5a0, 0x0046d5e8);
 		// putting a tool away installs the idle handler, which runs none. The original's install is followed by hover
@@ -187,8 +192,25 @@ public static class ParkBuildMode
 
 	private const int PendingLimit = 0x400;
 
-	/// <summary>How many runs have been laid since the tool anchored - the advisor speaks at the third (<c>DAT_008186dc</c>).</summary>
+	/// <summary>
+	/// The anchored clicks of the path and queue tools since an unanchored click last reset it (<c>DAT_008186dc</c>; the
+	/// reset is <c>0x00527316</c>, its one write of nought). It outlives a park: see <see cref="LeavePark"/>.
+	/// </summary>
 	public static int Clicks { get; set; }
+
+	/// <summary>
+	/// One anchored click of the path or the queue tool, counted once the latch has let it through (<c>0x0052732f</c>): the
+	/// third posts the advisor's Backspace tip, message <c>0xd6</c>, about no thing (<c>0x0052733f</c>..<c>0x0052736d</c>),
+	/// and the count runs on past it with no second post.
+	/// </summary>
+	public static void CountClick()
+	{
+		if ( ++Clicks != 3 )
+			return;
+
+		if ( Level.Current?.ParkState is { AdvisorMessages: { } lines } park )
+			lines.Post( ParkAdvisorMessages.BackspaceTip, park.GameTick );
+	}
 
 	public static void Push( int x, int y )
 	{
@@ -216,13 +238,27 @@ public static class ParkBuildMode
 		return true;
 	}
 
-	/// <summary>Forgets everything, for a park being torn down - these are statics and outlive a scene.</summary>
+	/// <summary>Forgets everything, the click counter too: a fresh start's state, for a test.</summary>
 	public static void Forget()
+	{
+		LeavePark();
+		Clicks = 0;
+	}
+
+	/// <summary>
+	/// What a park being torn down forgets - these are statics and outlive a scene. The click counter is kept, as the
+	/// original keeps its global across a load, so the third click can fall in the next park.
+	/// </summary>
+	/// <remarks>
+	/// <b>A deviation:</b> the original keeps the pending list across a load too (<c>q1038</c> run 3 to run 4), so a
+	/// Backspace in the next park before its first click would take up a line between another park's cells. Here the
+	/// list is emptied.
+	/// </remarks>
+	public static void LeavePark()
 	{
 		Current = None;
 		Serves = 0;
 		Anchor = (-1, -1);
-		Clicks = 0;
 		RefusalLatched = false;
 		ParkPatrolTool.PointerRefused = false;
 		ParkTrackTool.Forget();

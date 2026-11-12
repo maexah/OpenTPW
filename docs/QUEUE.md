@@ -648,10 +648,6 @@ filed the items that cite it.
   counts `STAFF_PICKED_UP_PREVIEW` (ParkPeople.cs) and keeps the plain arrow. Counted since Q432, never queued. Decode first whether type 6 shares the carried
   figure's sprite path (`0x0046c480` / `0x0046c730`, Q40's fork-watch note H2, which is `STAFF_CARRY_PREVIEW`'s item) or has its own; fold into Q40 if it does.
   Listed in `docs/DOES-NOT.md` beside `STAFF_CARRY_PREVIEW`.
-- [ ] **Q1047. The queue tool's third-click advisor `0xd6` (pre-existing).** The click counter `[0x8186dc]` is shared by modes 1 and 3
-  (`0x0052732f`..`0x0052736d`): it counts every anchored click and posts advisor `0xd6` at the third; its only reset is the
-  unanchored first click. `RunQueue` now counts `QUEUE_TOOL_ADVISOR_MESSAGE_0xD6` at the third click (rule 4); build the advisor
-  post itself with the path tool's `PATH_TOOL_ADVISOR_MESSAGE_0xD6`; the reset at the unanchored click is built (Q1046, `FirstQueueClick`). A refused run's click is not counted (the latch, `0x00524a63`; built). **Also a deviation:** ours zeroes the counter and the pending list at a park unload (`Level.ForgetPark` -> `ParkBuildMode.Forget()`); the original keeps both across a load (`q1038` run2 b3 3 to run3 c0 3, c5 6 to run4 d0 6), which moves the counted `0xd6` after a reload whose next arming is an edit.
 - [ ] **Q1124. The path tool's unanchored click asks the verdict itself too (Q1046's tail).** Mode 1's arm asks
   `FUN_00535670( cell, 1, 0 )` before it anchors (`0x0052726e`..`0x00527283`; `park-engine.md`, "The unanchored click"):
   with the last-square flag nought it charges bare ground a second time onto the run's total and refuses on a balance
@@ -2002,6 +1998,15 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   through `FUN_0052f200( 0, 0 )` and posts advisor message `0x151` when the queue is not joined (`park-engine.md`).
   Likely global sample 623, "you didn't connect the line to a path..." (inferred, not read): read message `0x151`'s
   record and how it is withdrawn (`hud.md`, the mode setter) first.
+- [ ] **Q1125. The path tool's first-click advisor `0xb8` and the queue tool's `0xcb` say nothing (Q1047's neighbours).**
+  Counted, never filed: `PATH_TOOL_ADVISOR_MESSAGE_0xB8` (`RunPath`'s unanchored click; the original posts it in mode 1
+  only, `0x005272d5`), and `EDIT_QUEUE_ADVISOR_0xCB`, `QUEUE_DRAIN_ADVISOR_0xCB` (three sites) and
+  `BACKSPACE_QUEUE_ADVISOR_0xCB` (`ParkPathBuilding.cs`). Both are tutorial rows of the same shape as `0xd6`
+  (`lib/advisorrow.py`: `0xb8` response 403, sample 376, transcribed "the put in a path just click on an empty patch of grass...";
+  `0xcb` response 422, sample 392, transcribed "the build the line extend the blueprint..."; both one line, `HelpMessage.Score`), and
+  both are among the ten the setters withdraw. Read each `0xcb` site's post in `testme.objdump` (the record, the thing),
+  then build them as `ParkBuildMode.CountClick` posts `0xd6`, add both to `Arm`'s withdrawal, and confirm the census and
+  the said line off-screen.
 - [ ] **Q964. Does an unjoined queue pulse red outside the queue tool? Check the original first.** Alexah remembers it;
   no `docs/exe/` page says so. The track's open end pulses (`Model_PulseOff`, `park.md`; Q767). Film an unjoined queue
   in the original with no tool held. If it pulses, find the producer (likely through `FUN_004de4a0`, the back of queue

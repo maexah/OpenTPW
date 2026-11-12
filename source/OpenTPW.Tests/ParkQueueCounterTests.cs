@@ -1,4 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
@@ -323,6 +324,95 @@ public class ParkQueueCounterTests
 		Assert.IsTrue( ParkPathBuilding.ClearQueueCell( state, park, 24, 3, stepped: true, out var refund ) );
 		Assert.AreEqual( 0, refund, "its owner's cell is bare" );
 		Assert.AreEqual( balance, state.Balance );
+	}
+
+	/// <summary>The park's advisor, with the Tutorial option on, which the Backspace tip's row needs.</summary>
+	private static ParkAdvisorMessages Advisor( ParkState state )
+		=> state.AdvisorMessages = new ParkAdvisorMessages( new SettingsFile( "Advisor/Advisor.sam" ), tutorial: () => true );
+
+	/// <summary>
+	/// <b>The third anchored click posts the Backspace tip</b>, message <c>0xd6</c> about no thing (<c>0x0052732f</c>..
+	/// <c>0x0052736d</c>), and <b>putting the tool away takes it back</b>, one of the ten the setter withdraws on a change
+	/// of mode (<c>0x0052f279</c>).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the post at the second click or the fourth; the withdrawal missing.</remarks>
+	[TestMethod]
+	public void TheThirdAnchoredClickPostsTheBackspaceTipAndPuttingTheToolAwayTakesItBack()
+	{
+		using var clock = new SimulationClockScope();
+		var (_, state) = Placed();
+		var lines = Advisor( state );
+		ParkBuildMode.Clicks = 1;
+
+		StringAssert.Contains( ParkPathBuilding.RunQueue( 20, 7 ), "laid 3" );
+		Assert.AreEqual( 2, ParkBuildMode.Clicks );
+		StringAssert.Contains( lines.Census(), "pending=0 ", "nothing at the second" );
+
+		StringAssert.Contains( ParkPathBuilding.RunQueue( 17, 7 ), "laid 3" );
+		Assert.AreEqual( 3, ParkBuildMode.Clicks );
+		StringAssert.Contains( lines.Census(), "pending=1 attempts=0 threshold=25 slot=214/subject=0 " );
+
+		ParkBuildMode.Disarm();
+		StringAssert.Contains( lines.Census(), "pending=0 ", "taken back as the tool is put away" );
+	}
+
+	/// <summary><b>The count runs on past three with no second post</b>: the test is for three exactly (<c>0x00527335</c>).</summary>
+	/// <remarks><b>Mutation:</b> three or more posts at the fourth.</remarks>
+	[TestMethod]
+	public void TheFourthClickPostsNothing()
+	{
+		var (_, state) = Placed();
+		var lines = Advisor( state );
+		ParkBuildMode.Clicks = 3;
+
+		StringAssert.Contains( ParkPathBuilding.RunQueue( 20, 7 ), "laid 3" );
+		Assert.AreEqual( 4, ParkBuildMode.Clicks );
+		StringAssert.Contains( lines.Census(), "pending=0 " );
+	}
+
+	/// <summary>
+	/// <b>The path tool counts on the same counter and posts the same tip</b> at its third anchored click, and he says
+	/// it as response 433, sample 464 (row <c>0xd6</c>'s one line).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the path tool's post missing; the row's response or sample.</remarks>
+	[TestMethod]
+	public void ThePathToolsThirdClickPostsTheSameTip()
+	{
+		var (_, state) = Placed();
+		var lines = Advisor( state );
+		var said = new List<(int Response, int Sample)>();
+		ParkBuildMode.Arm( ParkBuildMode.Path );
+
+		StringAssert.Contains( ParkPathBuilding.RunPath( 11, 10 ), "anchored at (11,10)" );
+		StringAssert.Contains( ParkPathBuilding.RunPath( 13, 10 ), "laid" );
+		StringAssert.Contains( ParkPathBuilding.RunPath( 13, 12 ), "laid" );
+		StringAssert.Contains( lines.Census(), "pending=0 ", "two clicks" );
+		StringAssert.Contains( ParkPathBuilding.RunPath( 11, 12 ), "laid" );
+		Assert.AreEqual( 3, ParkBuildMode.Clicks );
+		StringAssert.Contains( lines.Census(), "slot=214/subject=0 " );
+
+		lines.Tick( state.GameTick, 0, ( response, sample ) => { said.Add( (response, sample) ); return 9000; } );
+		CollectionAssert.AreEqual( new[] { (433, 464) }, said );
+	}
+
+	/// <summary>
+	/// <b>The click counter outlives a park</b>, as the original's global does across a load (<c>q1038</c>: run 3's
+	/// <c>c5-east</c> 6, run 4's <c>d0-before</c> 6), so the third click can fall in the next park; the pending list is
+	/// emptied, a deviation said at <see cref="ParkBuildMode.LeavePark"/>.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> <see cref="Level.ForgetPark"/> calling <see cref="ParkBuildMode.Forget"/>; the counter zeroed in <see cref="ParkBuildMode.LeavePark"/>; the list kept.</remarks>
+	[TestMethod]
+	public void TheClickCounterOutlivesAParkAndTheListDoesNot()
+	{
+		Placed();
+		ParkBuildMode.Clicks = 1;
+		StringAssert.Contains( ParkPathBuilding.RunQueue( 20, 7 ), "laid 3" );
+
+		Level.ForgetPark();
+
+		Assert.AreEqual( 2, ParkBuildMode.Clicks );
+		Assert.AreEqual( 0, ParkBuildMode.Pending.Count );
+		Assert.AreEqual( ParkBuildMode.None, ParkBuildMode.Current );
 	}
 
 	private static int Times( string what )

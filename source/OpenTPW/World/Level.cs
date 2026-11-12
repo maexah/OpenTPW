@@ -3399,8 +3399,9 @@ public class Level
 		// And whatever build mode was armed, for exactly the reason the two cameras above are forgotten:
 		// it is static so that it survives a frame, which means it survives the SCENE as well unless
 		// something says otherwise - and a park entered after one left mid-run would otherwise open with
-		// a path tool armed and an anchor pointing at a cell in a different park.
-		ParkBuildMode.Forget();
+		// a path tool armed and an anchor pointing at a cell in a different park. The click counter is kept, as the
+		// original's is.
+		ParkBuildMode.LeavePark();
 		ParkPicking.Forget();
 
 		// And whatever is in the hand, which would otherwise go down at the next park's first click. The
