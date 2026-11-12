@@ -47,6 +47,8 @@ public class ParkFileWriterBoughtAndSoldTests
 	[TestCleanup]
 	public void PutAwayWhatWasMade()
 	{
+		ParkBuilding.StandThing = null;
+
 		foreach ( var entity in made )
 			entity.Delete();
 
@@ -1404,6 +1406,54 @@ public class ParkFileWriterBoughtAndSoldTests
 		var things = Level.WrittenThings( shipped, bought, gone );
 
 		Assert.IsTrue( things.Contains( ape.ThingId ) && !things.Contains( DrinksShop ) && !things.Contains( camera.ThingId ) && things.Contains( 18 ) );
+	}
+
+	/// <summary>
+	/// A file's thing sold and bought again on its own anchor: every cell of the new footprint goes out on the original's
+	/// tile, the ones whose type and parent are the file's as well as the ones that changed. The sale left them on bare
+	/// ground's 55 and the stamp keeps it.
+	/// <para><b>Mutation:</b> the tile written only where the cell joined a footprint or changed its type or parent
+	/// (<c>Level.WrittenCells</c>); the anchor goes out on 55.</para>
+	/// </summary>
+	[TestMethod]
+	public void AThingSoldAndBoughtAgainOnItsAnchorIsWrittenOnTheFootprintTile()
+	{
+		var state = new ParkState( shipped );
+		var anchorId = MapStep.CellId( 43, 30 );
+		var anchorWas = shipped.Cells[(30 * 128) + 43];
+
+		Assert.IsTrue( IsFootprintType( anchorWas.Type ) && anchorWas.ParentId == anchorId, "the file's Drinks Shop stands on (43,30)" );
+		Assert.AreEqual( (0, Level.FootprintTile, 0), ((int)anchorWas.TileSet, (int)anchorWas.TileIndex, (int)anchorWas.TileAngle), "on the original's tile in the file" );
+
+		var angle = shipped.Objects.Single( thing => thing.ThingId == DrinksShop ).Angle;
+
+		ParkBuilding.Sell( state, shipped, catalogue, null, null, DrinksShop );
+		ParkBuilding.StandThing = _ => true;
+
+		var built = ParkBuilding.Build( state, shipped, catalogue, null, null, DrinksShopItem, 43, 30, angle );
+
+		Assert.AreNotEqual( 0, built.ThingId, built.Answer );
+
+		var shop = state.Objects.Single( thing => thing.ThingId == built.ThingId );
+
+		state.WrittenObjects( shipped, _ => true, out var bought, out var gone );
+		Unimplemented.Forget();
+
+		Assert.IsTrue( bought.Any( thing => thing.ThingId == shop.ThingId ) && gone.Contains( DrinksShop ) );
+
+		var cells = Level.WrittenCells( shipped, state, bought, gone );
+		var anchor = cells[(30 * 128) + 43];
+
+		Assert.AreEqual( ((int)anchorWas.Type, anchorId), ((int)anchor.Type, (int)anchor.ParentId), "the anchor's type and parent are the file's" );
+		Assert.AreEqual( (0, Level.FootprintTile, 0), ((int)anchor.TileSet, (int)anchor.TileIndex, (int)anchor.TileAngle) );
+
+		var footprint = cells.Values.Where( cell => IsFootprintType( cell.Type ) && cell.ParentId == anchorId ).ToList();
+
+		Assert.IsTrue( footprint.Count > 1 );
+		Assert.IsTrue( footprint.All( cell => (cell.TileSet, cell.TileIndex, cell.TileAngle) == (0, Level.FootprintTile, 0) ), "every footprint cell is on tile 8" );
+		Assert.AreEqual( 0, Times( "SAVE_PARK_FOOTPRINT_CELL" ) );
+
+		static bool IsFootprintType( int type ) => type is CellEdge.Footprint or CellEdge.RideEnd or CellEdge.RideFarEnd;
 	}
 
 	/// <summary>

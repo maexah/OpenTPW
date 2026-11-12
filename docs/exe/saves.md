@@ -1877,7 +1877,9 @@ and the object constructor `FUN_004db090` was read beside the two files.
   anew. Set `0xb` takes the made and every set loses the gone.
 - **The cells** (`Level.WrittenCells`): a cell that has joined the footprint of a thing written, or left the
   footprint of a thing taken out, is written, on tile 8 under a footprint, which the park here does not keep;
-  a cell left bare is on tile 55 already, as a sale here leaves it. A footprint of a thing that is not written
+  a cell left bare is on tile 55 already, as a sale here leaves it. Every footprint cell written goes out on tile 8,
+  also one whose type and parent are the file's: a file's thing sold and bought again on its own anchor has its
+  cells on the sale's 55, which the stamp keeps (Q279). A footprint of a thing that is not written
   is still counted and left
   (`SAVE_PARK_FOOTPRINT_CELL`).
 - **A made script** (`RideScript.Made`, `ParkScriptStates.MadeRecord`, `Splice`): the struct as the loader

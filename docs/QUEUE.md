@@ -1147,15 +1147,6 @@ filed the items that cite it.
   starts on animation 0, which its remarks give as a deviation no shipped bank reaches. Dead by content today:
   build it as the original's or leave the count, on Alexah's word.
 
-- [ ] **Q279. `Level.WrittenCells` writes a footprint cell on tile 8 only where the cell joined a footprint or
-  changed its type or parent.** So a file's thing moved and put back on its own anchor (sell then buy) goes out
-  with its unchanged cells on bare ground's tile 55, which the sale left and `ParkBuilding.Stamp` keeps. Every
-  footprint cell should go out on tile `(0, 8, 0)` as every footprint cell of seven park files is
-  (`docs/exe/saves.md`, "OpenTPW's writer, a thing bought and a thing sold"); a test that sells the Drinks Shop,
-  buys item 1203 on (43,30) again and reads `WrittenCells` for that cell's `TileIndex` would show 55 From the
-  week-end audit (stage 6, the second reading of commit `8422bffa`; read from the code, not reproduced in the
-  game). `OpenTPW/World/Level.cs`, line 907.
-
 - [ ] **Q280. A file's bumper ride with a peep on its leaving or boarding list and no car is written over where it
   lies once the running lists are empty (`Level.WritePark`.** `Take`: only `CarsOf` is asked of the file), so the
   file's type 7 and 8 chunks stay and the next load puts those peeps back on the lists. It should be taken out and

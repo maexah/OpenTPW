@@ -1061,6 +1061,10 @@ public class Level
 		var cells = WrittenCells( loaded, state, made, gone, pieces, catalogue );
 		var written = WrittenThings( loaded, made, gone );
 
+		var underFootprints = cells.Values.Where( cell => IsFootprint( cell.Type ) ).ToList();
+		Log.Info( $"Save: {cells.Count} cells written, {underFootprints.Count} under a footprint, "
+			+ $"{underFootprints.Count( cell => (cell.TileSet, cell.TileIndex, cell.TileAngle) == (0, FootprintTile, 0) )} of those on tile (0, {FootprintTile}, 0)" );
+
 		// The file's ids deleted since the load and taken out of it: a thing on one now is a new one, written whole as
 		// made (docs/exe/saves.md, "OpenTPW's writer, an id given out again"). An object sold that the file keeps,
 		// counted above, keeps its id there, and a person made on it is left out, counted. A deviation: the original writes
@@ -1389,7 +1393,7 @@ public class Level
 	/// <summary>
 	/// <see cref="WrittenCells(ParkWorld, ParkState)"/> where objects bought are written whole and objects sold are
 	/// taken out: a cell under the footprint of one of <paramref name="made"/>, and a cell one of
-	/// <paramref name="gone"/> has left, is written too. A cell that has joined a footprint goes out on the tile the
+	/// <paramref name="gone"/> has left, is written too. Every footprint cell written goes out on the tile the
 	/// original stamps one with (<see cref="FootprintTile"/>), which the park here does not keep; one left bare
 	/// is on bare ground's already (<see cref="ParkPathBuilding"/>).
 	///
@@ -1470,16 +1474,22 @@ public class Level
 				}
 
 				NotePiece( index, was, now );
-				written[index] = footprintNow ? now with { TileSet = 0, TileIndex = FootprintTile, TileAngle = 0 } : now;
+				written[index] = OnFootprintTile( now );
 
 				continue;
 			}
 
+			// One whose type and parent are the file's goes out on that tile as well: a thing sold and bought again on its own
+			// anchor has its cells on the tile the sale left them, which the stamp keeps.
 			NotePiece( index, was, now );
-			written[index] = now;
+			written[index] = OnFootprintTile( now );
 		}
 
 		return written;
+
+		// Every footprint cell the original's files hold is on tile (0, 8, 0); any other cell goes out as it stands.
+		static ParkWorld.MapCell OnFootprintTile( ParkWorld.MapCell cell )
+			=> IsFootprint( cell.Type ) ? cell with { TileSet = 0, TileIndex = FootprintTile, TileAngle = 0 } : cell;
 
 		// Whether the cell's track record is not the file's, the add-on's flag aside.
 		static bool TrackDiffers( ParkWorld.MapCell was, ParkWorld.MapCell now )
