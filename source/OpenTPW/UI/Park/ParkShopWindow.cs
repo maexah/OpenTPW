@@ -560,7 +560,7 @@ internal sealed class ParkShopWindow : UiWindow, IStatusBox
 	}
 
 	/// <summary>A guest's happiness in the running park, or null for anyone else.</summary>
-	private static float? GuestHappiness( int thingId )
+	internal static float? GuestHappiness( int thingId )
 		=> ParkPeople.Current?.Guests is { } guests && guests.TryGetValue( thingId, out var guest ) ? guest.Happiness : null;
 
 	/// <summary>The handler's <c>0x800</c> from <c>0xc06b</c>: the buffered quality, its icon lit (<c>1 &lt;&lt; value</c> to <c>0xc07f</c>), the figures again.</summary>
@@ -634,10 +634,7 @@ internal sealed class ParkShopWindow : UiWindow, IStatusBox
 	/// no ride (<c>+0x284</c> nought) whose item is the shown one's, by thing.
 	/// </summary>
 	internal static int[] ShopsOfItem( IEnumerable<ParkWorld.CatalogueObject> objects, ParkItemCatalogue catalogue, int catalogueId )
-		=> [.. objects
-			.Where( placed => placed.IsPlaced && placed.CatalogueId == catalogueId
-				&& catalogue.TryGet( placed.CatalogueId, out var item ) && item.UiType == 1 && item.AddOnUpgradesId == 0 )
-			.Select( placed => placed.ThingId )];
+		=> ParkObjectWindow.OfItem( objects, catalogue, catalogueId, uiType: 1 );
 
 	/// <summary>
 	/// <c>0xc081</c>: <c>FUN_00481bc0( 0x200, 0x004b0ae0 )</c> - the settings to every shop of the shown one's item, itself

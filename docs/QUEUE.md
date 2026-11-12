@@ -661,7 +661,7 @@ filed the items that cite it.
   unanchored first click. `RunQueue` now counts `QUEUE_TOOL_ADVISOR_MESSAGE_0xD6` at the third click (rule 4); build the advisor
   post itself with the path tool's `PATH_TOOL_ADVISOR_MESSAGE_0xD6`, and the reset with the unanchored arm above. A refused run's click is not counted (the latch, `0x00524a63`; built). **Also a deviation:** ours zeroes the counter and the pending list at a park unload (`Level.ForgetPark` -> `ParkBuildMode.Forget()`); the original keeps both across a load (`q1038` run2 b3 3 to run3 c0 3, c5 6 to run4 d0 6), which moves the counted `0xd6` after a reload whose next arming is an edit.
 - [ ] **Q1053. A sideshow's or feature's window, when built, must not offer the queue button (Q1038's tail).** The queue button is the ride window's (`FUN_004af200( 0 )`,
-  `park-engine.md`, "Editing a queue"). Not checked in the original: the stock park holds no sideshow to open, and the windows are unbuilt (Q31b, Q960, Q961). When one is
+  `park-engine.md`, "Editing a queue"). Not checked in the original: the stock park holds no sideshow to open, and the windows are unbuilt (Q31b, Q1520, Q961). When one is
   built, open a bought sideshow's window in the original and read whether it has the button.
 - [ ] **Q1344. The scrap row's figure photographed beside the original's (Q1054's split piece).** Since Q1054 the object window
   (`ParkObjectWindow`, `0x3e23`) and the shop window (`ParkShopWindow`, `0xc07d`) letter `FUN_004e2400`, the build price at
@@ -2039,10 +2039,16 @@ Their notes, the console.log and the screenshots are in `~/.cache/tpw-harnesses/
 the docs before filing. The reports already queued got a note in their own item (Q27, Q31b, Q40, Q55, Q148, Q158, Q400,
 Q408, Q419, Q511, Q512, Q543, Q648, Q950). The research advisor's "built all of the available features" line was checked
 and matches the decode (row 80, `advisor-park.md`); not filed.
-- [ ] **Q960. The sideshow's window.** Split from Q31b at Alexah's word (2026-10-31). A click on a sideshow counts
-  `SIDESHOW_WINDOW` and opens nothing (`Level.cs`, the object click's UI type 2). Q31b's notes have the decoded figures
-  and the inset bars (`hud.md`, "The shop, sideshow and ride windows"). Confirm: the Strength Bird's window beside the
-  original's, a screenshot of each.
+- [ ] **Q1520. The sideshow's window drawn (the rest of Q960).** A click on a sideshow still counts `SIDESHOW_WINDOW`
+  and opens nothing (`Level.cs`, the object click's UI type 2). Walk the stream `0x00755e80` (`FUN_004b2430`, handler
+  `FUN_004b2150`; `lib/uistream.py`, needing `testme.exe`) and read the labels (vtable `+0xc`, likely `FUN_004b1040`)
+  and which control letters which of `FUN_004b16c0`'s figures, and how (the shop's: a bar is `(x << 10) / 100`); read
+  what `FUN_004e1f20` answers over no customer (counted `SIDESHOW_WINNERS_NO_CUSTOMERS`) and the scrap row. Then build
+  the window on `ParkSideshowSettings` as `ParkShopWindow` is built (the bars `0xa094`, `0xa096`, `0xa099`, `0xa09e`
+  inset (0, 10), Q31b's note; the advisor's message, if the builder posts one, read first), and open it from the click.
+  The `UsageInfo.NonWinnableSideshow` branch is dead by content and not read (`ParkSideshowSettings.Applied`'s remarks).
+  Confirm (the desk lane): the Strength Bird's window beside the original's, a screenshot of each, with the
+  `sideshowwindow` census.
 - [ ] **Q961. The feature window (the Security Camera's).** Split from Q31b at Alexah's word (2026-10-31). A click on a
   feature counts `FEATURE_WINDOW` and opens nothing (UI type 3). Decode `FUN_00499eb0` and its handler `0x00499bb0`
   (`park-engine.md`, the nine object windows) first, and whether it has the camera's view Alexah wants to ride

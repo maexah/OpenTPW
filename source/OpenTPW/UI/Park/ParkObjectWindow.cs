@@ -450,6 +450,17 @@ internal sealed class ParkObjectWindow : UiWindow, IStatusBox
 			.Select( placed => placed.ThingId )];
 
 	/// <summary>
+	/// Apply to all's reach (<c>0x00482040</c>, then the callback's item test: the shop's <c>0x004b0ae0</c> on mask
+	/// <c>0x200</c>, the sideshow's <c>0x004b20f0</c> on <c>0x100</c>): the placed things of <paramref name="uiType"/> that fit
+	/// no ride (<c>+0x284</c> nought) whose item is <paramref name="catalogueId"/>, by thing.
+	/// </summary>
+	internal static int[] OfItem( IEnumerable<ParkWorld.CatalogueObject> objects, ParkItemCatalogue catalogue, int catalogueId, int uiType )
+		=> [.. objects
+			.Where( placed => placed.IsPlaced && placed.CatalogueId == catalogueId
+				&& catalogue.TryGet( placed.CatalogueId, out var item ) && item.UiType == uiType && item.AddOnUpgradesId == 0 )
+			.Select( placed => placed.ThingId )];
+
+	/// <summary>
 	/// Delete, <c>FUN_0048cd10</c>, which every object window shares: where the Confirmations option is on
 	/// (<c>[0x0078d90f]</c>) a box on UITEXT 396 whose tick (<c>0x0048cde0</c>) demolishes the thing as the box opened
 	/// and whose cross does nothing; where it is off the demolish at once. The caller then closes its window with no

@@ -12145,6 +12145,14 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q960. The sideshow's window: its first piece, what it loads, applies, reaches and reads.** Split from Q31b at
+  Alexah's word (2026-10-31); split again at this piece (2026-11-12, cloud lane c99), the drawn window being Q1520.
+  `ParkSideshowSettings` holds the decoded half (`hud.md`, "The shop, sideshow and ride windows"): the load (`0x004b1ee0`:
+  the chance's low byte, the prize, the price), the three controls' ranges (100, 10000, 500), the apply (`0x004b20b0`:
+  the price, the chance cut to a byte, the prize), apply to all's reach (mask `0x100`, the same item) and the arrows'
+  (every sideshow, newest first), and the figures `FUN_004b16c0` reads (C of M, takings, profit, satisfaction, winners
+  last month, the excitement at the buffered settings, the local happiness), read and applied by the console's
+  `sideshowwindow`. Five tests (`ParkSideshowSettingsTests`, needing the game) and an off-screen census.
 
 ## B. Docs and comments
 

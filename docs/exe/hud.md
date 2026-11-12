@@ -4645,6 +4645,9 @@ sideshow `0x004b20b0`). Window objects are globals: shop `0x007cc258`, sideshow 
   slider, the prize box and UITEXT `0x33`. Load `0x004b1ee0`: `0xa08a` the door, `0xa08e` <- `+0x190`, `0xa08f` <- `+0x194`
   (price), `0xa090` <- `+0x188` (prize). Ranges: `0xa08e` 0 to 100, `0xa090` 0 to 10000, `0xa08f` 0 to 500; `0xa08c`, `0xa08d`
   hidden under two. Buttons: `0xa08b` delete, `0xa0a8` move, `0xa0a9` apply to all, `0xa08a` door.
+- **Built in OpenTPW, the first piece** (Q960): `ParkSideshowSettings` holds the sideshow's load, ranges, apply, apply to
+  all's reach and the arrows', and the figures the refresh reads, without the window (its stream `0x00755e80` is not
+  walked, Q1520). It reads no `NonWinnableSideshow`, dead by content as above. The console's `sideshowwindow` reads it.
 - **Apply to all**: shop `0xc081` (`0x004b0dba`, `0x00481bc0( 0x200, 0x004b0ae0 )`), sideshow `0xa0a9` (`0x004b23b3`, **mask `0x100`**,
   `0x004b20f0`); the mask runs `0x00482040` over every thing of kind 3 whose item's `AddOn.UpgradesId` (`+0x284`) is 0 and whose
   `Info.WhichUIType` (`+0x4ac`) is 1 (shop) or 2 (sideshow); the callback acts only when the thing's item id (`+0xe`) equals the

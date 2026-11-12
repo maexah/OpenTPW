@@ -808,6 +808,41 @@ public static class DebugConsole
 					.FirstOrDefault() is { } shopWindow ? $"shop window: {shopWindow.Census()}" : "shop window: none" );
 				break;
 
+			case "sideshowwindow":
+				// The sideshow window's first piece (ParkSideshowSettings; the window is not drawn, Q1520): `sideshowwindow <thing>`
+				// reads what it would load and show; `... <chance> <prize> <price>` applies those as its close would, held to the
+				// controls' ranges, and `... all` as apply to all does, to every sideshow of the item.
+				if ( Level.Current is not { ParkState: { } showState, Catalogue: { } showCatalogue } )
+				{
+					Reply( "sideshowwindow: a park has to be loaded" );
+					break;
+				}
+
+				if ( !showState.TryObject( (int)Argument( 1 ), out var sideshow )
+					|| !showCatalogue.TryGet( sideshow.CatalogueId, out var sideshowItem ) || sideshowItem.UiType != UI.ParkSideshowSettings.UiType )
+				{
+					Reply( "sideshowwindow: name a placed sideshow's thing" );
+					break;
+				}
+
+				if ( parts.Length >= 5 )
+				{
+					var settings = new UI.ParkSideshowSettings.Settings( (int)Argument( 2 ), (int)Argument( 3 ), (int)Argument( 4 ) ).Held();
+					var reach = parts.Length >= 6 && parts[5] == "all"
+						? UI.ParkSideshowSettings.OfItem( showState.Objects, showCatalogue, sideshow.CatalogueId )
+						: [sideshow.ThingId];
+
+					foreach ( var id in reach )
+						UI.ParkSideshowSettings.ApplyTo( showState, id, settings );
+
+					Reply( $"sideshow window: applied to {string.Join( ", ", reach )}" );
+					showState.TryObject( sideshow.ThingId, out sideshow );
+				}
+
+				Reply( "sideshow window: " + UI.ParkSideshowSettings.Census( showState, showCatalogue, sideshow, sideshowItem,
+					UI.ParkSideshowSettings.Loaded( sideshow ), UI.ParkShopWindow.GuestHappiness ) );
+				break;
+
 			case "researchscreen":
 				// The research screen: the work load, the slider's limit, knob, dial and gauge, and each kind's bar, effort, output and label.
 				Reply( Level.Current?.Hud?.Children.OfType<UI.WindowStack>().FirstOrDefault()?.Windows.OfType<UI.ParkResearchScreen>()
