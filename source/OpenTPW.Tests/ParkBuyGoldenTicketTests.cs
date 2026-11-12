@@ -292,4 +292,45 @@ public class ParkBuyGoldenTicketTests
 		Assert.AreEqual( (1100, (int?)null), (ParkBuilding.Carrying, UiSounds.LastAsked) );
 		Assert.IsFalse( stack.Windows.Contains( screen ) );
 	}
+
+	private static int Posts() => Unimplemented.Summary.FirstOrDefault( gap => gap.What == "BUY_SCREEN_PURCHASE_ADVISOR_POST" ).Times;
+
+	/// <summary>
+	/// A purchase's advisor post (<c>0xc9</c> or <c>0xce</c>, <c>0x004ac67e</c>..<c>0x004ac7d9</c>) is reached by every click
+	/// that puts the item in the hand, on the cash arm and the tickets' alike, and by no refused click: it is counted once a
+	/// purchase.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the count taken before the refusal returns; the count on one arm only; the report gone.</remarks>
+	[TestMethod]
+	public void EveryPurchaseCountsTheAdvisorPostAndARefusalDoesNot()
+	{
+		var file = TwoLeft();
+		Unimplemented.Forget();
+
+		try
+		{
+			var (_, screen, _) = ParkFootprintPictureTests.BuyScreen();
+			SetBalance( 499 );
+			ListOf( screen ).Activated!( 1100 );
+			ListOf( screen ).Activated!( 1112 );
+			Assert.AreEqual( 0, Posts(), "the bank short and the tickets short: no purchase, no post" );
+
+			SetBalance( 500 );
+			ListOf( screen ).Activated!( 1100 );
+			Assert.AreEqual( 1100, ParkBuilding.Carrying );
+			Assert.AreEqual( 1, Posts(), "the cash arm's purchase" );
+			ParkHand.LetGo();
+
+			file.TicketsSpent = 3;
+			var (_, again, _) = ParkFootprintPictureTests.BuyScreen();
+			SetBalance( 0 );
+			ListOf( again ).Activated!( 1170 );
+			Assert.AreEqual( 1170, ParkBuilding.Carrying );
+			Assert.AreEqual( 2, Posts(), "the tickets' arm's purchase" );
+		}
+		finally
+		{
+			Unimplemented.Forget();
+		}
+	}
 }

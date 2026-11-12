@@ -12131,6 +12131,9 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   non-null where the entities step starts), or confirm it in a running game off-screen: the log's particle line before the
   catalogue's effects line, with the swap put back and the order seen to flip.
 - [x] **Q1036. The lobby bolt's brightness over its life. Decode first.** Folded into Q1044 (filed by the Sentinel the same hour from VERIFY-13, which decoded the envelope). From Q1034 and the Sentinel's second reading of Q152's fork review. OpenTPW dims the bolt over its whole life (`Lightning.OnUpdate`: opacity = life^2 x stutter, measured exact in Q1034: the lift in the frame is 78, 32, 13, 4.6 and 2.5 grey levels at 0.1, 0.2, 0.35, 0.4 and 0.45 s of a 0.5 s bolt, so it is out of sight by about 0.4 s), where the original is suspected to hold its bolt at 192 to 255 grey in saw-teeth for the whole 500 ms and cut at the end (the colour pulse `0x0057ee30` in Q1035; a second reading, neither decoded nor run). Decode the pulse's value over a bolt's life for the lobby's arguments (lifetime 500, argument 8), run the original's lobby bolt under Proton (`record.sh`, the island pinned) and write the figures in `docs/exe/weather.md`, "The bolt"; build the envelope only after that, in `Lightning.OnUpdate` and the `Flash` that lifts the lobby's sun and sky (`LobbyWeather`), and read it back with `q1034/confirm2.py` (`stepsweep`). Q1034 changed nothing in `Lightning.cs`.
+- [x] **Q465. A purchase's advisor post is not counted.** From the week-end audit (`VERIFY-10a.md` Q328 3). Every
+  purchase reaches the original's 0xc9 or 0xce post (`0x004ac67e`..`0x004ac7d9`); ours neither builds nor counts it
+  (`ParkBuyScreen.Chose`). The line is filed under Q420; add the `Unimplemented.Report` (rule 4).
 
 ## B. Docs and comments
 

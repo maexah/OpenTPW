@@ -467,7 +467,8 @@ internal sealed class ParkBuyScreen : UiWindow
 	/// <b>So does this.</b> <c>ParkBuilding.Carry</c> makes the same two tests and puts the item in the
 	/// hand, and <c>Level.ClickWorldAt</c> puts it down through <c>ParkBuilding.PlaceCarried</c> where
 	/// the park is next clicked. While it is carried its footprint is drawn as the original's
-	/// (<c>ParkBuilding.CarrySquares</c>).
+	/// (<c>ParkBuilding.CarrySquares</c>). The advisor's post that follows a purchase (<c>0xc9</c> or <c>0xce</c>) is
+	/// not built; it is counted as <c>BUY_SCREEN_PURCHASE_ADVISOR_POST</c>.
 	/// </remarks>
 	private void Chose( int rowId )
 	{
@@ -493,6 +494,11 @@ internal sealed class ParkBuyScreen : UiWindow
 		}
 
 		Stack.Close( this );
+
+		// Then the original posts the advisor's 0xce or 0xc9, which of the two set by a field of the item's and a test of
+		// the game's (0x004ac67e..0x004ac7d9; docs/exe/hud.md, "The click"). Neither row is built, so the post is counted,
+		// on both arms (cash and tickets).
+		Unimplemented.Report( "BUY_SCREEN_PURCHASE_ADVISOR_POST" );
 
 		// And clicking the park puts it down - Level.WorldClick, which takes the click only when the
 		// interface did not. `put <x> <y>` still does it from the console, for a test that cannot move
