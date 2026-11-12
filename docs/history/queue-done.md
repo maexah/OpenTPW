@@ -12284,6 +12284,18 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   Research"). The message box is built; both sites only count (`RESEARCH_BUTTON`, `RESEARCH_SHORTCUT`). Build the two
   boxes at both; the research screen behind them stays counted (blocked: `docs/PLAYER-GAPS.md`). Confirm: R and the
   button in Lost Kingdom, the box photographed beside the original's.
+- [x] **Q19. VSync and a frame limiter.** `Renderer.CreateGraphicsDevice` hard-codes VSync on. `Display.cs` already
+  carries each mode's refresh rate. Add an Options row: VSync mode, and a frame limit from 30 up to
+  Unlimited, default the monitor's refresh rate on first launch. Confirm: screenshot the options row;
+  log the measured frame time at two settings.
+  **Done 2026-11-12** (cloud lane c112; the row split off as Q1592): `FramePacing` and opentpw.cfg's `vsync on|off` and
+  `framelimit <30 or more>|unlimited`, read as the game starts; a first launch takes the monitor's refresh rate (60 where
+  SDL says 0) and the next write keeps it; with VSync on, a cap at or above the refresh rate is left to VSync. Off-screen
+  (llvmpipe, a 512 x 384 window, 22.68 ms a frame unlimited), the `Frames:` line read 35.23 ms a frame at `framelimit 30`
+  (142 frames in 5.00 s, one 303.20 ms start-up hitch: 33.3 without it) and 26.22 ms at `framelimit 40` (191 in 5.01 s,
+  longest 258.81: 25.0 without it), as predicted; a first launch logged `limit 60 (no framelimit line, so the monitor's
+  refresh rate, which SDL does not say, so 60)` and wrote `framelimit 60`. Eight tests (`FramePacingTests`), seven
+  bugs put back each failing one. The row is not built: the screen is 1:1 and has no free row (`ui.md`, "Game Options").
 
 ## D. Alexah's list: decode first, then build (two sessions each)
 

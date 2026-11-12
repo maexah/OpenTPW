@@ -510,6 +510,8 @@ Both apply on the tick and only when they actually changed, so no RESTART GAME b
 
 OpenTPW's row: Primary is the Vulkan device `GpuChoice.Pick` prefers (a discrete card), Secondary the next best, Secondary offered only where the loader lists more than one device, kept in Config.tcf's video card field and drawn on from the next start; opentpw.cfg's `gpu` line names a card exactly and wins over the row, and then the row says which role the card in use has. Linux seen (`q983/`); seen on Windows at `8ec427bf`: Primary the GTX 1650, Secondary the AMD from the next start, back again, and the `gpu` line winning (the log says "next start"; nothing on the screen does).
 
+**VSync and the frame limit are not on this screen** (Q19). They are OpenTPW's own (the original presents through DirectDraw and has no such settings, so there is no row, field or UITEXT of its to give them), kept in `opentpw.cfg`'s `vsync` and `framelimit` lines and read as the game starts (`FramePacing`). The screen being 1:1 with no free row, where their row goes is Alexah's call (Q1592), as Q33's is.
+
 Earlier rulings that still stand: the settings screen is 1:1 for now, GPU/software is dead and unreachable (its row carries the display mode). Resolution is the exception, and is real, as above. Give the dead rows a meaning only with Alexah's word. The video card row is taken (Q983), so `docs/QUEUE.md` Q33's UI scale needs another place.
 
 ### Uniform blocks must be per draw

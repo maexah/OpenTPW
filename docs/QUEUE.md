@@ -2358,10 +2358,14 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
 - [ ] **Q18. The advisor draws in front of the dimmed screen.** `Level.Render` draws the HUD, then
   the overlay pass with the advisor. Pausing does not hide him either; only the options screen's quiet stop takes him off (`ui.md`, "Pausing him"). Draw the
   dimmer over him, or hide him while such a window is open. Confirm: screenshot with the buy screen open.
-- [ ] **Q19. VSync and a frame limiter.** `Renderer.CreateGraphicsDevice` hard-codes VSync on. `Display.cs` already
-  carries each mode's refresh rate. Add an Options row: VSync mode, and a frame limit from 30 up to
-  Unlimited, default the monitor's refresh rate on first launch. Confirm: screenshot the options row;
-  log the measured frame time at two settings.
+- [ ] **Q1592. VSync and the frame limit on the Options screen (from Q19).** Q19 built both as opentpw.cfg lines
+  (`GameOptions.VSync`, `GameOptions.FrameLimit`, `FramePacing`); the item asked for an Options row too. The screen is the
+  original's compiled stream, 1:1, with no free row: the rendering row carries the display mode and the video card row is
+  the original's own (Q983), so where the row goes is Alexah's call, as Q33's is (`ui.md`, "Game Options": give a row a
+  meaning only with Alexah's word). Once placed: the row shows `VSync: On/Off` and the cap (30 up to Unlimited); a change
+  of the cap paces from the next frame already (`FramePacing.Wait` reads the options each frame), a change of VSync needs
+  `Device.SyncToVerticalBlank` set on the tick, and the tick's `SaveDisplay` writes both. Confirm: a screenshot of the row
+  beside the original's options screen (desk lane, photographs), and the `Frames:` line before and after a change.
 - [ ] **Q20b. No bubbles on the drinks shop, no chimney smoke on the staff room.** The scripts ask for the effects and
   `RideEffects` records the request; nothing consumes the records. Join them to `ParticleSystem.Spawn` through Q20a's
   pass (`ParLib.cs` names `Bubbles = 58`, `Smoke = 2`, `SmallSmoke = 13`; `park.md` decodes the node and the per-tick

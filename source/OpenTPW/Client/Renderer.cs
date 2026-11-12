@@ -20,6 +20,9 @@ public partial class Renderer
 	private readonly Stopwatch _frameClock = Stopwatch.StartNew();
 	private TimeSpan _lastFrame;
 
+	/// <summary>The frame limit and its measured line (Q19), made with the window, which says the monitor's refresh rate.</summary>
+	private readonly FramePacing _pacing;
+
 	public CommandList CommandList = null!;
 
 	public Window Window;
@@ -73,6 +76,8 @@ public partial class Renderer
 		// up, the drawn one always a frame and a present behind the one the window manager
 		// composites. Set once: SDL keeps this, and nothing else in the game asks for it back.
 		Input.IsSystemCursorVisible = false;
+
+		_pacing = StartPacing( Window, GameOptions.Current );
 
 		CreateGraphicsDevice();
 		// Swap the buffers so that the screen isn't a mangled mess
@@ -199,6 +204,28 @@ public partial class Renderer
 		) );
 	}
 
+	/// <summary>
+	/// The frame limit's pacing, on the monitor's refresh rate as the desktop is in it. A first launch, with no <c>framelimit</c>
+	/// line read, takes that rate as its limit (<see cref="FramePacing.FirstLimit"/>); the next write of opentpw.cfg keeps it.
+	/// </summary>
+	private static FramePacing StartPacing( Window window, GameOptions options )
+	{
+		var refresh = Display.Desktop( window )?.RefreshRate ?? 0;
+		var first = options.FrameLimit == FramePacing.NotChosen;
+
+		if ( first )
+			options.FrameLimit = FramePacing.FirstLimit( refresh );
+
+		var pacing = FramePacing.OnRealClock( refresh );
+		var limit = FramePacing.Clamp( options.FrameLimit );
+
+		Log.Info( $"Frames: vsync {(options.VSync ? "on" : "off")}, {(limit > 0 ? $"limit {limit}" : "unlimited")}"
+			+ $"{(first ? $" (no framelimit line, so the monitor's refresh rate{(refresh > 0 ? "" : $", which SDL does not say, so {FramePacing.RefreshUnknown}")})" : "")}, "
+			+ $"refresh {refresh}: {(FramePacing.Limits( options.VSync, limit, refresh ) ? "the limiter paces" : options.VSync ? "VSync paces" : "nothing paces")}" );
+
+		return pacing;
+	}
+
 	public void Run()
 	{
 		while ( Window.SdlWindow.Exists )
@@ -303,8 +330,12 @@ public partial class Renderer
 
 	private void Update()
 	{
+		// The frame limit's wait comes first, so the frame's delta holds it (Q19).
+		_pacing.Wait( GameOptions.Current );
+
 		var now = _frameClock.Elapsed;
 		float deltaTime = (float)(now - _lastFrame).TotalSeconds;
+		_pacing.Count( GameOptions.Current, now - _lastFrame );
 		_lastFrame = now;
 
 		InputSnapshot inputSnapshot = Window.SdlWindow.PumpEvents();
@@ -331,6 +362,7 @@ public partial class Renderer
 			// Input.ForgetHeldKeys.
 			Input.ForgetHeldKeys();
 
+			_pacing.Interrupt();
 			Thread.Sleep( 16 );
 			return;
 		}
@@ -408,7 +440,8 @@ public partial class Renderer
 
 			SwapchainDepthFormat = null,
 			SwapchainSrgbFormat = false,
-			SyncToVerticalBlank = true,
+			// opentpw.cfg's "vsync" line (Q19), on unless it says off.
+			SyncToVerticalBlank = GameOptions.Current.VSync,
 			HasMainSwapchain = true
 		};
 

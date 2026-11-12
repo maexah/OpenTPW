@@ -34,6 +34,9 @@ internal static class SaveFolder
 	private const string GpuName = "gpu";
 	private const string UpdateCheckName = "updatecheck";
 	private const string ToldName = "told";
+	private const string VSyncName = "vsync";
+	private const string FrameLimitName = "framelimit";
+	private const string FrameLimitUnlimited = "unlimited";
 	private const string GraphicsImproved = "improved";
 	private const string GraphicsFaithful = "faithful";
 	private const string UsersFolder = "users";
@@ -217,7 +220,8 @@ internal static class SaveFolder
 	/// for - see <see cref="Display"/>; the faithful graphics toggle (<see cref="GameOptions.Faithful"/>), read
 	/// before the first texture is made, and set nowhere else; and the graphics card's <c>gpu</c> line
 	/// (<see cref="GameOptions.Gpu"/>), read before the device is made; and the <c>updatecheck</c> line
-	/// (<see cref="GameOptions.UpdateCheck"/>), read before the update check starts; and the <c>told</c> lines (<see cref="GameOptions.NoticesTold"/>).
+	/// (<see cref="GameOptions.UpdateCheck"/>), read before the update check starts; and the <c>told</c> lines (<see cref="GameOptions.NoticesTold"/>);
+	/// and the <c>vsync</c> and <c>framelimit</c> lines (<see cref="GameOptions.VSync"/>, <see cref="GameOptions.FrameLimit"/>), read before the device is made.
 	///
 	/// <para>
 	/// It is a plain text file of its own rather than more fields in Config.tcf, so that the original's
@@ -273,6 +277,21 @@ internal static class SaveFolder
 					// The update check (Q941): "off" stops the one request the game makes as it starts; anything else keeps it.
 					case UpdateCheckName:
 						GameOptions.Current.UpdateCheck = !parts[1].Equals( "off", StringComparison.OrdinalIgnoreCase );
+						break;
+
+					// VSync (Q19): "off" turns it off; anything else keeps it on.
+					case VSyncName:
+						GameOptions.Current.VSync = !parts[1].Equals( "off", StringComparison.OrdinalIgnoreCase );
+						break;
+
+					// The frame limit (Q19): "unlimited", or frames a second, 1 to 29 read as 30. Anything else (0 too) is passed
+					// over, and the start takes the monitor's refresh rate as if the line were not there.
+					case FrameLimitName when parts[1].Equals( FrameLimitUnlimited, StringComparison.OrdinalIgnoreCase ):
+						GameOptions.Current.FrameLimit = FramePacing.Unlimited;
+						break;
+
+					case FrameLimitName when int.TryParse( parts[1], out var limit ) && limit > 0:
+						GameOptions.Current.FrameLimit = FramePacing.Clamp( limit );
 						break;
 
 					// A save-folder notice already shown (Q922): "told kept", "told moved".
@@ -333,6 +352,9 @@ internal static class SaveFolder
 		"# updatecheck on: as it starts, a weekly build asks GitHub whether a newer weekly build has been released, and says so in the lobby and the Escape menu.",
 		"# updatecheck off: no request is made. Nothing is downloaded or installed either way. Read as the game starts.",
 		"# told <name>: a notice about the save folders the game has shown once and will not show again. Delete the line to see it again.",
+		"# vsync on: each frame waits for the display's refresh, the default. vsync off: it does not. Read as the game starts.",
+		"# framelimit <30 or more>: at most that many frames a second; framelimit unlimited: no cap. A first launch takes the monitor's",
+		"# refresh rate. With vsync on, a limit at or above the refresh rate leaves the pacing to vsync. Read as the game starts.",
 
 		// Written by earlier builds only.
 		"# the flags easing between winds, and the buy and hire screens lettered larger. graphics faithful: every one",
@@ -421,6 +443,22 @@ internal static class SaveFolder
 					OwnComments[12],
 					$"{UpdateCheckName} {(options.UpdateCheck ? "on" : "off")}"
 				}),
+
+				(VSyncName, new[]
+				{
+					OwnComments[14],
+					$"{VSyncName} {(options.VSync ? "on" : "off")}"
+				}),
+
+				// Not written until the start has chosen it (a test's own options).
+				(FrameLimitName, options.FrameLimit == FramePacing.NotChosen
+					? Array.Empty<string>()
+					: new[]
+					{
+						OwnComments[15],
+						OwnComments[16],
+						$"{FrameLimitName} {(options.FrameLimit == FramePacing.Unlimited ? FrameLimitUnlimited : FramePacing.Clamp( options.FrameLimit ).ToString( System.Globalization.CultureInfo.InvariantCulture ))}"
+					}),
 
 				// The save-folder notices already shown (Q922), each once; a line deleted is told again.
 				(ToldName, options.NoticesTold.Count == 0

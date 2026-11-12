@@ -139,6 +139,12 @@ Every platform draws with Vulkan; on macOS through MoltenVK, which ships with th
 
 **Two graphics cards (a built-in GPU and a graphics card).** OpenTPW lists the Vulkan devices in `console.log` (the `Graphics card:` lines) and draws with a discrete card in preference to a built-in one; the `GPU:` line names the one in use. To choose another, put a line in `opentpw.cfg` in the save folder in use (`save/`, or the fallback under Saves): `gpu GTX 1650` (the first card whose name holds that text), `gpu #1` (the second card of the logged list) or `gpu auto` (the default). The Options screen's Video Card row is the original's own Primary or Secondary: Primary is the card above, Secondary the next one (offered only where there is more than one card), and it is drawn on from the next start. `gpu` names a card exactly and wins over the row; that line is OpenTPW's own. On macOS the card is not chosen: MoltenVK's own is used, and the `gpu` line and the row do nothing. Two cards of one maker (an AMD built-in GPU beside a Radeon, an Intel one beside an Arc) cannot be told apart on Windows: the log warns and the first device is drawn on.
 
+**VSync and a frame limit.** Each frame waits for the display's refresh (VSync), as it always has, and the frame rate is capped
+at the monitor's refresh rate, which the first launch reads and `opentpw.cfg` keeps. To change either, edit `opentpw.cfg` in the
+save folder in use: `vsync off`, and `framelimit 30` (any number from 30 up) or `framelimit unlimited`. `console.log` names the
+settings as the game starts (`Frames:`) and the frame time it measured over the first five seconds. The Options screen has no row
+for them yet. This is OpenTPW's own: the original has no such settings.
+
 <details>
 <summary>Linux on Wayland</summary>
 
