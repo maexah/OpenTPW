@@ -286,6 +286,20 @@ counted as `GADGET_RUN_TOTAL` and hidden (Q541). This game shows the price from 
 original's total is what the tool start (`0x0052f087`, nought) and the first preview pass wrote; and it is set every frame
 where the original letters it on a change of the balance and on every third message `0x1e`. Not yet seen beside the
 original (Q1436).
+### The date's lettering, `0x20` (Q527)
+
+`Gadget_SetDateAndTrend` (`0x004a0e30`) letters the date at the same two times as it sets the arrow (above): through
+`FUN_006acca0` from UITEXT row `0x1c0` (448) into a buffer of `0x1f` bytes (the call at `0x004a0ea1`), with token 16 the
+day, 17 the month (1-based, the +1 at `0x0048156c`) and 18 the year plus 1900. Row 448 is `{17}.{16}.{18}` in the
+american tables the original reads, so month.day.year with full stops, none padded: on 10 January 2002 its gadget read
+"1.10.2002" (`q526/orig/a-2-loaded-gadget.png`). It is the row the Load Park list writes a save's date with (`saves.md`,
+"The list is the folder").
+
+**OpenTPW** (Q527): `ParkGadget.DateOf` fills the american row 448 by those three tokens from `GameCalendar.Now`, so
+"1.10.2002" on that date, written every frame where the original writes on a day's change and at set-up (the text is
+the same between them). **A deviation, said at the site:** the rest of the interface reads the English tables (Q697), so
+the Load Park list letters a date day first while the gadget letters it month first; in the original both read the
+american row. The 31-byte buffer is not modelled; no date fills it.
 
 ### The happiness gauge's two quads (Q244; fork watch 2026-10-19, verify-advisor-ui.md L3, verify-other-b.md M3)
 

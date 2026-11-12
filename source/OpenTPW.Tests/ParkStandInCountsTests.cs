@@ -8,9 +8,9 @@ using System.Runtime.CompilerServices;
 namespace OpenTPW.Tests;
 
 /// <summary>
-/// Four park-screen readouts are stand-ins for the original's, and each is counted where it is drawn (Q865, the
+/// Three park-screen readouts are stand-ins for the original's, and each is counted where it is drawn (Q865, the
 /// counting piece of Q158): the object window's scrap row
-/// (<c>FUN_004e2400</c>), the entry-price screen's park-name heading (<c>0x00498e4c</c>), the gadget's date (UITEXT 448)
+/// (<c>FUN_004e2400</c>), the entry-price screen's park-name heading (<c>0x00498e4c</c>)
 /// and the buy screen's turning model and kind row (<c>0x1ec</c>). Reads the shipped park; skipped without the game
 /// (<see cref="GameData"/>).
 /// </summary>
@@ -146,22 +146,31 @@ public class ParkStandInCountsTests
 		Assert.AreEqual( before + 1, Times( "ENTRY_PRICE_TITLE_PARK_NAME" ) );
 	}
 
-	/// <summary><b>The gadget counts its date each time it writes it</b>: once built, and again each frame.</summary>
-	/// <remarks><b>Mutations:</b> the report taken out; counted only at the build.</remarks>
+	/// <summary><b>The gadget writes its date again on a frame</b>, from UITEXT 448 (Q527): 10 January 2000 at the build,
+	/// 13 February 2000 (tick 1000) after a frame, and nothing counted for it.</summary>
+	/// <remarks><b>Mutations:</b> written only at the build; the report put back.</remarks>
 	[TestMethod]
-	public void TheGadgetCountsItsDateEachTimeItIsWritten()
+	public void TheGadgetRewritesItsDateOnAFrame()
 	{
 		var before = Times( "GADGET_DATE_UITEXT_448" );
 
-		var gadget = new ParkGadget( _stack );
-		_stack.Open( gadget );
+		try
+		{
+			GameCalendar.Rebase( 208 );
+			var gadget = new ParkGadget( _stack );
+			_stack.Open( gadget );
+			Assert.AreEqual( "1.10.2000", FindOrNull( gadget.Root, 0x20 )!.Text );
 
-		var built = Times( "GADGET_DATE_UITEXT_448" );
-		Assert.IsTrue( built > before, "written when built" );
+			GameCalendar.Rebase( 1000 );
+			_stack.Update();
 
-		_stack.Update();
-
-		Assert.IsTrue( Times( "GADGET_DATE_UITEXT_448" ) > built, "and rewritten on a frame" );
+			Assert.AreEqual( "2.13.2000", FindOrNull( gadget.Root, 0x20 )!.Text );
+			Assert.AreEqual( before, Times( "GADGET_DATE_UITEXT_448" ), "no longer a stand-in" );
+		}
+		finally
+		{
+			GameCalendar.Rebase();
+		}
 	}
 
 	/// <summary>

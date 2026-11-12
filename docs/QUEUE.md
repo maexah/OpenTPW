@@ -1516,16 +1516,6 @@ filed the items that cite it.
   draw, then letter both as the original does. Confirm by the two frames at one fee and one balance under nought.
   - **Note (play test 2026-10-21, note 25):** the ticket price box shows "20", not "$20". The original letters UITEXT
     `0x1c1` "$ " (`hud.md:3294`; QUEUE:1436).
-- [ ] **Q527. The gadget's date: the original letters it month.day.year with full stops.** From Q526
-  (`q526/side-by-side.png`): on 10 January 2002 the original's gadget reads "1.10.2002" (`orig/a-2-loaded-gadget.png`,
-  the poll's day word 10 at that moment), where ours letters .NET's short date, "1/6/2002" on 6 January
-  (`ParkGadget.ShowDate`, `ToShortDateString`, so it follows the computer's culture). Decoded (run 6 review):
-  `FUN_004a0e30` letters UITEXT row `0x1c0` (448, `{17}.{16}.{18}` in the american tables, `saves.md`, the Load Park
-  rows) into a buffer of `0x1f` (the call at `0x004a0ea1`), token 16 the day, 17 the month (1-based, the +1 at
-  `0x0048156c`) and 18 the year + 1900: month.day.year with full stops. It is redrawn on a day's change, from
-  `0x00481570` inside the day-changed block (the call at `0x004f83ac`), and once at set-up (`0x0048166f`). Ours draws `GameCalendar.Now`,
-  the date of the park's tick (Q149), so the two gadgets show one date in two letterings (`q149/side-by-side.png`). Confirm by both
-  gadgets on one date.
 - [ ] **Q1408. A loaded park's weather beside the original's, in frames.** From Q529 (built in a cloud lane with no
   display, no original and no Ghidra): `ParkWeather.RunOnFrom` takes the whole weather record and the schedule runs on
   the park calendar's instants, counted off-screen (Lost Kingdom's forecast made on 816 and delivered on 909; a park
@@ -1535,6 +1525,11 @@ filed the items that cite it.
   step) and the delivery on 17097 read in both; the compare's equality at `0x005129c5` (`FUN_005fc570`) read in Ghidra
   (said "past" in `weather.md`, unreachable at the shipped rate); and a hallow file saved in snow, loaded (the record holds
   no particle mode, so ours loads it as not snowing).
+- [ ] **Q1388. The gadget's date, both gadgets on one date.** Split from Q527, whose lettering is built
+  (`ParkGadget.DateOf`, UITEXT 448 by tokens 16, 17 and 18; `docs/exe/hud.md`, "The date's lettering"). Not
+  photographed: no display, no original in that lane. Confirm by both gadgets on one date, as `q526/side-by-side.png`
+  does: predict "1.10.2002" in both on 10 January 2002 (ours reads the american row 448 for the gadget alone). Look too at the lettering's fit in the text rect
+  (182, 1061)-(383, 1103) for the longest date, "12.31.2002", which no frame has shown.
 - [ ] **Q712. The television static on entering or leaving first person.** From the fork watch of 2026-10-19
   (verify-advisor-ui.md L4; `park-engine.md`, "Entering or leaving first person shows 300 ms of television static"),
   with Q485's first person. On either edge of the camera flags `& 0x16` (a ride's view, first person) the original's

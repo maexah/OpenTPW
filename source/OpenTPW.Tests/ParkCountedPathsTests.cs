@@ -677,9 +677,8 @@ public class ParkCountedPathsTests
 	private static void InFirstPerson( bool active )
 		=> typeof( ParkCamcorderCameraMode ).GetProperty( nameof( ParkCamcorderCameraMode.Active ) )!.SetValue( null, active );
 
-	/// <summary>What has been counted, less the gadget's date, which it counts each frame it is drawn (Q865).</summary>
-	private static string Counted() => string.Join( ", ", Unimplemented.Summary
-		.Where( entry => entry.What != "GADGET_DATE_UITEXT_448" ).Select( entry => entry.What ) );
+	/// <summary>What has been counted.</summary>
+	private static string Counted() => string.Join( ", ", Unimplemented.Summary.Select( entry => entry.What ) );
 
 	private static int Times( string what ) => Unimplemented.Summary.FirstOrDefault( entry => entry.What == what ).Times;
 
