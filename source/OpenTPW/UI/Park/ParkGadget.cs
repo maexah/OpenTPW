@@ -74,10 +74,10 @@ namespace OpenTPW.UI;
 /// <para>
 /// <b>The bank balance beside it IS built.</b> 0x2f is the lettering and 0x32 the currency icon, and the
 /// number is <see cref="ParkState.Balance"/>: the save's own <c>mBalance</c>, moved by every admission
-/// fee, charge, cost and refund - one number, as in the original (see <see cref="ShowMoney"/>). What is
-/// still out is <b>0x30</b>, the cost of whatever is
-/// in your hand, which the original starts hidden and paints yellow because an empty hand has no price.
-/// <b>0x31</b>, the trend arrow, is built (Q674; see <see cref="ShowMoney"/>). 0x30 is written out where the cluster is built.
+/// fee, charge, cost and refund - one number, as in the original (see <see cref="ShowMoney"/>), lettered in one of six
+/// colours by the thousands it holds (<see cref="BalanceColour"/>, Q403). <b>0x30</b> is the price of the item in the hand,
+/// yellow, hidden with nothing carried (<see cref="CostInHand"/>, Q403); the build tools' run total it also shows in the
+/// original is counted (Q541). <b>0x31</b>, the trend arrow, is built (Q674; see <see cref="ShowMoney"/>).
 /// </para>
 /// <para>
 /// <b>Engine and content.</b> The controls, the pointer and the help bar are engine. Which buttons a
@@ -229,6 +229,12 @@ internal sealed class ParkGadget : UiWindow
 
 	/// <summary>Whether the arrow and the icon have been logged once, so the first frames are said as well as each change.</summary>
 	private bool _moneyLogged;
+
+	/// <summary>The price in the hand, the stream's 0x30: yellow, font slot 2, started hidden (<c>FUN_004a1d70</c>).</summary>
+	private readonly UiControl _cost;
+
+	/// <summary>The band and the price last logged, so the log says each change once; -1 and <c>int.MinValue</c> before the first.</summary>
+	private (int Band, int? Cost) _costLogged = (-1, int.MinValue);
 
 	/// <summary>
 	/// The balance's own font slot - <c>FUN_004a1d70</c> gives 0x2f <c>FUN_00485a70(1)</c>, where the two
@@ -602,9 +608,20 @@ internal sealed class ParkGadget : UiWindow
 			Mesh = UiMesh.Get( "i_dollar" )
 		} );
 
-		// ONE OF THE CLUSTER IS NOT BUILT: 0x30, the price of whatever is in your hand, (458,273)-(720,363): yellow,
-		// font 2, and started HIDDEN by FUN_004a1d70, which is exactly what an empty hand should show. The hand carries
-		// things (ParkBuilding.Carry); what the original shows there is Q403's.
+		// 0x30, the price of whatever is in the hand, (458,273)-(720,363): yellow, font 2, started HIDDEN by FUN_004a1d70.
+		// ShowMoney letters it and puts its right edge at the balance's lettering's (Gadget_ShowMoney 0x004a0ab0).
+		_cost = Root.Add( new UiControl
+		{
+			Id = 0x30,
+			Rect = new UiRect( 458, 273, 720, 363 ),
+			Font = CountFont,
+			TextColour = new UiColour( 255, 255, 0 ),
+
+			// Lettered against the right edge the original moves to the balance's end: a CHOICE, as the label's own
+			// alignment is not read (docs/exe/hud.md, "The balance's colour and the price in hand").
+			TextAcross = TextAlign.End,
+			Visible = false
+		} );
 
 		// The stream's fourth root control, away in the top right corner of the screen rather than on the
 		// panel - so it is added to the window's root, not to the gadget body, and it anchors top-right on
@@ -1749,6 +1766,7 @@ internal sealed class ParkGadget : UiWindow
 		if ( level?.ParkState is not { } park || level.Park?.Economy is null )
 		{
 			_balance.Text = null;
+			_cost.Visible = false;
 			return;
 		}
 
@@ -1768,7 +1786,67 @@ internal sealed class ParkGadget : UiWindow
 				+ $"the icon's part {sign} at {balance}, the arrow at x {_trend.Rect.Left} on {GameCalendar.Now:yyyy-MM-dd}" );
 
 		(_trend.Frame, _dollar.Frame, _moneyLogged) = (trend, sign, true);
+
+		// The colour by the band (0x004a0ab0, the table at 0x00752e30), and 0x30's price, its right edge at the lettering's.
+		var band = BalanceBand( balance );
+		var cost = CostInHand( level );
+
+		_balance.TextColour = BalanceColours[band];
+		_cost.Visible = cost.HasValue;
+		_cost.Text = cost.HasValue ? $"$ {cost.Value}" : null;
+		_cost.Rect = CostPlace( _cost.Rect, _trend.Rect.Left );
+
+		if ( (band, cost) != _costLogged )
+			Log.Info( $"Gadget: the balance {balance} in band {band} {BalanceColours[band]}, the price in hand "
+				+ (cost.HasValue ? $"\"$ {cost.Value}\" at x {_cost.Rect.Left}..{_cost.Rect.Right}" : "hidden") );
+
+		_costLogged = (band, cost);
 	}
+
+	/// <summary>
+	/// The six colours the balance is lettered in, the table at <c>0x00752e30</c> (six RGBA words, alpha 255), by
+	/// <see cref="BalanceBand"/>: red at nought or below, through orange and yellow, to white above 4000.
+	/// </summary>
+	internal static readonly UiColour[] BalanceColours =
+	[
+		new( 255, 0, 0 ), new( 250, 90, 0 ), new( 255, 175, 0 ), new( 255, 200, 0 ), new( 255, 255, 150 ), UiColour.White
+	];
+
+	/// <summary>
+	/// Which of <see cref="BalanceColours"/> a balance takes: <c>(balance + 999) / 1000</c>, the division cut toward nought,
+	/// held to 0..5 (<c>Gadget_ShowMoney</c> <c>0x004a0ab0</c>). So 1 to 1000 is band 1, 4001 and above band 5, and nought
+	/// or any debt band 0.
+	/// </summary>
+	internal static int BalanceBand( int balance ) => Math.Clamp( unchecked(balance + 999) / 1000, 0, 5 );
+
+	/// <summary>
+	/// What 0x30 shows, or null where it is hidden. The original letters its run total <c>DAT_0081af4c</c> while the
+	/// interaction mode is type 3 (the carry and build-tool shell, vtable <c>0x006fe9e0</c>; 8 too while
+	/// <c>[0x0079c658] &amp; 1</c>), and the patrol tool's -9999 hides it (<c>0x004a0d38</c>..<c>0x004a0d94</c>). A carried
+	/// item's preview sets the total to the item's price (<c>FUN_005234d0</c> from <c>+0x1b8</c>), a mystery ride's to
+	/// nought (<c>0x0052360a</c>), a moved one's to its full price (<c>0x0052398b</c>). A candidate or a worker in the
+	/// hand is no type 3 mode, so it shows nothing.
+	/// </summary>
+	internal static int? CostInHand( Level? level )
+	{
+		if ( ParkBuilding.Carrying != 0 )
+		{
+			if ( level?.Catalogue is not { } catalogue || !catalogue.TryGet( ParkBuilding.Carrying, out var item ) )
+				return null;
+
+			return !ParkBuilding.CarryingMoved && GoldenTickets.IsMystery( item ) ? 0 : item.BuildPrice;
+		}
+
+		// The path, queue and track tools are the same type 3 shell, and show the run's total as their passes add it and
+		// message 0x1e clears it (Q541, unbuilt). The patrol tool writes -9999, which hides it.
+		if ( ParkBuildMode.Current is not (ParkBuildMode.None or ParkBuildMode.Patrol) )
+			Unimplemented.Report( "GADGET_RUN_TOTAL" );
+
+		return null;
+	}
+
+	/// <summary>0x30 moved so its right edge is at <paramref name="right"/>, its top and size kept (<c>Gadget_ShowMoney</c>).</summary>
+	internal static UiRect CostPlace( UiRect label, int right ) => new( right - (label.Right - label.Left), label.Top, right, label.Bottom );
 
 	/// <summary>The balance as lettered: its magnitude, <c>(x ^ s) - s</c> with <c>s</c> its sign, so the least int stays itself.</summary>
 	internal static int Unsigned( int balance )

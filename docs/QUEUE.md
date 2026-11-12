@@ -1284,17 +1284,12 @@ filed the items that cite it.
   when the receiver (the parent) is a list flagged `0x10`. A radio group's children already toggle (`UiRadioGroup`). Not heard in
   either game yet. Confirm: a heading clicked on the hire list, caught by the disk driver, beside the original.
 
-- [ ] **Q403. The balance's colour and the cost in hand.** From the fork review 2, 2026-10-16 (`verify-ui-hud.md` L5).
-  The HUD letters the balance in one of six colours (table `0x00752e30`, index (balance + 999) / 1000 clamped to 0..5:
-  red at nought or below, white over 4000), and control `0x30` shows the cost of the item in hand (`0x004a0d38`..`0x004a0d94`),
-  only for mode type 3 (no mode object returns 4; fork watch 2026-10-31, `verify-other.md` M5), and 8 when `[0x0079c658] & 1` is set (-9999 hides it, -999 resets it). The keys counter is skipped in Instant Action,
-  the tickets counter runs in every mode. Read what this game does first. Confirm: the balance at 500 and 5000 beside
-  the original.
-  - **Note (fork watch 2026-10-31, verify-other M5):** no mode object returns type 4: slot `+0x24` of the seven vtables
-    `0x006fe980`..`0x006fead0` returns 7, 3, 1, 5, 6, 8, 9, so the test at `0x004a0ce4` is dead. -9999 is written at
-    `0x00523c18` (Clear Area hover, mode `0x3a`) and `0x00523d68` (`0x36`); the tool start zeroes at `0x0052f087`. Bit 0 of
-    `[0x0079c658]` is set only at `0x00441a5d` (a scan of the writes, context only). The price from the validator
-    `0x00532303`: only the loop starts there, the store is `0x00532374`; the price itself is unproven.
+- [ ] **Q1436. The balance's colour and the price in hand, beside the original.** Q403's split piece (built in a cloud
+  container with no display, so nothing was photographed). Photograph this game's gadget with the balance held at 500 and
+  at 5000 (orange (250, 90, 0) and white predicted) and with Jurassic Tours carried from the buy list as a mystery ride
+  ("$ 0") and once bought ("$ 3000"), each beside the original on the same file. Check there: the six colours against the
+  image's table `0x00752e30` (read once, 2026-09-14), the label's alignment inside `0x30` (right-aligned here is a choice),
+  and whether the original shows the price from the carry's first frame or only after the first pointer move.
 
 - [ ] **Q419. The hire screen's candidate box is empty.** From the run review, 2026-10-16. On the same file the
   original's hire screen shows the chosen candidate's figure where this game's box is black (`q412/run-fix2/3-screen.png`

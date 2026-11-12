@@ -252,6 +252,59 @@ public class ParkBuyGoldenTicketTests
 	}
 
 	/// <summary>
+	/// <b>0x30 shows the price of the item in the hand</b> (Q403, <c>Gadget_ShowMoney</c> <c>0x004a0d38</c>..<c>0x004a0d94</c>):
+	/// nothing with the hand empty; Jurassic Tours carried as a mystery ride "$ 0" (<c>0x0052360a</c>), carried once bought
+	/// "$ 3000", moved unbought "$ 3000" (<c>0x0052398b</c>); the label's right edge at the balance's lettering's, which is
+	/// the trend arrow's left. The patrol tool hides it uncounted; the path tool's run total is counted (Q541).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the mystery's nought dropped (3000 carried); the move's full price dropped (0 moved); the
+	/// right edge left at the stream's 720; the path tool not counted.</remarks>
+	[TestMethod]
+	public void ThePriceInHandIsTheItemsAndAMysteryRidesNought()
+	{
+		var file = TwoLeft();
+		ParkFootprintPictureTests.BuyScreen();
+		SetBalance( 100000 );
+		var level = Level.Current!;
+
+		Assert.IsNull( ParkGadget.CostInHand( level ), "an empty hand" );
+
+		Assert.IsTrue( ParkBuilding.Carry( 1170, out var held ) is { } && held );
+		Assert.AreEqual( 0, ParkGadget.CostInHand( level ), "a mystery ride carried" );
+
+		file.RideIds.Add( 1170 );
+		Assert.AreEqual( 3000, ParkGadget.CostInHand( level ), "bought, it is a cash ride" );
+
+		var gadget = new ParkGadget( new WindowStack() );
+		var cost = Find( gadget.Root, 0x30 );
+		Assert.AreEqual( (true, "$ 3000"), (cost.Visible, cost.Text) );
+		Assert.AreEqual( Find( gadget.Root, 0x31 ).Rect.Left, cost.Rect.Right, "against the lettering's end" );
+		Assert.AreEqual( (262, 273, 363), (cost.Rect.Right - cost.Rect.Left, cost.Rect.Top, cost.Rect.Bottom), "its size kept" );
+
+		file.RideIds.Clear();
+		typeof( ParkBuilding ).GetProperty( nameof( ParkBuilding.CarryingMoved ) )!.SetValue( null, true );
+		Assert.AreEqual( 3000, ParkGadget.CostInHand( level ), "moved, priced in full" );
+
+		ParkHand.LetGo();
+		Assert.IsNull( ParkGadget.CostInHand( level ), "let go of" );
+
+		int RunTotals() => Unimplemented.Summary.SingleOrDefault( gap => gap.What == "GADGET_RUN_TOTAL" ).Times;
+		var before = RunTotals();
+
+		ParkBuildMode.Arm( ParkBuildMode.Patrol, 1 );
+		Assert.IsNull( ParkGadget.CostInHand( level ), "the patrol tool's -9999" );
+		Assert.AreEqual( before, RunTotals(), "and not counted" );
+
+		ParkBuildMode.Arm( ParkBuildMode.Path );
+		Assert.IsNull( ParkGadget.CostInHand( level ), "the path tool's total is not built" );
+		Assert.AreEqual( before + 1, RunTotals(), "and counted" );
+		ParkBuildMode.Disarm();
+	}
+
+	private static UiControl Find( UiControl control, int id )
+		=> control.Id == id ? control : control.Children.Select( child => Find( child, id ) ).FirstOrDefault( found => found != null )!;
+
+	/// <summary>
 	/// The click only carries the ride (<c>BuyScreen_OnMessage</c>, <c>0x004ac270</c>); the tickets are spent where it is put
 	/// down (<c>Object_Construct</c>, <c>0x004db4a6</c>): after the click the spent count and the ride ids are as they were,
 	/// a put-down that does not stand the ride spends nothing either, and <see cref="ParkBuilding.PayFor(ParkState, ParkItemCatalogue.Item, Player)"/>,
