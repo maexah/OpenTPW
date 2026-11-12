@@ -314,7 +314,7 @@ public sealed partial class ParkPeople : Entity
 			MayCrossTheRoad = MayCrossTheRoad,
 			// And who stands near a deciding guest, which only the holder of everybody's walk can say.
 			EntertainerToWatch = EntertainerToWatch,
-			BalloonBeside = BalloonBeside
+			LetGoABalloonBeside = LetGoABalloonBeside
 		};
 
 		// Staff take the balance stack alone: every constant they run on is a per-grade entry in it, and
@@ -1574,18 +1574,23 @@ public sealed partial class ParkPeople : Entity
 	}
 
 	/// <summary>
-	/// Whether another guest on (x, y) holds a balloon, for a prankster's third prank (<c>0x004ff1c8</c>..
-	/// <c>0x004ff1d9</c>: not themselves, a guest, <c>mBalloonScript</c> set).
+	/// A prankster's third prank (<c>0x004ff156</c>..<c>0x004ff1f7</c>): the cell's thing list walked from its head, and
+	/// the first thing on it that is not the prankster, is a guest and holds a balloon (<c>mBalloonScript</c>) lets it go
+	/// (<c>FUN_004fe950</c>), bursting where it was. The life is left, so the victim gets it back on leaving their next thing.
 	/// </summary>
-	private bool BalloonBeside( Peep prankster, int x, int y )
+	/// <returns>Whether a balloon was let go, the prank done.</returns>
+	private bool LetGoABalloonBeside( Peep prankster, int x, int y )
 	{
-		foreach ( var peep in _peeps )
+		for ( int thing = State.CellAt( x, y ).Occupant; thing != 0; thing = State.NextOnCell( thing ) )
 		{
-			if ( peep == prankster || peep.Balloon == null || !_walks.TryGetValue( peep.ThingId, out var walk ) )
+			if ( thing == prankster.ThingId || !_byId.TryGetValue( thing, out var victim ) || victim.Balloon == null )
 				continue;
 
-			if ( walk.Position.Cell == (x, y) )
-				return true;
+			victim.LetGoOfTheBalloon();
+			Log.Info( $"Person {prankster.ThingId}: a prank, the balloon of person {victim.ThingId} let go on ({x},{y})" );
+			TakeLetGo( victim );
+
+			return true;
 		}
 
 		return false;

@@ -1648,7 +1648,7 @@ decide, where the original's comes after it.
 | The dead end and the stamp | thought `0x11`, `+0x198` stamped, every route refused until a map edit | the same, for a guest (`PeepBehaviour.SetRandomDest`, `RefusedAsStranded`; "Q110b") | not by the stock park left alone; by a player who cuts a queue's tail off its path ("Q110") |
 | A map type write's block stamp | a fresh counter value in the cell's 16 × 16 block | the same, where a cell becomes ground, path or queue (`ParkState.SetRecord`, `ClearRecord`, `StampBlock`) | every path or queue cell laid or cleared, every sale |
 | The split's events 1 and 2 | pushed onto the guest's event ring | counted, `DECIDE_NOTHING_CHOSEN_EVENT` and `DECIDE_CHOSEN_EVENT`; no ring is kept | every choice |
-| Arms (a), (b), (c), (e), (f) | run before the split | (e)'s entertainer arm built: face him, the turn ends (`PeepBehaviour.Watch`, `ParkPeople.EntertainerToWatch`; "Q668"); the rest counted at each arm's own test (`PeepBehaviour.CountBeforeLeaving`, `CountAfterLeaving`; "Q111") | (a) above 80; (c) the Drinks Shop's litter and the bin at (44,29); (e) the entertainer, thing 27; (f) pranksters |
+| Arms (a), (b), (c), (e), (f) | run before the split | (e)'s entertainer arm built: face him, the turn ends (`PeepBehaviour.Watch`, `ParkPeople.EntertainerToWatch`; "Q668"); (f)'s balloon prank and every prank's happiness built, its litter, event and message counted (`ParkPeople.LetGoABalloonBeside`; "Q228"); the rest counted at each arm's own test (`PeepBehaviour.CountBeforeLeaving`, `CountAfterLeaving`; "Q111") | (a) above 80; (c) the Drinks Shop's litter and the bin at (44,29); (e) the entertainer, thing 27; (f) pranksters |
 | Leaving | state 6 only: happiness byte 0, `mExitLevel` exactly 0, or shut; −25 every turn it holds; (47,9)/(48,9); state `0x12` only on a route | the same (`PeepBehaviour.WantsToLeave`, `Leave`, Q109); the second pass in walking mode 1 is counted, `LEAVE_ROUTE_MODE_1_RETRY`; a guest reaching state 19 is taken out at the crossing, where the original walks them on to a bus stop (Q128) | every leaver |
 
 **Q109: when a guest leaves** is built in `PeepBehaviour.Decide` (`WantsToLeave`, `Leave`), as the listing reads
@@ -1796,6 +1796,19 @@ Then every guest set to happiness 90, litter 90 and illness 100 for 20 s, litter
 cell: 5 of 7 turns beside him. Happiness 10 and prankery 100: 5 stink bombs in 19 turns (0.26; 0.248 predicted);
 prankery 101: **18 litter pranks in 18 turns, as predicted exactly**; 102: none, nobody holding a balloon. No guest
 jumped, was sick or walked to the bin. The samples are small; the two exact readings are the zeros and the 18.
+
+**Q228: the pranks' tail and the balloon prank are built** (from (f) above and "A held balloon" 8; no Ghidra in that
+session, so no address re-read). `PeepBehaviour.CountAfterLeaving` keeps Q111's tests and, for a prank **done**, adds
+`PrankHappinessChange` (+1, the constant at `[0x00700794]` taken off, held to 0..100) and counts `DECIDE_PRANK_EVENT`
+(event `0xf`; no ring is kept) and `DECIDE_PRANK_MESSAGE` (the type-`0xe` bus message: neither receiver is built, the
+advisor's rows 125 to 127 wanting their rows' lines, group and props, which no page holds, and the guard sent from the HQ
+wanting the escort `0x004d6a50`'s arms; Q1305). Arm 102 is `ParkPeople.LetGoABalloonBeside`: the prankster's cell's
+thing list from its head (`ParkState.CellAt( x, y ).Occupant`, then `NextOnCell`), the first guest on it not the
+prankster with a balloon lets it go (`Peep.LetGoOfTheBalloon`), taken into the bursting at once, its life left; no
+holder, no prank. Arms 100 and 101 still count `DECIDE_PRANK_STINK_BOMB` and `DECIDE_PRANK_LITTER` where they would drop
+litter kind 8 (with sound `0xcf`) or 1 + r % 5 on the cell, which waits on a cell's litter (Q225; Q1304), but they are
+done: the happiness, event and message follow. `DECIDE_PRANK_BALLOON` is gone. `ParkDecidingArmsTests` holds it, and the
+off-screen run in Lost Kingdom is in Q228's "Not verified" account (`docs/STATUS.md`, then `docs/history/not-verified.md`).
 
 **In the original**, from Q107's log of the stock park taken the same day (`q107/orig/watch1.log`, 964 sweeps, 13
 guests, not run again): **one happy jump** (guest 33 at 83, state 6 to 8, `+0x208` stamped, no idle stamp, no event),
@@ -3639,8 +3652,8 @@ the park's later draws is not reproduced (`ParkGenerator`); the bob's phase coun
 per rendered frame; the two other callers of the placement are not reproduced; whether the per-frame placement runs
 while a park's menu has paused the clock is not traced; a saved balloon's first turn is one interval after the load,
 as a person's is. A balloon saved while it bursts, which no guest names any more, goes on bursting after the load on its
-saved loop stack (`ParkPeople`, `Balloon.Saved`; none of the 79 balloons in Alexah's four played saves that hold any is bursting). No prank
-and no challenge exists here to read it.
+saved loop stack (`ParkPeople`, `Balloon.Saved`; none of the 79 balloons in Alexah's four played saves that hold any is bursting). The
+prankster's let-go (8) is built since Q228 (`ParkPeople.LetGoABalloonBeside`, below); no challenge exists here to read it.
 
 ### A costume
 

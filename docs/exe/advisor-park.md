@@ -2351,8 +2351,8 @@ the visitors are misbehaving. You should hire some soon!" (`Language/american`'s
 
 A topic scored from the same `ParkFacts`, which now carry this month's kids (`ParkState.MisbehavingKids.Month`, the
 file's at a load since Q395). The guards are the kind's members rows 28 to 32 already read. The poll line ends
-` closed=N guards=N kids=N`. `ParkTags.Rows` lists row 14. Nothing here counts a kid (the chase waits on the pranks,
-`DECIDE_PRANK_*`), so in this game too the count comes from the file.
+` closed=N guards=N kids=N`. `ParkTags.Rows` lists row 14. Nothing here counts a kid (the chase waits on a prank's message
+reaching a guard, `DECIDE_PRANK_MESSAGE`, Q1305), so in this game too the count comes from the file.
 
 **The scenes** (`q413/mkkids.py`): `noguard.TPWS`, the stock park paused on tick 765 with its guard dismissed
 (`lib/pathscene.py ... 760 0 -- "fire 28"`), then the kids written with `parkfile.thing_set` (thing 5, `+73468`):

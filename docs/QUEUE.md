@@ -826,23 +826,19 @@ filed the items that cite it.
   - **Note (fork watch 2026-10-18, `verify-other-b.md` L2):** the sick are litter kind 7: record `0x0074f140`, region effect 2
     stamped first, then the sprite placed by the cell-id reseed and two draws (`ride-operation.md`, "A cell's litter"). The drop
     does nothing on a cell that already has litter, so a second sickness there leaves the first.
-- [ ] **Q228. A prankster plays no pranks.** Found by Q111, arm (f). Below happiness 15, on a draw under the
-  prankery: a stink bomb (litter type 8, sound `0xcf`) on `PeepInfo.StinkbombLikelihood` of a hundred, litter, or
-  the balloon of another guest on the cell let go; event `0xf`, a type-`0xe` bus message and happiness up one. After
-  Q225. Decode what the bus message's receivers do with it before building. Counted as
-  `DECIDE_PRANK_STINK_BOMB`, `DECIDE_PRANK_LITTER` and `DECIDE_PRANK_BALLOON`. Confirm: `need prankery 102` beside a
-  guest holding a balloon, the balloon let go; a screenshot.
-  - **Note (fork review 2, 2026-10-16, `verify-economy-guests-paths.md` L3):** the receiver: the guard sent is the
-    idle or walking one (state 0 or 1) nearest the staff HQ's own cell; `0x005099c0` never reads the prankster's cell,
-    and a tie goes to the newest hire. The HQ sits at (0, 0) in Easymode and in all five Full Simulation saves, so it
-    is the guard nearest the map's corner wherever the prank is. Not read: anything else acting on message `0xe`, the
-    escort `0x004d6a50`'s arms.
-  - **Note (fork watch 2026-10-16, `verify-advisor.md` lead B):** the advisor's half of the bus message is decoded
-    (`advisor-park.md`, "Rows settled from the bytes"): `ReceiveMessage` arm `0x0059b221` takes the guest's id and
-    packed cell and switches on the message's `+0xc` (the guest's id % 3): 0 posts advisor message `0x7d`, 1 `0x7e`, 2
-    `0x7f` (rows 125-127, getters `0x0059f360`, `0x0059f370`, `0x0059f380`, keys `PrankSbomb`, `PrankLitter` and
-    `PrankBalloon` `.Score`, 35 each, above the 25 cut). The prank done is `mPrankeryIndex` 100 + id % 3, so the
-    advice names the prank done for a guest the constructor made.
+- [ ] **Q1304. A prankster's stink bomb and litter leave nothing on the cell.** Split from Q228, which built the pranks'
+  tail (happiness up one, the event and the bus message counted) and the balloon prank. After Q225, which builds a cell's
+  litter. Build, where `DECIDE_PRANK_STINK_BOMB` and `DECIDE_PRANK_LITTER` are counted (`PeepBehaviour.CountAfterLeaving`),
+  as `ride-operation.md` says in "The state-6 turn, in order" (f) and "A cell's litter": prankery 100 drops kind 8 (region
+  effect 5 and particle effect `0x32` at the cell, kept at `+0x38`) and plays sound `0xcf` (its category not read: decode
+  `0x004ff27e`'s call first); 101 drops kind 1 + r % 5 on the turn's one draw (`0x004ff237`). Confirm: `need prankery 101`
+  and `happy 10`, the cells' litter in a census; the cloud and the dropped litter photographed.
+- [ ] **Q1305. A prank's bus message reaches nobody.** Split from Q228, which counts it as `DECIDE_PRANK_MESSAGE`. Its two
+  receivers (Q228's notes): the advisor's rows 125 to 127 (`PrankSbomb`, `PrankLitter`, `PrankBalloon`), whose lines,
+  group, props and instances no page holds yet (read them from the metadata table at `0x0076e300` first, as the other
+  built topics' rows were), and the guard sent from the staff HQ (`0x005099c0`), wanting the escort `0x004d6a50`'s arms
+  decoded. Confirm: a balloon prank in Lost Kingdom (`need prankery 102`, `happy 10`, beside a holder), the advisor's
+  line said and the guard nearest (0, 0) setting off.
 - [ ] **Q229. A member of staff put down with the pointer on them sets off on the next sweep, where the original's
   stands eleven (decoded in Q869).** Found by Q112's measurement of the original (`ride-operation.md`, "OpenTPW takes
   the arm"). The original's second 0 is most likely the hover's stop (by elimination; `FUN_00505f50` from `FUN_00486d90`;

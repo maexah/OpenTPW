@@ -1320,7 +1320,7 @@ public sealed class ParkState
 	/// The park analyser's three counts of misbehaving kids (<c>+0x21bfc</c> to <c>+0x21c04</c>): the month's two the
 	/// file's at a load and the third nought, and all three nought in a park made with no file (<c>FUN_004c58c0</c>);
 	/// <see cref="TurnTheMonth"/> zeroes the month's two. What
-	/// counts into them, a guard's chase ending (<c>FUN_004c74f0</c>), waits on the pranks (<c>DECIDE_PRANK_*</c>).
+	/// counts into them, a guard's chase ending (<c>FUN_004c74f0</c>), waits on a prank's message reaching a guard (<c>DECIDE_PRANK_MESSAGE</c>).
 	/// </summary>
 	public ParkWorld.MisbehavingKidCounts MisbehavingKids { get; private set; }
 

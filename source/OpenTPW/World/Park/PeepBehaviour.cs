@@ -1272,9 +1272,9 @@ public sealed class PeepBehaviour
 	/// orders the leaver's two cells and its remainder picks the split's arm (<c>0x004fecb4</c>).
 	/// </para>
 	/// <para>
-	/// <b>Watching an entertainer is built</b> and ends the turn (<see cref="Watch"/>). <b>The other arms before the
-	/// split are counted, not built</b>: <see cref="CountBeforeLeaving"/> and <see cref="CountAfterLeaving"/>, either
-	/// side of the leave test as the original has them.
+	/// <b>Watching an entertainer is built</b> and ends the turn (<see cref="Watch"/>), and so is a prankster's balloon
+	/// prank. <b>The other arms before the split are counted, not built</b>: <see cref="CountBeforeLeaving"/> and
+	/// <see cref="CountAfterLeaving"/>, either side of the leave test as the original has them.
 	/// </para>
 	/// </summary>
 	private void Decide( Peep peep, PeepWalk walk, int tick )
@@ -1368,6 +1368,12 @@ public sealed class PeepBehaviour
 	public const int PrankBelow = 15;
 
 	/// <summary>
+	/// What a prank done adds to the prankster's happiness: the original takes the constant -1.0 (<c>[0x00700794]</c>)
+	/// off it, a fixed amount and not a balance key.
+	/// </summary>
+	public const float PrankHappinessChange = 1f;
+
+	/// <summary>
 	/// The cell of the entertainer a deciding guest on (x, y) would watch, or none (<c>0x004fefcf</c>..<c>0x004ff051</c>):
 	/// one of the entertainers' model must stand on the nine cells around (<c>FUN_004c8eb0( 6, cell, 1 )</c>), and then
 	/// the nearest entertainer of all (<c>FUN_00500f00</c>) must be performing, its state <c>0xe</c>.
@@ -1376,10 +1382,11 @@ public sealed class PeepBehaviour
 	internal Func<int, int, (int X, int Y)?> EntertainerToWatch { get; set; } = static ( _, _ ) => null;
 
 	/// <summary>
-	/// Whether another guest on this guest's cell holds a balloon - the walk of the cell's things at
-	/// <c>0x004ff156</c>. <see cref="ParkPeople"/> hands in its own; nothing handed in is nobody.
+	/// A prankster's third prank on (x, y): the first other guest in the cell's thing list who holds a balloon lets it go
+	/// (<c>0x004ff156</c>..<c>0x004ff1f7</c>, <c>FUN_004fe950</c>), and whether there was one. <see cref="ParkPeople"/>
+	/// hands in its own; nothing handed in is nobody.
 	/// </summary>
-	internal Func<Peep, int, int, bool> BalloonBeside { get; set; } = static ( _, _, _ ) => false;
+	internal Func<Peep, int, int, bool> LetGoABalloonBeside { get; set; } = static ( _, _, _ ) => false;
 
 	/// <summary>
 	/// The deciding turn's three arms ahead of the leave test (<c>0x004fecb9</c>..<c>0x004fee51</c>), each counted
@@ -1415,13 +1422,21 @@ public sealed class PeepBehaviour
 	/// <summary>
 	/// The deciding turn's two arms between the leave test and the split (<c>0x004fef19</c>..<c>0x004ff3ae</c>):
 	/// watching fireworks, counted, or an entertainer, built (<see cref="Watch"/>), and a prankster's three pranks by
-	/// <see cref="Peep.PrankeryIndex"/>, on the turn's one draw, each counted where the original tests it.
+	/// <see cref="Peep.PrankeryIndex"/>, on the turn's one draw (<c>docs/exe/ride-operation.md</c>, "The state-6 turn,
+	/// in order" (f)).
 	/// </summary>
 	/// <remarks>
 	/// Watching fireworks ends the original's turn; here it is counted and the turn goes on to the pranks and the split,
 	/// without asking the entertainer (dead by content: no Lost Kingdom item sets <c>IsFireworks</c>). The fireworks'
-	/// script variable 0 is not read. A prank whose own test fails (the stink bomb's roll, no balloon on the cell) does
-	/// nothing in the original and counts nothing here.
+	/// script variable 0 is not read.
+	/// <para>
+	/// <b>The balloon prank (102) is built</b>: another guest's balloon let go (<see cref="LetGoABalloonBeside"/>). The
+	/// stink bomb (100, litter kind 8 and sound <c>0xcf</c>) and the litter (101, kind 1 + r % 5) are counted where they
+	/// would drop litter on the cell, which waits on a cell's litter (Q225), and are still done. <b>A prank done adds one
+	/// to happiness</b> (<see cref="PrankHappinessChange"/>, held to 0..100); its event <c>0xf</c> is counted (this
+	/// project keeps no event ring) and its bus message <c>0xe</c> too: neither receiver is built, the advisor's rows 125
+	/// to 127 nor the guard sent from the staff HQ. A prank not done (the bomb's roll, no balloon on the cell) does nothing.
+	/// </para>
 	/// </remarks>
 	/// <returns>Whether the turn ends here, the guest watching an entertainer.</returns>
 	private bool CountAfterLeaving( Peep peep, PeepWalk walk, ParkAdmission admission, int draw )
@@ -1437,25 +1452,37 @@ public sealed class PeepBehaviour
 		if ( (byte)(int)peep.Happiness >= PrankBelow || draw % 101 >= (byte)peep.PrankeryIndex )
 			return false;
 
+		var done = false;
+
 		switch ( (byte)peep.PrankeryIndex )
 		{
 			case 100:
 				if ( draw % 100 < admission.StinkbombLikelihood )
+				{
 					Unimplemented.Report( "DECIDE_PRANK_STINK_BOMB" );
+					done = true;
+				}
 
 				break;
 
 			case 101:
 				Unimplemented.Report( "DECIDE_PRANK_LITTER" );
+				done = true;
 
 				break;
 
 			case 102:
-				if ( BalloonBeside( peep, x, y ) )
-					Unimplemented.Report( "DECIDE_PRANK_BALLOON" );
+				done = LetGoABalloonBeside( peep, x, y );
 
 				break;
 		}
+
+		if ( !done )
+			return false;
+
+		Unimplemented.Report( "DECIDE_PRANK_EVENT" );
+		Unimplemented.Report( "DECIDE_PRANK_MESSAGE" );
+		peep.Happiness = Peep.Change( peep.Happiness, PrankHappinessChange );
 
 		return false;
 	}
