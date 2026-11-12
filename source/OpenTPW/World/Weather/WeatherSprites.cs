@@ -14,6 +14,9 @@ namespace OpenTPW;
 /// </summary>
 public abstract class WeatherSprites : ModelEntity
 {
+	/// <summary>The weather's material: depth tested, not written, added, and two-sided as the original's.</summary>
+	internal const MaterialFlags DrawFlags = MaterialFlags.DisableDepthWrite | MaterialFlags.Additive | MaterialFlags.DisableCulling;
+
 	[StructLayout( LayoutKind.Sequential )]
 	protected struct ObjectUniformBuffer
 	{
@@ -137,10 +140,9 @@ public abstract class WeatherSprites : ModelEntity
 
 		// Depth-tested so weather sits behind the islands properly, but not depth-writing:
 		// these are transparent and drawn in whatever order the pool happens to be in, so
-		// letting them occlude each other would show as sprite-shaped holes. Culled, where the original draws weather
-		// both-sided (render-states.md, "Which draws the test covers"; Q613); its quads face the camera, so none is lost.
-		var material = new Material<ObjectUniformBuffer>( "content/shaders/weather.shader",
-			MaterialFlags.DisableDepthWrite | MaterialFlags.Additive );
+		// letting them occlude each other would show as sprite-shaped holes. Both sides drawn, as the original's
+		// Batch_AddPolygon draws weather with no face test (render-states.md, "Which draws the test covers").
+		var material = new Material<ObjectUniformBuffer>( "content/shaders/weather.shader", DrawFlags );
 
 		_texture = LoadTexture( _texturePath );
 		material.Set( "Color", _texture );

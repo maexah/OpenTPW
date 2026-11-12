@@ -422,8 +422,9 @@ public sealed class ParkBuildMarkers : ModelEntity
 		if ( !Lay( strip, carried, patrol, stranded, field ) )
 			return;
 
-		// Both faces drawn, where the original culls (render-states.md, "Which draws the test covers"; Q613).
-		var material = new Material<ObjectUniformBuffer>( "content/shaders/test.shader", MaterialFlags.DisableCulling );
+		// Culled as the original's BlueprintMesh is, a model of the model lists (render-states.md, "Which draws the test covers"):
+		// a square's upper side kept, a wall's both (Elements).
+		var material = new Material<ObjectUniformBuffer>( "content/shaders/test.shader", DrawFlags );
 		material.Set( "Color", _textures );
 
 		TranslucentModel = new Model( _vertices, _elements, material );
@@ -498,19 +499,7 @@ public sealed class ParkBuildMarkers : ModelEntity
 		if ( Fill( field ) == 0 )
 			return false;
 
-		_elements = new uint[ElementCount( _strip.Count, _walls.Count )];
-		var element = 0;
-
-		for ( var corner = 0u; corner < _vertices.Length; corner += 4 )
-		{
-			_elements[element++] = corner;
-			_elements[element++] = corner + 1;
-			_elements[element++] = corner + 2;
-
-			_elements[element++] = corner;
-			_elements[element++] = corner + 2;
-			_elements[element++] = corner + 3;
-		}
+		_elements = Elements( _strip.Count, _walls.Count );
 
 		return true;
 	}
@@ -524,8 +513,56 @@ public sealed class ParkBuildMarkers : ModelEntity
 	/// <summary>Four corners to every square and wall.</summary>
 	internal static int VertexCount( int squares, int walls ) => (squares + walls) * 4;
 
-	/// <summary>Six indices to every square and wall: two triangles over its four corners.</summary>
-	internal static int ElementCount( int squares, int walls ) => (squares + walls) * 6;
+	/// <summary>Six indices to every square, two triangles over its four corners, and twelve to every wall, its two sides.</summary>
+	internal static int ElementCount( int squares, int walls ) => (squares * 6) + (walls * 12);
+
+	/// <summary>The markers' material: culled, as the original's <c>BlueprintMesh</c> is.</summary>
+	internal const MaterialFlags DrawFlags = MaterialFlags.None;
+
+	/// <summary>
+	/// The index list over the squares' corners and then the walls' (<see cref="Fill"/>'s order). A square's two triangles
+	/// turn clockwise seen from above, so the culled pipeline keeps its upper side, as the original keeps it. A wall is laid
+	/// both ways round, so both its sides are drawn: which side the original's face test keeps depends on the order
+	/// <c>FUN_0053df30</c> writes a wall's corners into its faces, not read (Q1621). A deviation while that is open.
+	/// </summary>
+	internal static uint[] Elements( int squares, int walls )
+	{
+		var elements = new uint[ElementCount( squares, walls )];
+		var element = 0;
+		var corner = 0u;
+
+		for ( var square = 0; square < squares; ++square, corner += 4 )
+			element = Clockwise( elements, element, corner );
+
+		for ( var wall = 0; wall < walls; ++wall, corner += 4 )
+		{
+			element = Clockwise( elements, element, corner );
+
+			elements[element++] = corner;
+			elements[element++] = corner + 1;
+			elements[element++] = corner + 2;
+
+			elements[element++] = corner;
+			elements[element++] = corner + 2;
+			elements[element++] = corner + 3;
+		}
+
+		return elements;
+	}
+
+	/// <summary>A quad's two triangles over its corners 0 to 3, (0, 2, 1) and (0, 3, 2): clockwise seen from above a square laid (x, y), (x + 1, y), (x + 1, y + 1), (x, y + 1).</summary>
+	private static int Clockwise( uint[] elements, int element, uint corner )
+	{
+		elements[element++] = corner;
+		elements[element++] = corner + 2;
+		elements[element++] = corner + 1;
+
+		elements[element++] = corner;
+		elements[element++] = corner + 3;
+		elements[element++] = corner + 2;
+
+		return element;
+	}
 
 	/// <summary>Lays the four corners of every square and wall at the wave's current height; answers how many were laid.</summary>
 	private int Fill( HeightfieldFile field )

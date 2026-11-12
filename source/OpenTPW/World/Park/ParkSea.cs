@@ -127,8 +127,9 @@ public sealed class ParkSea : ModelEntity
 
 		var elements = Elements( _vertices.Length / 4 );
 
-		// Both faces drawn, where the original culls (render-states.md, "Which draws the test covers"; Q613).
-		var material = new Material<ObjectUniformBuffer>( "content/shaders/test.shader", MaterialFlags.DisableCulling );
+		// Culled as the original's WaterMesh is, a model of the model lists (render-states.md, "Which draws the test covers"):
+		// the quilt's faces, laid as FUN_0053e530 lays them (Elements), turn clockwise seen from above, so the upper side is kept.
+		var material = new Material<ObjectUniformBuffer>( "content/shaders/test.shader", DrawFlags );
 		material.Set( "Color", textures );
 
 		TranslucentModel = new Model( _vertices, elements, material );
@@ -166,6 +167,9 @@ public sealed class ParkSea : ModelEntity
 
 		return new ParkSea( balance.Vector( "WaterStartPos", Vector3.Zero ), SmallTextures( textureQuality ), new Random() );
 	}
+
+	/// <summary>The sea's material: culled, as the original's <c>WaterMesh</c> is.</summary>
+	internal const MaterialFlags DrawFlags = MaterialFlags.None;
 
 	/// <summary>
 	/// The triangles of <paramref name="quads"/> quads: <c>FUN_0053e530</c> writes each of the sea's faces as (2, 1, 0)

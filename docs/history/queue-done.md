@@ -12145,6 +12145,24 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q613. Cull what the original culls (Q608's build).** From Q608 (`render-states.md`, "Which draws the test
+  covers"). Take `DisableCulling` off `UiMesh`, `ParkGround`, `ParkPaths`, `ParkSea` and `ParkBuildMarkers`, keeping the
+  side the original keeps: for the UI, a face clockwise in the file's (x, y), y up (`lib/uiwinding.py` names the 422
+  faces that go); for the sheets, the upper side, whatever their winding here. Put `DisableCulling` on `WeatherSprites`,
+  two-sided in the original (`Batch_AddPolygon`), though its quads face the camera. Confirm on Lost Kingdom's island
+  panel (`original/lobbypanel.sh`, `q608/confirm.py`): the "1" of "x 1" with no inner edge, as `q608/orig/run-a/a-08.png`,
+  and the ground, paths, sea and markers unchanged from above (a before/after pair, `VERIFYING.md` rule 90).
+  - **Note (fork watch 2026-10-21, verify-audio-ui M2):** the object window's preview is culled in both. The original puts it
+    in render list 1 with diag(1, -1, 1, 1) (flag `0x200`, `0x0045bed0`; `0x0057a260`), its entries carry `0x2000000`
+    (`0x0057a890`) and take `ClipToScreen` mode 2 (`ui.md`) after the same face test as every model. Ours is a `LobbyModel`
+    (`ParkObjectPreview.cs:250`), culled since Q586, and by orientation keeps the same side; not photographed. Settle it with
+    a preview beside the original's, a ride window's asymmetric `P` model (Lost Kingdom's `Pcoaster1` or `Pspider`). The
+    advisor is the same path (`0x00468dc1`, `0x00468ded`).
+  - **Built (cloud lane c117, 2026-11-12):** the five sheets and the UI culled, the weather both-sided; the ground's,
+    paths' and markers' squares' triangles wound clockwise from above (`ParkGround.PutCellElements`,
+    `ParkBuildMarkers.Elements`), the sea's already so; a marker's wall laid both ways round (Q1621).
+    `SheetAndInterfaceCullingTests`: the UI drops 422 faces, as `uiwinding.py`. Off-screen frames before and after match
+    but for what moves. The photographs beside the original split off as Q1620, the preview's with them.
 
 ## B. Docs and comments
 

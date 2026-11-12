@@ -22,7 +22,7 @@ public enum MaterialFlags
 	Additive = 4,
 
 	/// <summary>
-	/// Draws both faces: the sky, which the camera sits inside, and what is drawn outside the original's model path.
+	/// Draws both faces: what the original draws with no face test, the sky, people, particles and weather.
 	/// A model's faces are culled (<see cref="LobbyModel.DrawFlags"/>), as the original culls them itself.
 	/// </summary>
 	DisableCulling = 8,
@@ -472,6 +472,19 @@ public partial class Material : Asset
 
 	/// <summary>The winding kept: clockwise on the screen, the original's (<c>Face_KeptByWinding</c>) in this engine's axes.</summary>
 	internal const FrontFace KeptWinding = FrontFace.Clockwise;
+
+	/// <summary>
+	/// Whether a culling pipeline keeps a face whose corners stand at these clip-space points (y up), in front of the eye:
+	/// those that turn clockwise once divided to the screen, <see cref="KeptWinding"/>.
+	/// </summary>
+	internal static bool Keeps( System.Numerics.Vector4 a, System.Numerics.Vector4 b, System.Numerics.Vector4 c )
+	{
+		var (ax, ay) = (a.X / a.W, a.Y / a.W);
+		var (bx, by) = (b.X / b.W, b.Y / b.W);
+		var (cx, cy) = (c.X / c.W, c.Y / c.W);
+
+		return ((bx - ax) * (cy - ay)) - ((by - ay) * (cx - ax)) < 0f;
+	}
 
 	/// <summary>The depth and stencil description a material's pipeline is built with: what <see cref="SetupResources"/> uses.</summary>
 	internal static DepthStencilStateDescription DepthStateFor( MaterialFlags flags )

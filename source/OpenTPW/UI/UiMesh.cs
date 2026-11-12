@@ -126,6 +126,33 @@ internal sealed class UiMesh
 	}
 
 	/// <summary>
+	/// The matrix a part is drawn through. The meshes are y-up with the top of the screen at zero; the window is y-down in
+	/// pixels, and clip space is y-up again. One matrix takes a vertex straight from the file to clip space: its bounds onto
+	/// the rectangle, the rectangle onto the window. Both scales are positive, so a face turns on the screen as it turns in
+	/// the file's (x, y), y up, and the culled pipeline keeps a face clockwise there, as the original's face test does
+	/// (<c>render-states.md</c>, "Which draws the test covers").
+	/// </summary>
+	internal static Matrix4x4 ToScreen( PixelRect pixels, (float Left, float Right, float Bottom, float Top) bounds, float screenWidth, float screenHeight )
+	{
+		var scaleX = pixels.Width / MathF.Max( bounds.Right - bounds.Left, 0.001f );
+		var scaleY = pixels.Height / MathF.Max( bounds.Top - bounds.Bottom, 0.001f );
+
+		var acrossScale = 2f * scaleX / screenWidth;
+		var acrossOffset = (2f * (pixels.X - (bounds.Left * scaleX)) / screenWidth) - 1f;
+		var upScale = 2f * scaleY / screenHeight;
+		var upOffset = 1f - (2f * (pixels.Y + (bounds.Top * scaleY)) / screenHeight);
+
+		return new Matrix4x4(
+			acrossScale, 0f, 0f, 0f,
+			0f, upScale, 0f, 0f,
+			0f, 0f, 0f, 0f,
+			acrossOffset, upOffset, 0.5f, 1f );
+	}
+
+	/// <summary>A part's material: drawn over everything, with no depth, and culled, as the original's face test culls a UI mesh.</summary>
+	internal const MaterialFlags DrawFlags = MaterialFlags.DisableDepth;
+
+	/// <summary>
 	/// What a draw hands the shader: the part's matrix onto the screen, lit by nothing but a flat 1 so every texel is its
 	/// texture's own colour, and its texture moved across by <paramref name="scrollAcross"/> repeats (nought for all but a
 	/// research pump's run; <c>test.shader</c>).
@@ -196,10 +223,8 @@ internal sealed class UiMesh
 			// that reaches past it, to repeat it, wraps.
 			var withinTexture = mesh.TexCoords.All( uv => uv.X >= -0.001f && uv.X <= 1.001f && uv.Y >= -0.001f && uv.Y <= 1.001f );
 
-			// Both faces drawn, where the original keeps a clockwise face only (render-states.md, "Which draws the test
-			// covers"; Q613).
-			var shading = new Material<ObjectUniformBuffer>( "content/shaders/test.shader",
-				MaterialFlags.DisableDepth | MaterialFlags.DisableCulling );
+			// A face clockwise in the file's (x, y) kept, the rest culled (ToScreen).
+			var shading = new Material<ObjectUniformBuffer>( "content/shaders/test.shader", DrawFlags );
 			shading.Set( "Color", textures, withinTexture ? SamplerType.Anisotropic : SamplerType.AnisotropicWrap );
 
 			_model = new Model( _vertices, mesh.Indices, shading );
@@ -252,22 +277,7 @@ internal sealed class UiMesh
 			if ( _vertices.Length == 0 )
 				return;
 
-			// The meshes are y-up with the top of the screen at zero; the window is y-down in pixels,
-			// and clip space is y-up again. One matrix takes a vertex straight from the file to clip
-			// space: its bounds onto the rectangle, the rectangle onto the window.
-			var scaleX = pixels.Width / MathF.Max( _right - _left, 0.001f );
-			var scaleY = pixels.Height / MathF.Max( _top - _bottom, 0.001f );
-
-			var acrossScale = 2f * scaleX / Screen.Width;
-			var acrossOffset = (2f * (pixels.X - (_left * scaleX)) / Screen.Width) - 1f;
-			var upScale = 2f * scaleY / Screen.Height;
-			var upOffset = 1f - (2f * (pixels.Y + (_top * scaleY)) / Screen.Height);
-
-			var toScreen = new Matrix4x4(
-				acrossScale, 0f, 0f, 0f,
-				0f, upScale, 0f, 0f,
-				0f, 0f, 0f, 0f,
-				acrossOffset, upOffset, 0.5f, 1f );
+			var toScreen = ToScreen( pixels, (_left, _right, _bottom, _top), Screen.Width, Screen.Height );
 
 			// Through the frame, as one part is drawn for every control that wears it - see Material.SetInFrame.
 			_model.Material.SetInFrame( "g_oUbo", Uniforms( toScreen, opacity, scrollAcross ) );

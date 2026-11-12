@@ -26,7 +26,7 @@ public class ParkCellDiagonalTests
 	/// <summary>
 	/// <b>A cell with <c>0x0002</c> is cut from its near corner to its far one, and one without from its along-x corner to its along-y
 	/// one</b>, whatever else the word carries (the mirror <c>0x40</c>, a turn <c>0x20</c>, the path cell's <c>0x80</c>), and both
-	/// triangles face the same way.
+	/// triangles turn clockwise seen from above (the side the culled pipeline keeps, Q613).
 	/// </summary>
 	/// <remarks><b>Mutations:</b> the flag test inverted; <c>== 0x2</c> for <c>&amp; 0x2</c> (fails on 0x42 and 0x62); <c>0x4</c> read for
 	/// <c>0x2</c>; the second triangle of the other diagonal wound the other way.</remarks>
@@ -34,10 +34,10 @@ public class ParkCellDiagonalTests
 	public void ACellIsCutOnTheDiagonalItsFlagNames()
 	{
 		foreach ( var flags in new ushort[] { 0x02, 0x42, 0x62, 0x82, 0x06 } )
-			CollectionAssert.AreEqual( new uint[] { 0, 1, 2, 0, 2, 3 }, ElementsFor( flags ), $"0x{flags:x}" );
+			CollectionAssert.AreEqual( new uint[] { 0, 2, 1, 0, 3, 2 }, ElementsFor( flags ), $"0x{flags:x}" );
 
 		foreach ( var flags in new ushort[] { 0x04, 0x44, 0x64, 0x84, 0x00 } )
-			CollectionAssert.AreEqual( new uint[] { 0, 1, 3, 1, 2, 3 }, ElementsFor( flags ), $"0x{flags:x}" );
+			CollectionAssert.AreEqual( new uint[] { 0, 3, 1, 1, 3, 2 }, ElementsFor( flags ), $"0x{flags:x}" );
 
 		foreach ( var flags in new ushort[] { 0x02, 0x04 } )
 		{
@@ -49,7 +49,7 @@ public class ParkCellDiagonalTests
 				var b = Corners[elements[triangle + 1]];
 				var c = Corners[elements[triangle + 2]];
 
-				Assert.IsTrue( ((b.X - a.X) * (c.Y - a.Y)) - ((b.Y - a.Y) * (c.X - a.X)) > 0f, $"0x{flags:x} triangle {triangle / 3} winds the other way" );
+				Assert.IsTrue( ((b.X - a.X) * (c.Y - a.Y)) - ((b.Y - a.Y) * (c.X - a.X)) < 0f, $"0x{flags:x} triangle {triangle / 3} winds the other way" );
 			}
 		}
 	}
@@ -65,15 +65,15 @@ public class ParkCellDiagonalTests
 		try
 		{
 			ParkGround.CutByFlag = false;
-			CollectionAssert.AreEqual( new uint[] { 0, 1, 2, 0, 2, 3 }, ElementsFor( 0x44 ) );
-			CollectionAssert.AreEqual( new uint[] { 0, 1, 2, 0, 2, 3 }, ElementsFor( 0x42 ) );
+			CollectionAssert.AreEqual( new uint[] { 0, 2, 1, 0, 3, 2 }, ElementsFor( 0x44 ) );
+			CollectionAssert.AreEqual( new uint[] { 0, 2, 1, 0, 3, 2 }, ElementsFor( 0x42 ) );
 		}
 		finally
 		{
 			ParkGround.CutByFlag = true;
 		}
 
-		CollectionAssert.AreEqual( new uint[] { 0, 1, 3, 1, 2, 3 }, ElementsFor( 0x44 ) );
+		CollectionAssert.AreEqual( new uint[] { 0, 3, 1, 1, 3, 2 }, ElementsFor( 0x44 ) );
 	}
 
 	/// <summary>The element offset is advanced by six and the vertices named are the cell's own, whatever corner they start at.</summary>
@@ -84,7 +84,7 @@ public class ParkCellDiagonalTests
 		var next = ParkGround.PutCellElements( elements, 6, 8, 0x04 );
 
 		Assert.AreEqual( 12, next );
-		CollectionAssert.AreEqual( new uint[] { 8, 9, 11, 9, 10, 11 }, elements[6..12] );
+		CollectionAssert.AreEqual( new uint[] { 8, 11, 9, 9, 11, 10 }, elements[6..12] );
 		Assert.AreEqual( 0u, elements[0] );
 		Assert.AreEqual( 0u, elements[12] );
 	}

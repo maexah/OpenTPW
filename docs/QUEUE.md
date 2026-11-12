@@ -463,19 +463,17 @@ filed the items that cite it.
   the original's bus voice stood at (529, 64) and (439, 65) (`q561/side-by-side.png`). Left: the original's bus
   photographed at both stops at one camera beside ours (`q583/confirm.py ... bus`, camera 485,45 zoom 130), and its
   matrix there read from its memory, its nose against ours (-1.00, 0.00, 0.04) and (-1.00, -0.00, -0.04).
-- [ ] **Q613. Cull what the original culls (Q608's build).** From Q608 (`render-states.md`, "Which draws the test
-  covers"). Take `DisableCulling` off `UiMesh`, `ParkGround`, `ParkPaths`, `ParkSea` and `ParkBuildMarkers`, keeping the
-  side the original keeps: for the UI, a face clockwise in the file's (x, y), y up (`lib/uiwinding.py` names the 422
-  faces that go); for the sheets, the upper side, whatever their winding here. Put `DisableCulling` on `WeatherSprites`,
-  two-sided in the original (`Batch_AddPolygon`), though its quads face the camera. Confirm on Lost Kingdom's island
-  panel (`original/lobbypanel.sh`, `q608/confirm.py`): the "1" of "x 1" with no inner edge, as `q608/orig/run-a/a-08.png`,
-  and the ground, paths, sea and markers unchanged from above (a before/after pair, `VERIFYING.md` rule 90).
-  - **Note (fork watch 2026-10-21, verify-audio-ui M2):** the object window's preview is culled in both. The original puts it
-    in render list 1 with diag(1, -1, 1, 1) (flag `0x200`, `0x0045bed0`; `0x0057a260`), its entries carry `0x2000000`
-    (`0x0057a890`) and take `ClipToScreen` mode 2 (`ui.md`) after the same face test as every model. Ours is a `LobbyModel`
-    (`ParkObjectPreview.cs:250`), culled since Q586, and by orientation keeps the same side; not photographed. Settle it with
-    a preview beside the original's, a ride window's asymmetric `P` model (Lost Kingdom's `Pcoaster1` or `Pspider`). The
-    advisor is the same path (`0x00468dc1`, `0x00468ded`).
+- [ ] **Q1620. Q613's culling photographed beside the original (desk lane).** From Q613, built in a cloud container that
+  could not photograph or run the original. Confirm on Lost Kingdom's island panel (`original/lobbypanel.sh`,
+  `q608/confirm.py`): the "1" of "x 1" with no inner edge, as `q608/orig/run-a/a-08.png`; the ground, paths, sea and build
+  markers (a blue square, and the red lifted square and walls over the Belly Bounce, (53,23), path tool) unchanged from
+  above, a before/after pair (`VERIFYING.md` rule 90); and the note under Q613: the object window's preview (`Pcoaster1`
+  or `Pspider`) beside the original's.
+- [ ] **Q1621. Which side of a build marker's wall the original keeps.** From Q613. The original culls `BlueprintMesh`
+  whole, walls too; ours lays a wall both ways round (`ParkBuildMarkers.Elements`), so both sides draw, a deviation said
+  at the site. Read in Ghidra the order `FUN_0053df30` writes a wall's four corners into its two faces (and a square's,
+  whose upper side is kept), work out which side `Face_KeptByWinding` keeps, write it to `park-engine.md`, "The walls",
+  and lay the wall that way only; confirm the red lifted square's walls over (53,23) beside the original's.
 - [ ] **Q614. The island panel's "x N" is drawn larger than the original's.** Seen in Q608 (`q608/PREDICTION.txt`, "Seen,
   not predicted"; `goldspan.py`): beside a key of the same size (the original's 432 units wide, ours 433), the original's
   "1" stands 118 units high and its "x" 126 wide, ours 254 and 177 (`q608/orig/run-a/a-08.png`, `q608/run1/panel-1.png`).
