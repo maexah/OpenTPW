@@ -472,4 +472,57 @@ public class ParkCoasterPylonsTests
 		StringAssert.Contains( File.ReadAllText( Path.Join( root, "World", "Level.cs" ) ), "new ParkCoasterPylons(" );
 		StringAssert.Contains( File.ReadAllText( Path.Join( root, "Client", "Diagnostics", "DebugConsole.cs" ) ), "case \"pylons\":" );
 	}
+
+	/// <summary>
+	/// <b>A coaster made here stands its station's two pylons and nothing else</b> (<c>Coaster_Create</c>, <c>0x004368f0</c>, makes the
+	/// station's nodes alone; Q951), on the cells under its own station: put where her Temple Of Gloom stands, (19,34) turned 0, they are
+	/// her two, (18,35) and (23,35) at the loft 0.0227; put ten cells east, (28,35) and (33,35) at the same loft.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> a made-here coaster given the save's pieces or none of its station's; the station cells taken from the old place.</remarks>
+	[TestMethod]
+	public void ACoasterMadeHereStandsItsStationsTwoPylonsUnderItsOwnStation()
+	{
+		var data = GameData.Required();
+		var catalogue = new ParkItemCatalogue( "jungle", data );
+		var field = JungleGround( data );
+
+		// The shipped park with a saved coaster of 38 pieces in it, which a coaster made here must not take.
+		using var stream = new MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
+		var save = new ParkWorld( TrackBytes.WithCoasters( new SaveReader( stream ).ReadFile(), TrackBytes.CoastersModule( 1, 0x101, 330, 0 ) ) );
+
+		Assert.AreEqual( 38, save.Coasters.FirstPieces.Count );
+		Assert.IsTrue( catalogue.TryGet( 1180, out var gloom ) );
+
+		List<ParkCoasterHeights.PylonPlace> At( int x, int y )
+		{
+			var placed = ParkBuilding.Constructed( gloom, 300, x, y, 0, 0, 0, default );
+
+			Assert.AreEqual( 0, placed.MeshInstance, "a coaster made here carries no model instance" );
+
+			return ParkCoasterPylons.PlacesFor( save, placed, gloom, field, data, out _ )!;
+		}
+
+		var there = At( 19, 34 );
+		var east = At( 29, 34 );
+
+		CollectionAssert.AreEqual( new[] { "station 1", "station 3" }, there.Select( place => place.Which ).ToArray() );
+		CollectionAssert.AreEqual( new[] { (18, 35), (23, 35) }, there.Select( place => (place.CellX, place.CellY) ).ToArray() );
+		CollectionAssert.AreEqual( new[] { (28, 35), (33, 35) }, east.Select( place => (place.CellX, place.CellY) ).ToArray() );
+		Assert.AreEqual( 0.0227f, there[0].Loft, 0.0005f );
+		Assert.AreEqual( there[0].Loft, east[0].Loft, 1e-4f );
+	}
+
+	/// <summary>A sale takes down the sold coaster's pylons, each once, and leaves every other coaster's standing.</summary>
+	/// <remarks><b>Mutations:</b> another thing's pylons taken; one of its own left; the count of the list left answered.</remarks>
+	[TestMethod]
+	public void ASaleTakesDownTheSoldThingsPylonsAndNoOthers()
+	{
+		var standing = new List<(int Thing, string Which)> { (236, "station 1"), (99, "station 1"), (236, "station 3"), (236, "piece 1"), (99, "piece 1") };
+		var down = new List<string>();
+
+		Assert.AreEqual( 3, ParkCoasterPylons.TakeDown( standing, 236, each => each.Thing, each => down.Add( each.Which ) ) );
+		CollectionAssert.AreEqual( new[] { "station 1", "station 3", "piece 1" }, down );
+		CollectionAssert.AreEqual( new[] { (99, "station 1"), (99, "piece 1") }, standing );
+		Assert.AreEqual( 0, ParkCoasterPylons.TakeDown( standing, 236, each => each.Thing, each => down.Add( each.Which ) ) );
+	}
 }

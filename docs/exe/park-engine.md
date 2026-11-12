@@ -627,6 +627,28 @@ composed (both clips turn that node, which no mesh hangs from: the later replace
 **Measured in OpenTPW** (Q817, Alexah's New Save, a copy; the final binary): `pylons` lists 40, each knot drawn where `ParkCoasterHeights.OnPylon` puts it (off 0.0000),
 each floor 4 listed and 4 on a corner (160 conformed vertices), `mc_bridge` hidden on all 40; the two at cells (29, 35) and (32, 35) (loft 1) stand 100 up.
 
+**A sold coaster's pylons** (Q951, 2026-11-12, decoded in a private copy of the Ghidra project and the disassembly; no run of the
+original was made for it). **A sale destroys the coaster and every pylon on it, and a coaster put down has its station's two and no track.** The demolisher's
+`Thing_Delete` (`0x0050b780`) queues the object, and the thing sweep (`FUN_00516380`, every eighth 31 ms tick) runs its destructor
+`FUN_004dd0a0`, which ends in `FUN_0050b980`. For a placed object (model byte 3) that calls `Instance_Destroy` (`0x00463c80`, the log's
+"Cannot find a ride to destroy") on the object's instance (`+0x20`), and it calls `Coaster_Destroy` (`0x00436fa0`) before it frees the
+instance. `Coaster_Destroy` looks on `[0x00790fe0]` for the coaster whose `+0x10` is that instance (any other object has none), destroys
+the instances its `+0x128` records hold, frees the list at `+0x38` (`FUN_0043eac0`) and the cells (`Coaster_FreeCells`, `0x0043eaf0`),
+and unlinks it. `Coaster_FreeCells` walks the coaster's cells (`+0x4c`, next `+0x28`). On a cell whose `+4` lacks `0x1`, every node of its
+stack (`+0x30` of them at `+0x34`) goes through `Coaster_FreeNode` (`0x00434570`) when the cell's pylon type's flag byte holds `0x4`
+(`StdPylon`'s `0x5ed` does), and the map cell is cleared (`Coaster_ClearMapCell`, `0x00452ca0`: `Cell_Clear`, `Track_ClearCell`). A cell
+with `0x1` (the cell-less station node's, made `0x13` at `0x00436c41`) has its first node's meshes freed alone (`FUN_00433240`).
+`Coaster_FreeNode` destroys the node's pylon instance (`+0x70`, `Instance_Destroy`), frees its meshes, then the node. The station's two
+pylon cells are made `0x12` (`0x00436bad`) and a piece's is stood at a load, which passes over `0x1`, so all of a coaster's pylons go:
+her Temple Of Gloom's 40. **A move is the sale and then a purchase** ("Moving a thing"). The put-down's `Model_MakeAndStampFootprint`
+calls `Coaster_Create` (`0x004368f0`, at `0x00463897`), which, not loading, makes the station's nodes (`Coaster_MakeStationNodes` at
+`0x00436a89`) and their two pylons, nodes 0 and 2, and nothing of the old track. A moved coaster stands on its station's two pylons.
+
+**OpenTPW** (Q951): the sale takes the coaster's pylons down (`ParkBuilding`'s `Demolish`, `ParkCoasterPylons.TakeDown`), and a
+coaster's purchase, a move's put-down included, stands its station's two (`ParkCoasterPylons.StandBought`, set up from the item's own
+files by `ParkCoasterHeights.SetUpType`). A deviation in time: ours go at once, the original's at the next eighth tick. The track is not
+drawn (Q594); when it is, it goes and comes the same way.
+
 **OpenTPW builds the conform and the drape** (Q808, `ProceduralConform`): `LobbyModel`'s `stand` hook moves the drawn vertices of the
 model's file as it is made, before the meshes are built from them, in the model's own place and turn. The conform takes the base
 vertices `ProceduralBase.BaseVertices` lists (the floor search's own walk) of a model with the header's `0x8`, snaps x and y to the

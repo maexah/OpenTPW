@@ -94,6 +94,16 @@ public static class ParkCoasterHeights
 			return null;
 		}
 
+		return SetUpType( placed, item, field, files );
+	}
+
+	/// <summary>
+	/// A coaster's pylon type, curviness and station nodes from its item's own files, stood where it stands: all a coaster made
+	/// here has (<c>Coaster_Create</c>, <c>0x004368f0</c>, makes its station's nodes and nothing else). Null where they cannot be read.
+	/// </summary>
+	internal static CoasterSetup? SetUpType( ParkWorld.CatalogueObject placed, ParkItemCatalogue.Item item, HeightfieldFile field,
+		BaseFileSystem files )
+	{
 		var pylon = ParkCoasterPylon.Load( item.Directory, files );
 		var curviness = Curviness( item.Directory, files );
 		var station = RideNodes.Load( item.Directory, item.Stem, files, item.DoHeadProcessing, [] );

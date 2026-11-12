@@ -55,6 +55,13 @@ public static class ParkBuilding
 	/// thing stood. Null in the game.</summary>
 	internal static Func<ParkWorld.CatalogueObject, bool>? StandThing { get; set; }
 
+	/// <summary>A test's stand-in for <see cref="ParkCoasterPylons.StandBought"/>, whose pylons want a graphics device: answers
+	/// how many stood. Null in the game.</summary>
+	internal static Func<ParkWorld.CatalogueObject, ParkItemCatalogue.Item, int>? StandPylons { get; set; }
+
+	/// <summary>A test's stand-in for <see cref="ParkCoasterPylons.TakeDown(int)"/>: answers how many went. Null in the game.</summary>
+	internal static Func<int, int>? TakeDownPylons { get; set; }
+
 	private static Built Build( int catalogueId, int cellX, int cellY, int angle )
 	{
 		if ( Level.Current is not { } level || level.ParkState is not { } state
@@ -194,6 +201,11 @@ public static class ParkBuilding
 			}
 
 			Stamp( state, covered, cellX, cellY );
+
+			// A coaster is made with its station's nodes and their two pylons, and no track (Coaster_Create, 0x004368f0): a move's
+			// put-down too, the sale having destroyed the old one's.
+			if ( item.TrackType == ItemDescriptionFile.CoasterTrack )
+				_ = StandPylons?.Invoke( placed, item ) ?? ParkCoasterPylons.Current?.StandBought( placed, item );
 
 			// No tile pass follows the stamp: after it a purchase retiles none of its table cells to (set 0, tile 55): the placer
 			// retiles the cells its picture marks (type 4 gives tile 8, which gives nothing back) and the entrance's path cell and
@@ -612,6 +624,11 @@ public static class ParkBuilding
 
 		rides?.Unbind( thingId, item );
 		objects?.Remove( thingId );
+
+		// Its model's destruction destroys a coaster and every node's pylon with it (Coaster_Destroy, 0x00436fa0). A deviation in
+		// time: the original frees the object at the thing sweep, on the next eighth 31 ms tick (FUN_00516380); this is at once.
+		if ( item.TrackType == ItemDescriptionFile.CoasterTrack )
+			_ = TakeDownPylons?.Invoke( thingId ) ?? ParkCoasterPylons.Current?.TakeDown( thingId );
 
 		ParkSurfaces.Rebuild();
 

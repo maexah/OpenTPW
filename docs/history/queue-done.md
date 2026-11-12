@@ -14175,3 +14175,17 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
     portrait `0x2484`"): the script at word 1832, the remake rule, the kind by role, the costume's bank, facing 5 drawn as 3
     reflected, the place, the steps, the free. The size is a stand-in, counted (`STAFF_PORTRAIT_SIZE`, Q1513); the photograph
     beside the original is Q1512. The names' difference is not looked into.
+- [x] **Q951. A sold or moved coaster's pylons stay standing.** From an outside review of `1efacc58` (Alexah, 2026-10-30;
+  source-established, checked by the Sentinel against `c67821bf`). `ParkCoasterPylons` (Q817) builds its pylon entities once, when a
+  park loads (`Level.cs:473`), and takes them down only on its own `OnDelete` at unload (`TakeDown`). A sale (`ParkBuilding.Demolish`)
+  frees the coaster's track ride and object and rebuilds `ParkSurfaces`, and a move goes through the same `Demolish`
+  (`PickUp`); neither touches `ParkCoasterPylons`, the only other reader of which is the console's `pylons`. Partly run
+  (`~/.cache/tpw-harnesses/rev-1030/`, off-screen, her Full Simulation park as Q817's `ours.py`): `pylons 40` before, `sell 236`
+  sold the Temple Of Gloom for 10000 and it left `objects`; the count after was not read (run1's replies came one command late,
+  run2 went over its 12 GB cap under lavapipe: ours on that park peaked at 11.1 GB off-screen), so run it on the desk. Decode
+  first what the original's demolisher does with a coaster's track and pylons (`FUN_00527ee0`'s track arm for `WhichTrackType` 3,
+  which Q449 says withdraws nought; whether `FUN_00530830` / `FUN_00530b70` or another walk drops the pylon instances), then
+  take the pylons of the sold coaster down (and on a move, put them back where the original does). Related, not the same:
+  Q607 (the file's id of a sold object), Q594 (the track drawn), `SALE_TRACK_TEARDOWN`. Confirm: `pylons` before and after a
+  sale and a move, with a frame of the empty spot, against the original selling the same coaster; a test that fails with the
+  teardown put back.

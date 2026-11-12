@@ -18,6 +18,12 @@ namespace OpenTPW;
 /// (<c>Coaster_MoveNodeToCell</c>, <c>0x00442f40</c>: a coaster is not edited here), and the saved node word's <c>0x400</c>
 /// (<c>0x80000000</c> held on a floor shown again), which changes nothing drawn.
 /// </para>
+/// <para>
+/// <b>A sale takes the coaster's pylons down and a purchase puts up its station's two</b> (<c>docs/exe/park-engine.md</c>, "A sold
+/// coaster's pylons", Q951): the object's destructor destroys its model, which destroys the coaster with every node's pylon
+/// (<c>Coaster_FreeCells</c>, <c>0x0043eaf0</c>), and a coaster's construction makes its station's nodes alone (<c>Coaster_Create</c>,
+/// <c>0x004368f0</c>). A move is the two, so the moved coaster stands on its station's two pylons with no track.
+/// </para>
 /// </summary>
 public sealed class ParkCoasterPylons : Entity
 {
@@ -62,30 +68,94 @@ public sealed class ParkCoasterPylons : Entity
 
 		foreach ( var placed in state.Objects )
 		{
-			if ( !catalogue.TryGet( placed.CatalogueId, out var item ) || item.TrackType != ItemDescriptionFile.CoasterTrack
-				|| placed.MeshInstance == 0 )
-				continue;
-
-			if ( ParkCoasterHeights.SetUp( save, placed, item, field, FileSystem ) is not { } coaster )
-				continue;
-
-			var places = ParkCoasterHeights.Pylons( save.Coasters.FirstPieces, coaster.Pylon, field, coaster.RootHeight, coaster.TrackNode );
-
-			if ( places == null )
-				continue;
-
-			var before = _standing.Count;
-
-			foreach ( var place in places )
-			{
-				if ( Make( placed.ThingId, place, item.Directory, coaster.Pylon, field ) is { } standing )
-					_standing.Add( standing );
-			}
-
-			Log.Info( $"{_theme}: coaster '{item.Name}' (thing {placed.ThingId}): {_standing.Count - before} of {places.Count} pylons stand, "
-				+ $"{_standing.Skip( before ).Sum( standing => standing.Conformed )} floor vertices conformed, "
-				+ $"{_standing.Skip( before ).Sum( standing => standing.Hidden )} parts hidden" );
+			if ( catalogue.TryGet( placed.CatalogueId, out var item ) && item.TrackType == ItemDescriptionFile.CoasterTrack
+				&& placed.MeshInstance != 0 )
+				Stand( save, placed, item, field );
 		}
+	}
+
+	/// <summary>
+	/// Every pylon a coaster stands on: a saved one's station two and its pieces' each, one made here its station's two alone
+	/// (<c>Coaster_Create</c>, <c>0x004368f0</c>, makes the station's nodes only when it is not loading one). Null where it cannot be set up.
+	/// </summary>
+	internal static List<ParkCoasterHeights.PylonPlace>? PlacesFor( ParkWorld? save, ParkWorld.CatalogueObject placed,
+		ParkItemCatalogue.Item item, HeightfieldFile field, BaseFileSystem files, out ParkCoasterPylon? type )
+	{
+		type = null;
+
+		var saved = placed.MeshInstance != 0;
+		var coaster = saved
+			? (save == null ? null : ParkCoasterHeights.SetUp( save, placed, item, field, files ))
+			: ParkCoasterHeights.SetUpType( placed, item, field, files );
+
+		if ( coaster == null )
+			return null;
+
+		type = coaster.Pylon;
+
+		return ParkCoasterHeights.Pylons( saved ? save!.Coasters.FirstPieces : [], coaster.Pylon, field, coaster.RootHeight,
+			coaster.TrackNode );
+	}
+
+	/// <summary>Stands one coaster's pylons, answering how many stood.</summary>
+	private int Stand( ParkWorld? save, ParkWorld.CatalogueObject placed, ParkItemCatalogue.Item item, HeightfieldFile field )
+	{
+		if ( PlacesFor( save, placed, item, field, FileSystem, out var type ) is not { } places || type == null )
+			return 0;
+
+		var before = _standing.Count;
+
+		foreach ( var place in places )
+		{
+			if ( Make( placed.ThingId, place, item.Directory, type, field ) is { } standing )
+				_standing.Add( standing );
+		}
+
+		Log.Info( $"{_theme}: coaster '{item.Name}' (thing {placed.ThingId}): {_standing.Count - before} of {places.Count} pylons stand, "
+			+ $"{_standing.Skip( before ).Sum( standing => standing.Conformed )} floor vertices conformed, "
+			+ $"{_standing.Skip( before ).Sum( standing => standing.Hidden )} parts hidden" );
+
+		return _standing.Count - before;
+	}
+
+	/// <summary>
+	/// A coaster just put down, bought or moved, stands its station's two pylons (<c>Coaster_Create</c>, <c>0x004368f0</c>, through
+	/// <c>Coaster_MakeStationNodes</c> at <c>0x00436a89</c>); anything else stands none. Answers how many stood.
+	/// </summary>
+	public int StandBought( ParkWorld.CatalogueObject placed, ParkItemCatalogue.Item item )
+	{
+		if ( item.TrackType != ItemDescriptionFile.CoasterTrack || ParkGround.Current?.Heightfield is not { } field )
+			return 0;
+
+		return Stand( ParkState.Current?.Park?.Save, placed, item, field );
+	}
+
+	/// <summary>
+	/// A sold coaster's pylons taken down: its model's destruction destroys the coaster, and that each of its cells' nodes with the
+	/// pylon on it (<c>Instance_Destroy</c> <c>0x00463c80</c>, <c>Coaster_Destroy</c> <c>0x00436fa0</c>, <c>Coaster_FreeCells</c>
+	/// <c>0x0043eaf0</c>, <c>Coaster_FreeNode</c> <c>0x00434570</c>). Answers how many went.
+	/// </summary>
+	public int TakeDown( int thing )
+	{
+		var gone = TakeDown( _standing, thing, standing => standing.Thing, Delete );
+
+		if ( gone > 0 )
+			Log.Info( $"{_theme}: coaster thing {thing}: {gone} pylons taken down, {_standing.Count} stand" );
+
+		return gone;
+	}
+
+	/// <summary>Takes one thing's pylons out of <paramref name="standing"/>, each through <paramref name="down"/>; answers how many went.</summary>
+	internal static int TakeDown<T>( List<T> standing, int thing, Func<T, int> thingOf, Action<T> down )
+	{
+		var going = standing.Where( each => thingOf( each ) == thing ).ToList();
+
+		foreach ( var each in going )
+			down( each );
+
+		standing.RemoveAll( each => thingOf( each ) == thing );
+
+		return going.Count;
 	}
 
 	/// <summary>
@@ -167,13 +237,16 @@ public sealed class ParkCoasterPylons : Entity
 
 	private static string Format( Numerics.Vector3? v ) => v is { } p ? $"({p.X:F2},{p.Y:F2},{p.Z:F2})" : "-";
 
+	private static void Delete( Standing standing )
+	{
+		foreach ( var entity in standing.Model.Entities )
+			entity.Delete();
+	}
+
 	private void TakeDown()
 	{
 		foreach ( var standing in _standing )
-		{
-			foreach ( var entity in standing.Model.Entities )
-				entity.Delete();
-		}
+			Delete( standing );
 
 		_standing.Clear();
 	}

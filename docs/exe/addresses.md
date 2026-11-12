@@ -92,9 +92,14 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0042c587` | The camcorder sweep, after every pass: FUN_0042a340 at the pass's cell; a ride found runs Ride it! from first person and ends the sweep | OpenTPW.Tests/ParkCamcorderWalkTests.cs OpenTPW/World/Park/ParkCamcorderCameraMode.cs  |
 | `0x0042c621` | The park camera's update holds the zoom to 70..130 (40..300 with bit 0x200; only with bit 0x80, set at every load; park-engine.md, "A hidden wide zoom") | OpenTPW/World/Park/ParkOrbitCameraMode.cs  |
 | `0x0042d130` | | OpenTPW/World/Park/ParkOrbitCameraMode.cs  |
+| `0x00434570` | Coaster_FreeNode: the node's pylon instance +0x70 destroyed (Instance_Destroy), its meshes and the node freed | OpenTPW/World/Park/ParkCoasterPylons.cs  |
+| `0x004368f0` | Coaster_Create: a coaster made for an instance; not loading, it makes the station's nodes and their two pylons alone | OpenTPW.Tests/ParkCoasterPylonsTests.cs OpenTPW.Tests/ParkCoasterSaleTests.cs OpenTPW/World/Park/ParkBuilding.cs OpenTPW/World/Park/ParkCoasterHeights.cs OpenTPW/World/Park/ParkCoasterPylons.cs  |
+| `0x00436a89` | Coaster_Create: the call to Coaster_MakeStationNodes, made only when the coaster is not being loaded | OpenTPW/World/Park/ParkCoasterPylons.cs  |
+| `0x00436fa0` | Coaster_Destroy: the coaster whose +0x10 is the instance, its cells and every node's pylon freed (Coaster_FreeCells), then unlinked from [0x00790fe0] | OpenTPW.Tests/ParkCoasterSaleTests.cs OpenTPW/World/Park/ParkBuilding.cs OpenTPW/World/Park/ParkCoasterPylons.cs  |
 | `0x004380e7` | SAOC loader: node +0x3c bit 0, the circuit closed, from the saved header's flag bit 0 | OpenTPW.Files/Formats/Save/ParkCoasters.cs OpenTPW/World/Park/ParkRideChoice.cs  |
 | `0x004382b3` | SAOC loader: node +0x3c bit 1, a gap open, from the saved header's flag bit 1 | OpenTPW.Files/Formats/Save/ParkCoasters.cs  |
 | `0x0043837d` | SAOC loader: node +0x140, the clash count, restored from header +0x1c last | OpenTPW.Files/Formats/Save/ParkCoasters.cs OpenTPW/World/Park/ParkRideChoice.cs  |
+| `0x0043eaf0` | Coaster_FreeCells: each cell without +4 bit 1 has its stack's nodes freed (Coaster_FreeNode) and its map cell cleared | OpenTPW/World/Park/ParkCoasterPylons.cs  |
 | `0x0044a904` | FUN_0044a870: a lookup record gets a matrix only when its file flags carry 0x10 or 0x20 (TEST byte [rec],0x30) | OpenTPW/World/Ride/RideNodes.cs  |
 | `0x0044abf2` | Pose walk FUN_0044ab30: a record whose file flags meet 0x40040 takes its position from a face of its parent mesh while that mesh carries 0x200000 | OpenTPW/World/Lobby/LobbyModel.cs OpenTPW/World/Ride/RideNodes.cs  |
 | `0x0044ac00` | | OpenTPW/World/Lobby/MeshAnimator.cs  |
@@ -118,6 +123,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00462bd1` | Item loader FUN_004629d0: with flag 0x20000, the second model set "p%s" loaded into the record's +0xd0 | OpenTPW/UI/Park/ParkObjectPreview.cs  |
 | `0x00462d4a` | Item loader FUN_004629d0: runtime bit 8 on every lookup record of an item loaded under 0x400000 (Info.DoHeadProcessing) | OpenTPW.Files/Formats/ItemDescriptionFile.cs  |
 | `0x00463060` | the build path: checks role 0 exists, triggers it, then starts role 13 at once, which holds that clip at frame nought. A newly built thing's script, run from word 0, plays it; a loaded one's resumes past it and its channels come back from the save | OpenTPW/World/Park/ParkRides.cs  |
+| `0x00463c80` | Instance_Destroy: a model instance destroyed; a coaster's first (Coaster_Destroy), from FUN_0050b980 for a placed object | OpenTPW/World/Park/ParkCoasterPylons.cs  |
 | `0x004646a1` | | OpenTPW/World/Ride/AnimTimeControl.cs  |
 | `0x004647a0` | the `RSYS` arm of the restore chain: overwrites every animation channel from the saved record and restores the per-node flag words with it, which is what stops a loaded park's things standing frozen | OpenTPW.Files/Formats/Save/ParkThingStates.cs  |
 | `0x00464bcb` | FUN_004647a0, the RSYS restore: a saved channel's eleven dwords copied onto the channel, from | OpenTPW.Files/Formats/Save/ParkThingStates.cs OpenTPW.Tests/ParkScriptStateTests.cs OpenTPW/World/Park/ParkRides.cs  |

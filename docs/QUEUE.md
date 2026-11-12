@@ -390,6 +390,9 @@ filed the items that cite it.
   track, though Q706 rebuilds the track's knots, curve and samples from the save (`ParkCoasterHeights`, `ParkCoasterPylon`). Build
   the track's mesh from the samples and the `coaster.sam` cross sections (FileFormats `sam.md`, "A
   `coaster.sam`'s tables"; the mesh builder not decoded: decode first). Confirm by the same two frames side by side.
+  - **Note (Q951):** a sale takes the track with the coaster (`Coaster_Destroy`, `0x00436fa0`) and a put-down, a move's too, has
+    the station's nodes alone (`Coaster_Create`, `0x004368f0`): the drawn track goes and comes with the pylons
+    (`ParkCoasterPylons.TakeDown`, `StandBought`; `park-engine.md`, "A sold coaster's pylons").
   - **Note (fork watch 2026-10-31, verify-world M7):** the scroll rule: `0x00435adf` gates on `[[ctl+4]] & 4`; delta = (now
     - `+0x138`) x `[ctl+0x2c]` x 0.001f (`0x00435af8`..`0x00435b1a`); the floats at `[ctl+0x13c]` add it and wrap past 1.0,
     the wrapped amount coming off delta too (`0x00435b28`..`0x00435b76`); faces of a texture with flag `0x20` get V -= delta
@@ -1889,20 +1892,6 @@ filed the items that cite it.
   taken out. If the original shows a row over the chosen toggle, the layout's op 0x12 or the getter's reading is wrong:
   read `0x753f50`'s stream and `0x00669410` again before changing anything. Also reconcile `hud.md`'s staff switch
   (`b_route`, second help 87, measured not shown by `q431/confirm.py`) with the same getter, as the Q684 note asks.
-- [ ] **Q951. A sold or moved coaster's pylons stay standing.** From an outside review of `1efacc58` (Alexah, 2026-10-30;
-  source-established, checked by the Sentinel against `c67821bf`). `ParkCoasterPylons` (Q817) builds its pylon entities once, when a
-  park loads (`Level.cs:473`), and takes them down only on its own `OnDelete` at unload (`TakeDown`). A sale (`ParkBuilding.Demolish`)
-  frees the coaster's track ride and object and rebuilds `ParkSurfaces`, and a move goes through the same `Demolish`
-  (`PickUp`); neither touches `ParkCoasterPylons`, the only other reader of which is the console's `pylons`. Partly run
-  (`~/.cache/tpw-harnesses/rev-1030/`, off-screen, her Full Simulation park as Q817's `ours.py`): `pylons 40` before, `sell 236`
-  sold the Temple Of Gloom for 10000 and it left `objects`; the count after was not read (run1's replies came one command late,
-  run2 went over its 12 GB cap under lavapipe: ours on that park peaked at 11.1 GB off-screen), so run it on the desk. Decode
-  first what the original's demolisher does with a coaster's track and pylons (`FUN_00527ee0`'s track arm for `WhichTrackType` 3,
-  which Q449 says withdraws nought; whether `FUN_00530830` / `FUN_00530b70` or another walk drops the pylon instances), then
-  take the pylons of the sold coaster down (and on a move, put them back where the original does). Related, not the same:
-  Q607 (the file's id of a sold object), Q594 (the track drawn), `SALE_TRACK_TEARDOWN`. Confirm: `pylons` before and after a
-  sale and a move, with a frame of the empty spot, against the original selling the same coaster; a test that fails with the
-  teardown put back.
 - [ ] **Q955. The UI's draws: a resource set made each time the shared UI material's texture changes, and every quad's index
   upload ending the render pass.** From an outside audit (Alexah, 2026-10-30), checked against `8a566e88` by the Sentinel's Opus
   reader (`~/.cache/tpw-harnesses/rev-1030/VERIFY-gpt-perf.md`, P1, D, E; source only, not measured). Q954 (`3bc9708e`) since made
