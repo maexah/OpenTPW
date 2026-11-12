@@ -418,6 +418,62 @@ public class ScriptSoundTests
 	}
 
 	/// <summary>
+	/// <b>A stop on the pass that empties a script's chain cuts no child</b>: the prune deletes the newest child without
+	/// stopping its channel (<c>0x006bdc3e</c>) and the stop walks only the list (<c>0x006bd9b0</c>). The level's
+	/// <c>cat_rides</c> 100 and 89 on the End's node 9, as <see cref="AnEffectOfFourAloneIsAChainOfChildren"/>; the clock
+	/// on the earlier one's due millisecond, so its child is pruned and let go, and a <c>KILLOBJ</c> of both then cuts only
+	/// the other's, still in its list.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> the prune keeping the voice (the kill cuts it); the kill cutting nothing.
+	/// </remarks>
+	[TestMethod]
+	public void AKillOnAChainsEmptyPassCutsNoChild()
+	{
+		var nowBefore = Time.Now;
+
+		WithAParksAudio( park =>
+		{
+			Time.Now = 100f;
+
+			var nodes = RideNodes.Load( "levels/jungle/features/end", "End", (BaseFileSystem)FileSystem, false, [] )!;
+			var script = new RideScript( Build(
+				Word( Opcode.ADDOBJ ), 3, 9, 100, 40,
+				Word( Opcode.ADDOBJ ), 3, 9, 89, 10,
+				Word( Opcode.END ) ) ) { Effects = new RideEffects(), Nodes = nodes, Id = 913 };
+
+			script.Turn( 0f );
+
+			var effects = script.Effects!;
+			var lava = effects.Records.Single( record => record.Tag == 40 ).Sound!;
+			var ape = effects.Records.Single( record => record.Tag == 10 ).Sound!;
+			var (pruned, held) = lava.NextAt <= ape.NextAt ? (lava, ape) : (ape, lava);
+			var (prunedVoice, heldVoice) = (pruned.Voice!, held.Voice!);
+
+			Time.Now = pruned.NextAt;
+			Assert.IsTrue( ParkAudio.Milliseconds( Time.Now ) < ParkAudio.Milliseconds( held.NextAt ), "the other is not due in that millisecond" );
+
+			park.ServeScriptSounds();
+
+			Assert.AreEqual( (1, 1), (lava.Samples, ape.Samples), "no child made on that pass" );
+			Assert.IsTrue( pruned.ListEmpty && !held.ListEmpty, "the earlier one's list pruned empty, the other's not" );
+			Assert.IsNull( pruned.Voice, "its child let go" );
+
+			var kill = new RideScript( Build( Word( Opcode.KILLOBJ ), 40, Word( Opcode.KILLOBJ ), 10, Word( Opcode.END ) ) );
+
+			script.Effects = null;
+			kill.Effects = effects;
+			kill.Turn( 0f );
+
+			Assert.AreEqual( 0, park.ScriptVoices.Count, "both chains are gone" );
+			Assert.IsTrue( prunedVoice.Playing && !prunedVoice.Ending, "the pruned child's sample is not cut by the kill" );
+			Assert.IsFalse( heldVoice.Playing, "the child still in the other's list is" );
+		} );
+
+		Time.Now = nowBefore;
+	}
+
+	/// <summary>
 	/// <b>An effect of <c>0x404</c> is a held chain: its first child the effect's first variation, each later one drawn
 	/// among the zones of the variation before.</b> The level ambient's 177 (the gates' and the first speaker's: nine
 	/// variations of one sample, each one's zones naming the other eight over 0 to 100, waits 1000 to 4000, volume 20 to
