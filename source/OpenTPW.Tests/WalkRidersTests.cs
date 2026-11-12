@@ -423,7 +423,7 @@ public class WalkRidersTests
 			for ( var sweep = 0; sweep < (action == 6 ? 8 : 1); ++sweep )
 			{
 				SimulationClockScope.Frame( 8 * GameClock.TickSeconds );
-				people.Update();
+				ParkFrame.Run( people );
 			}
 
 			if ( action == 6 )

@@ -532,7 +532,7 @@ public class ParkAdvisorMessageTests
 			{
 				Time.Update( .031f );
 				GameClock.Update( false, GameClock.ParkCatchUp );
-				people.Update();
+				ParkFrame.Run( people );
 			}
 			Assert.AreEqual( 1, state.AdvisorMessages.Attempts );
 			Assert.IsTrue( state.AdvisorMessages.Census().Contains( "message=128/score=26/line=0/lastTick=101" ) );
@@ -565,7 +565,7 @@ public class ParkAdvisorMessageTests
 			state.SetParkClosed( false );
 			state.SetParkClosed( true );
 			SimulationClockScope.Frame( 2f );
-			people.Update();
+			ParkFrame.Run( people );
 			Assert.AreEqual( 3, state.GameTick, "64 ticks owe eight world sweeps, and a frame runs three" );
 			Assert.AreEqual( 1, state.AdvisorMessages.Attempts, "all three sweeps see one instant, so the one-second wait cannot expire" );
 			Assert.AreEqual( 1, state.AdvisorMessages.PendingCount );
@@ -940,7 +940,7 @@ public class ParkAdvisorMessageTests
 				for ( var frame = 0; frame < 4; ++frame )
 				{
 					SimulationClockScope.Frame( GameClock.TickSeconds * 2 );
-					people.Update();
+					ParkFrame.Run( people );
 				}
 			}
 			Sweep();

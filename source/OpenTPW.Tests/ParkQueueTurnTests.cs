@@ -646,7 +646,7 @@ public class ParkQueueTurnTests
 			for ( var frame = 0; frame < 2000 && leaving.State == PeepState.InQueue; ++frame )
 			{
 				Frame( 1f / 60f );
-				people.Update();
+				ParkFrame.Run( people );
 			}
 
 			Assert.AreEqual( PeepState.Deciding, leaving.State, "they left for the toilet" );
@@ -710,7 +710,7 @@ public class ParkQueueTurnTests
 			for ( var frame = 0; frame < 60 && GameClock.Ticks / ParkPeople.ThingTickEvery == first; ++frame )
 			{
 				Frame( 1f / 60f );
-				people.Update();
+				ParkFrame.Run( people );
 			}
 
 			Assert.AreNotEqual( first, GameClock.Ticks / ParkPeople.ThingTickEvery, "a sweep ran" );

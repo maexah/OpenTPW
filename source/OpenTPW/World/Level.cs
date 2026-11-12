@@ -1791,6 +1791,11 @@ public class Level
 		// choice that closes one screen and opens another never lets the world go in between.
 		GameClock.Update( PausedByWindow(), Kind == Scene.Park ? GameClock.ParkCatchUp : GameClock.LobbyCatchUp );
 
+		// A park's loop takes the frame's ticks one at a time through every system before anything is done once a frame,
+		// as the original's loop runs before its frame's work (ParkLoop).
+		if ( Kind == Scene.Park )
+			ParkLoop.Run( ParticleSystem.Current, ParkRides.Current, ParkPeople.Current );
+
 		Entity.All.ForEach( entity => entity.Update() );
 
 		// The End feature asked for in the walk above, made outside it: its model adds entities, which the walk cannot take.
@@ -1822,7 +1827,9 @@ public class Level
 
 		TellSaveTrouble();
 
-		ParticleSystem.Current?.Update();
+		// The lobby's loop is the particles alone; a park's take theirs in ParkLoop.
+		if ( Kind != Scene.Park )
+			ParticleSystem.Current?.Update();
 
 		// What the pointer is over, before the interface deals out this frame's clicks - so a click
 		// and the cell it landed on are the same frame's answer. Only a park has ground to point at.

@@ -355,7 +355,7 @@ public class ParkResearcherResearchTests
 			member.StartResearching( state.GameTick + 1 );
 
 			SimulationClockScope.Frame( 8 * GameClock.TickSeconds );
-			people.Update();
+			ParkFrame.Run( people );
 
 			Assert.AreEqual( StaffActivity.Researching, member.Activity );
 			Assert.IsTrue( sprite.IsOn( 10 ) );
@@ -365,7 +365,7 @@ public class ParkResearcherResearchTests
 			for ( var sweep = 0; sweep < 6; ++sweep )
 			{
 				SimulationClockScope.Frame( 8 * GameClock.TickSeconds );
-				people.Update();
+				ParkFrame.Run( people );
 			}
 
 			Assert.AreEqual( 4, sprite.Set );

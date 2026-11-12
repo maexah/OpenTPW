@@ -66,7 +66,7 @@ public class ParkArrivalCellTests
 			for ( var sweep = 0; sweep < 6; ++sweep )
 			{
 				SimulationClockScope.Frame( GameClock.TickSeconds * 8 );
-				people.Update();
+				ParkFrame.Run( people );
 			}
 
 			CollectionAssert.AreEqual( new[] { "(53,5)", "(53,5)", "(53,5)" }, cells, "the bus's three, all at stop B" );
@@ -77,7 +77,7 @@ public class ParkArrivalCellTests
 			for ( var sweep = 0; sweep < 45; ++sweep )
 			{
 				SimulationClockScope.Frame( GameClock.TickSeconds * 8 );
-				people.Update();
+				ParkFrame.Run( people );
 			}
 
 			Assert.AreEqual( 40, cells.Count, "all forty made" );
@@ -125,7 +125,7 @@ public class ParkArrivalCellTests
 			for ( var sweep = 0; sweep < 3; ++sweep )
 			{
 				SimulationClockScope.Frame( GameClock.TickSeconds * 8 );
-				people.Update();
+				ParkFrame.Run( people );
 			}
 
 			CollectionAssert.AreEqual( new[] { "(53,5)" }, cells );

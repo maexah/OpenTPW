@@ -40,7 +40,7 @@ public class ParkSweepCapTests
 			// Two seconds is the clock's own cap: 64 ticks, eight sweeps owed.
 			SimulationClockScope.Frame( 2f );
 			Assert.AreEqual( 64, GameClock.TicksDue, "the frame owes 64 ticks" );
-			people.Update();
+			ParkFrame.Run( people );
 			Assert.AreEqual( start + 3, people.State.GameTick, "three sweeps run" );
 			Assert.AreEqual( (3, 5), (people.SweepsRun, people.SweepsDropped), "and five dropped" );
 
@@ -55,21 +55,65 @@ public class ParkSweepCapTests
 				Assert.IsTrue( sprite!.Due >= lastSpriteTick, $"a sprite due at {sprite.Due} was not stepped up to {lastSpriteTick}" );
 
 			SimulationClockScope.Frame( GameClock.TickSeconds * 8 );
-			people.Update();
+			ParkFrame.Run( people );
 			Assert.AreEqual( start + 4, people.State.GameTick, "the next frame owes one and runs one: nothing is made up" );
 
 			SimulationClockScope.Frame( GameClock.TickSeconds * 24 );
 			Assert.AreEqual( 24, GameClock.TicksDue );
-			people.Update();
+			ParkFrame.Run( people );
 			Assert.AreEqual( start + 7, people.State.GameTick, "a frame owing three runs all three" );
 			Assert.AreEqual( (7, 5), (people.SweepsRun, people.SweepsDropped) );
 
 			// The cap is on any pass, not only the clock's longest (0x0054f680): 40 ticks owe five sweeps.
 			SimulationClockScope.Frame( GameClock.TickSeconds * 40 );
 			Assert.AreEqual( 40, GameClock.TicksDue );
-			people.Update();
+			ParkFrame.Run( people );
 			Assert.AreEqual( start + 10, people.State.GameTick, "a frame owing five runs three" );
 			Assert.AreEqual( (10, 7), (people.SweepsRun, people.SweepsDropped), "and drops two" );
+		}
+		finally
+		{
+			people.Delete();
+			Entity.ApplyDeletions();
+		}
+	}
+
+	/// <summary>
+	/// <b>A tick's sprites step before its sweep</b> (<c>FUN_00475360</c> at <c>0x0054f5fb</c>, the sweep at <c>0x0054f7bb</c>;
+	/// <see cref="ParkLoop"/>): an animation a member of staff starts in the sweep of tick 16 has not run a word when the
+	/// frame ends, though the sprite came due on that tick; it runs on tick 18.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the sprites stepped after the sweep in the tick.</remarks>
+	[TestMethod]
+	public void ASpriteStartedInASweepWaitsForTheNextSpriteTick()
+	{
+		var data = GameData.Required();
+		FileSystem = data;
+
+		using var stream = new MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
+		var world = new ParkWorld( new SaveReader( stream ).ReadFile() );
+
+		using var clock = new SimulationClockScope();
+		var people = new ParkPeople( world, new ParkBalance( "jungle", easyMode: true ) );
+
+		try
+		{
+			// Ticks 1 to 8: every sprite has stepped on the even ticks, so each comes due again on tick 16 at the latest.
+			SimulationClockScope.Frame( GameClock.TickSeconds * 8 );
+			ParkFrame.Run( people );
+
+			var member = people.Staff.First( member => people.SpriteFor( member.ThingId ) is not null );
+			var playing = people.SpriteFor( member.ThingId )!;
+
+			// Ticks 9 to 16; the sweep of 16 starts the animation (StartAnimation, after the member's behaviour).
+			SimulationClockScope.Frame( GameClock.TickSeconds * 8 );
+			member.NextAnimation = SpriteScript.Standing;
+			ParkFrame.Run( people );
+
+			Assert.AreEqual( 16, GameClock.Ticks );
+			Assert.AreEqual( 0, member.NextAnimation, "the sweep took the animation" );
+			Assert.AreEqual( playing.Script, playing.Pc, "started in the sweep of tick 16 and not yet run" );
+			Assert.IsTrue( playing.Due <= 16 * ParkPeople.MillisecondsPerTick + playing.Interval, $"and due by tick 18 ({playing.Due})" );
 		}
 		finally
 		{
@@ -107,14 +151,14 @@ public class ParkSweepCapTests
 		try
 		{
 			SimulationClockScope.Frame( GameClock.TickSeconds * 8 );
-			people.Update();
+			ParkFrame.Run( people );
 
 			Assert.AreEqual( start + 1, people.State.GameTick );
 			Assert.AreEqual( start + 1, pool.Mark, "topped up on the park's first sweep, 361 past its mark" );
 			Assert.AreEqual( 1, pool.Turns );
 
 			SimulationClockScope.Frame( 2f );
-			people.Update();
+			ParkFrame.Run( people );
 			Assert.AreEqual( 4, pool.Turns, "a frame owing eight sweeps runs three, and the pool's turn with each" );
 		}
 		finally

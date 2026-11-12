@@ -40,7 +40,7 @@ public class ParkArrivalLoadsRingTests
 		for ( var frame = 0; frame < 10 && people.State.GameTick == from; ++frame )
 		{
 			Frame( 0.1f );
-			people.Update();
+			ParkFrame.Run( people );
 		}
 
 		Assert.AreEqual( from + 1, people.State.GameTick, "one sweep" );

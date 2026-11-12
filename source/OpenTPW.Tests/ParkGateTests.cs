@@ -230,7 +230,7 @@ public class ParkGateTests
 			var old = state.GameTick;
 			Time.Update( .031f );
 			GameClock.Update( false, GameClock.ParkCatchUp );
-			people.Update();
+			ParkFrame.Run( people );
 			Assert.AreEqual( state.GameTick != old && state.GameTick % 30 == 0 ? 0 : 1,
 				gate["VAR_COMMAND"], $"tick {state.GameTick}" );
 		}

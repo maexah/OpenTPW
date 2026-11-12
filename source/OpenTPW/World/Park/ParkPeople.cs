@@ -2288,244 +2288,232 @@ public sealed partial class ParkPeople : Entity
 			0f, 1f );
 
 	/// <summary>
-	/// One turn of every guest for each thing tick that has come due - see
-	/// <see cref="ThingTickEvery"/>, which is why that is not every 31ms tick.
-	///
-	/// <para>
-	/// The tick <i>number</i> is worked back rather than counted locally, because the guests are spread
-	/// across four slots by <c>id &amp; 3</c> and a local counter would put them in the wrong ones. By
-	/// the time an entity updates, <see cref="GameClock.Ticks"/> already counts this frame's ticks, so
-	/// the first of them is that many less <see cref="GameClock.TicksDue"/>, plus one -
-	/// <see cref="ParkRides"/> works its own instants back the same way and for the same reason.
-	/// </para>
+	/// Once a frame, after the park's loop has run the frame's ticks (<see cref="ParkLoop"/>): the per-frame placement's half of
+	/// the stranded bookkeeping (<c>FUN_004fa030</c>, <c>0x004fa0c7</c>), which the original's frame reaches past its loop
+	/// (<c>FUN_00518f90</c>, <c>0x0054fa85</c>).
 	/// </summary>
 	protected override void OnUpdate()
 	{
-		// The per-frame placement's half of the stranded bookkeeping (FUN_004fa030, 0x004fa0c7): a counter value
-		// for every person, and a stranded stamp above it zeroed, which only a stamp from an earlier run of the
+		// A counter value for every person, and a stranded stamp above it zeroed, which only a stamp from an earlier run of the
 		// counter can be. Only a guest is ever stamped, so only guests are asked.
 		foreach ( var peep in _peeps )
 		{
 			if ( ParkState.NextCounter() < peep.StrandedTime )
 				peep.StrandedTime = 0;
 		}
+	}
 
-		var sweeps = 0;
-		var dropped = 0;
-
-		for ( var i = 0; i < GameClock.TicksDue; ++i )
-		{
-			var tick = GameClock.Ticks - GameClock.TicksDue + 1 + i;
-
-			// The park loop steps the sprites BEFORE it reaches the thing gate - FUN_00475360 at 0054f5fb,
-			// the gate at 0054f668 - so they are taken in that order here too.
-			if ( (tick & (SpriteTickEvery - 1)) == 0 )
-			{
-				foreach ( var playing in _sprites.Values )
-					playing.Step( tick * MillisecondsPerTick );
-
-				// The balloons are instances of the same table, held and let go alike.
-				foreach ( var peep in _peeps )
-					peep.Balloon?.Sprite.Step( tick * MillisecondsPerTick );
-
-				foreach ( var bursting in _bursting )
-					bursting.Sprite.Step( tick * MillisecondsPerTick );
-
-				_bursting.RemoveAll( bursting => bursting.Sprite.Freed );
-			}
-
-			if ( (tick & (ThingTickEvery - 1)) != 0 )
-				continue;
-
-			// A fourth sweep in one frame is dropped, not owed - see SweepsAFrame.
-			if ( sweeps == SweepsAFrame )
-			{
-				++dropped;
-				continue;
-			}
-
-			++sweeps;
-			++SweepsRun;
-
-			// The park's own clock goes one up before anything in the sweep runs (FUN_00516380, 0x00516394).
-			State.AdvanceGameTick();
-			// <b>The number handed on is the park's clock, mGameTick, not the 31 ms tick, and that is not
-			// cosmetic.</b> Peep.Tick spreads guests across four slots by (id & 3) == (tick & 3); every 31 ms
-			// tick that reaches here is a multiple of eight, and four divides eight, so passing that would make
-			// the test true only for guests whose id is a multiple of four and starve the other three quarters
-			// of their needs for ever. Every clock a guest's handler reads is mGameTick, one up a sweep
-			// (docs/exe/ride-operation.md, "The guests' and the objects' clock").
-			var thingTick = State.GameTick;
-
-			// The sprites' clock at this sweep, the 31 ms tick's milliseconds, for a balloon built on a ride's turn.
-			_sweepSpriteClock = tick * MillisecondsPerTick;
-
-			foreach ( var peep in _peeps )
-			{
-				// FUN_004fa870 eases the walking speed first, then stamps the position.
-				peep.Pace();
-
-				// Where they start this tick, before anything moves them - the original's FUN_004fa870,
-				// which is the first call of the guest tick handler (0x00501658) and sits ahead of that
-				// handler's own (id & 3) stagger. So it runs for every guest on every sweep whatever
-				// state they are in, and NOT only for the ones that walk: see
-				// PeepNavigator.StampPrevious for why stamping only walkers makes a stopped guest
-				// oscillate for ever.
-				peep.Navigator.StampPrevious();
-
-				peep.Tick( thingTick, OnACountingCell( peep ), ThinkOfNeeds, CellEffects( peep ) );
-
-				// The needs turn's bubble call (0x00501951): on every needs turn, riding or not.
-				if ( peep.DueOn( thingTick ) )
-					peep.Thoughts.Expire( State.GameTick );
-
-				// The guest tick handler's last call, after its (id & 3) needs block, so every sweep, on the park's
-				// own clock (FUN_004fdc90, 0x005019da).
-				peep.AgeRefusals( State.GameTick );
-
-				var playing = _sprites.GetValueOrDefault( peep.ThingId );
-
-				// Every thing tick, and not one in four: the share gates the needs alone, and the
-				// behaviours are a separate call the original never gates. FUN_0050b360 makes both of
-				// these for every guest, back to back, needs first.
-				//
-				// The STATE is asked before the walk rather than after it, which is the original's order:
-				// FUN_005019f0 switches on what a guest is doing and only then asks whether they got
-				// anywhere, so a guest in a state that does not walk never reaches the walk at all.
-				if ( _walks.TryGetValue( peep.ThingId, out var walk ) )
-					_behaviour.Step( peep, walk, playing, thingTick );
-
-				// A balloon let go by the needs or by a state entered goes on bursting where it was.
-				TakeLetGo( peep );
-
-				// FUN_004d4190, whose only caller is the per-guest needs call - so what the walk asked for
-				// lands on that guest's own turn in four rather than at once. Which side of the walk it
-				// sits on is not established, and cannot matter here: the walk asks for an animation only
-				// when the sprite is not already playing it, so a turn either way changes nothing after
-				// the first.
-				AskTheWalk( peep, playing );
-
-				if ( playing != null && peep.DueOn( thingTick ) )
-					Apply( peep, playing );
-			}
-
-			// The staff run on the same beat. FUN_0050b360 switches on the thing's model byte and gives
-			// every person-kind a needs call and a behaviour call back to back, so a member of staff takes
-			// their turn exactly where a guest takes theirs - there is no second clock.
-			//
-			// <b>The needs half is deliberately absent for staff.</b> A guest's needs are hunger, thirst
-			// and the rest; a staff member's are their pay and their training, which nothing here runs.
-			foreach ( var member in _staff )
-			{
-				// The same stamp, for the same reason: the original gives every person kind a needs call
-				// and a behaviour call back to back off one switch, and FUN_00505490 opens with
-				// FUN_004fa870 at 0x00505495 exactly as the guest handler does: the speed eased, then the stamp.
-				MoveEffect( member );
-				member.Pace();
-				member.Navigator.StampPrevious();
-
-				// The staff handler's own bubble call, on the member's sweep in four of the park's clock
-				// (FUN_00505490, 0x005054b3..0x005054c0).
-				if ( (member.ThingId & 3) == (State.GameTick & 3) )
-					member.Thoughts.Expire( State.GameTick );
-
-				var playing = _sprites.GetValueOrDefault( member.ThingId );
-
-				// On the park's clock, mGameTick, as every staff handler reads it (0x004d6545 the guard's): the
-				// idle stamps are readings of it, and the guard's walk-or-stay is its low two bits.
-				if ( _staffWalks.TryGetValue( member.ThingId, out var walk ) )
-					_staffBehaviour.Step( member, walk, playing, State.GameTick );
-
-				if ( playing == null )
-					continue;
-
-				// A sprite on a state's script whose save kept no frames a direction (+0xbc nought) would loop on
-				// it for ever: it is read from the bank again, and with no bank the sprite stands.
-				if ( playing.IsOnAState && playing.FramesPerDirection <= 0 )
-				{
-					playing.FramesPerDirection = BankOf( member.ThingId ) is { } bank
-						? bank.Sets[playing.Set].FramesPerDirection
-						: 0;
-
-					if ( playing.FramesPerDirection <= 0 )
-					{
-						Unimplemented.Report( "SPRITE_STATE_ANIMATION_NOT_STARTED" );
-						playing.Start( SpriteScript.Standing );
-					}
-				}
-
-				if ( member.NextAnimation != 0 )
-				{
-					StartAnimation( member.ThingId, playing, member.NextAnimation );
-					member.NextAnimation = 0;
-				}
-
-				if ( member.NextInterval != 0 )
-				{
-					playing.Interval = member.NextInterval;
-					member.NextInterval = 0;
-				}
-			}
-
-			// Anybody who has walked out of the park goes home, taken out here rather than inside the
-			// loop above because removing from a list while it is being walked would throw. PeepBehaviour
-			// puts them into these states and deliberately does not act on either: it owns what a guest
-			// wants, never the list they are in.
-			//
-			// A leaver walks HeadingForExit -> PickingACellOutside (19) -> WalkingOutside (20) ->
-			// AtTheBusStop (21) and goes from there when a vehicle stands for them, which PeepBehaviour
-			// answers by putting them in Leaving; the original deletes them in that turn (FUN_0050b780).
-			// Newest first, the sweep's own order, which is the order their ids come free in.
-			foreach ( var leaver in _peeps.Where( peep => peep.State is PeepState.Leaving ).Select( peep => peep.ThingId ).ToList() )
-				Depart( leaver );
-
-			StepArrivals();
-
-			// After the load, and on every sweep rather than only while one is running - the original
-			// reaches its own tail the same way, from every arm above. Without this the vehicle is
-			// released once and parks at the next of its three spins for ever.
-			StepVehicle();
-			LogVehicleStatuses();
-
-			// The staff pool's turn follows the arrival manager's in the sweep's tail (0x004d7b30).
-			ParkStaffPool.Current?.Sweep( State.GameTick,
-				kind => _staff.Count( member => ParkStaffPool.KindFor( member.Model ) == kind ),
-				StaffNamed );
-
-			TakeTheRidesTurns( thingTick );
-			RetryGateClose();
-
-			// The advisor's turn is the sweep's last: he is a thing (model 11, FUN_0050b360's arm 0xb), the list is
-			// swept newest first, and the two things made before him have no arm, so a message posted on any
-			// other thing's turn is said on the same tick (docs/exe/advisor-park.md, "The advisor's turn in the sweep").
-			// Catch-up sweeps share a frame timestamp here; the native running clock may query the OS per call.
-			// GameClock.Now keeps the engine's clamped-frame timing deviation (docs/exe/advisor-park.md).
-			State.AdvisorMessages?.Tick( State.GameTick, (long)(GameClock.Now * 1000),
-				( response, sample ) => SpeakResponse( Advisor.Current is { } advisor ? advisor.PlayParkResponse : null, response, sample ),
-				(group, subject, second) =>
-				{
-					// The event's item word is the record's +0x04 (FUN_0059b620): the item a poster handed, else the subject's.
-					var item = second ?? (State.TryObject( subject, out var about ) ? about.CatalogueId : 0);
-					var name = _behaviour.Catalogue is { } catalogue && catalogue.TryGet( item, out var named ) ? named.Name : null;
-					State.Tags.Said( group, subject, Time.WallMilliseconds, item, name );
-				},
-				AdvisorFacts );
-
-			// The sweep's end: the ids of the things deleted in it go back on the free list (0x00516654..0x00516685), before the tail.
-			State.FreeDeletedThings();
-
-			// Then the sweep's tail, after every thing's turn and so after the advisor's (FUN_00516380 turns the things at
-			// 0x005163fb and calls the tail at 0x00516695): the golden tickets on every hundredth tick (0x004d7b60) are
-			// owed here and tested by Level.TurnTheCalendar once the calendar has turned, as the original's tail has them
-			// (0x004d7b20), so a ticket's line waits for the next sweep's turn.
-			ParkGoldenTickets.Owe( State.GameTick );
-		}
-
-		if ( dropped == 0 )
+	/// <summary>
+	/// The sprites' part of one step of the park's loop (<c>FUN_00475360</c>, <c>0x0054f5fb</c>), on every second 31 ms tick
+	/// (<see cref="SpriteTickEvery"/>); <paramref name="tick"/> is the tick's number. The loop steps the sprites before it
+	/// reaches the thing gate (<c>0x0054f668</c>), so they take no part in the cap.
+	/// </summary>
+	internal void StepSprites( int tick )
+	{
+		if ( (tick & (SpriteTickEvery - 1)) != 0 )
 			return;
 
+		foreach ( var playing in _sprites.Values )
+			playing.Step( tick * MillisecondsPerTick );
+
+		// The balloons are instances of the same table, held and let go alike.
+		foreach ( var peep in _peeps )
+			peep.Balloon?.Sprite.Step( tick * MillisecondsPerTick );
+
+		foreach ( var bursting in _bursting )
+			bursting.Sprite.Step( tick * MillisecondsPerTick );
+
+		_bursting.RemoveAll( bursting => bursting.Sprite.Freed );
+	}
+
+	/// <summary>
+	/// The thing sweep (<c>FUN_00516380</c>, <c>0x0054f7bb</c>): one turn of every guest, member of staff and ride, which the
+	/// park's loop runs on every eighth 31 ms tick (<see cref="ThingTickEvery"/>), at most <see cref="SweepsAFrame"/> a frame.
+	/// <paramref name="tick"/> is the 31 ms tick's number, which only the sprites' clock reads.
+	/// </summary>
+	internal void Sweep( int tick )
+	{
+		++SweepsRun;
+
+		// The park's own clock goes one up before anything in the sweep runs (FUN_00516380, 0x00516394).
+		State.AdvanceGameTick();
+		// <b>The number handed on is the park's clock, mGameTick, not the 31 ms tick, and that is not
+		// cosmetic.</b> Peep.Tick spreads guests across four slots by (id & 3) == (tick & 3); every 31 ms
+		// tick that reaches here is a multiple of eight, and four divides eight, so passing that would make
+		// the test true only for guests whose id is a multiple of four and starve the other three quarters
+		// of their needs for ever. Every clock a guest's handler reads is mGameTick, one up a sweep
+		// (docs/exe/ride-operation.md, "The guests' and the objects' clock").
+		var thingTick = State.GameTick;
+
+		// The sprites' clock at this sweep, the 31 ms tick's milliseconds, for a balloon built on a ride's turn.
+		_sweepSpriteClock = tick * MillisecondsPerTick;
+
+		foreach ( var peep in _peeps )
+		{
+			// FUN_004fa870 eases the walking speed first, then stamps the position.
+			peep.Pace();
+
+			// Where they start this tick, before anything moves them - the original's FUN_004fa870,
+			// which is the first call of the guest tick handler (0x00501658) and sits ahead of that
+			// handler's own (id & 3) stagger. So it runs for every guest on every sweep whatever
+			// state they are in, and NOT only for the ones that walk: see
+			// PeepNavigator.StampPrevious for why stamping only walkers makes a stopped guest
+			// oscillate for ever.
+			peep.Navigator.StampPrevious();
+
+			peep.Tick( thingTick, OnACountingCell( peep ), ThinkOfNeeds, CellEffects( peep ) );
+
+			// The needs turn's bubble call (0x00501951): on every needs turn, riding or not.
+			if ( peep.DueOn( thingTick ) )
+				peep.Thoughts.Expire( State.GameTick );
+
+			// The guest tick handler's last call, after its (id & 3) needs block, so every sweep, on the park's
+			// own clock (FUN_004fdc90, 0x005019da).
+			peep.AgeRefusals( State.GameTick );
+
+			var playing = _sprites.GetValueOrDefault( peep.ThingId );
+
+			// Every thing tick, and not one in four: the share gates the needs alone, and the
+			// behaviours are a separate call the original never gates. FUN_0050b360 makes both of
+			// these for every guest, back to back, needs first.
+			//
+			// The STATE is asked before the walk rather than after it, which is the original's order:
+			// FUN_005019f0 switches on what a guest is doing and only then asks whether they got
+			// anywhere, so a guest in a state that does not walk never reaches the walk at all.
+			if ( _walks.TryGetValue( peep.ThingId, out var walk ) )
+				_behaviour.Step( peep, walk, playing, thingTick );
+
+			// A balloon let go by the needs or by a state entered goes on bursting where it was.
+			TakeLetGo( peep );
+
+			// FUN_004d4190, whose only caller is the per-guest needs call - so what the walk asked for
+			// lands on that guest's own turn in four rather than at once. Which side of the walk it
+			// sits on is not established, and cannot matter here: the walk asks for an animation only
+			// when the sprite is not already playing it, so a turn either way changes nothing after
+			// the first.
+			AskTheWalk( peep, playing );
+
+			if ( playing != null && peep.DueOn( thingTick ) )
+				Apply( peep, playing );
+		}
+
+		// The staff run on the same beat. FUN_0050b360 switches on the thing's model byte and gives
+		// every person-kind a needs call and a behaviour call back to back, so a member of staff takes
+		// their turn exactly where a guest takes theirs - there is no second clock.
+		//
+		// <b>The needs half is deliberately absent for staff.</b> A guest's needs are hunger, thirst
+		// and the rest; a staff member's are their pay and their training, which nothing here runs.
+		foreach ( var member in _staff )
+		{
+			// The same stamp, for the same reason: the original gives every person kind a needs call
+			// and a behaviour call back to back off one switch, and FUN_00505490 opens with
+			// FUN_004fa870 at 0x00505495 exactly as the guest handler does: the speed eased, then the stamp.
+			MoveEffect( member );
+			member.Pace();
+			member.Navigator.StampPrevious();
+
+			// The staff handler's own bubble call, on the member's sweep in four of the park's clock
+			// (FUN_00505490, 0x005054b3..0x005054c0).
+			if ( (member.ThingId & 3) == (State.GameTick & 3) )
+				member.Thoughts.Expire( State.GameTick );
+
+			var playing = _sprites.GetValueOrDefault( member.ThingId );
+
+			// On the park's clock, mGameTick, as every staff handler reads it (0x004d6545 the guard's): the
+			// idle stamps are readings of it, and the guard's walk-or-stay is its low two bits.
+			if ( _staffWalks.TryGetValue( member.ThingId, out var walk ) )
+				_staffBehaviour.Step( member, walk, playing, State.GameTick );
+
+			if ( playing == null )
+				continue;
+
+			// A sprite on a state's script whose save kept no frames a direction (+0xbc nought) would loop on
+			// it for ever: it is read from the bank again, and with no bank the sprite stands.
+			if ( playing.IsOnAState && playing.FramesPerDirection <= 0 )
+			{
+				playing.FramesPerDirection = BankOf( member.ThingId ) is { } bank
+					? bank.Sets[playing.Set].FramesPerDirection
+					: 0;
+
+				if ( playing.FramesPerDirection <= 0 )
+				{
+					Unimplemented.Report( "SPRITE_STATE_ANIMATION_NOT_STARTED" );
+					playing.Start( SpriteScript.Standing );
+				}
+			}
+
+			if ( member.NextAnimation != 0 )
+			{
+				StartAnimation( member.ThingId, playing, member.NextAnimation );
+				member.NextAnimation = 0;
+			}
+
+			if ( member.NextInterval != 0 )
+			{
+				playing.Interval = member.NextInterval;
+				member.NextInterval = 0;
+			}
+		}
+
+		// Anybody who has walked out of the park goes home, taken out here rather than inside the
+		// loop above because removing from a list while it is being walked would throw. PeepBehaviour
+		// puts them into these states and deliberately does not act on either: it owns what a guest
+		// wants, never the list they are in.
+		//
+		// A leaver walks HeadingForExit -> PickingACellOutside (19) -> WalkingOutside (20) ->
+		// AtTheBusStop (21) and goes from there when a vehicle stands for them, which PeepBehaviour
+		// answers by putting them in Leaving; the original deletes them in that turn (FUN_0050b780).
+		// Newest first, the sweep's own order, which is the order their ids come free in.
+		foreach ( var leaver in _peeps.Where( peep => peep.State is PeepState.Leaving ).Select( peep => peep.ThingId ).ToList() )
+			Depart( leaver );
+
+		StepArrivals();
+
+		// After the load, and on every sweep rather than only while one is running - the original
+		// reaches its own tail the same way, from every arm above. Without this the vehicle is
+		// released once and parks at the next of its three spins for ever.
+		StepVehicle();
+		LogVehicleStatuses();
+
+		// The staff pool's turn follows the arrival manager's in the sweep's tail (0x004d7b30).
+		ParkStaffPool.Current?.Sweep( State.GameTick,
+			kind => _staff.Count( member => ParkStaffPool.KindFor( member.Model ) == kind ),
+			StaffNamed );
+
+		TakeTheRidesTurns( thingTick );
+		RetryGateClose();
+
+		// The advisor's turn is the sweep's last: he is a thing (model 11, FUN_0050b360's arm 0xb), the list is
+		// swept newest first, and the two things made before him have no arm, so a message posted on any
+		// other thing's turn is said on the same tick (docs/exe/advisor-park.md, "The advisor's turn in the sweep").
+		// Catch-up sweeps share a frame timestamp here; the native running clock may query the OS per call.
+		// GameClock.Now keeps the engine's clamped-frame timing deviation (docs/exe/advisor-park.md).
+		State.AdvisorMessages?.Tick( State.GameTick, (long)(GameClock.Now * 1000),
+			( response, sample ) => SpeakResponse( Advisor.Current is { } advisor ? advisor.PlayParkResponse : null, response, sample ),
+			(group, subject, second) =>
+			{
+				// The event's item word is the record's +0x04 (FUN_0059b620): the item a poster handed, else the subject's.
+				var item = second ?? (State.TryObject( subject, out var about ) ? about.CatalogueId : 0);
+				var name = _behaviour.Catalogue is { } catalogue && catalogue.TryGet( item, out var named ) ? named.Name : null;
+				State.Tags.Said( group, subject, Time.WallMilliseconds, item, name );
+			},
+			AdvisorFacts );
+
+		// The sweep's end: the ids of the things deleted in it go back on the free list (0x00516654..0x00516685), before the tail.
+		State.FreeDeletedThings();
+
+		// Then the sweep's tail, after every thing's turn and so after the advisor's (FUN_00516380 turns the things at
+		// 0x005163fb and calls the tail at 0x00516695): the golden tickets on every hundredth tick (0x004d7b60) are
+		// owed here and tested by Level.TurnTheCalendar once the calendar has turned, as the original's tail has them
+		// (0x004d7b20), so a ticket's line waits for the next sweep's turn.
+		ParkGoldenTickets.Owe( State.GameTick );
+	}
+
+	/// <summary>The sweeps the park's loop dropped in a frame by <see cref="SweepsAFrame"/>, <paramref name="run"/> having run: counted, and said.</summary>
+	internal void Dropped( int run, int dropped )
+	{
 		SweepsDropped += dropped;
-		Log.Info( $"Park sweep: {sweeps} run and {dropped} dropped in a frame of {GameClock.TicksDue} ticks, mGameTick {State.GameTick}" );
+		Log.Info( $"Park sweep: {run} run and {dropped} dropped in a frame of {GameClock.TicksDue} ticks, mGameTick {State.GameTick}" );
 	}
 
 	/// <summary>

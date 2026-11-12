@@ -98,14 +98,9 @@ public static class GameClock
 	/// for every frame of a pause.
 	///
 	/// <para>
-	/// Every system that runs on the tick reads this same count, rather than one of them draining a
-	/// queue. The original instead runs a single loop that calls each system on its own share of the ticks
-	/// (0x0054f4bf onwards: the particles and the thing engine every tick, the schedulers every 2nd, the music
-	/// level every 32nd), which
-	/// is the same thing while no two of them depend on the order they see each other in. <b>When
-	/// there is a simulation that does</b> - guests reacting to what rides did in the same tick -
-	/// <b>this has to become one loop calling each system per tick</b>, not a count each of them
-	/// loops over separately.
+	/// A park's systems take these ticks in one loop, each tick through every system before the next
+	/// (<see cref="ParkLoop"/>, the original's from 0x0054f4bf), so a guest's turn sees what the rides did in
+	/// the ticks before it. The lobby's one system, the particles, loops over the count alone.
 	/// </para>
 	/// </summary>
 	public static int TicksDue { get; private set; }

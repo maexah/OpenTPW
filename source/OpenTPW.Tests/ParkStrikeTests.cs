@@ -374,7 +374,7 @@ public class ParkStrikeTests
 		{
 			Time.Update( 0.1f );
 			GameClock.Update( paused: false, GameClock.ParkCatchUp );
-			people.Update();
+			ParkFrame.Run( people );
 		}
 
 		Assert.AreEqual( from + 1, people.State.GameTick, "one sweep" );

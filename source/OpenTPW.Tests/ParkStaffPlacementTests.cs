@@ -379,7 +379,7 @@ public class ParkStaffPlacementTests
 		{
 			Time.Update( GameClock.TickSeconds );
 			GameClock.Update( paused: false, GameClock.ParkCatchUp );
-			people.Update();
+			ParkFrame.Run( people );
 		}
 
 		Assert.AreEqual( 0.809375f, hired.PreviousSpeed, 0.00001f, "three sweeps of the park ease it three times" );

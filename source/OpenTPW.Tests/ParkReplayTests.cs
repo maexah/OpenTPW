@@ -54,7 +54,7 @@ public class ParkReplayTests
 			for ( var frame = 0; frame < 400; ++frame )
 			{
 				SimulationClockScope.Frame( 8 * GameClock.TickSeconds );
-				people.Update();
+				ParkFrame.Run( people );
 				trace.Add( $"{GameClock.TicksDue}:{state.GameTick}:" + string.Join( ";", people.Peeps.Select( peep =>
 					$"{peep.ThingId},{peep.State},{peep.Navigator.Position},{peep.MajorDest},{peep.Cash},{peep.Happiness:R},{peep.SpriteKind},{peep.SpriteBank}" ) )
 					+ "|" + string.Join( ";", people.Staff.Select( person =>

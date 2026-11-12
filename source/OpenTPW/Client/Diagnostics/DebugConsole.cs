@@ -2520,7 +2520,7 @@ public static class DebugConsole
 						+ $"rates ({string.Join( ", ", emitter.Rates )}) most {emitter.MaxParticles} raw ({emitter.X},{emitter.Y},{emitter.Z})" );
 				}
 
-				Reply( $"particles: {ofTheWorld} emitters of the world, {alive} particles alive, {WorldParticles.Current?.Drawn ?? 0} drawn last frame, density {particleSystem.Density}" );
+				Reply( $"particles: {ofTheWorld} emitters of the world, {alive} particles alive, {WorldParticles.Current?.Drawn ?? 0} drawn last frame, density {particleSystem.Density}, steps {particleSystem.Steps}" );
 
 				break;
 

@@ -32,7 +32,7 @@ namespace OpenTPW;
 /// <para>
 /// <b>What this is not.</b> It does not steer - the behaviour list that produces a force is
 /// <see cref="PeepSteering"/>, and following the route it plans is <see cref="PeepJourney"/>.
-/// <b>Both are ticked from the park</b>, through <c>ParkPeople.OnUpdate</c> into
+/// <b>Both are ticked from the park</b>, through <c>ParkPeople.Sweep</c> into
 /// <see cref="PeepBehaviour"/> and <see cref="PeepWalk"/>, so a route planned here does make somebody
 /// walk.
 /// </para>

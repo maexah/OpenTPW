@@ -1730,26 +1730,29 @@ public sealed class ParkRides : Entity
 	}
 
 	/// <summary>
-	/// One tick for every 31ms that has come due, which is where the original runs the whole script
-	/// system: <c>FUN_005516b0</c>, called once per park tick - after the track tick, which counts the bumper cars'
-	/// goes (<see cref="ParkBumperCars.Tick"/>).
+	/// The rides' part of one step of the park's loop (<see cref="ParkLoop"/>), <paramref name="index"/> the step's
+	/// place among the frame's ticks: the track tick, which counts the bumper cars' goes (<see cref="ParkBumperCars.Tick"/>),
+	/// then the whole script system, <c>FUN_005516b0</c> (<c>0x0054f56b</c>).
+	/// </summary>
+	internal void Tick( int index )
+	{
+		ParkState.Current?.TrackRides.Cars.Tick();
+		Scheduler.Advance( MillisecondsAt( index ) );
+
+		// The walks after the scripts, as the engine's order has them, but once a tick where the engine's
+		// FUN_00557ab0 runs once a frame past this loop (0x0054fa08): a deviation kept by Alexah's decision,
+		// so an arrival is noticed within 31 ms whatever the frame rate (docs/history/queue-done.md Q183).
+		Scheduler.StepTheWalks( MillisecondsAt( index ) );
+	}
+
+	/// <summary>
+	/// Once a frame, after the park's loop has run the frame's ticks (<see cref="Tick"/>), whatever they asked for is shown.
 	/// </summary>
 	protected override void OnUpdate()
 	{
-		for ( int i = 0; i < GameClock.TicksDue; ++i )
-		{
-			ParkState.Current?.TrackRides.Cars.Tick();
-			Scheduler.Advance( MillisecondsAt( i ) );
-
-			// The walks after the scripts, as the engine's order has them, but once a tick where the engine's
-			// FUN_00557ab0 runs once a frame past this loop (0x0054fa08): a deviation kept by Alexah's decision,
-			// so an arrival is noticed within 31 ms whatever the frame rate (docs/history/queue-done.md Q183).
-			Scheduler.StepTheWalks( MillisecondsAt( i ) );
-		}
-
-		// And then, once, whatever those ticks asked for is shown. The engine advances its animation players
+		// The engine advances its animation players
 		// in the scene draw (on-screen models from their scene-node callback, the rest by FUN_0044e410( 3 )),
-		// past the back edge of this very catch-up loop, off one snapshot of the clock - so the sweep belongs after the loop rather than inside it.
+		// past the back edge of the catch-up loop, off one snapshot of the clock - so the sweep belongs after the loop rather than inside it.
 		// The snapshot is the frame's own moment, so a clip moves every drawn frame (0x00473740; docs/exe/park.md, difference 7). Our tick runs
 		// at the end of its 31 ms and the engine's at the start, so the engine's snapshot lies between its last two ticks and ours past its
 		// last: the same moment of the frame, a tick further on in the ticks' own stamps, which leaves these clips a tick ahead of the
@@ -1770,7 +1773,7 @@ public sealed class ParkRides : Entity
 	/// </para>
 	/// <para>
 	/// Worked back from the tick number rather than read from <see cref="GameClock.Now"/>, which is one
-	/// value for the whole frame. By the time an entity updates, <see cref="GameClock.Ticks"/> already
+	/// value for the whole frame. By the time the park's loop runs, <see cref="GameClock.Ticks"/> already
 	/// counts this frame's ticks, so the first of them is that many less <see cref="GameClock.TicksDue"/>,
 	/// plus one.
 	/// </para>

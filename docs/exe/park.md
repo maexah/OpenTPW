@@ -3376,19 +3376,16 @@ A third read method — `memory.getBytes` into a Jython bytearray — **silently
 
 **Three clip totals are all correct and answer different questions. Do not read a mismatch as an error:** **1085** clips summed PER SCRIPT (308 `.RSE` files across 262 archives; an archive with several scripts counts its clips once per script); **910** per archive-named item (274 of them); **1273** per base model across all of `data/` (445 of them). Likewise the item census: keyed on **base models** — any `<stem>.md2` with at least one role file beside it — the answer is **197 of 445**; the older "88 of 274" keyed each item to its archive's basename, which is invisible to every archive holding more than one base model (`terrain.wad` holds `base.MD2`, `queue.wad` holds every queue piece, and the go-kart and water-ride archives hold a track segment each).
 
-## OpenTPW catch-up ordering reproduction (2026-10-03)
+## OpenTPW catch-up ordering
 
-Observed in OpenTPW, not an additional executable claim: `ParkCatchUpOrderTests` drives
-`ParkRides.Update` then `ParkPeople.Update`, the order used by `Level`. A synthetic script
-with scheduler id 1 yields at tick 1 and clears `VAR_ADMIT` at tick 9. A guest from the shipped
-Lost Kingdom park is placed in the entering-ride state and queue for thing 13.
-
-Across 16 ticks, partitions of 1 or 8 ticks per frame complete boarding on relative world
-tick 2; one 16-tick frame completes it on relative world tick 1. The first guest turn sees
-future script state because all ride ticks have already run. The test asserts this known
-Q150 discrepancy, not correct behaviour. Replace its unequal expectations when the scheduler
-is repaired. This isolates admission timing; it does not establish that every subsystem
-should be partition-invariant (frame animation and original script time have separate rules).
+Observed in OpenTPW, not an additional executable claim. `ParkLoop` takes a frame's ticks one at a time through every
+system, as the original's loop does (`docs/exe/park-engine.md`, "What the 31 ms tick drives"), so what a sweep sees no
+longer hangs on how the ticks fall into frames. `ParkCatchUpOrderTests` drives the loop as `Level` does: a synthetic
+script with scheduler id 1 yields at tick 1 and clears `VAR_ADMIT` at tick 9, a guest of the shipped Lost Kingdom park
+stands entering ride 13, and across 16 ticks, one, eight or sixteen to a frame, the guest boards on relative world tick
+2 and the ride's turn in each sweep finds the scripts at that sweep's own tick, 8 then 16. Before Q150 the rides took
+every tick of a frame before any guest took one, and a sixteen-tick frame boarded on tick 1. This isolates admission
+timing; frame animation and the scripts' own time have separate rules (differences 6 and 7).
 
 ## Repeatable OpenTPW simulation tests (2026-10-03)
 
@@ -3401,4 +3398,4 @@ random stream must actually draw; a costume-shop dismissal exercises ride settle
 Identical seeds and frame inputs reproduce the trace; different seeds change it. Removing
 random injection fails the test. `SimulationClockScope` restores frame/tick clock internals.
 This does not prove determinism of weather, rendering, audio or a complete `Level` session,
-and does not require different frame partitions to agree while Q150 is open.
+and does not compare frame partitions (`ParkCatchUpOrderTests` does, for the scripts and the sweep).

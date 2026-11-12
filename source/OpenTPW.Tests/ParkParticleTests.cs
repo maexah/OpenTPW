@@ -257,6 +257,41 @@ public class ParkParticleTests
 	}
 
 	/// <summary>
+	/// <b>A tick's particles go before its scripts</b> (<c>Particles_Tick</c> at <c>0x0054f4f2</c>, the scripts at
+	/// <c>0x0054f56b</c>; <see cref="ParkLoop"/>): an emitter a script starts on the first of a frame's four ticks is first
+	/// stepped on the second, so three steps by the frame's end.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the particles after the scripts in the tick; the particles once a frame after the loop.</remarks>
+	[TestMethod]
+	public void AnEmitterAScriptStartsIsFirstSteppedOnTheNextTick()
+	{
+		var rides = Rides( shipped );
+		using var clock = new SimulationClockScope();
+
+		// The system's first step does nothing (0x00520130); it is taken before the frame.
+		system.Tick();
+
+		// An effect that runs down a step at a time and outlives the frame, so its lifetime counts its steps.
+		var effect = Array.FindIndex( system.Library.Effects, template => !template.Endless && template.Lifetime > 8 );
+		Assert.IsTrue( effect >= 0, "the library holds an effect that runs down" );
+
+		var before = Running;
+		var script = OnTheToilet( rides, Word( Opcode.EVENT ), 1, 1, effect, Word( Opcode.END ) );
+
+		// A script takes its turn on the ticks its id matches in the low three bits (RideScriptScheduler.RunsOn): this one's is
+		// the frame's first.
+		rides.Scheduler.Add( 0x900 | ((rides.Scheduler.Tick + 1) & 7), script );
+
+		SimulationClockScope.Frame( 4 * GameClock.TickSeconds );
+		Assert.AreEqual( 4, GameClock.TicksDue );
+		ParkLoop.Run( system, rides, null );
+
+		var started = Running.Except( before ).Single( emitter => emitter.Effect == effect );
+
+		Assert.AreEqual( 3, started.FirstLifetime - started.Lifetime, $"effect {effect}: stepped on the frame's last three ticks" );
+	}
+
+	/// <summary>
 	/// <b>A start keeps the node's fraction and the sweep cuts it to whole units</b>: Mumbo's smoke, started in the
 	/// original at height -4.618, was seen reaching <c>Particles_Spawn</c> as -4729 over 1024, not -4096 (<c>q928/orig/a/brk.log</c>). The toilet's stink starts at 10.125 up and 174.98 along, and the
 	/// first sweep leaves it at (555, 10, 174).

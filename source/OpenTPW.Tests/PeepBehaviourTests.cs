@@ -448,7 +448,7 @@ public class PeepBehaviourTests
 			for ( var tick = 0; tick < 140 * ParkPeople.ThingTickEvery; ++tick )
 			{
 				Frame( GameClock.TickSeconds );
-				people.Update();
+				ParkFrame.Run( people );
 			}
 
 			// The save's own guests, not everybody in the park. No load is due in these 140 sweeps (the
@@ -488,7 +488,7 @@ public class PeepBehaviourTests
 			for ( var tick = 0; tick < 32 * ParkPeople.ThingTickEvery; ++tick )
 			{
 				Frame( GameClock.TickSeconds );
-				people.Update();
+				ParkFrame.Run( people );
 			}
 
 			foreach ( var peep in arrived )
@@ -668,7 +668,7 @@ public class PeepBehaviourTests
 			for ( var tick = 0; tick < 140 * ParkPeople.ThingTickEvery; ++tick )
 			{
 				Frame( GameClock.TickSeconds );
-				people.Update();
+				ParkFrame.Run( people );
 			}
 
 			var guests = people.Peeps.ToDictionary( peep => peep.ThingId );

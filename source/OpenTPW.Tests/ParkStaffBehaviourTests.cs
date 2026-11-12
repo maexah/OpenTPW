@@ -692,7 +692,7 @@ public class ParkStaffBehaviourTests
 			while ( seen.Count < sweeps )
 			{
 				Frame( GameClock.TickSeconds );
-				people.Update();
+				ParkFrame.Run( people );
 
 				if ( people.State.GameTick == last )
 					continue;

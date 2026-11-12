@@ -127,7 +127,7 @@ public class ParkAnimationTests
 			for ( var tick = 0; tick < 64; ++tick )
 			{
 				Frame( GameClock.TickSeconds );
-				people.Update();
+				ParkFrame.Run( people );
 
 				foreach ( var peep in people.Peeps )
 					seen[peep.ThingId].Add( people.SpriteFor( peep.ThingId )!.Frame );
@@ -197,7 +197,7 @@ public class ParkAnimationTests
 			for ( var tick = 1; tick <= WarmUp; ++tick )
 			{
 				Frame( GameClock.TickSeconds );
-				people.Update();
+				ParkFrame.Run( people );
 			}
 
 			var frames = people.Peeps.ToDictionary(
@@ -208,7 +208,7 @@ public class ParkAnimationTests
 			for ( var tick = WarmUp + 1; tick <= WarmUp + 80; ++tick )
 			{
 				Frame( GameClock.TickSeconds );
-				people.Update();
+				ParkFrame.Run( people );
 
 				var moved = false;
 
@@ -271,7 +271,7 @@ public class ParkAnimationTests
 			for ( var tick = 0; tick < 64; ++tick )
 			{
 				Frame( GameClock.TickSeconds );
-				people.Update();
+				ParkFrame.Run( people );
 			}
 
 			var walking = people.Peeps
@@ -324,7 +324,7 @@ public class ParkAnimationTests
 			for ( var tick = 0; tick < 128; ++tick )
 			{
 				Frame( GameClock.TickSeconds );
-				people.Update();
+				ParkFrame.Run( people );
 			}
 
 			foreach ( var peep in people.Peeps )
@@ -372,7 +372,7 @@ public class ParkAnimationTests
 			for ( var tick = 0; tick < 64; ++tick )
 			{
 				Frame( GameClock.TickSeconds );
-				people.Update();
+				ParkFrame.Run( people );
 
 				differing += people.Peeps.Count( peep =>
 				{
@@ -436,7 +436,7 @@ public class ParkAnimationTests
 			for ( var tick = 0; tick < 96; ++tick )
 			{
 				Frame( GameClock.TickSeconds );
-				people.Update();
+				ParkFrame.Run( people );
 
 				foreach ( var peep in people.Peeps )
 				{

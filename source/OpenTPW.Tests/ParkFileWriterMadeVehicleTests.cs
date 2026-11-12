@@ -105,7 +105,7 @@ public class ParkFileWriterMadeVehicleTests
 		{
 			Time.Update( 0.1f );
 			GameClock.Update( paused: false, GameClock.ParkCatchUp );
-			people.Update();
+			ParkFrame.Run( people );
 		}
 	}
 

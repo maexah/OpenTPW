@@ -1493,7 +1493,8 @@ public sealed partial class ParkAudio : Entity
 
 		// Re-counted rather than told when the crowd changes, as the original does, and on its beat: FUN_0051e790
 		// runs from the park loop at 0x0054f870 on every 32nd tick, about once a second, and not while the game
-		// is held, when no tick runs. Guests arrive by bus and leave, so the level moves with them.
+		// is held, when no tick runs. Guests arrive by bus and leave, so the level moves with them. Asked once a frame after the
+		// park's loop, where the original asks in the 32nd tick's own step: a later sweep in the same frame is counted (Q1120).
 		if ( SetsMusicLevel( GameClock.Ticks, GameClock.TicksDue ) )
 		{
 			var worldState = Level.Current?.Park?.WorldState ?? 0;

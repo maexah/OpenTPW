@@ -421,7 +421,7 @@ public class ParkClosedRideTests
 
 				var ticks = GameClock.TicksDue;
 
-				park.People.Update();
+				ParkFrame.Run( park.People );
 
 				var swept = Enumerable.Range( 0, ticks )
 					.Count( i => ((GameClock.Ticks - ticks + 1 + i) & (ParkPeople.ThingTickEvery - 1)) == 0 );
@@ -1801,7 +1801,7 @@ public class ParkClosedRideTests
 			{
 				Time.Update( 1f / 60f );
 				GameClock.Update( paused: false, GameClock.ParkCatchUp );
-				park.People.Update();
+				ParkFrame.Run( park.People );
 			}
 
 			Assert.AreEqual( 64, park.State.GameTick, "one sweep" );
@@ -1847,7 +1847,7 @@ public class ParkClosedRideTests
 			{
 				Time.Update( 1f / 60f );
 				GameClock.Update( paused: false, GameClock.ParkCatchUp );
-				park.People.Update();
+				ParkFrame.Run( park.People );
 			}
 
 			var waiting = park.People.WaitingToOpen;
@@ -1887,7 +1887,7 @@ public class ParkClosedRideTests
 			{
 				Time.Update( 1f / 60f );
 				GameClock.Update( paused: false, GameClock.ParkCatchUp );
-				park.People.Update();
+				ParkFrame.Run( park.People );
 				Assert.AreEqual( 0, messages.PendingCount, $"left waiting at the end of sweep {park.State.GameTick}: {messages.Census()}" );
 			}
 

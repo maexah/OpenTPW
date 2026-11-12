@@ -196,7 +196,7 @@ public class ParkStaffRegionEffectsTests
 		for ( var sweep = 0; sweep < 40 && !seen; ++sweep )
 		{
 			SimulationClockScope.Frame( 8 * GameClock.TickSeconds );
-			people.Update();
+			ParkFrame.Run( people );
 			seen = guard.RecordedCell != MapStep.CellId( 39, 28 );
 		}
 

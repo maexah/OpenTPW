@@ -552,7 +552,7 @@ public class ParkBalloonTests
 			{
 				Frame( 0.031f );
 				Assert.IsTrue( GameClock.TicksDue <= 1, "a frame of one tick at most" );
-				people.Update();
+				ParkFrame.Run( people );
 			}
 
 			Assert.AreEqual( (from + 1, 0), (people.State.GameTick, GameClock.Ticks % ParkPeople.ThingTickEvery), "one sweep, on its own tick" );
@@ -589,7 +589,7 @@ public class ParkBalloonTests
 		for ( var frame = 0; frame < 10 && people.State.GameTick == from; ++frame )
 		{
 			Frame( 0.1f );
-			people.Update();
+			ParkFrame.Run( people );
 		}
 
 		Assert.AreEqual( from + 1, people.State.GameTick, "one sweep" );

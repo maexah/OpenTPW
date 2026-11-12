@@ -128,7 +128,7 @@ public class ParkVisitHistoryTests
 
 				Time.Update( 1f / 60f );
 				GameClock.Update( paused: false, GameClock.ParkCatchUp );
-				people.Update();
+				ParkFrame.Run( people );
 			}
 
 			Assert.AreEqual( 760, state.GameTick, "the park swept up to 760" );

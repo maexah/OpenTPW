@@ -12817,3 +12817,20 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   buys item 1203 on (43,30) again and reads `WrittenCells` for that cell's `TileIndex` would show 55 From the
   week-end audit (stage 6, the second reading of commit `8422bffa`; read from the code, not reproduced in the
   game). `OpenTPW/World/Level.cs`, line 907.
+- [x] **Q150. Scripts and the thing sweep take a frame's ticks in two loops, where the original takes both per tick.**
+  Found by the 2026-09-26 staleness audit. The original's park loop runs the scripts (`0x0054f56b`) and the thing
+  sweep (`0x0054f7bb`) inside one loop over the frame's ticks. `ParkRides` and `ParkPeople` each loop over
+  `GameClock.TicksDue` on their own, rides first (`ParticleSystem` is a third), so on a frame with two ticks due every
+  script takes both before any guest takes one. `GameClock.TicksDue`'s remark says this must become one loop once
+  guests react to what rides did in the same tick, and they do now: a shut ride turns its queue away (`c54e848`). Run
+  the park's systems from one loop, one tick at a time, in the original's order, keeping the three-sweep cap
+  (`ParkPeople.SweepsAFrame`). Confirm: a long frame
+  forced, the log's ride and guest lines interleaved tick by tick.
+  From Q238: inside one sweep the original walks ONE list, every kind of thing in it, the newest first
+  (`FUN_00516270`; `ride-operation.md`, "Where a ride's turn comes from"). `ParkPeople` sweeps the guests, then the
+  staff, then the rides, each in that order among its own, so a hire or a thing bought after a guest still takes
+  its turn after every guest.
+  Done in Q150: `ParkLoop`, at the top of a park's frame, takes each tick through the particles, the track tick and the
+  scripts (`ParkRides.Tick`), the sprites and, on every eighth, the sweep (`ParkPeople.Sweep`), three a frame; the
+  entities keep only their once-a-frame work. Seen off-screen after `stall 600` and `stall 1200` (`q150/`); the music's
+  once-a-frame count is Q1120, and Q238's one newest-first list within a sweep is Q1121.

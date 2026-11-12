@@ -303,7 +303,7 @@ public class ParkEntertainerPerformanceTests
 			Assert.AreEqual( 17, bank.Sets[4].FramesPerDirection, "SPR_EX's set 4 is the long one" );
 
 			SimulationClockScope.Frame( 8 * GameClock.TickSeconds );
-			people.Update();
+			ParkFrame.Run( people );
 
 			Assert.AreEqual( packed ? 17 : 0, sprite.FramesPerDirection );
 
@@ -354,7 +354,7 @@ public class ParkEntertainerPerformanceTests
 			for ( var sweep = 0; sweep < 900; ++sweep )
 			{
 				SimulationClockScope.Frame( 8 * GameClock.TickSeconds );
-				people.Update();
+				ParkFrame.Run( people );
 
 				if ( member.Activity != StaffActivity.Performing )
 					continue;
@@ -450,7 +450,7 @@ public class ParkEntertainerPerformanceTests
 			void Sweep()
 			{
 				SimulationClockScope.Frame( 8 * GameClock.TickSeconds );
-				people!.Update();
+				ParkFrame.Run( people! );
 				++swept;
 
 				Assert.AreEqual( start + swept, state.GameTick, "one sweep a frame" );

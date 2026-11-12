@@ -340,7 +340,7 @@ public class ParkDecidingArmsTests
 			for ( var sweep = 0; sweep < 8; ++sweep )
 			{
 				SimulationClockScope.Frame( GameClock.TickSeconds * 8 );
-				people.Update();
+				ParkFrame.Run( people );
 			}
 
 			Assert.AreEqual( (PeepState.PlayingSpotAnimation, 54f), (guest.State, guest.Happiness) );

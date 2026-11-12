@@ -333,6 +333,9 @@ internal sealed class ParticleSystem
 		}
 	}
 
+	/// <summary>The steps taken since the system started (<see cref="Tick"/>), for the debug console and the park's loop's log.</summary>
+	internal int Steps => _ticks;
+
 	/// <summary>One step of the whole system - 0x00520130.</summary>
 	internal void Tick()
 	{

@@ -470,19 +470,6 @@ filed the items that cite it.
   original fits (`UiControl_PlaceMesh`, `0x00476f10`: the node `0x00476e80` answers, `+0x78..+0x8c` through its chain)
   and how the "x N" part is chosen, then fit as it does; confirm "x 1" beside the original's.
 
-- [ ] **Q150. Scripts and the thing sweep take a frame's ticks in two loops, where the original takes both per tick.**
-  Found by the 2026-09-26 staleness audit. The original's park loop runs the scripts (`0x0054f56b`) and the thing
-  sweep (`0x0054f7bb`) inside one loop over the frame's ticks. `ParkRides` and `ParkPeople` each loop over
-  `GameClock.TicksDue` on their own, rides first (`ParticleSystem` is a third), so on a frame with two ticks due every
-  script takes both before any guest takes one. `GameClock.TicksDue`'s remark says this must become one loop once
-  guests react to what rides did in the same tick, and they do now: a shut ride turns its queue away (`c54e848`). Run
-  the park's systems from one loop, one tick at a time, in the original's order, keeping the three-sweep cap
-  (`ParkPeople.SweepsAFrame`). Confirm: a long frame
-  forced, the log's ride and guest lines interleaved tick by tick.
-  From Q238: inside one sweep the original walks ONE list, every kind of thing in it, the newest first
-  (`FUN_00516270`; `ride-operation.md`, "Where a ride's turn comes from"). `ParkPeople` sweeps the guests, then the
-  staff, then the rides, each in that order among its own, so a hire or a thing bought after a guest still takes
-  its turn after every guest.
 - [ ] **Q570. The calendar compared after each sweep, and the weather ticked inside it.** From the run 6 review of Q149
   (`review6/VERIFY-7.md`, Q149 1 and the hunt's new finding). The original's `Calendar_Update` (`0x004f8260`) runs at
   the tail of every sweep (`0x00516695` -> `0x004d7b3b`), so in a frame of two or three sweeps whose day turns before
@@ -490,10 +477,9 @@ filed the items that cite it.
   frame after the entity walk (`Level.Update`, `GameCalendar.Update`), so the later sweeps count into the closing day.
   And `ParkWeather` ticks off `GameCalendar.Counter`, which moves only after the walk, so its ticks for a frame's sweeps
   run in the next frame and read `GameCalendar.Days` as compared after the last of them; the original's
-  `FUN_00512880` runs inside its sweep, before that sweep's compare. Both are said at the site. The sweep is split
-  across the entities (`ParkPeople.OnUpdate`, `ParkRides`, `ParticleSystem` each loop over `GameClock.TicksDue`), so the
-  fix is one sweep loop that runs every entity's sweep work, then the weather's tick, then the compare and
-  `RollTheDay` / `TurnTheMonth` / `TurnTheYear`, per sweep. The weather's day phase is moot once Q529 schedules on
+  `FUN_00512880` runs inside its sweep, before that sweep's compare. Both are said at the site. Since Q150 the
+  frame's ticks run in one loop (`ParkLoop`, `ParkPeople.Sweep` on every eighth), so the fix puts the weather's tick,
+  then the compare and `RollTheDay` / `TurnTheMonth` / `TurnTheYear`, after each `ParkPeople.Sweep` there, per sweep. The weather's day phase is moot once Q529 schedules on
   instants; its one-frame lag is not. Test: a frame of three sweeps whose day turns on the second rolls the rings
   before the third sweep's settle-up (put the once-a-frame compare back and see it fail). Reached only in a frame
   owing 16 or more ticks (a hitch); no game run shows it unless a hitch is forced (the console's `pause`/`step` or a
@@ -741,8 +727,8 @@ filed the items that cite it.
   `u4-gate-1`, `u2-arrivals-4`). Staff are kept on paths by a fence the original does not have; its own recovery is
   the no-links arm (`0x004f95c0`), built for staff (Q112): ask Alexah whether the fence stays. `ParkPeople` holds two
   versions of `FUN_004fa990`: `InsideGateCensus` reads the position's cell as the original does (bytes `+5`, `+7`),
-  `OnACountingCell` reads the occupancy link first; make them one. `ParkCatchUpOrderTests`' row (16, 1) asserts the
-  open Q150 defect as the expected result and will go red when Q150 is fixed: say so in the test.
+  `OnACountingCell` reads the occupancy link first; make them one. The third, `ParkCatchUpOrderTests`' row (16, 1), was
+  settled by Q150, which made that test the order's own.
 - [ ] **Q218. Five gaps left by the Q208 and Q209 corrections.** Found 2026-10-04 by a second read of those four
   commits, each checked against the code. (1) `RideHoardingTests.TerrainEndpointsFollowTheOriginalNormalizedQuarterTurns`
   still says by its name that it follows the original, while `docs/exe/ride-hoardings.md` says it checks OpenTPW's
@@ -2230,6 +2216,20 @@ filed the items that cite it.
   account falls by 6.9 to 8.6 MB from 108.8 MB, VmHWM falls by about as much, `mem vulkan` (204.5 MB) falls by less or not at all
   (the pool may reuse the space); the second park loads in about 4.8 to 5.0 s against 3.1 s. Add `memmap.drm` vram on the desk if
   wanted. Decide the keep or release in `docs/DECISIONS.md` from the figures (about 1.75 s a re-entry against the saving). (Filed by the Sentinel from the run 15 review of Q832, VERIFY-2.)
+- [ ] **Q1120. The music's level and the crowd's voice count the guests once a frame, after all its sweeps (from Q150).**
+  The original's every-32nd block (`0x0054f82d`..`0x0054f8c8`) runs in the 32nd tick's own step of the park's loop, after
+  that step's sweep. `ParkAudio.OnUpdate` asks `SetsMusicLevel` once a frame, after `ParkLoop`, so in a frame owing a 32nd
+  tick and a sweep after it (nine ticks or more: a hitch) the level and the crowd's voice count the guests as the later
+  sweep left them. Said at the site. Ask the block from `ParkLoop`'s step, after the sweep, keeping `Audio.Ready`'s guard
+  and the pump outside. Test: a frame from tick 25 to 40 sets the level from the guests the sweep of 32 left (a guest the
+  sweep of 40 admits is not counted). Reached in play only by a hitch (`lib/hitch.py`).
+- [ ] **Q1121. One sweep walks one list of every thing, newest first (from Q150, Q238's note).** Inside one sweep the
+  original visits one list holding every kind of thing, the newest first (`FUN_00516380`, `FUN_00516270`;
+  `ride-operation.md`, "Where a ride's turn comes from"). `ParkPeople.Sweep` takes the guests, then the staff, then the
+  rides, each in that order among its own, so a hire or a thing bought after a guest still takes its turn after every
+  guest. Q150 put the sweep in the original's step and left this order. Read which of the sweep's other calls are things
+  in that list (the advisor is, model 11) and which are the sweep's own, then walk one list. Confirm: a member of staff
+  hired after a guest takes their turn before that guest's in the same sweep, logged.
 
 **Filed from Alexah's play test of 2026-10-30/31 (Full Simulation, Lost Kingdom), at the end of the bugs at their word.**
 Their notes, the console.log and the screenshots are in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`; each report was checked against the code, the log and

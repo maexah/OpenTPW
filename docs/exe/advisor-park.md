@@ -609,7 +609,7 @@ through its script 20 s after the load. The advisor's record for `0x46` read (0,
 was guessed at 1190 to 1215 for the first run and missed, and reasoned at 1159 to 1205 for the second
 (`q318/PREDICTION.txt`). The run of 2026-10-11 read 1201 and 1201.
 
-**OpenTPW** (`ParkPeople.OnUpdate`): the messages' turn is the sweep's last call, after the guests', the staff's,
+**OpenTPW** (`ParkPeople.Sweep`): the messages' turn is the sweep's last call, after the guests', the staff's,
 the arrivals', the staff pool's, the rides' and the gate's retry. `q318/confirm.py`, the stock park's Belly Bounce
 broken 25 s in, predicted first (`q318/PREDICTION.txt`; the first round's `pending` counts were Q306's, wrong since
 Q314, and were predicted again before the second run): the log read `mechanic 26 found ride 13 ... on mGameTick

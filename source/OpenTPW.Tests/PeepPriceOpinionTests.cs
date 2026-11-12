@@ -262,7 +262,7 @@ public class PeepPriceOpinionTests
 			for ( var frame = 0; frame < 120 && peep.State == PeepState.BeingAdmitted; ++frame )
 			{
 				Frame( 1f / 60f );
-				people.Update();
+				ParkFrame.Run( people );
 			}
 
 			Assert.AreEqual( PeepState.Deciding, peep.State, "they walked away from the door" );

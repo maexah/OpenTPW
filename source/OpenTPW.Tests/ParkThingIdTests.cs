@@ -356,7 +356,7 @@ public class ParkThingIdDeletionTests
 		for ( var frame = 0; frame < 600 && GameClock.Ticks / ParkPeople.ThingTickEvery < until; ++frame )
 		{
 			Frame( 1f / 60f );
-			people.Update();
+			ParkFrame.Run( people );
 		}
 
 		Assert.IsTrue( GameClock.Ticks / ParkPeople.ThingTickEvery >= until, "the sweeps ran" );

@@ -289,7 +289,7 @@ public class ParkTickTests
 			{
 				Frame( AFrame );
 				ticked += GameClock.TicksDue;
-				people.Update();
+				ParkFrame.Run( people );
 			}
 
 			// If this is zero the clock never ran and nothing below means anything - so it is asserted
@@ -383,8 +383,7 @@ public class ParkTickTests
 				Frame( AFrame );
 				ticked += GameClock.TicksDue;
 
-				rides.Update();
-				people.Update();
+				ParkFrame.Run( people, rides );
 
 				foreach ( var peep in people.Peeps )
 				{
@@ -549,7 +548,7 @@ public class ParkTickTests
 			for ( var tick = 0; tick < 16 * ParkPeople.ThingTickEvery; ++tick )
 			{
 				Frame( GameClock.TickSeconds );
-				people.Update();
+				ParkFrame.Run( people );
 			}
 
 			foreach ( var peep in people.Peeps )
@@ -601,7 +600,7 @@ public class ParkTickTests
 			for ( var tick = 1; tick <= 64; ++tick )
 			{
 				Frame( GameClock.TickSeconds );
-				people.Update();
+				ParkFrame.Run( people );
 
 				if ( walk.Position == last )
 					continue;
@@ -675,7 +674,7 @@ public class ParkTickTests
 				// A tenth of a second is three or four 31 ms ticks, so no frame runs more than one sweep, and each
 				// change below is stamped with the sweep that made it.
 				Frame( 0.1f );
-				people.Update();
+				ParkFrame.Run( people );
 
 				var tick = people.State.GameTick;
 
@@ -1661,7 +1660,7 @@ public class ParkTickTests
 		for ( var frame = 0; frame < 10 && people.State.GameTick == from; ++frame )
 		{
 			Frame( 0.1f );
-			people.Update();
+			ParkFrame.Run( people );
 		}
 
 		Assert.AreEqual( from + 1, people.State.GameTick, "one sweep" );
@@ -1731,7 +1730,7 @@ public class ParkTickTests
 			for ( var frame = 0; frame < 600 && walk.Position == start; ++frame )
 			{
 				Frame( AFrame );
-				people.Update();
+				ParkFrame.Run( people );
 			}
 
 			Assert.AreNotEqual( start, walk.Position, "the guest never moved at all" );
@@ -1751,7 +1750,7 @@ public class ParkTickTests
 				navigator.Add( walk.Position );
 
 				Frame( AFrame );
-				people.Update();
+				ParkFrame.Run( people );
 			}
 
 			Assert.AreEqual( 1, navigator.Count,
@@ -1870,7 +1869,6 @@ public class ParkTickTests
 			for ( var frame = 0; frame < 40000; ++frame )
 			{
 				Frame( frame % 2000 == 1999 ? Hitch : AFrame );
-				rides.Update();
 
 				// Where everybody stands as this frame's first sweep, if it has one, begins.
 				var stood = people.Peeps
@@ -1882,7 +1880,7 @@ public class ParkTickTests
 
 				var ticks = GameClock.TicksDue;
 
-				people.Update();
+				ParkFrame.Run( people, rides );
 
 				var sweptTimes = Enumerable.Range( 0, ticks )
 					.Count( i => ((GameClock.Ticks - ticks + 1 + i) & (ParkPeople.ThingTickEvery - 1)) == 0 );
@@ -2023,7 +2021,7 @@ public class ParkTickTests
 			for ( var frame = 0; frame < 120; ++frame )
 			{
 				Frame( AFrame );
-				people.Update();
+				ParkFrame.Run( people );
 			}
 
 			var person = world.People.Single( p => p.ThingId == 42 );
@@ -2100,8 +2098,7 @@ public class ParkTickTests
 			for ( var frame = 0; frame < 40000; ++frame )
 			{
 				Frame( AFrame );
-				rides.Update();
-				people.Update();
+				ParkFrame.Run( people, rides );
 
 				Assert.IsTrue( GameClock.TicksDue <= 1, $"frame {frame} ran {GameClock.TicksDue} ticks" );
 
