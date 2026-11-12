@@ -12145,6 +12145,12 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q272. A mechanic arriving at a ride that waits for an upgrade is sent away.** From the week-end audit
+  (stage 4; read twice from the listing). `FUN_004da740` puts him to work on any of three: the ride's state 1, its
+  state 2 (`FUN_004e03e0`, `0x004da7ca`) or the ride's `+0x64` call, each going to `FUN_004da370` with `0xd`
+  (`0x004da7fa`). `StaffBehaviour.ArriveAtTheRide` tests state 1 and the call only, sends a state 2 ride's mechanic
+  back to his decide and counts nothing; its summary gives the two tests as the original's. Build the third, or
+  count it. Confirm: a ride put to state 2 with a mechanic sent to it, his state read in both games.
 
 ## B. Docs and comments
 

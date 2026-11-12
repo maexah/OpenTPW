@@ -243,7 +243,7 @@ hurry speed, where the handyman's walk to a toilet takes one.
 cleared and he decides ("UNUSUAL INCIDENT"). Then a step of the walk (`FUN_004fa2a0`), with no tiring: arrived,
 a ride broken down, waiting for an upgrade or calling goes to state `0xd`, and any other sends him to his
 decide with the ride still named; a walk that fails clears `+0x218` and decides. Unlike the handyman's arrival,
-his own cell is not held against the entry. OpenTPW's `ArriveAtTheRide` asks only for broken down or calling: a ride waiting for an upgrade sends him to his decide, not counted (the search passes such a ride over, `MECHANIC_UPGRADE_JOB`, so only a mechanic loaded on his way to one arrives at it).
+his own cell is not held against the entry. OpenTPW's `ArriveAtTheRide` asks all three, the upgrade first: a ride waiting for an upgrade is counted, `MECHANIC_UPGRADE_ARRIVAL`, and sends him to his decide, since the upgrade's count in state `0xd` is not decoded (Q272; the search passes such a ride over, `MECHANIC_UPGRADE_JOB`, so only a mechanic loaded on his way to one arrives at it).
 
 **State `0xd`.** The setter queues animation `0x12` and sets `+0x214` (`mDurationOfRepair`): for a repair
 `(100 - the State of repair's byte) x MechanicConstsPerGrade.WorkDuration / 100` in whole sweeps
@@ -265,7 +265,7 @@ the original, loading the file saved as he set off, read him assigned on its fir
 ticks after the load, where the run that wrote it took 42 sweeps from the same moment.
 
 **Where OpenTPW differs.** An object waiting for an upgrade is passed over by the search, counted
-(`MECHANIC_UPGRADE_JOB`), and `Repair` on one is counted and does nothing (`RIDE_UPGRADE_COMPLETION`): nothing
+(`MECHANIC_UPGRADE_JOB`), a mechanic arriving at one is sent to his decide, counted (`MECHANIC_UPGRADE_ARRIVAL`), and `Repair` on one is counted and does nothing (`RIDE_UPGRADE_COMPLETION`): nothing
 here puts a ride in state 2. Advisor message `0x46` is posted with the ride (`advisor-park.md`, "A mechanic on his way"). The coaster's
 circuit test after the open is counted (`OPEN_GUARD_COASTER_TRACK_RECORD`). A thing in the hand is passed
 over. The five "non-openable" log lines are not written.

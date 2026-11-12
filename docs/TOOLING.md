@@ -1497,6 +1497,15 @@ after its poller starts**, so a key meant inside either line cannot be sent afte
 - **The mechanic mending a pot:** `broken_pot()` (`lib/parkscene.py`), then wait for the log's `mechanic 26 found
   ride`, `starts repairing` and `finished repairing`: under a minute in all. He stands on (43,23), inside the
   pot's doorway, hidden from yaw 180: `camera 435 235 30 0` looks in at him (Q257z).
+- **A mechanic on his way to a ride in a state no screen reaches, on a cloud lane** (Q272, `consolerun.py` only): a
+  private game folder (links to the game's entries and a `save/` of its own) whose player was made by clicking
+  (`click 1007 56`, slot 1's `7a14` in a 1280 x 1024 run, then the name typed by `xdotool type` after `windowfocus`, Return),
+  made Instant Action by `gmsfile.put( gms.dat, mode=1 )`, with a copy of the level's `Easymode.TPWI` put in the player's
+  `jungle` folder as a `.TPWS`: `park jungle` then enters the newest file there, the stock park (a new player's folder holds
+  none, and the park is made fresh and empty). To catch him walking: `pause`, `scriptvar 13 VAR_BREAKSTAT 1` (the Bouncy Dino),
+  then `step 40`, `staff`, `savepark sNN` sixteen times: he set off between the second and third and arrived after the
+  fifteenth. Then `parkfile.thing_set( file, out, 13, 200, '<i', 2 )` writes the ride's `mState`, the file made the only
+  one in a second such folder, and `park jungle` loads it with him still on his way.
 - **A placed sound measured in the mix:** `AUDIO_FILE` before `parkrun.py`, `bus music 0`, then **wait 16 s
   after the park is entered**: before Q316 an opening line turned the effects down there (a waterfall read 0.05 to
   0.07 where 0.176 was owed); the stock park now says none, and the wait was not measured again. Take byte marks either side of an 8 s sleep and use `mixmatch.steady`: a 1.5 s

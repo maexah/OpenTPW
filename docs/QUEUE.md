@@ -1043,12 +1043,15 @@ filed the items that cite it.
   (`0x00452ac8`): without it the original answers nought there too. Confirm: the height read under a point on the
   gate's row in both games.
 
-- [ ] **Q272. A mechanic arriving at a ride that waits for an upgrade is sent away.** From the week-end audit
-  (stage 4; read twice from the listing). `FUN_004da740` puts him to work on any of three: the ride's state 1, its
-  state 2 (`FUN_004e03e0`, `0x004da7ca`) or the ride's `+0x64` call, each going to `FUN_004da370` with `0xd`
-  (`0x004da7fa`). `StaffBehaviour.ArriveAtTheRide` tests state 1 and the call only, sends a state 2 ride's mechanic
-  back to his decide and counts nothing; its summary gives the two tests as the original's. Build the third, or
-  count it. Confirm: a ride put to state 2 with a mechanic sent to it, his state read in both games.
+- [ ] **Q1292. A mechanic arriving at a ride that waits for an upgrade does the upgrade's work (from Q272).** Q272 gave
+  `StaffBehaviour.ArriveAtTheRide` the arrival's third test (`FUN_004da740`, `0x004da7ca`) and counts it,
+  `MECHANIC_UPGRADE_ARRIVAL`, sending him to his decide, because what state `0xd` counts down for an upgrade is not
+  decoded: `ride-operation.md`, "State `0xd`", says only "the tier's figure times the same" (`FUN_004da370`). Decode
+  that figure in Ghidra (which tier field, at which address), then put him to work for it and let `FUN_004df8f0`'s
+  upgrade arm finish it (`RIDE_UPGRADE_COMPLETION`); the search's own `MECHANIC_UPGRADE_JOB` belongs with it. Nothing
+  here puts a ride in state 2 (the Buy Upgrades order is not built, and the stock park is Instant Action), so the path
+  is reached only by a file that holds one. Confirm: a ride put to state 2 with a mechanic on his way, his
+  `mDurationOfRepair` and the ride's level read in both games.
 
 - [ ] **Q273. A node's direction is normalised in another order and width than the original's.** From the week-end
   audit (stage 4; read twice from the listing). `FUN_00556b90` sums (x*x + y*y) + z*z, keeps the root as a float
