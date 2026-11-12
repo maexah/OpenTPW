@@ -484,6 +484,33 @@ public class ParkMechanicRepairTests
 	}
 
 	/// <summary>
+	/// The arrival's third test (<c>FUN_004da740</c>, <c>0x004da7ca</c>): a ride waiting for an upgrade is work in
+	/// the original, unbuilt here, so arriving at one is counted and he decides; called or not, it is counted, and
+	/// the ride is left waiting. A ride that wants nothing is not counted.
+	/// </summary>
+	[DataTestMethod]
+	[DataRow( 2, 0, 1, DisplayName = "waiting for an upgrade: counted" )]
+	[DataRow( 2, 1, 1, DisplayName = "waiting and called: counted, not repaired" )]
+	[DataRow( 0, 0, 0, DisplayName = "operating: not counted" )]
+	public void ArrivingAtARideWaitingForAnUpgradeIsCounted( int rideState, int requested, int counted )
+	{
+		var world = World();
+		var state = new ParkState( world );
+		var (member, walk) = MechanicOn( world, state );
+		var before = Counted( "MECHANIC_UPGRADE_ARRIVAL" );
+
+		Change( state, Ride, ride => ride with { State = rideState, RequestedService = requested, StateOfRepair = 40f } );
+		OnHisWayAtTheEntry( state, member, Ride );
+
+		Behaviour( state ).Step( member, walk, playing: null, tick: 1001 );
+
+		Assert.AreEqual( counted, Counted( "MECHANIC_UPGRADE_ARRIVAL" ) - before );
+		Assert.AreNotEqual( StaffActivity.Repairing, member.Activity, "no repair's count is started for an upgrade" );
+		Assert.AreEqual( 0, member.DurationOfRepair );
+		Assert.AreEqual( rideState, Thing( state, Ride ).State, "the ride is left as it was" );
+	}
+
+	/// <summary>
 	/// Arriving at a ride that wants nothing he decides again in the same turn; on the way to one that is no
 	/// longer his he forgets it and decides (<c>FUN_004da740</c>).
 	/// </summary>

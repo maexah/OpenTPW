@@ -13542,3 +13542,9 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   by hand each failed one. Off-screen in the shipped park: a guest at (46,31) took litter 90 to bin 17 and its
   `VAR_TRIGGER` went 1 then 0, one at (47,22) dropped kind 3 there. Done in cloud lane c42; the drawing, the sprite's place
   and the written file are Q1288.
+- [x] **Q272. A mechanic arriving at a ride that waits for an upgrade is sent away.** From the week-end audit
+  (stage 4; read twice from the listing). `FUN_004da740` puts him to work on any of three: the ride's state 1, its
+  state 2 (`FUN_004e03e0`, `0x004da7ca`) or the ride's `+0x64` call, each going to `FUN_004da370` with `0xd`
+  (`0x004da7fa`). `StaffBehaviour.ArriveAtTheRide` tests state 1 and the call only, sends a state 2 ride's mechanic
+  back to his decide and counts nothing; its summary gives the two tests as the original's. Build the third, or
+  count it. Confirm: a ride put to state 2 with a mechanic sent to it, his state read in both games.

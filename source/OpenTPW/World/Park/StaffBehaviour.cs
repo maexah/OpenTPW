@@ -937,8 +937,25 @@ public sealed class StaffBehaviour
 	/// repair it has lost, cut to a byte (<c>FUN_004da370</c>, <c>0x004da42a</c>); any other sends him back to
 	/// his decide, the ride still named.
 	/// </summary>
+	/// <remarks>
+	/// <b>Not built, counted.</b> The arrival's third test, a ride waiting for an upgrade (state 2,
+	/// <c>FUN_004e03e0</c>, <c>0x004da7ca</c>), puts him to work in the original (<c>FUN_004da370</c> with
+	/// <c>0xd</c>, <c>0x004da7fa</c>) for a count of the upgrade tier's own that is not decoded
+	/// (<c>docs/exe/ride-operation.md</c>, "State <c>0xd</c>"). Here it is counted,
+	/// <c>MECHANIC_UPGRADE_ARRIVAL</c>, and he is sent back to his decide.
+	/// </remarks>
 	private void ArriveAtTheRide( Staff staff, PeepWalk walk, ParkWorld.CatalogueObject ride, int tick )
 	{
+		if ( ride.State == 2 )
+		{
+			Unimplemented.Report( "MECHANIC_UPGRADE_ARRIVAL" );
+			Log.Info( $"Staff: mechanic {staff.ThingId} arrived at ride {ride.ThingId} on mGameTick {tick}, "
+				+ "waiting for an upgrade: the upgrade's work is not built" );
+			Decide( staff, walk, tick );
+
+			return;
+		}
+
 		if ( ride.State != ParkRideChoice.StateRefusedOne && ride.RequestedService == 0 )
 		{
 			Log.Info( $"Staff: mechanic {staff.ThingId} arrived at ride {ride.ThingId} on mGameTick {tick} "
