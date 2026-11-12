@@ -3779,7 +3779,10 @@ inverted, then `DAT_00790a98`'s), normalises that direction, and walks 56 candid
 x (`0x006fe2c4`) and turned `c` × −45° about y (`0x006fe2bc`), by the sine table's entries (below), keeping the first with the largest dot product above
 nought; rows 0 and 6 keep column 0, and the frame is `c + 8r` (`0x0044b9f5`). It then sets two more locals (`0x0044ba04`..`0x0044ba2f`; `FUN_004755d0` writes local *n* at
 `+0x84 + 4n`): local 9, `+0xa8`, the roll from `FUN_0046f200` times 1/2π (`0x006fe2cc`), so in turns, which OpenTPW
-does not draw (`RIDER_HEAD_ROLL`; `FUN_0046f200` is not decoded, so it stays counted until it is, Q1560); and **local 8, `+0xa4`, the sprite's scale, 0.685** (the float at `0x0074ced0`),
+does not draw (`RIDER_HEAD_ROLL`, counted until it is: `FUN_0046f200` is atan2(−m[`+0x10`], m[`+0x14`]) of the 4 × 4
+matrix it is passed (`0x0046f200`..`0x0046f20e`: `fld`, `fchs`, `fld`, `fpatan`), and that matrix, built at
+`0x0044b96c`..`0x0044b9e1` by `FUN_0046f150`, `FUN_0046fbb0` and `FUN_00470040`, their product by `FUN_004702d0` copied to
+`[ebp-0x13c]` and passed at `0x0044b9e4`, is not decoded, Q1560); and **local 8, `+0xa4`, the sprite's scale, 0.685** (the float at `0x0074ced0`),
 which the picker copies to the draw record's `+0x2c` (`0x005422b2`) and `SpriteShadow_BuildQuad` multiplies by the 20.0 span. A
 head is drawn at 0.685 of a body's size; its pictures (22-40 pixels, all 128/128 like every pack) are as tall as a
 whole kid's. OpenTPW: `ParkGuestSprites.HeadScale` (Q179d's follow-up, Alexah 2026-09-30). The `b_car`'s `Head1` is turned half

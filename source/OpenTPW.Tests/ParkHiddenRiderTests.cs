@@ -20,7 +20,7 @@ public class ParkHiddenRiderTests
 	/// The stock park with a people of its own; the Drinks Shop's flags written over to <paramref name="shopFlags"/>, so a
 	/// thing without the bit stands beside the Belly Bounce, which keeps it.
 	/// </summary>
-	private static void WithThePark( int shopFlags, Action<ParkPeople, Peep[]> body )
+	private static void WithThePark( int shopFlags, Action<ParkPeople, Peep[]> body, Func<int, RideScript?>? scriptFor = null )
 	{
 		var data = GameData.Required();
 		using var stream = new MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
@@ -38,7 +38,7 @@ public class ParkHiddenRiderTests
 			Assert.AreEqual( 0x24, shop.Flags, "the stock Drinks Shop keeps its riders' sprites" );
 			Assert.IsTrue( state.ReplaceObject( shop with { Flags = (ushort)shopFlags } ) );
 
-			people = new ParkPeople( world, state: state, scriptFor: _ => null, random: new Random( 1 ),
+			people = new ParkPeople( world, state: state, scriptFor: scriptFor ?? (_ => null), random: new Random( 1 ),
 				behaviourRandom: new Random( 2 ), rideRandom: new Random( 3 ), staffRandom: new Random( 4 ) );
 
 			body( people, [.. people.Peeps.Take( 4 )] );
@@ -103,6 +103,78 @@ public class ParkHiddenRiderTests
 	[TestMethod]
 	public void AFrameDrawsNoBodyForARiderOnAThingWithoutTheBit()
 	{
+		InAFrame( null, ( people, peeps ) => { }, ( people, peeps, pool, written ) =>
+		{
+			var drawn = pool.Drawn.Select( one => one.Thing ).ToHashSet();
+
+			CollectionAssert.AreEquivalent( new[] { peeps[1].ThingId, peeps[2].ThingId, peeps[3].ThingId }, drawn.ToArray(),
+				"the shop's rider alone is not drawn" );
+			Assert.IsFalse( pool.ShadowsDrawn.Any( shadow => shadow.Thing == peeps[0].ThingId ), "nor their shadow" );
+
+			var lines = pool.Census().ToArray();
+
+			Assert.AreEqual( 1, lines.Count( line => line.Contains( "RIDES WITHOUT A SPRITE" ) ) );
+			StringAssert.Contains( lines.Single( line => line.Contains( "RIDES WITHOUT A SPRITE" ) ), $"thing {peeps[0].ThingId,2} " );
+		} );
+	}
+
+	/// <summary>
+	/// <b>A head a ride hangs is still drawn for a rider on a thing without the bit</b>: the hide sits after the head
+	/// branches of <see cref="ParkGuestSprites.WriteTheFrame"/>. The shop (flags <c>0xc</c>) runs a script whose
+	/// <c>ADDHEAD</c> hangs its rider's head on a head node of the Crazy Ape's model (the Crazy Ape is itself one of the 15
+	/// without the bit); the frame writes that head's quad where the node stands and no body for them, beside the three
+	/// others' bodies.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutation (fails here):</b> the hide moved above the two head branches (the head is not written: three quads, all
+	/// bodies).
+	/// </remarks>
+	[TestMethod]
+	public void AHeadARideHangsIsStillDrawnForARiderOnAThingWithoutTheBit()
+	{
+		var data = GameData.Required();
+		var monkey = new ParkItemCatalogue( "jungle", data ).All.Single( item => item.Stem == "monkey" );
+		var nodes = RideNodes.Load( monkey.Directory, monkey.Stem, data, false, [] )!;
+		nodes.PlaceFixed();
+		RideScript? hanging = null;
+		(OpenTPW.Vector3 At, int Frame, System.Numerics.Vector3 Towards)? hung = null;
+
+		InAFrame( thing => thing == DrinksShop ? hanging : null, ( people, peeps ) =>
+		{
+			hanging = new RideScript( RideScriptHeadTests.Build(
+				RideScriptHeadTests.Word( Opcode.ADDHEAD ), peeps[0].ThingId,
+				RideScriptHeadTests.Word( Opcode.END ) ) ) { Nodes = nodes, ThingId = DrinksShop };
+			hanging.SizeHeads( 16 );
+			hanging.SeedRandom( 1 );
+			hanging.Turn( 0f );
+
+			hung = ParkGuestSprites.HeadOnRide( people, peeps[0].ThingId );
+			Assert.IsNotNull( hung, "the shop's script holds the rider's head on a posed node" );
+		}, ( people, peeps, pool, written ) =>
+		{
+			CollectionAssert.AreEquivalent( new[] { peeps[1].ThingId, peeps[2].ThingId, peeps[3].ThingId },
+				pool.Drawn.Select( one => one.Thing ).ToArray(), "no body for the shop's rider" );
+			Assert.AreEqual( 4 + pool.BalloonsDrawn.Count, written.Used, "three bodies and the one head" );
+
+			// The quads are written furthest first; the bodies stand at (300, 200), the head on its node by the origin.
+			var at = hung!.Value.At.GetSystemVector3();
+			var middles = Enumerable.Range( 0, written.Used )
+				.Select( quad => pool.Written.Vertices.AsSpan( quad * 4, 4 ).ToArray()
+					.Aggregate( System.Numerics.Vector3.Zero, ( sum, corner ) => sum + corner.Position.GetSystemVector3() ) / 4f )
+				.ToArray();
+
+			Assert.AreEqual( 1, middles.Count( middle => System.Numerics.Vector3.Distance( middle, at ) < 5f ),
+				$"one quad, the head, at its node {at}: {string.Join( ", ", middles )}" );
+		} );
+	}
+
+	/// <summary>
+	/// The stock park with the shop's flags at <c>0xc</c>, four guests (the shop's rider, the Bounce's rider, the shop's
+	/// queuer and one left as the file has them) in one loaded bank, a head bank beside it, and one frame written.
+	/// </summary>
+	private static void InAFrame( Func<int, RideScript?>? scriptFor, Action<ParkPeople, Peep[]> before,
+		Action<ParkPeople, Peep[], ParkGuestSprites, (int Used, int Reach)> after )
+	{
 		var data = GameData.Required();
 		var bankFile = ParkGuestSprites.BanksIn( data, ParkGuestSprites.FolderFor( 0, "jungle" )!, 0 )[0];
 		var bank = new SpriteBankFile( new MemoryStream( data.ReadAllBytes( bankFile ) ) );
@@ -129,11 +201,15 @@ public class ParkHiddenRiderTests
 				Camera.SetCameraMode<CameraMode>();
 				((CameraMode)cameraField.GetValue( null )!).Position = new OpenTPW.Vector3( 100f, -40f, 7f );
 
+				before( people, peeps );
+
 				var pool = new ParkGuestSprites( "jungle", null );
 				pool.Resize( 6 );
 
 				var loaded = typeof( ParkGuestSprites ).GetNestedType( "Loaded", all )!;
-				((System.Collections.IDictionary)typeof( ParkGuestSprites ).GetField( "_banks", all )!.GetValue( pool )!)[(0, 0)] = Activator.CreateInstance( loaded, bank, pictures );
+				var banks = (System.Collections.IDictionary)typeof( ParkGuestSprites ).GetField( "_banks", all )!.GetValue( pool )!;
+				banks[(0, 0)] = Activator.CreateInstance( loaded, bank, pictures );
+				banks[ParkGuestSprites.HeadOf( 0, 0 )] = Activator.CreateInstance( loaded, bank, pictures );
 
 				var listed = (System.Collections.Generic.List<(ParkWorld.Person Person, ParkWorld.Sprite Sprite)>)typeof( ParkGuestSprites ).GetField( "_people", all )!.GetValue( pool )!;
 
@@ -145,18 +221,10 @@ public class ParkHiddenRiderTests
 					listed.Add( (new ParkWorld.Person( peep.ThingId, 0, 0, 0, peep.ThingId, 0, default!, null ),
 						new ParkWorld.Sprite( peep.ThingId, 0, 0, 0, 300f, 200f, 0f, 0, 0, 255, 0, 0, 0 )) );
 
-				pool.WriteTheFrame();
-				var drawn = pool.Drawn.Select( one => one.Thing ).ToHashSet();
+				var written = pool.WriteTheFrame();
 
-				CollectionAssert.AreEquivalent( new[] { peeps[1].ThingId, peeps[2].ThingId, peeps[3].ThingId }, drawn.ToArray(),
-					"the shop's rider alone is not drawn" );
-				Assert.IsFalse( pool.ShadowsDrawn.Any( shadow => shadow.Thing == peeps[0].ThingId ), "nor their shadow" );
-
-				var lines = pool.Census().ToArray();
-
-				Assert.AreEqual( 1, lines.Count( line => line.Contains( "RIDES WITHOUT A SPRITE" ) ) );
-				StringAssert.Contains( lines.Single( line => line.Contains( "RIDES WITHOUT A SPRITE" ) ), $"thing {peeps[0].ThingId,2} " );
-			} );
+				after( people, peeps, pool, written );
+			}, scriptFor );
 		}
 		finally
 		{

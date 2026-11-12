@@ -186,10 +186,11 @@ internal static class ParkItemHeights
 	/// <see cref="LocalCell"/>, floored. Null outside the file's cells.
 	/// </summary>
 	/// <remarks>
-	/// The original truncates a corner's offset (<c>0x00452bb0</c>..<c>0x00452c1d</c>) where this floors the middle's. The two
-	/// differ only below nought, and no cell a Lost Kingdom thing covers comes there: each middle lands half a cell inside
-	/// its file's cell at every quarter turn (<c>ItemHeightMapTests.EveryCoveredCellsMiddleLandsInsideItsFileCell</c>).
-	/// Which corner the original takes at each turn is not read here (Q1561).
+	/// The original truncates a corner's offset (<c>0x00452bb0</c>..<c>0x00452c1d</c>) where this floors the middle's. Its
+	/// four arms take the corner lowest in the item's unturned space at every quarter turn (<c>docs/exe/park-engine.md</c>,
+	/// the lift's row), so the two pick the same file cell wherever it is not below nought, and no cell a Lost Kingdom thing
+	/// covers comes there: each middle lands half a cell inside its file's cell at every quarter turn
+	/// (<c>ItemHeightMapTests.EveryCoveredCellsMiddleLandsInsideItsFileCell</c>). Measuring it in the original is Q1561.
 	/// </remarks>
 	internal static float? AboveBase( ItemHeightMapFile file, System.Numerics.Vector3 origin, int angle, HeightfieldFile field,
 		int x, int y )

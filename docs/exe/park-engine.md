@@ -3158,9 +3158,15 @@ nought. `FUN_00452ae0` finds the thing on the cell in two steps. First it reads 
 reads the cell's thing id (`FUN_00527e80`), which must be an object (type byte 3). From that object it reads the
 `.hmp` at `+0xcc` and the root node's matrix (model `+0x78`; translation `+0x40`, `+0x44`, `+0x48`). It carries the
 cell's corner back into the object's unturned space by its rotation at model `+0x10`, a quarter turn at a time
-(`0x00452bb0`..`0x00452c1d`; OpenTPW floors the cell's middle where this truncates a corner's offset, the same cell for every cell a Lost
-Kingdom thing covers at every quarter turn, `ItemHeightMapTests.EveryCoveredCellsMiddleLandsInsideItsFileCell`, Q221 (5); which corner
-each turn takes is not read, Q1561). It answers the `.hmp`'s cell-grid byte × 1/2.55 plus the root's world height (the height the model maker gave it,
+(`0x00452bb0`..`0x00452c1d`). The corner (10x, 10y) less the root's `+0x40` and `+0x48` gives dx and dz; the arms for 90,
+180 and 270 negate an axis and take one cell off (`fchs`, `fsub` 10.0), each offset is multiplied by -0.1 (`0x006fe404`)
+and truncated (`_ftol`, `0x0067a830`), and the byte is read at `[hmp + 0x10]` less row × columns less column. The file
+cell, column then row, is at 0 (trunc(dx/10), trunc(dz/10)); at 90 (trunc((-dz-10)/10), trunc(dx/10)), `0x00452be5`; at
+180 (trunc((-dx-10)/10), trunc((-dz-10)/10)), `0x00452c05`; at 270 (trunc(dz/10), trunc((-dx-10)/10)), `0x00452bff`: the
+corner lowest in the item's unturned space at every turn (that `[hmp + 0x10]` is the grid's start is read from the
+signs, not traced). OpenTPW floors the cell's middle carried back by `ParkObjects.Turn`'s inverse, which picks the same
+cell wherever it is not below nought, and so for every cell a Lost Kingdom thing covers at every quarter turn
+(`ItemHeightMapTests.EveryCoveredCellsMiddleLandsInsideItsFileCell`, Q221 (5)); not measured in the original, Q1561). It answers the `.hmp`'s cell-grid byte × 1/2.55 plus the root's world height (the height the model maker gave it,
 "Where a placed object's model stands"). With no
 object, it answers the ground height at the cell's corner (`FUN_004527f0`). **The wave branch of `FUN_0053ddd0` then
 adds the ground height at each corner again**, so on raised ground the ground counts twice: once in the object's base
@@ -3569,9 +3575,13 @@ move pickup both reach it, so **a move puts everyone off as a sale does**.
   Temple Of Gloom, Chac Atak, Gorilla Thrilla, the Costume Shop, the Arcade, the Super Toilet; measured from the items'
   files, Q52). **OpenTPW** draws no body for a rider on a thing without it (`ParkPeople.RidesWithoutASprite`, which the
   writer asks too; the `guests` census line ends `RIDES WITHOUT A SPRITE, body not drawn`), a head a ride hangs still
-  drawn as its own sprite; it keeps the sprite record rather than destroying it. A walk holding such a rider is not
-  decoded (does the placer make a sprite for handle 0?): it is counted, `WALK_RIDER_ON_A_THING_KEEPING_NO_SPRITE`, and
-  the rider left hidden.
+  drawn as its own sprite; it keeps the sprite record rather than destroying it. A walk holding such a rider: the
+  placer `FUN_004f9e60` makes a sprite where the handle is nought (`0x004f9e6e`..`0x004f9e7d`, `FUN_004d4140`), so a
+  rider it places is shown and only the hide `FUN_004f9ed0` leaves none (`ride-operation.md`, `Person_PlaceSprite`).
+  Ours does not build that: a walk-held such rider is counted, `WALK_RIDER_ON_A_THING_KEEPING_NO_SPRITE`, and left
+  hidden (Q1542). It is dead by CONTENT in Lost Kingdom: no jungle item without the bit declares a walk slot (the
+  `.RSE` header's `+0x1c`, 0 in all 26 scripts of the 15; the ten jungle scripts that declare any belong to items that
+  set `RideHandlesSprite`).
 - **Queueing** - `FUN_00502430`: state 11 to 14, or state 8 with the saved state 11 to 14 - runs `FUN_005012f0`:
   event 6; the kids' `0x80` only when the guest's own id `& 7` is nought (`0x0050133d`); happiness down by
   `MediumHappinessChange`; `mQPrev`, `mQNext`, `mBeenAdmitted` (`+0x1f8`), `MajorDest` and `mQueuePos` zeroed;
@@ -4996,8 +5006,8 @@ with masks 1 and 2 handled inline instead (mask 1 ends `FUN_00403be0(0x37)`, mas
 Read 2026-11-12 (Q991; the disassembly and lane B's private Ghidra copy, not seen in the running original). The fork watch
 of 2026-10-31 called these the demolish preview's; the two that set a mark record the track tool's multi-delete and move.
 
-**The three textures.** `Coaster_LoadType` (`0x0042f390`) gives a coaster type its own `n` materials (`n` is the type's
-`+0xfc`), then appends the `[0x0074ce10]` = 3 entries of the table at `0x0074cde0` (16 bytes each: flags 7, the name, two
+**The three textures.** `Coaster_LoadType` (`0x0042f390`) gives a coaster type its own `n` materials (`n` is the `+0xfc` of
+its third argument, the record that also gives `+0x3b08`), then appends the `[0x0074ce10]` = 3 entries of the table at `0x0074cde0` (16 bytes each: flags 7, the name, two
 noughts) in its order: `m_erase.tga`, `red.tga`, `blue.tga` (`0x0042f509`..`0x0042f55d`). It stores `n` at the type's
 `+0x20` (`0x0042f575`), so the three are materials `n`, `n + 1` and `n + 2`. The game's files of those names are
 `m_erase.wct`, `red.wct` and `blue.wct` in `data/generic/dynamic/textures` and `stexture`. `FUN_00435a30` reads the same
@@ -5026,11 +5036,16 @@ material `[type + 0x20] + mark - 1` written into every face's word `+4` (`0x0043
   editor's per-frame `FUN_00443340` (`0x00443bd5`), with a node it works out from the pylon under the pointer
   (`Coaster_NodeOfPylonModel`, `0x00443ee0`, called at `0x00443add`: the node whose pylon's model
   `[0x007a4610 + 4 × [pylon + 0x70]]` is the given one). `Coaster_DeleteMultiClick` is called from `FUN_00446300` (the
-  editor's mouse slots) and `FUN_00447b60`, `Coaster_MovePickUp` from `FUN_00446300` and `FUN_00447bb0`. Whether a sale
+  editor's mouse slots) and `FUN_00447b60`, `Coaster_MovePickUp` from `FUN_00446300` and `FUN_00447bb0`. `Coaster_MovePickUp` sets the bit
+  itself on the carried pylon's run, from `[node + 0x68]` (or the node) to `[node + 0x64]` (or the node), lower id first,
+  the higher end left out (`0x00446e60`, `0x00446ec9`), which is how mark 3 is drawn. Whether a sale
   sets a mark is not settled: a walk of the direct calls from the demolisher `FUN_00527ee0` reaches 1,365 functions, these
   among them (`q991/reach.py`), so it shows no path, only that the graph is too wide to rule one out.
-- **Red without the word**: bit `0x4000`, set by `Coaster_InsertNode` (`0x00436190`) when its third argument, the answer of
-  `FUN_00434740` that the cursor's preview `FUN_00435d50` asks, is nought (Q1001 saw a stacked carry drawn so); and `+0xb0`,
+- **Red without the word**: bit `0x4000`: the editor's per-frame `FUN_00443340` sets it on the carried node
+  `[0x0079c6a4]` (stored by `Coaster_MovePickUp`, `0x00446d96`) and on that node's `+0x68` when `FUN_00434740`
+  (`0x00443ca9`) answers nought, and clears it on both otherwise (`0x00443cbc`..`0x00443d00`; Q1001 saw a stacked carry
+  drawn so). `Coaster_InsertNode` (`0x00436190`) sets it the same way, from its third argument, for the track-laying
+  cursor's preview `FUN_00435d50`. And `+0xb0`,
   a piece's count of the pieces it crosses, which `FUN_00439c40` raises with the coaster's `+0x140` (`0x00439ffe`,
   `0x0043a03c`). What bits `0x2000` and `0x800000` of B mean is not read.
 

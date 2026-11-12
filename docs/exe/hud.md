@@ -1740,7 +1740,7 @@ its tag was gone 33 s after it came.
 | The arm's sounds (`0x1c` as it starts, `0xc2` as it is in) | played | played, cat_ui at the effects' own volumes (Q427); not heard in either game |
 | The panel's children as it comes out | each shown as its right edge passes the body's | the same (Q427) |
 | A carried panel's depth | 3, its parts 5 and theirs 7: behind the body and the retract button | the same (Q445); a locator's buttons, at 7 under their group, are drawn after the retract button, the order at one depth not decoded |
-| The retract button through the slide in | switched off and drawn | the same, but it stops the pointer (Q445) |
+| The retract button through the slide in | switched off and drawn | the same (Q445); the hit test passes over it to the arm since Q66 |
 | The bar's text | the middle panel's, over the right slice | the same lettering; the right slice is put in the tree before the middle one so that it is drawn under it. At 1280 x 720 font 6 is a smaller face than the original's at 1024 x 768, so the line breaks fall later |
 | The two stacked buttons | 21 types | dressed for every type whose mesh is a file of `ui.wad` (not `b_loan` and `b_pkinfo`, nodes of files not looked up); types 3, 9 to `0x11` and `0x18` act (`advisor-park.md`, "A park with no ride in it", "Worn rides and no mechanic"), the rest counted `TAG_BAR_BUTTON` |
 | Advisor message `0x11c` | posted with the bar, withdrawn as it leaves | the same (`advisor-park.md`, "The line of an opened tag message") |

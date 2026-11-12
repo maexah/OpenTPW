@@ -883,6 +883,10 @@ public sealed class ParkBumperCars
 	public const int SmokeEffect = 2;
 
 	/// <summary><c>BUMP 8</c> with a value - <c>FUN_00544c80</c>: broken, smoke at each running car, a Hot Pot car at rest.</summary>
+	/// <remarks>
+	/// The original smokes the cars only for a ride of BumperType -1 or -3 to -14 (<c>0x00544cfb</c>); this has no type
+	/// gate. Dead by CONTENT in Lost Kingdom, whose bumper types are -1, -4 and -5 (<c>docs/exe/park.md</c>, selector 8).
+	/// </remarks>
 	public void Break( int handle )
 	{
 		if ( RideOf( handle ) is not { } ride )
@@ -916,6 +920,11 @@ public sealed class ParkBumperCars
 	}
 
 	/// <summary><c>BUMP 8</c> or <c>9</c> with nought - <c>FUN_00544e50</c>: sound, and only from broken the smoke out and the cars rocking again.</summary>
+	/// <remarks>
+	/// The original puts the smoke out only for a ride of BumperType -1 or -3 to -14 (<c>0x00544ed3</c>), as the break
+	/// smokes; this has no type gate. Dead by CONTENT in Lost Kingdom, whose bumper types are -1, -4 and -5
+	/// (<c>docs/exe/park.md</c>, selector 8).
+	/// </remarks>
 	public void Fix( int handle )
 	{
 		if ( RideOf( handle ) is not { } ride )

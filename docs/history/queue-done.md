@@ -14336,3 +14336,14 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   - **Done (cloud lane c106, 2026-11-12):** `ParkCreateEffect.Start` from `BindNew`, `ParticleSystem.SetArea` and the emitter's
     own area; in ours off-screen the Round Fountain bought at (64,18) started effect 81, life 30, most 146, area (960, 544, 960).
     The photograph beside the original's is Q1568; a save during the effect is Q1569.
+- [x] **Q1562. Q221 (8)'s remainder: two gates unread and a FileFormats page.** `FUN_00544e50` (the fix) and
+  `FUN_00544c00` (worn out): read whether each has a type or flag gate (`park.md`'s selector rows 8 and 9 say "not read").
+  FileFormats `sound-categories.md`: put right "bits 1, 2 and 4" and "645 speech variations holding 100" with
+  `audio.md`'s re-measure of 2026-11-12 (the flag bits met are `0x1`, `0x2`, `0x4`, `0x8`, `0x10`, `0x200`, `0x400`; the
+  645 speech variations are all at range nought); that repository is not writable from a cloud lane.
+  - **Done (2026-11-12, run 22's review, fix group R; objdump, no Ghidra, no original).** The gates are read:
+    `FUN_00544c00` has none but the handle's, `FUN_00544e50` goes on only from 2 and for BumperType -1 or -3 to -14,
+    and its anim 5 only for type -1 and a car flagged `0x4000` (`park.md`, selector rows 8 and 9); ours has no type gate
+    in `ParkBumperCars.Break` or `Fix`, labelled dead by content. The FileFormats half was the wrong fields: its masks
+    (`+0x18`, `+0x1c`) are right but for "alone" (the speech variations' second mask of 100); that word is put right on
+    FileFormats branch `fix-R` (`1cf5c41`), and `audio.md` says which field is which.

@@ -751,17 +751,14 @@ filed the items that cite it.
   Proton, the same sun.
 - [ ] **Q1560. A rider's head rolled to its node (Q221 (6)). Decode first.** `FUN_0044b510` writes local 9 (`+0xa8`), the
   roll from `FUN_0046f200` times 1/2π (`0x0044ba04`..`0x0044ba2f`, `ride-operation.md`, "What the head is"); `DrawHead`
-  draws no roll and counts `RIDER_HEAD_ROLL` as a boat is stood. Decode `FUN_0046f200` in Ghidra, then roll the head quad
-  by it. Confirm: a bumper boat's riders photographed beside the original's at the same camera.
-- [ ] **Q1561. Which corner `0x00452bb0` takes at each quarter turn (Q221 (5)).** `ParkItemHeights.LocalCell` carries the
-  cell's middle back and floors it; the original carries a corner and truncates. Over every cell a Lost Kingdom `.hmp`
-  thing covers they agree only if each turn's corner lands at the low edge of the file's cell. Read the four arms in
-  Ghidra; then measure a lift over a thing turned 90 and 270 on raised ground in the original under Proton.
-- [ ] **Q1562. Q221 (8)'s remainder: two gates unread and a FileFormats page.** `FUN_00544e50` (the fix) and
-  `FUN_00544c00` (worn out): read whether each has a type or flag gate (`park.md`'s selector rows 8 and 9 say "not read").
-  FileFormats `sound-categories.md`: put right "bits 1, 2 and 4" and "645 speech variations holding 100" with
-  `audio.md`'s re-measure of 2026-11-12 (the flag bits met are `0x1`, `0x2`, `0x4`, `0x8`, `0x10`, `0x200`, `0x400`; the
-  645 speech variations are all at range nought); that repository is not writable from a cloud lane.
+  draws no roll and counts `RIDER_HEAD_ROLL` as a boat is stood. `FUN_0046f200` is atan2(−m[`+0x10`], m[`+0x14`]) of the
+  matrix it is passed (`0x0046f200`..`0x0046f20e`). Decode the matrix built at `0x0044b96c`..`0x0044b9e1` (`FUN_0046f150`,
+  `FUN_0046fbb0`, `FUN_00470040`, their product by `FUN_004702d0`) in Ghidra, then roll the head quad by it. Confirm: a bumper boat's riders photographed beside the original's at the same camera.
+- [ ] **Q1561. A lift over a turned thing, measured in the original (Q221 (5)).** `ParkItemHeights.LocalCell` carries the
+  cell's middle back and floors it; the original carries a corner and truncates. The four arms of `0x00452bb0` are read
+  (`park-engine.md`, the lift's row): each turn takes the corner lowest in the item's unturned space, so the two agree
+  over every cell a Lost Kingdom `.hmp` thing covers. Measure a lift over a thing turned 90 and 270 on raised ground in
+  the original under Proton to confirm it.
 - [ ] **Q222. The original's guests come up empty-handed, and ours do not. Measure first.** Found by Q107's
   comparison with the original (`ride-operation.md`, "Q107"). The same stock Lost Kingdom park left alone for 240 s:
   the original's chooser named nothing 112 times and a thing 72 times (Jungle Spray 27, Drinks Shop 18, Belly Bounce
@@ -1314,7 +1311,7 @@ filed the items that cite it.
 - [ ] **Q461. The tag bar's meshless buttons are disabled in the original.** From the week-end audit (D10,
   `TIEBREAK-Q311.md`). A type-0 tag's second button and a decline's erase button are shown and disabled (vtable +0x14
   with 0 at `0x0048e991`, `0x0048e43c`); the hit test skips a disabled control (`0x0065db3b`). Q427 made them take the
-  pointer (`ParkGadget.cs`, `hud.md`, two tests). Needs Q66 (`HitTest` reads no `Enabled`) first, or the difference said.
+  pointer (`ParkGadget.cs`, `hud.md`, two tests). Q66 has made a disabled button pass the hit test: set the two buttons' `Enabled` false.
 - [ ] **Q1170. A purchase's advisor post, `0xc9` or `0xce`: decode which, then build.** From Q465, which counts it
   (`BUY_SCREEN_PURCHASE_ADVISOR_POST` in `ParkBuyScreen.Chose`, once a click that puts the item in the hand). The
   original posts `0xc9` where the item's `+0x4c` is nought and `FUN_004824d0( 0x80, 0 )` answers nought, else `0xce`
@@ -2610,11 +2607,14 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   file is written so. `Peep.AnimationFor`'s remark reads the setter's case `0x10` as "the stand" (`0x00502136`,
   `FUN_004217f0( 3 )`): read it again with these files, in Ghidra, then build. Confirm: `guests` showing the riders'
   script, and a park file's sprites, beside the original's.
-- [ ] **Q1542. A walk holding a rider whose sprite admission destroyed. Decode first.** Found by Q52. On a thing
-  without flag `0x20` the sprite is gone (`0x00502147`), and the walk's placer (`FUN_005580a0`) hands it on to
-  `FUN_004f9e60` or the hide `FUN_004f9ed0`: whether either makes a sprite for handle 0 is not decoded. Ours leaves
-  such a rider hidden and counts `WALK_RIDER_ON_A_THING_KEEPING_NO_SPRITE`. First count which of the jungle's 15
-  visitable items without the bit run a `WALKON` (not checked in Q52); if none, it is dead by CONTENT for Lost Kingdom.
+- [ ] **Q1542. A walk that places a rider whose sprite admission destroyed: make the sprite and draw them.** Found by
+  Q52. On a thing without flag `0x20` the sprite is gone (`0x00502147`), and the walk's placer (`FUN_005580a0`) hands
+  the rider on to `FUN_004f9e60`, which makes a sprite where the handle is nought (`0x004f9e6e`..`0x004f9e7d`) and
+  places it, or to the hide `FUN_004f9ed0`, which leaves none (`park-engine.md`, the sale's riders). Ours hides every
+  walk-held such rider and counts `WALK_RIDER_ON_A_THING_KEEPING_NO_SPRITE`. Build: let the walk decide for a
+  walk-held rider: placed, drawn at the placer's point and written with a sprite; hidden, as now. Dead by CONTENT in
+  Lost Kingdom (no jungle item without the bit declares a walk slot); fantasy's `frushy` and `squirtem` and space's
+  `marsmoon` declare walk slots and set no `RideHandlesSprite`, so it waits for those themes.
 - [ ] **Q1204. A balance file's first refused line ends it. Decode first.** Found by Q54 (`park-engine.md`, "How a key
   finds its global"). `FUN_004017a0` stops a file at the first line it refuses - a key its table does not name, a
   bounded value out of range, a negative in a type-5 key - but which balance key is which type, and its bounds, are

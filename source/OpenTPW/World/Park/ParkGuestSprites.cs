@@ -1087,8 +1087,10 @@ public sealed class ParkGuestSprites : ModelEntity
 				continue;
 			}
 
-			// A rider on a thing without flag bit 0x20 has no body: admission destroyed the sprite (0x00502147). What a
-			// walk's placer does with such a rider is not decoded, so one is counted and left hidden, as the writer leaves it.
+			// A rider on a thing without flag bit 0x20 has no body: admission destroyed the sprite. A walk's placer makes one
+			// where the handle is nought (FUN_004f9e60, 0x004f9e6e), so a rider it places is shown and only its hide leaves
+			// none; that is not built (Q1542), so a walk-held one is counted and left hidden, as the writer leaves it. Dead by
+			// CONTENT in Lost Kingdom: no jungle item without the bit declares a walk slot (docs/exe/park-engine.md, the sale).
 			if ( people?.RidesWithoutASprite( person.ThingId ) == true )
 			{
 				if ( WalkedOnRide( people, person.ThingId ) != null )
@@ -1284,8 +1286,9 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// and nothing else (<c>docs/exe/ride-operation.md</c>, "What the head is"). The picture is the one the seat node
 	/// shows the camera (<see cref="ParkBumperBoats.HeadFrame"/>); the sprite's flag word <c>0x3000080</c> carries
 	/// <c>0x2000000</c>, so the drawing adds no direction of its own (<c>FUN_00542010</c>). The original also rolls the
-	/// quad to the node (locals 8 and 9), which is not drawn here: the roll comes from <c>FUN_0046f200</c>, not decoded
-	/// (<c>RIDER_HEAD_ROLL</c>, counted as a boat is stood; Q1560).
+	/// quad to the node (locals 8 and 9), which is not drawn here: the roll is <c>FUN_0046f200</c>'s atan2(-m[+0x10],
+	/// m[+0x14]) of a matrix <c>FUN_0044b510</c> builds, and that matrix is not decoded (<c>RIDER_HEAD_ROLL</c>, counted as
+	/// a boat is stood; Q1560).
 	/// </remarks>
 	private bool DrawHead( int used, Vector3 seat, int frame, int kind, int bank, int alpha )
 	{

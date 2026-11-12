@@ -851,7 +851,7 @@ system sent (`Input.MouseInfo.LeftWentDown`) that no window takes goes to `Windo
 `0x0066c5a4`'s test, and the island panel's root has the L. `IslandPanel.EnterPark` makes the original's five tests in its
 order, `LobbyIsland.GlobalLoaded` standing for the record, and counts the keys held. Over the player slots, nobody playing, `FrontEnd.MenuKey` drops
 Escape as the slots do (Q64), so no menu opens; only a flight the debug console started with nobody playing, which the
-original cannot have, is still cancelled by it. Two differences are said at their sites: Ctrl+H acts on its press
+original cannot have, is still cancelled by it. One difference is said at its site: Ctrl+H acts on its press
 (`docs/QUEUE.md` Q65). A disabled button is passed over with all it holds, as `0x0065db25` passes a control flagged `0x2`
 (`UiButton.SkipsPointer`, Q66): an Instant Action player's grey arrows are the panel's, so no hover and no help row, and a
 press there ends at the L. F8 is not built (Q65).
