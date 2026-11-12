@@ -340,6 +340,11 @@ internal sealed class UiList : UiControl
 	/// (<c>0x00485780</c>) picks the sound by the list's style bit <c>0x10</c>; this heading is a button with
 	/// <c>Toggles</c> false and plays <c>BUTTON01</c> (<c>hud.md</c>, "Which window the click sound is for").
 	/// </para>
+	/// <para>
+	/// A framed heading letters by its state (<see cref="UiButton.LettersByState"/>) in the colour handed over for both, as
+	/// <c>FUN_00486660</c> sets the button's two colours to its caller's (<c>0x00486749</c>, <c>0x00486751</c>): the same colour
+	/// where it lies, moved (1, 1) with the pointer on it and (2, 1) pressed (<c>docs/exe/ui.md</c>, "A text button's lettering by state").
+	/// </para>
 	/// </remarks>
 	internal UiButton AddHeading( int column, UiRect rect, string text, string? mesh = null, int? font = null,
 		UiColour? colour = null, int help = -1 )
@@ -350,6 +355,8 @@ internal sealed class UiList : UiControl
 			Mesh = mesh == null ? null : UiMesh.Get( mesh ),
 			Font = font ?? RowFont,
 			TextColour = colour ?? UiColour.White,
+			LettersByState = mesh != null,
+			PointerTextColour = colour ?? UiColour.White,
 			TextAcross = mesh != null ? TextAlign.Centre
 				: column < ColumnAligns.Length ? ColumnAligns[column]
 				: column == 0 ? TextAlign.Start : TextAlign.End,

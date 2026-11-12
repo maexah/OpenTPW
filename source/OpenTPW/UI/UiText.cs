@@ -41,8 +41,10 @@ internal sealed class UiText
 	/// at that size where the box holds it, and as large as the box holds where not, never smaller than the original's.
 	/// A wrapping text is broken at the width it has at that size.
 	/// </param>
+	/// <param name="nudgeAcross">How far the text is moved right, in the font's pixels (a button's lettering by state).</param>
+	/// <param name="nudgeDown">How far the text is moved down, in the font's pixels.</param>
 	public void Draw( string? text, int font, UiColour colour, bool shadow, bool wrap, PixelRect area, TextAlign across, TextAlign down,
-		float size = 1f )
+		float size = 1f, int nudgeAcross = 0, int nudgeDown = 0 )
 	{
 		if ( string.IsNullOrEmpty( text ) || UiFonts.Get( font ) is not { } bitmap )
 			return;
@@ -55,6 +57,7 @@ internal sealed class UiText
 
 		var margin = shadow ? ShadowOffset : 0;
 		var (placed, drawn, prescale) = Plan( area, _width, _height, margin, UiFonts.Scale, size, across, down );
+		placed = Nudge( placed, nudgeAcross, nudgeDown, UiFonts.Scale * drawn );
 
 		Upload( prescale, built );
 
@@ -73,6 +76,13 @@ internal sealed class UiText
 		using ( _ = new Graphics.Scope( Screen.Size ) )
 			Graphics.Quad( new Rectangle( MathF.Round( placed.X ), MathF.Round( Screen.Height - placed.Y - placed.Height ), placed.Width, placed.Height ), Material.UI );
 	}
+
+	/// <summary>
+	/// A placed text moved <paramref name="across"/> and <paramref name="down"/> font pixels, each <paramref name="scale"/>
+	/// screen pixels: the original draws a font at its own size, so the offset a button hands its label is in its pixels.
+	/// </summary>
+	internal static Rectangle Nudge( Rectangle placed, int across, int down, float scale )
+		=> placed with { X = placed.X + (across * scale), Y = placed.Y + (down * scale) };
 
 	/// <summary>
 	/// <see cref="Place"/>, and with it how many texels a font pixel is copied to (<see cref="PrescaleFor"/>): chosen from
