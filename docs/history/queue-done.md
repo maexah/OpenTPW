@@ -12327,6 +12327,20 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   retail `TP.exe` cannot start under Proton (`exe/boot.md`, "Under Wine and Proton"). Found on the way: the original's
   park clock loses precision with uptime (`exe/park-engine.md`), so timings taken on it need `tpwmem.py clock` first
   (`VERIFYING.md` rule 127).
+- [x] **Q683. Start a bought thing's create effect (Q663's build).** The script loader starts the item's
+  `Info.CreateParticleEffect` (`ItemDescriptionFile.CreateParticleEffect`) once as a bought or moved thing's script is made (a move's put-down
+  rebuilds the object through the same constructor: `0x00525417`, `FUN_00528a70`, `FUN_004db090`; `park-engine.md`), never
+  at a load or a layout replay: `Particles_Spawn` at the middle of the model's box (`FUN_00466b70`: the model's own
+  cells `+0xc0`/`+0xc4` x 10, not the anchor's footprint, Q744's rule) at its base height, then `Particles_SetArea` with
+  half the box across and along and a quarter of its height in place of the template's area (`park.md`, "What building
+  a thing gives off"). Here `ParkRides.BindNew` counts `CREATE_PARTICLE_EFFECT`; `ParticleSystem` takes no area but the
+  template's. Build both, with the same box for the destroy effect's (Q38). Leave the `+0xd4` sound zone alone: uncounted,
+  reached exactly with `CREATE_PARTICLE_EFFECT` (`0x00558e81`, the box tests `0x00558ea5` and `0x00558f4d`), an EAX 2.0
+  occlusion zone (`park.md`, "What building a thing gives off"; Q38's note), its factor `0x006c4c80` not read. Confirm: the Round Fountain bought in both games, `particles` against `original/emitters.py` (effect 81,
+  life 30, most 146 at density 500, about 1.5 s) and the build's first frames side by side (`q663/side-by-side.png`).
+  - **Done (cloud lane c106, 2026-11-12):** `ParkCreateEffect.Start` from `BindNew`, `ParticleSystem.SetArea` and the emitter's
+    own area; in ours off-screen the Round Fountain bought at (64,18) started effect 81, life 30, most 146, area (960, 544, 960).
+    The photograph beside the original's is Q1568; a save during the effect is Q1569.
 
 ## F. Then
 

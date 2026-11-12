@@ -112,12 +112,22 @@ public sealed class ParkRides : Entity
 
 		// The engine's script loader starts the item's create effect over the cells its model covers as a bought
 		// thing's script starts (FUN_005587f0, 0x00558e7c; docs/exe/park.md, "What building a thing gives off").
-		// Counted, not drawn: no emitter here takes the cells' box as its area.
+		// A fixed item stands on no cells of its own here, where the original's record holds cell (0,0) alone: counted.
 		if ( item.CreateParticleEffect != 0 )
 		{
-			Unimplemented.Report( "CREATE_PARTICLE_EFFECT" );
-			Log.Info( $"{ThemeName}: thing {placed.ThingId} ('{item.Name}') built: its create effect " +
-				$"{item.CreateParticleEffect} not started (CREATE_PARTICLE_EFFECT)" );
+			if ( _objects is { } objects && objects.ModelFor( placed.ThingId ) is not null && objects.StoredFootprint( placed.ThingId ) is null )
+			{
+				Unimplemented.Report( "CREATE_PARTICLE_EFFECT_FIXED_ITEM" );
+				Log.Info( $"{ThemeName}: thing {placed.ThingId} ('{item.Name}') built: its create effect " +
+					$"{item.CreateParticleEffect} not started, a fixed item covers no cells (CREATE_PARTICLE_EFFECT_FIXED_ITEM)" );
+			}
+			else
+			{
+				var handle = ParkCreateEffect.Start( item, placed );
+
+				Log.Info( $"{ThemeName}: thing {placed.ThingId} ('{item.Name}') built: its create effect {item.CreateParticleEffect} " +
+					(handle != 0 ? $"started, handle 0x{handle:x}" : "not started (no particle system, ground or .hmp)") );
+			}
 		}
 
 		// A thing made here has no file's words to start from: a fresh model's, kept from its first clip on.

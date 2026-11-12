@@ -1354,9 +1354,16 @@ sampling is 0.75 s against a life of 1.2 to 1.6 s, so they are a weak check besi
 the put-down after a move builds the object afresh through the same constructor (`0x00525417`, `FUN_00528a70`;
 `park-engine.md`).
 
-**OpenTPW** reads the value (`ItemDescriptionFile.CreateParticleEffect`, the item's own over its category's) and counts
-it where a bought or moved thing's script starts (`ParkRides.BindNew`, `CREATE_PARTICLE_EFFECT`, with a log line naming the
-effect); nothing is spawned. The load path does not reach it. Building it is Q683.
+**OpenTPW** reads the value (`ItemDescriptionFile.CreateParticleEffect`, the item's own over its category's) and starts
+it where a bought or moved thing's script starts (`ParkRides.BindNew`, `ParkCreateEffect.Start`, Q683): `ParticleSystem.Spawn`
+at the middle of the model's cells (`ParkObjects.SoundBoxOf`) at its base height (`ParkItemHeights.BaseOf`), then
+`ParticleSystem.SetArea` with the box's width x 512, its height (the `.hmp`'s box, `BoxMin.Y` to `BoxMax.Y`, read as the
+loader's `+0x1c`/`+0x28`) x 256 and its depth x 512, which the emitter keeps as its own area (`Emitter.Area`) and throws its
+particles out over in place of the template's. The load path does not reach it. A fixed item (no cells of its own here)
+is counted, `CREATE_PARTICLE_EFFECT_FIXED_ITEM`. The box (`ParkCreateEffect.Box`) is the one the destroy effect is spread
+over too (Q38, still counted). A save made during the effect's life does not write its emitter (Q1569). The `+0xd4` sound
+zone is not made. Measured in ours off-screen (Q683): the Round Fountain bought at (64,18) started effect 81, life 30,
+most 146 at density 500, area (960, 544, 960), gone about 2 s later; not yet photographed beside the original's (Q1568).
 
 ### `COAST` — the script-to-ride interface, and it is small
 

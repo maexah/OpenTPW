@@ -152,6 +152,7 @@ internal sealed class ParticleSystem
 		emitter.Y = y >> 4;
 		emitter.Z = z >> 4;
 		emitter.Aim = aim;
+		emitter.Area = template.Area;
 		emitter.VX = template.EmitterVelocity.X + (aim is null ? Signed( template.EmitterVelocityRandom ) : 0);
 		emitter.VY = template.EmitterVelocity.Y + (aim is null ? Signed( template.EmitterVelocityRandom ) : 0);
 		emitter.VZ = template.EmitterVelocity.Z + (aim is null ? Signed( template.EmitterVelocityRandom ) : 0);
@@ -233,6 +234,18 @@ internal sealed class ParticleSystem
 	{
 		if ( TryEmitter( handle, out var emitter ) )
 			emitter.Aim = aim;
+	}
+
+	/// <summary>
+	/// Sets the area an effect's emitter throws its particles out over in place of its template's (<c>Particles_SetArea</c>,
+	/// <c>FUN_00520030</c>): each of <paramref name="x"/>, <paramref name="y"/> and <paramref name="z"/> over 16 into the
+	/// emitter's <c>+0x44</c>, <c>+0x48</c> and <c>+0x4c</c>, the units its place is kept in (<c>docs/exe/park.md</c>, "What
+	/// building a thing gives off"). A handle for no live effect sets nothing.
+	/// </summary>
+	public void SetArea( int handle, int x, int y, int z )
+	{
+		if ( TryEmitter( handle, out var emitter ) )
+			emitter.Area = new ParticleVector( x / 16, y / 16, z / 16 );
 	}
 
 	/// <summary>Starts effector <paramref name="effector"/> (0x00522360) and returns its handle, or 0.</summary>
@@ -532,7 +545,7 @@ internal sealed class ParticleSystem
 		particle.Colour = template.ColourMode == 0 ? template.Colours[15] : template.Colours[Next() & 0xf];
 
 		int x, y, z;
-		var area = template.Area;
+		var area = emitter.Area;
 
 		if ( area.IsZero )
 		{
@@ -543,7 +556,7 @@ internal sealed class ParticleSystem
 			if ( template.SpawnInBox )
 			{
 				x = Signed( area.X );
-				y = AreaHeight( template );
+				y = AreaHeight( template, area );
 				z = Signed( area.Z );
 			}
 			else
@@ -554,13 +567,13 @@ internal sealed class ParticleSystem
 				if ( template.OnAreaEdge )
 				{
 					x = Cos( angle ) * area.X * 4 >> 10;
-					y = AreaHeight( template );
+					y = AreaHeight( template, area );
 					z = -(Sin( angle ) * area.Z * 4 >> 10);
 				}
 				else
 				{
 					x = Cos( angle ) * Positive( area.X ) * 4 >> 10;
-					y = AreaHeight( template );
+					y = AreaHeight( template, area );
 					z = -(Sin( angle ) * Positive( area.Z ) * 4 >> 10);
 				}
 			}
@@ -613,8 +626,8 @@ internal sealed class ParticleSystem
 		}
 	}
 
-	private int AreaHeight( ParticleEffectTemplate template )
-		=> template.AreaAboveOnly ? Positive( template.Area.Y ) : Signed( template.Area.Y );
+	private int AreaHeight( ParticleEffectTemplate template, ParticleVector area )
+		=> template.AreaAboveOnly ? Positive( area.Y ) : Signed( area.Y );
 
 	/// <summary>
 	/// One tick of a ring effect - 0x005224f0. The ring widens by <see cref="ParticleEffectTemplate.VelocityRandom"/>
@@ -997,6 +1010,12 @@ internal sealed class Emitter : ILinked
 	/// for the effect's own.
 	/// </summary>
 	public ParticleVector? Aim;
+
+	/// <summary>
+	/// The area its particles are thrown out over, its words at <c>+0x44</c>: the template's as it starts, or what
+	/// <see cref="ParticleSystem.SetArea"/> set in its place.
+	/// </summary>
+	public ParticleVector Area;
 
 	public int Lifetime;
 	public int FirstLifetime;
