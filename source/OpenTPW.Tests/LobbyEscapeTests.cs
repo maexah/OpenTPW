@@ -319,14 +319,16 @@ public class LobbyEscapeTests
 	/// <summary>
 	/// <b>A Full Simulation player's Enter starts the key puff, effect 98, owned by no window</b>, as the original's
 	/// (<c>0x004b8fd0</c>): the panel is closed and the puff is drawn all the same, over everything. Escape then gives the
-	/// panel back under the puff, still running and still no window's. Needs the game's particle library.
+	/// panel back under the puff, still running, and hands the puff to the panel (Q747), so it is drawn with it. Needs
+	/// the game's particle library.
 	/// </summary>
 	/// <remarks>
-	/// <b>Mutations:</b> giving the puff the panel as its owner leaves it undrawn once the panel closes (the bug Q630
-	/// found); not starting it at all leaves no effect 98; killing it with the cancel leaves none under the panel.
+	/// <b>Mutations:</b> giving the puff the panel as its owner at the Enter leaves it undrawn once the panel closes (the
+	/// bug Q630 found); not starting it at all leaves no effect 98; killing it with the cancel leaves none under the panel;
+	/// the cancel not handing it over leaves it no window's.
 	/// </remarks>
 	[TestMethod]
-	public void EnteringStartsTheKeyPuffOwnedByNoWindowAndACancelLeavesItRunning()
+	public void EnteringStartsTheKeyPuffOwnedByNoWindowAndACancelHandsItToThePanel()
 	{
 		FileSystem = GameData.Required();
 		var system = new ParticleSystem( "Particle/Tp2.plb", 1000 );
@@ -345,10 +347,7 @@ public class LobbyEscapeTests
 			for ( var i = 0; i < 3; ++i )
 				system.Tick();
 
-			var puffs = system.Emitters.Where( emitter => emitter.Active && emitter.Effect == 98 ).ToArray();
-			Assert.AreEqual( 1, puffs.Length, "one key puff is running" );
-
-			var puff = puffs[0];
+			var puff = ThePuff( system );
 			Assert.IsNull( puff.Owner, "it is no window's" );
 			Assert.IsTrue( Drawn( puff ), $"so it is drawn with the panel closed ({puff.Count} particles)" );
 
@@ -356,13 +355,123 @@ public class LobbyEscapeTests
 			Assert.AreEqual( "IslandPanel", Names( stack ), "Escape gave the panel back" );
 
 			system.Tick();
-			Assert.IsTrue( puff.Active && puff.Effect == 98 && puff.Owner is null && Drawn( puff ),
-				"and the puff runs on over it, still no window's" );
+			Assert.IsTrue( puff.Active && puff.Effect == 98 && Drawn( puff ), "and the puff runs on over it" );
+			Assert.AreSame( panel, puff.Owner, "now the panel's, drawn straight after it" );
 		}
 		finally
 		{
 			system.Shutdown();
 		}
+	}
+
+	/// <summary>
+	/// <b>A second Escape soon after the cancel opens the game menu over the panel, and the puff still falling is the
+	/// panel's</b> (Q747), so the menu, opened after the panel, covers it with its dimming, where the original's puff,
+	/// no window's, shows through. A new Enter then gives a puff the panel still holds back to no window, since the panel
+	/// closes again. Needs the game's particle library.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> the cancel not handing the puff over (the bug: it stays no window's and is drawn over the menu);
+	/// the handle not kept at the Enter (the same); the new Enter not giving the old puff back (it is the closed panel's and
+	/// stops being drawn).
+	/// </remarks>
+	[TestMethod]
+	public void ASecondEscapeOpensTheMenuOverThePanelThatHoldsTheFallingPuff()
+	{
+		FileSystem = GameData.Required();
+		var system = new ParticleSystem( "Particle/Tp2.plb", 1000 );
+
+		try
+		{
+			var (frontEnd, stack, panel) = ALobbyFrontEnd();
+			var island = AnIsland( out _ );
+			SetBacking( island, "GlobalLoaded", true );
+			SetCurrentPlayer( new Player( 0, "Test", new PlayerFile { InstantAction = false } ) );
+
+			Enter( stack, panel );
+
+			for ( var i = 0; i < 3; ++i )
+				system.Tick();
+
+			var puff = ThePuff( system );
+
+			Escape( frontEnd );
+			system.Tick();
+			Escape( frontEnd );
+			system.Tick();
+
+			Assert.AreEqual( "IslandPanel, GameMenu", Names( stack ), "the second Escape opened the game menu over the panel" );
+			Assert.IsTrue( puff.Active && puff.Count > 0, $"while the puff is still falling ({puff.Count} particles)" );
+			Assert.AreSame( panel, puff.Owner, "and it is the panel's, which the menu is opened over, not drawn over all" );
+
+			// Resume Game; then a new Enter while the first puff still falls.
+			Escape( frontEnd );
+			Assert.AreEqual( "IslandPanel", Names( stack ), "Escape closed the menu" );
+
+			Enter( stack, panel );
+			system.Tick();
+
+			Assert.IsTrue( puff.Active && puff.Count > 0, $"the first puff still falls ({puff.Count} particles)" );
+			Assert.IsNull( puff.Owner, "and is no window's again, the panel being closed" );
+			Assert.IsTrue( Drawn( puff ), "so it is drawn" );
+
+			var puffs = system.Emitters.Where( emitter => emitter.Active && emitter.Effect == 98 ).ToArray();
+			Assert.AreEqual( 2, puffs.Length, "the new Enter started a second puff" );
+			Assert.IsTrue( puffs.All( emitter => emitter.Owner is null ), "both no window's" );
+		}
+		finally
+		{
+			system.Shutdown();
+		}
+	}
+
+	/// <summary>
+	/// <b><see cref="ParticleSystem.SetOwner"/> hands an effect to a window with the effect it started along with it</b>,
+	/// which took its owner as it started, and back to none. Needs the game's particle library, whose first effect with a
+	/// linked effect (not an effector) is the one taken.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the linked effect left with its old owner; the handle's own effect left.</remarks>
+	[TestMethod]
+	public void SetOwnerHandsAnEffectAndTheEffectItStartedToAWindow()
+	{
+		FileSystem = GameData.Required();
+		var system = new ParticleSystem( "Particle/Tp2.plb", 1000 );
+
+		try
+		{
+			var effect = Array.FindIndex( system.Library.Effects,
+				template => template.Linked >= 0 && !template.LinkedIsEffector && template.Linked < system.Library.Effects.Length );
+			Assert.IsTrue( effect >= 0, "the library has an effect that starts another" );
+
+			var (_, stack, panel) = ALobbyFrontEnd();
+			var handle = system.Spawn( effect, 50000, 0, 30000 );
+			Assert.IsTrue( system.TryEmitter( handle, out var emitter ), "it started" );
+			Assert.IsTrue( system.TryEmitter( emitter.Linked, out var linked ), $"effect {effect} started effect {system.Library.Effects[effect].Linked}" );
+			Assert.IsTrue( emitter.Owner is null && linked.Owner is null, "both no window's" );
+
+			system.SetOwner( handle, panel );
+			Assert.AreSame( panel, emitter.Owner, "the effect is the panel's" );
+			Assert.AreSame( panel, linked.Owner, "and so is the one it started" );
+
+			system.SetOwner( handle, null );
+			Assert.IsTrue( emitter.Owner is null && linked.Owner is null, "and both are no window's again" );
+
+			system.SetOwner( 0, panel );
+			Assert.IsTrue( emitter.Owner is null && linked.Owner is null, "no handle touches nothing" );
+		}
+		finally
+		{
+			system.Shutdown();
+		}
+	}
+
+	/// <summary>The one key puff running, effect 98.</summary>
+	private static Emitter ThePuff( ParticleSystem system )
+	{
+		var puffs = system.Emitters.Where( emitter => emitter.Active && emitter.Effect == 98 ).ToArray();
+		Assert.AreEqual( 1, puffs.Length, "one key puff is running" );
+
+		return puffs[0];
 	}
 
 	/// <summary>Whether the screen's effects draw <paramref name="emitter"/> at all, by their own rule.</summary>

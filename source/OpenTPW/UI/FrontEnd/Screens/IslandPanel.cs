@@ -116,6 +116,9 @@ internal sealed class IslandPanel : UiWindow
 	/// <summary>The sparkles across the price while they run, or 0.</summary>
 	private int _sparkle;
 
+	/// <summary>The key puff the last Enter started (effect 98), or 0; kept so that a cancel can give it to this panel.</summary>
+	private int _puff;
+
 	public IslandPanel( WindowStack stack ) : base( stack )
 	{
 		Root = new UiControl
@@ -333,13 +336,15 @@ internal sealed class IslandPanel : UiWindow
 				// Owned by no window, as the original's (0x004b8fd0 keeps no handle), so it is drawn over everything and
 				// lives on after this panel is closed. The owner rule (ScreenParticles) does not bite: no window opens from
 				// here to the park. A first Escape cancels the flight and shows this panel again under the puff, as the
-				// original's (lobby.md, "The key puff at park entry"). LIMIT: a second Escape within about 0.7 s opens the
-				// game menu (FrontEnd.MenuKey), and the ownerless puff is then drawn over the dimmed menu;
-				// ParticleSystem has no SetOwner to hand the live puff back to the panel.
+				// original's (lobby.md, "The key puff at park entry"), and hands the live puff to this panel (TakeKeyPuff),
+				// so a second Escape's game menu covers it with its dimming. A puff an earlier Enter left, still falling, is
+				// given back to no window first, since this panel is closed again.
+				particles.SetOwner( _puff, null );
+
 				var rect = _price.Rect;
 				var middle = ((rect.Bottom - rect.Top) >> 1) + rect.Top;
 
-				var puff = particles.Spawn( (int)ParLib.P_EFFECT_KeyPuff, 50000, 0,
+				var puff = _puff = particles.Spawn( (int)ParLib.P_EFFECT_KeyPuff, 50000, 0,
 					middle * 75000 / VirtualScreen.Height, _price.Anchor );
 
 				Log.Info( $"Front end: key puff (effect 98) started, handle 0x{puff:x}, owned by no window" );
@@ -352,6 +357,21 @@ internal sealed class IslandPanel : UiWindow
 		// this panel's tree, which hides it (this panel is closed before the puff, above, which no window owns). The camera then swings round onto the gate, opens it, flies in, and asks for the park
 		// when it arrives - see LobbyCameraMode.LeaveForPark. Escape before then cancels it and shows this panel again.
 		LobbyCameraMode.LeaveForPark( () => Game.RequestParkLoad( island.ThemeName ) );
+	}
+
+	/// <summary>
+	/// Makes this panel the owner of the key puff the last Enter started, while it still runs: Escape's cancel calls it as
+	/// it shows this panel again (<see cref="FrontEnd"/>). The puff is still drawn, now straight after this panel, so a game
+	/// menu opened over the panel (a second Escape) dims it with the rest. OpenTPW's own: the original's puff belongs to no
+	/// window and shows through the menu (lobby.md, "The key puff at park entry").
+	/// </summary>
+	internal void TakeKeyPuff()
+	{
+		if ( ParticleSystem.Current is not { } particles || !particles.IsLive( _puff ) )
+			return;
+
+		particles.SetOwner( _puff, this );
+		Log.Info( $"Front end: key puff handle 0x{_puff:x} handed to the island panel" );
 	}
 
 	private static void ViewOnlineWorld() { }

@@ -46,7 +46,8 @@ belongs to or at the end. Grep it by area or Q-number; never read it whole.
 - **A sample's length reads its stream's own version** (Q147): `MP2File.Duration` takes MPEG-1's bitrate table for the five MPEG-1 entries, so the scan and the walk agree in both global categories. Nothing heard or timed changes: the cue plays its decoded clip whole and due times use the map's length, so the evidence is the `parkcue` log line (3056.6 ms, not 4075.5) and the suite.
 - **Entering a park draws the key puff, as the original's** (Q669): a Full Simulation player's Enter starts effect 98 at
   the price owned by no window, so the cloud of keys is drawn over the island for about a second after the panel closes
-  (32 particles, none from about 1.1 s); Escape during the flight gives the panel back under the same puff
+  (32 particles, none from about 1.1 s); Escape during the flight gives the panel back under the same puff, now the
+  panel's, so a second Escape's game menu covers it (Q747, OpenTPW's own: the original's shows through)
   (`docs/exe/lobby.md`, "The key puff at park entry").
 - **The park-entry flight runs at the original's rates** (Q670, measured): from the same turn the turn onto the gate,
   the fly-in and the park's asking take as long as the original's (for the same wait at the panel Lost Kingdom's entry is up

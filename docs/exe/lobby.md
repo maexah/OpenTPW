@@ -182,10 +182,13 @@ the puff with no owner, as the original's, so `ScreenParticles` draws it over ev
 build, the `run4` column above) it lived its second with nothing to be drawn with, since an owned effect is drawn only
 while its window is open. The owner rule (the departure above) does not bite here: nothing is open in the stack from
 the Enter to the park, and a first Escape cancels the flight before it can open a menu, giving the panel back under a puff
-still alive, as the original's. **A limit:** the cancel leaves no flight, so a second Escape within about 0.7 s (while the
-puff lives) goes on to `FrontEnd.MenuKey` (`FrontEnd.cs`), which opens the game menu, and the ownerless puff is drawn over
-the dimmed menu; ours has no `SetOwner` to give the live puff back to the reopened
-panel. The fade starts some 3 s after the puff is gone, so it hides none of it. The key
+still alive, as the original's. **The cancel hands the puff to the panel (Q747, OpenTPW's own).** The cancel leaves no
+flight, so a second Escape within about 0.7 s (while the puff lives) goes on to `FrontEnd.MenuKey` (`FrontEnd.cs`), which
+opens the game menu. The original's puff, no window's, shows through the menu's dimming. Ours keeps the puff's handle at the
+Enter, and the cancel, as it shows the panel again, makes the panel its owner (`IslandPanel.TakeKeyPuff`, by
+`ParticleSystem.SetOwner`, which takes the effect it started along with it too): the puff is still drawn, now straight after
+the panel, so the menu opened over the panel covers it. A new Enter gives a puff still falling back to no window before the
+panel closes. The fade starts some 3 s after the puff is gone, so it hides none of it. The key
 sparkle 97 is still the panel's, so its last few particles (3, 2, 1, 1 at 0.1 to 0.4 s, `q669/run1/run.log`) are not
 drawn after the Enter, where the original's, stopped with 4 particles still falling at 0.1 s, are drawn until they die,
 gone by 0.5 s (`q630/orig-a/poll.txt`); the puff lives to about 1 s.
