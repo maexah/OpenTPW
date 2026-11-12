@@ -36,8 +36,14 @@ internal class UiControl
 	/// <summary>How far the part's textures are moved across, in repeats of them: a research pump's run (<see cref="ResearchPump.Scroll"/>), else nought.</summary>
 	public float TextureShift { get; set; }
 
-	/// <summary>The row of UIHELPTEXT.str the <see cref="HelpBar"/> shows over it, or -1 for none.</summary>
+	/// <summary>The row of UIHELPTEXT.str the <see cref="HelpBar"/> shows over it, or -1 for none: its layout's op 0x11.</summary>
 	public int HelpText { get; set; } = -1;
+
+	/// <summary>
+	/// The row the help bar is given for it now: its <see cref="HelpText"/>, as the base control's getter answers
+	/// (<c>0x0065bc70</c>); a button answers by its state (<see cref="UiButton.HelpWhenOn"/>).
+	/// </summary>
+	internal virtual int ShownHelp => HelpText;
 
 	public string? Text { get; set; }
 
@@ -400,6 +406,16 @@ internal class UiButton : UiControl
 	/// makes UI_Init's hook play Select3 for its click rather than BUTTON01 (0x00485780).
 	/// </summary>
 	public bool Toggles { get; init; }
+
+	/// <summary>
+	/// The row it shows while it is on, its layout's op 0x12, or null where this game does not carry the layout's op 0x12
+	/// and the button shows <see cref="UiControl.HelpText"/> whatever its state. The button class's getter (<c>0x00669410</c>;
+	/// <c>docs/exe/hud.md</c>, the tree stream's op 0x12) answers this row when the state byte is exactly 1, on and not held
+	/// down, and the op 0x11 row otherwise; -1 is the empty bar.
+	/// </summary>
+	public int? HelpWhenOn { get; init; }
+
+	internal override int ShownHelp => HelpWhenOn is { } on && IsDown && !Pressed ? on : HelpText;
 
 	/// <summary>Whether a click on it tells its parent, and so plays a click - see <see cref="UiSliderThumb"/> for one that does not.</summary>
 	internal virtual bool Clicks => true;
