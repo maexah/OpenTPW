@@ -12145,6 +12145,19 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q226. Nobody is sick.** Found by Q111, arm (b). Illness exactly 100 on a third of deciding turns: spot
+  animation 7, litter type 7 on the cell, event `0x12`, sound `0xcc`, illness nought, and the turn ends. After Q225,
+  which builds a cell's litter. Build it where `DECIDE_VOMIT` is counted. Confirm: `need vomit 100`, a guest sick
+  within a few turns, `peeps` showing illness 0; a screenshot.
+  - **Note (fork watch 2026-10-18, `verify-other-b.md` L2):** the sick are litter kind 7: record `0x0074f140`, region effect 2
+    stamped first, then the sprite placed by the cell-id reseed and two draws (`ride-operation.md`, "A cell's litter"). The drop
+    does nothing on a cell that already has litter, so a second sickness there leaves the first.
+  - **Done 2026-11-12 (cloud lane c118, no Ghidra, no display).** `PeepBehaviour.Vomits`, ahead of the litter arm (now
+    `GetsRidOfLitter`): spot animation 7, kind 7 on the cell with region effect 2 stamped after the log
+    (`ParkState.DropLitter`), event `0x12` counted (`DECIDE_VOMIT_EVENT`), kids `0xcc` (`ParkAudio.Sick`), illness nought,
+    the turn ended. Three tests in `ParkDecidingArmsTests`; off-screen `need vomit 100` made six guests sick in 40 s and
+    the census read their illness 4 to 13 (`ride-operation.md`, "Q226"). Split: the photograph (Q1624), the sound's and the
+    event's calls read (Q1625).
 
 ## B. Docs and comments
 

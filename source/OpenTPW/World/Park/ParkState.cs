@@ -54,7 +54,7 @@ public sealed class ParkState
 	/// <summary>
 	/// Every cell's region effects as the park runs, <see cref="ParkWorld.EffectWords"/> words a cell in the map's
 	/// order: the file's, with what a thing bought, sold, dirtied or cleaned since has stamped and taken off
-	/// (the world's <c>+0x2d8 + 0x1b1104</c>). The litter's are the file's and do not move; an entertainer's and a guard's move with them (<see cref="ParkPeople.MoveEffect"/>).
+	/// (the world's <c>+0x2d8 + 0x1b1104</c>). A sick guest's litter stamps its own as it is dropped (<see cref="DropLitter"/>); an entertainer's and a guard's move with them (<see cref="ParkPeople.MoveEffect"/>).
 	/// </summary>
 	public IReadOnlyList<short> Effects => _effects;
 
@@ -2462,8 +2462,9 @@ public sealed class ParkState
 	/// <remarks>
 	/// <b>Not built: the sprite</b> (<c>0x004d94cb</c>), whose place the original takes by reseeding the park's generator
 	/// with the cell id and drawing twice (Q1288); so this neither reseeds nor draws <see cref="RandomSeed"/>, and counts
-	/// each drop as <c>LITTER_SPRITE_AND_RESEED</c>. Only kinds 1 to 5 reach it,
-	/// so kind 7's and 8's region effects and kind 8's particle are not built (the sick and the stink bomb, Q226, Q228).
+	/// each drop as <c>LITTER_SPRITE_AND_RESEED</c>. Kinds 1 to 5 and 7 reach it: kind 7, a sick guest's, stamps region
+	/// effect 2 round the cell first (<see cref="ParkRegionEffects.SickLitter"/>). Kind 8's region effect and particle are
+	/// not built (the stink bomb, Q228), and nothing here takes litter off a cell, so nothing unstamps effect 2.
 	/// The online visit's refusal does not arise: there is none.
 	/// </remarks>
 	internal bool DropLitter( int x, int y, int kind )
@@ -2477,6 +2478,9 @@ public sealed class ParkState
 			return false;
 
 		Log.Info( $"Littering cell {x}, {y}" );
+
+		if ( kind == PeepBehaviour.LitterSick )
+			StampEffect( ParkRegionEffects.SickLitter, x, y );
 
 		cell.Litter = kind;
 		cell.LitterCollector = 0;

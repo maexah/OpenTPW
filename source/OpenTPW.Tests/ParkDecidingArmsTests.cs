@@ -6,8 +6,8 @@ using System.Linq;
 namespace OpenTPW.Tests;
 
 /// <summary>
-/// The deciding turn's arms either side of its leave test - <c>FUN_004fec90</c>: the happy jump, built; the vomit,
-/// litter, watching fireworks and the pranks, counted, each test asserting the count moves exactly where the
+/// The deciding turn's arms either side of its leave test - <c>FUN_004fec90</c>: the happy jump, the vomit and the
+/// litter, built; watching fireworks and the pranks, counted, each test asserting the count moves exactly where the
 /// original's own test holds; and watching an entertainer, built.
 ///
 /// <para>
@@ -30,6 +30,9 @@ public class ParkDecidingArmsTests
 		using var stream = new MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) );
 		return new ParkWorld( new SaveReader( stream ).ReadFile() );
 	}
+
+	/// <summary>The guests whose sickness <see cref="DecidingAt"/>'s behaviour sounded, in order.</summary>
+	private readonly System.Collections.Generic.List<int> _sounded = [];
 
 	private static int Counted( string gap ) => Unimplemented.Summary.FirstOrDefault( entry => entry.What == gap ).Times;
 
@@ -55,7 +58,8 @@ public class ParkDecidingArmsTests
 			state: people.State )
 		{
 			EntertainerToWatch = people.Behaviour.EntertainerToWatch,
-			BalloonBeside = people.Behaviour.BalloonBeside
+			BalloonBeside = people.Behaviour.BalloonBeside,
+			Sick = peep => _sounded.Add( peep.ThingId )
 		};
 
 		guest.SetState( PeepState.Deciding, tick: 1, new Random( 1 ) );
@@ -118,48 +122,91 @@ public class ParkDecidingArmsTests
 	}
 
 	/// <summary>
-	/// <b>The jump ends the turn</b> (the return after <c>0x004fecea</c>): a guest who jumps is not also counted
-	/// for the vomit the same turn would have reached.
+	/// <b>The jump ends the turn</b> (the return after <c>0x004fecea</c>): a guest who jumps is not also sick on the turn
+	/// the vomit's test would have held.
 	/// </summary>
 	[TestMethod]
 	public void TheJumpEndsTheTurnBeforeTheVomit()
 	{
-		var (guest, turn, _) = DecidingAt( 47, 22, SeedWhere( roll => roll % 3 == 0 ) );
+		var (guest, turn, people) = DecidingAt( 47, 22, SeedWhere( roll => roll % 3 == 0 ) );
 		guest.TimeStartedIdling = 1000;
 		guest.Vomit = 100f;
 		guest.Happiness = 90f;
-		var from = Counted( "DECIDE_VOMIT" );
 
 		turn( guest.TimeOfLastSpotAnim + 101 );
-		Assert.AreEqual( (PeepState.PlayingSpotAnimation, from), (guest.State, Counted( "DECIDE_VOMIT" )),
-			"jumped, and the vomit's test not reached" );
+		Assert.AreEqual( (PeepState.PlayingSpotAnimation, PeepBehaviour.SpotHappy, 100f, 0, 0),
+			(guest.State, guest.NextAnimation, guest.Vomit, people.State.CellAt( 47, 22 ).Litter, _sounded.Count),
+			"jumped, and not sick" );
 	}
 
 	/// <summary>
-	/// <b>The vomit is counted at illness exactly 100 on a draw that divides by three</b> (<c>0x004fed15</c>,
-	/// <c>0x004fed26</c>).
+	/// <b>A guest at illness exactly 100 is sick on a draw that divides by three</b> (<c>0x004fed15</c>,
+	/// <c>0x004fed26</c>): spot animation 7 from deciding, litter of kind 7 on their cell with region effect 2 stamped
+	/// round it (happiness -1, illness 1, hunger -1 on the cell; radius 1, so the cells beside gain -1/2 and 1/2, cut to
+	/// nought), event <c>0x12</c> counted, the sound once, illness nought. At the byte 99, or on a draw that does not
+	/// divide, nothing.
 	/// </summary>
 	[TestMethod]
-	public void TheVomitIsCountedAtExactlyAHundredOnAThirdOfTheDraws()
+	public void AGuestAtExactlyAHundredIsSickOnAThirdOfTheDraws()
 	{
-		var from = Counted( "DECIDE_VOMIT" );
+		var from = Counted( "DECIDE_VOMIT_EVENT" );
 
-		var (ill, turn, _) = DecidingAt( 47, 22, SeedWhere( roll => roll % 3 == 0 ) );
+		var (ill, turn, people) = DecidingAt( 47, 22, SeedWhere( roll => roll % 3 == 0 ) );
 		ill.TimeStartedIdling = 1000;
 		ill.Vomit = 99.9f;
 		turn( 2 );
-		Assert.AreEqual( from, Counted( "DECIDE_VOMIT" ), "the byte 99" );
+		Assert.AreEqual( (99.9f, 0, 0, from), (ill.Vomit, people.State.CellAt( 47, 22 ).Litter, _sounded.Count,
+			Counted( "DECIDE_VOMIT_EVENT" )), "the byte 99" );
 
-		(ill, turn, _) = DecidingAt( 47, 22, SeedWhere( roll => roll % 3 == 0 ) );
+		(ill, turn, people) = DecidingAt( 47, 22, SeedWhere( roll => roll % 3 == 2 ) );
+		ill.Vomit = 100f;
+		turn( 2 );
+		Assert.AreEqual( (100f, 0, 0, from), (ill.Vomit, people.State.CellAt( 47, 22 ).Litter, _sounded.Count,
+			Counted( "DECIDE_VOMIT_EVENT" )), "100, and the draw does not divide" );
+
+		(ill, turn, people) = DecidingAt( 47, 22, SeedWhere( roll => roll % 3 == 0 ) );
 		ill.TimeStartedIdling = 1000;
 		ill.Vomit = 100f;
-		turn( 2 );
-		Assert.AreEqual( from + 1, Counted( "DECIDE_VOMIT" ), "100, and the draw divides" );
+		var cell = people.State.EffectsAt( 47, 22 ).ToArray();
+		var beside = people.State.EffectsAt( 48, 22 ).ToArray();
+		var diagonal = people.State.EffectsAt( 48, 23 ).ToArray();
+		Assert.AreEqual( 0, people.State.CellAt( 47, 22 ).Litter, "the cell clean before" );
 
-		(ill, turn, _) = DecidingAt( 47, 22, SeedWhere( roll => roll % 3 == 2 ) );
-		ill.Vomit = 100f;
 		turn( 2 );
-		Assert.AreEqual( from + 1, Counted( "DECIDE_VOMIT" ), "100, and the draw does not" );
+		Assert.AreEqual( (PeepState.PlayingSpotAnimation, PeepState.Deciding, PeepBehaviour.SpotSick, 2),
+			(ill.State, ill.SavedState, ill.NextAnimation, ill.TimeOfLastSpotAnim), "spot animation 7 from deciding" );
+		Assert.AreEqual( (7, 0f, 1, ill.ThingId, from + 1),
+			(people.State.CellAt( 47, 22 ).Litter, ill.Vomit, _sounded.Count, _sounded[0], Counted( "DECIDE_VOMIT_EVENT" )),
+			"litter 7, illness nought, sounded once, the event" );
+		CollectionAssert.AreEqual( new short[] { (short)(cell[0] - 1), (short)(cell[1] + 1), (short)(cell[2] - 1), cell[3], cell[4] },
+			people.State.EffectsAt( 47, 22 ).ToArray(), "region effect 2 on the cell" );
+		CollectionAssert.AreEqual( beside, people.State.EffectsAt( 48, 22 ).ToArray(), "half of -1 and 1 cut to nought beside" );
+		CollectionAssert.AreEqual( diagonal, people.State.EffectsAt( 48, 23 ).ToArray(), "and nought on the diagonal" );
+
+		turn( 13 );
+		Assert.AreEqual( PeepState.Deciding, ill.State, "back to deciding on the eleventh sweep" );
+	}
+
+	/// <summary>
+	/// <b>The vomit ends the turn</b> (the return after the illness is cleared): a sick guest full of litter does not also
+	/// drop it or set off for a bin that turn. <b>A cell already littered keeps its litter</b> (<c>FUN_004d93b0</c> returns
+	/// at once): the guest is still sick, and no region effect is stamped.
+	/// </summary>
+	[TestMethod]
+	public void TheVomitEndsTheTurnAndLeavesALitteredCellAsItWas()
+	{
+		var (ill, turn, people) = DecidingAt( 47, 22, SeedWhere( roll => roll % 3 == 0 ) );
+		ill.TimeStartedIdling = 1000;
+		ill.Vomit = 100f;
+		ill.Litter = 95f;
+		people.State.CellAt( 47, 22 ).Litter = 2;
+		var cell = people.State.EffectsAt( 47, 22 ).ToArray();
+
+		turn( 2 );
+		Assert.AreEqual( (PeepState.PlayingSpotAnimation, PeepBehaviour.SpotSick, 0f, 95f, 2, 1),
+			(ill.State, ill.NextAnimation, ill.Vomit, ill.Litter, people.State.CellAt( 47, 22 ).Litter, _sounded.Count),
+			"sick, the litter kept, the cell's kind 2 kept" );
+		CollectionAssert.AreEqual( cell, people.State.EffectsAt( 47, 22 ).ToArray(), "no region effect on a littered cell" );
 	}
 
 	/// <summary>

@@ -637,6 +637,8 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004fece2` | | OpenTPW.Tests/ParkDecidingArmsTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004fed15` | | OpenTPW.Tests/ParkDecidingArmsTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004fed26` | | OpenTPW.Tests/ParkDecidingArmsTests.cs  |
+| `0x004fed30` | | OpenTPW/World/Park/PeepBehaviour.cs  |
+| `0x004fed5d` | | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004fedb3` | | OpenTPW.Tests/ParkDecidingArmsTests.cs OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004fedd8` | | OpenTPW/World/Park/PeepBehaviour.cs  |
 | `0x004fee51` | | OpenTPW/World/Park/PeepBehaviour.cs  |

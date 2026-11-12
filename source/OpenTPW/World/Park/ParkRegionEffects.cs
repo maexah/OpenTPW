@@ -13,6 +13,9 @@ public sealed class ParkRegionEffects
 	/// <summary>A toilet's while it is clean.</summary>
 	public const int CleanToilet = 1;
 
+	/// <summary>A sick guest's litter's, kind 7, stamped as it is dropped.</summary>
+	public const int SickLitter = 2;
+
 	/// <summary>A guard's, moved with them cell by cell.</summary>
 	public const int Guard = 3;
 

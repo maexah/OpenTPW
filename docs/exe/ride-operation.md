@@ -1217,7 +1217,7 @@ restored bugs each fail it (the count-and-walk-on, no `Forget`, no return, no `L
 #### Spot animations - `FUN_004fc800` and state 8
 
 Decoded from the disassembly (`docs/QUEUE.md` Q98). The function, state 8's turn and the queue turn's two calls are
-built (Q98b), and so are the deciding turn's calls of 4 (Q107) and 5 (Q224); its call of 7 is counted, not built (Q226).
+built (Q98b), and so are the deciding turn's calls of 4 (Q107), 5 (Q224) and 7 (Q226).
 
 **`FUN_004fc800( n )`**, a guest thiscall, in order:
 
@@ -1275,8 +1275,8 @@ round. While any of them is in state 8 the state-11 turn does not run: no mood, 
 **In OpenTPW** `PeepBehaviour.PlaySpotAnimation` is `FUN_004fc800` without its step 1: the yawn
 (`PeepBehaviour.Yawns`, `ParkAudio.Yawn`, at the level `ParkAudio.PutOff` stands in with), the request
 (`Peep.NextAnimation`), the saved state and SetState(8), which stamps `TimeOfLastSpotAnim`. `PeepBehaviour.Step`'s
-case for state 8 is the return. The queue turn's two arms and the deciding turn's empty hand call it; the deciding
-turn's other two do not yet (5 and 7: Q224, Q226). A guest in state 8 is held by a thing when the saved state is (`PeepBehaviour.HeldByAThing( Peep )`),
+case for state 8 is the return. The queue turn's two arms and the deciding turn's empty hand, happy jump and vomit call
+it (4, 5 and 7: Q107, Q224, Q226). A guest in state 8 is held by a thing when the saved state is (`PeepBehaviour.HeldByAThing( Peep )`),
 so `ParkPeople.Depart` refuses a jumping queuer.
 
 **Measured in the running game** (`q98bconfirm.py`, two runs, guests made with `admit` and sent with `send`, happiness
@@ -1647,7 +1647,7 @@ decide, where the original's comes after it.
 | The dead end and the stamp | thought `0x11`, `+0x198` stamped, every route refused until a map edit | the same, for a guest (`PeepBehaviour.SetRandomDest`, `RefusedAsStranded`; "Q110b") | not by the stock park left alone; by a player who cuts a queue's tail off its path ("Q110") |
 | A map type write's block stamp | a fresh counter value in the cell's 16 × 16 block | the same, where a cell becomes ground, path or queue (`ParkState.SetRecord`, `ClearRecord`, `StampBlock`) | every path or queue cell laid or cleared, every sale |
 | The split's events 1 and 2 | pushed onto the guest's event ring | counted, `DECIDE_NOTHING_CHOSEN_EVENT` and `DECIDE_CHOSEN_EVENT`; no ring is kept | every choice |
-| Arms (a), (b), (c), (e), (f) | run before the split | (e)'s entertainer arm built: face him, the turn ends (`PeepBehaviour.Watch`, `ParkPeople.EntertainerToWatch`; "Q668"); the rest counted at each arm's own test (`PeepBehaviour.CountBeforeLeaving`, `CountAfterLeaving`; "Q111") | (a) above 80; (c) the Drinks Shop's litter and the bin at (44,29); (e) the entertainer, thing 27; (f) pranksters |
+| Arms (a), (b), (c), (e), (f) | run before the split | (e)'s entertainer arm built: face him, the turn ends (`PeepBehaviour.Watch`, `ParkPeople.EntertainerToWatch`; "Q668"); (a), (b) and (c) built (`PeepBehaviour.JumpsForJoy`, `Vomits`, `GetsRidOfLitter`; "Q224", "Q226", "Q225"); (f) counted at its own test (`CountAfterLeaving`; "Q111") | (a) above 80; (c) the Drinks Shop's litter and the bin at (44,29); (e) the entertainer, thing 27; (f) pranksters |
 | Leaving | state 6 only: happiness byte 0, `mExitLevel` exactly 0, or shut; −25 every turn it holds; (47,9)/(48,9); state `0x12` only on a route | the same (`PeepBehaviour.WantsToLeave`, `Leave`, Q109); the second pass in walking mode 1 is counted, `LEAVE_ROUTE_MODE_1_RETRY`; a guest reaching state 19 is taken out at the crossing, where the original walks them on to a bus stop (Q128) | every leaver |
 
 **Q109: when a guest leaves** is built in `PeepBehaviour.Decide` (`WantsToLeave`, `Leave`), as the listing reads
@@ -1811,6 +1811,20 @@ arm runs on turns the original would end at (a) or (b). A bin with `mEntryPos` n
 and passed over; Lost Kingdom's one bin has one. Off-screen on the shipped park (`consolerun.py`, cloud lane c42, output not
 kept): a guest made at (46,31) at litter 90 set off for bin 17 on sweep 882 and put it in on 904, `VAR_TRIGGER` read 1 seven
 times a quarter-second apart, then 0; one at (47,22) dropped kind 3 there on 882, `cell 47 22` then `litter 3`.
+
+**Q226: arm (b), the vomit, is built** (`PeepBehaviour.Vomits`, after `JumpsForJoy` and before `GetsRidOfLitter`, which
+was the litter half of `CountBeforeLeaving`), from (b) above, "Spot animations" and "A cell's litter", with no Ghidra on the
+lane. The illness byte exactly 100 and the turn's draw dividing by three: spot animation 7 (state 8, 6 saved), litter kind 7
+on the guest's cell (`ParkState.DropLitter`, which for kind 7 stamps region effect 2 round the cell after the log, so the
+cell's happiness -1, illness 1, hunger -1 and, at radius 1, nought beside; nothing on a cell already littered), event `0x12`
+counted (`DECIDE_VOMIT_EVENT`: no event ring is kept), kids `0xcc` at the guest (`ParkAudio.Sick`), illness nought, and the
+turn ends; `DECIDE_VOMIT` is gone. **Not read here (Q1625):** the call that sounds `0xcc`, built as `Person_PlaySound`'s
+one-shot as the charge's and the yawn's are, and the event's call; the order is the one this page gives. Nothing takes
+litter off a cell yet (`FUN_004d9620`, Q1288's neighbour), so nothing unstamps effect 2. Off-screen on the shipped park
+(`consolerun.py`, cloud lane c118, output not kept): `need vomit 100`, then within 40 s six guests sick, the first at (48,20)
+on sweep 888 and five at (52,27), the Jungle Spray's exit, the first of them littering it and the rest finding it littered;
+each sounded a `puke` or `sick` sample at volume 0.1925, range 100; each back to deciding eleven sweeps on; the census then
+read their illness 4 to 13 and the other seven's 100; `DECIDE_VOMIT_EVENT` 6. What it looks like is not checked (Q1624).
 
 Predicted and read in Lost Kingdom (`q111confirm.py`, `q111/run1`). The stock park left alone 120 s: vomit, litter,
 pranks and fireworks all nought as predicted, the happy jump 0 (0 to 40 predicted), an entertainer beside 4 (0 to 60).
@@ -2450,7 +2464,7 @@ its reader `FUN_00402d70`; the same ranges refer to the world pointer `[0x008023
 | `0x00501ea9` | SetState, case `0xb` | `+0x1fc` (`mTimeStartedIdling`) = mGameTick | the same |
 | `0x004fc869` | `FUN_004fc800`, a spot animation | `+0x208` = mGameTick | the same, through `SetState` |
 | `0x00501d35` | `FUN_005019f0`, case 8 | over when mGameTick > `+0x208` + 10, unsigned | `PeepBehaviour.Step` |
-| `0x004fecca` | `FUN_004fec90`, the deciding turn | the happy jump's gap, mGameTick − `+0x208` > 100 | `CountBeforeLeaving`, the gap counted, the jump not built (Q224) |
+| `0x004fecca` | `FUN_004fec90`, the deciding turn | the happy jump's gap, mGameTick − `+0x208` > 100 | `JumpsForJoy` (Q224) |
 | `0x004ff3fa`, `0x004ff49d` | the same | `+0x1fc` = mGameTick (no wander; empty-handed) | `Decide` |
 | `0x004ff428` | the same | the chooser asked when mGameTick > `+0x1fc` + 30 | `Decide` |
 | `0x005002fe` | `FUN_004ffff0`, the queue turn | the mood gap, mGameTick − `+0x208` > 30, and the window on `+0x1fc` | `QueueTurn` |
@@ -3285,7 +3299,7 @@ cell of the guest's own bytes (`+5`, `+7`; `FUN_004cd4e0` packs it, `FUN_004d841
 three words, added to happiness (`+0x19c`), illness (`+0x1b0`) and hunger (`+0x1a8`), each held to 0..100, in every
 state, before the drift. In a Lost Kingdom park as shipped the one happiness word in the cells is the entertainer's: 2 on his cell and 1 on the four
 orthogonal cells beside (effect 0 divides by |dx| + |dy| + 1, so a diagonal gains 0, 2/3 cut to nought); a sick guest's
-litter (effect 2, -1) and a stink bomb (effect 5, -3) add their own once those arms are built (Q225, Q228). Of the six cells a
+litter (effect 2, -1) adds its own as it is dropped (Q226), and a stink bomb (effect 5, -3) will once its arm is built (Q228). Of the six cells a
 guest watches from, the four beside him gain 1 a needs turn. `EntertainerConstsPerGrade[g].HappinessEffectOnCell` (4 to 20, the per-grade record's `+4`,
 `0x0078539c`) is read by no instruction: the stamp is RegionFX[0]'s whatever his grade. OpenTPW: `Peep.Tick`'s `cell`,
 from `ParkPeople.CellEffects` (Q668).
@@ -3410,7 +3424,7 @@ use that dirties a toilet swaps 1 for 6 and the clean swaps them back; the conso
 An entertainer's and a guard's is stamped where they are hired, moved before their turn on the sweep that finds them
 on another cell than `Staff.RecordedCell` (`ParkPeople.MoveEffect`), and taken off round that cell as they are
 fired; `staff` prints the cell recorded. Measured in `saves.md`, "OpenTPW's writer, the staff's region effects".
-**Not built:** litter dropped by a guest (Q225) stamps nothing, as kinds 1 to 5 stamp nothing; the sick's and the stink bomb's are not dropped (Q226, Q228); fireworks' is not taken off on their spent turn (`FIREWORKS_SPENT_REGION_EFFECT`, counted at
+**Built (Q226):** the sick's litter, kind 7, stamps effect 2 as it is dropped (`ParkState.DropLitter`); nothing takes litter off a cell yet, so nothing unstamps it. **Not built:** litter dropped by a guest (Q225) stamps nothing, as kinds 1 to 5 stamp nothing; the stink bomb's is not dropped (Q228); fireworks' is not taken off on their spent turn (`FIREWORKS_SPENT_REGION_EFFECT`, counted at
 their purchase; a sale always takes it off), and the guest's needs turn adds the cell's first three words (Q668), and
 the chooser still divides by the file's attraction word.
 

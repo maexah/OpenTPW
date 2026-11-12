@@ -805,13 +805,17 @@ filed the items that cite it.
   beside a frame the original draws of the same file (`q253/orig/sold-by-the-original.TPWS`, its four littered cells (41,21)
   and (39,22) to (39,24)), and a drop's sprite at the reseed's place. Not tested here: a park with two bins in reach (the
   nearest and the tie), which no Lost Kingdom file holds.
-- [ ] **Q226. Nobody is sick.** Found by Q111, arm (b). Illness exactly 100 on a third of deciding turns: spot
-  animation 7, litter type 7 on the cell, event `0x12`, sound `0xcc`, illness nought, and the turn ends. After Q225,
-  which builds a cell's litter. Build it where `DECIDE_VOMIT` is counted. Confirm: `need vomit 100`, a guest sick
-  within a few turns, `peeps` showing illness 0; a screenshot.
-  - **Note (fork watch 2026-10-18, `verify-other-b.md` L2):** the sick are litter kind 7: record `0x0074f140`, region effect 2
-    stamped first, then the sprite placed by the cell-id reseed and two draws (`ride-operation.md`, "A cell's litter"). The drop
-    does nothing on a cell that already has litter, so a second sickness there leaves the first.
+- [ ] **Q1624. The sick guest, photographed (split from Q226).** Built in cloud lane c118 with no display. A guest at
+  illness 100 deciding in Lost Kingdom plays spot animation 7 for eleven sweeps (the log's `Person N: spot animation 7
+  from Deciding at tick T`, then `sick at illness 100 on (x,y)`, then `spot animation over at tick T+11`); `need vomit
+  100` makes one within about 40 s, most at (52,27), the Jungle Spray's exit. Confirm on a desk: a screenshot of that
+  guest bending at the waist (set 6, four frames), beside the original's at the same point, and the puke sample heard
+  (kids `0xcc`). The litter on the cell is not drawn until Q1288.
+- [ ] **Q1625. The vomit's sound and event calls, read in Ghidra (split from Q226).** Q226 built arm (b) from
+  `ride-operation.md` alone. Read `0x004fed30`..the arm's return: the call that sounds kids `0xcc` (built as
+  `Person_PlaySound`'s one-shot at the guest, `ParkAudio.Sick`; if it is a raw `Sound_PlayEffect` or carries a handle or
+  level, fix `ParkAudio.Sick`), the event `0x12`'s push and what it names, and the order of the four after the animation
+  (built: litter, event, sound, illness nought). Write the addresses into (b) and `PeepBehaviour.Vomits`.
 - [ ] **Q228. A prankster plays no pranks.** Found by Q111, arm (f). Below happiness 15, on a draw under the
   prankery: a stink bomb (litter type 8, sound `0xcf`) on `PeepInfo.StinkbombLikelihood` of a hundred, litter, or
   the balloon of another guest on the cell let go; event `0xf`, a type-`0xe` bus message and happiness up one. After
@@ -1110,7 +1114,6 @@ filed the items that cite it.
   `StaffBehaviour` takes that arm only above 1, counts `ENTERTAINER_BANK_WITHOUT_A_STATE_GROUP` for nought and
   starts on animation 0, which its remarks give as a deviation no shipped bank reaches. Dead by content today:
   build it as the original's or leave the count, on Alexah's word.
-
 
 - [ ] **Q1316. The handyman loaded walking to litter or sweeping: his walk off photographed, and the job itself (from Q1154).**
   Q1154 made one loaded in state 8 or 9 fall to idle (`StaffBehaviour.Step`'s default arm, counted as

@@ -1065,6 +1065,37 @@ public sealed partial class ParkAudio : Entity
 	}
 
 	/// <summary>
+	/// The kids' effect <c>0xcc</c>, which the original sounds at a guest who is sick on a deciding turn
+	/// (<c>docs/exe/ride-operation.md</c>, "The state-6 turn, in order", (b)). One variation of ten samples, by name
+	/// <c>puke1</c>..<c>puke4</c>, <c>sick1</c>, <c>sick1a</c> and <c>sick6</c>..<c>sick9</c>; nobody has listened to them.
+	/// </summary>
+	/// <remarks>
+	/// Played as <see cref="Yawn"/> and <see cref="Charge"/> are, a plain one-shot at its variation's own volume, over its own
+	/// range, not held back by the repeat delay; that this arm's call is <c>Person_PlaySound</c> as theirs are has not been read
+	/// in a disassembly (Q1625).
+	/// </remarks>
+	/// <returns>Whether anything started.</returns>
+	internal bool Sick( Vector3 at )
+	{
+		if ( !Audio.Ready || _kids is not { IsValid: true } )
+			return false;
+
+		var voice = _kids.Play( SickEffect, respectDelay: false, bus: AudioBus.Effects,
+			position: at, ownRange: true, gain: OneShotGain, rate: OneShotRate );
+
+		if ( voice == null )
+			return false;
+
+		Log.Info( $"Park audio: sick, effect {SickEffect} sample '{voice.Name}' volume {voice.Volume:0.0000} pitch {OneShotPitch} "
+			+ $"at ({at.X:0.0},{at.Y:0.0},{at.Z:0.0}) range {voice.Range ?? 0f:0}" );
+
+		return true;
+	}
+
+	/// <summary>The kids' category effect a sick guest plays - see <see cref="Sick"/>.</summary>
+	private const int SickEffect = 0xcc;
+
+	/// <summary>
 	/// The kids' effect <c>0xd0</c>, a till (<c>cashD2b.mp2</c>), which <c>Person_PayCharge</c> plays at the guest who
 	/// pays (<c>0x004fe1be</c>..<c>0x004fe1cb</c> through <c>Person_PlaySound</c>; <c>docs/exe/audio.md</c>, "The charge's
 	/// sound"). No handle and no level, so a plain one-shot at its variation's own volume, over its own range, and not

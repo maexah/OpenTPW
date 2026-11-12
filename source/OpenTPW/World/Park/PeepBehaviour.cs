@@ -821,7 +821,7 @@ public sealed class PeepBehaviour
 				break;
 
 			// The litter-bin errand - FUN_004fff20, case 9 of FUN_005019f0. The deciding turn's litter arm sets it
-			// when a bin in reach routes (CountBeforeLeaving); in Lost Kingdom the one bin is thing 17, the Litter
+			// when a bin in reach routes (GetsRidOfLitter); in Lost Kingdom the one bin is thing 17, the Litter
 			// Bin at (44,29). It never queues, never charges and never touches +0x1de.
 			case PeepState.GoingToMinorDestination:
 				BinErrand( peep, walk, playing, tick );
@@ -1277,10 +1277,9 @@ public sealed class PeepBehaviour
 	/// </para>
 	/// <para>
 	/// <b>The happy jump comes first and is built</b> (<see cref="JumpsForJoy"/>), ending the turn. <b>Watching an
-	/// entertainer is built</b> and ends the turn (<see cref="Watch"/>), and so is the litter arm, in
-	/// <see cref="CountBeforeLeaving"/>. <b>The vomit, the fireworks and the pranks are counted, not built</b>:
-	/// <see cref="CountBeforeLeaving"/> and <see cref="CountAfterLeaving"/>, either side of the leave test as the
-	/// original has them.
+	/// entertainer is built</b> and ends the turn (<see cref="Watch"/>), and so are the vomit (<see cref="Vomits"/>)
+	/// and the litter arm (<see cref="GetsRidOfLitter"/>), ahead of the leave test. <b>The fireworks and the pranks are
+	/// counted, not built</b>: <see cref="CountAfterLeaving"/>, after the leave test as the original has them.
 	/// </para>
 	/// </summary>
 	private void Decide( Peep peep, PeepWalk walk, int tick )
@@ -1293,7 +1292,10 @@ public sealed class PeepBehaviour
 		if ( JumpsForJoy( peep, tick ) )
 			return;
 
-		if ( CountBeforeLeaving( peep, walk, draw, tick ) )
+		if ( Vomits( peep, walk, draw, tick ) )
+			return;
+
+		if ( GetsRidOfLitter( peep, walk, tick ) )
 			return;
 
 		if ( WantsToLeave( peep ) && Leave( peep, walk, admission, draw, tick ) )
@@ -1410,22 +1412,60 @@ public sealed class PeepBehaviour
 	}
 
 	/// <summary>
-	/// The deciding turn's two arms after the happy jump and ahead of the leave test (to <c>0x004fee51</c>): the vomit,
-	/// counted where the original tests it, and litter, built: a bin in reach that routes takes the guest on the bin
-	/// errand, and with none the litter goes on the ground (<c>docs/exe/ride-operation.md</c>, "The state-6 turn, in
-	/// order", (c)).
+	/// The deciding turn's arm (b), the vomit - the test at <c>0x004fed15</c>, the litter at <c>0x004fed5d</c>: the illness byte exactly
+	/// <see cref="VomitAt"/> and the turn's draw dividing by three, the guest plays spot animation <see cref="SpotSick"/>,
+	/// puts litter of kind <see cref="LitterSick"/> on their cell (<see cref="ParkState.DropLitter"/>, nothing on a cell
+	/// already littered), sounds kids <c>0xcc</c> where they stand, has illness nought, and the turn ends
+	/// (<c>docs/exe/ride-operation.md</c>, "The state-6 turn, in order", (b)).
 	/// </summary>
 	/// <remarks>
-	/// In the original the vomit ends the turn and clears its own test. Here it is not built, so its count is of deciding
-	/// turns on which the test held, and the turn goes on to the litter arm, which the original would not reach on such a
-	/// turn. A litter drop with no bin goes on to the leave test, as the original's does.
+	/// <b>The event <c>0x12</c> is counted</b>, <c>DECIDE_VOMIT_EVENT</c>: no event ring is kept. The sound goes through
+	/// <see cref="Sick"/> as a person's sound at the guest (<c>Person_PlaySound</c>'s shape, as the charge's and the yawn's);
+	/// the call's own form at this arm has not been read in a disassembly (Q1625).
 	/// </remarks>
-	/// <returns>Whether the turn ends here, the guest set off for a bin.</returns>
-	private bool CountBeforeLeaving( Peep peep, PeepWalk walk, int draw, int tick )
+	/// <returns>Whether the guest was sick, ending the turn.</returns>
+	private bool Vomits( Peep peep, PeepWalk walk, int draw, int tick )
 	{
-		if ( (byte)(int)peep.Vomit == VomitAt && draw % 3 == 0 )
-			Unimplemented.Report( "DECIDE_VOMIT" );
+		if ( (byte)(int)peep.Vomit != VomitAt || draw % 3 != 0 )
+			return false;
 
+		PlaySpotAnimation( peep, SpotSick, tick );
+
+		var (x, y) = walk.Position.Cell;
+		var dropped = State.DropLitter( x, y, LitterSick );
+
+		// The guest's event 0x12, after the litter: no event ring is kept.
+		Unimplemented.Report( "DECIDE_VOMIT_EVENT" );
+
+		Sick( peep );
+
+		Log.Info( $"Person {peep.ThingId}: sick at illness {peep.Vomit:0} on ({x},{y})"
+			+ (dropped ? "" : ", the cell already littered") + $", tick {tick}" );
+
+		peep.Vomit = 0f;
+
+		return true;
+	}
+
+	/// <summary>
+	/// A sick guest's kids <c>0xcc</c>, played where their sprite is heard (<see cref="ParkGuestSprites.Heard"/>) on the
+	/// park's audio. A test hands in its own.
+	/// </summary>
+	internal Action<Peep> Sick { get; set; } = static peep =>
+	{
+		if ( ParkGuestSprites.Heard( peep.Navigator.Position ) is { } heard )
+			ParkAudio.Current?.Sick( heard );
+	};
+
+	/// <summary>
+	/// The deciding turn's litter arm (c), after the vomit and ahead of the leave test (to <c>0x004fee51</c>): a bin in
+	/// reach that routes takes the guest on the bin errand, and with none the litter goes on the ground
+	/// (<c>docs/exe/ride-operation.md</c>, "The state-6 turn, in order", (c)). A drop with no bin goes on to the leave
+	/// test, as the original's does.
+	/// </summary>
+	/// <returns>Whether the turn ends here, the guest set off for a bin.</returns>
+	private bool GetsRidOfLitter( Peep peep, PeepWalk walk, int tick )
+	{
 		if ( (byte)(int)peep.Litter < LitterFullFrom )
 			return false;
 
@@ -1954,6 +1994,12 @@ public sealed class PeepBehaviour
 	/// <summary>Spot animation 5: a jump with both arms up, picture set 12 - a happy guest (<c>0x00500320</c>).</summary>
 	public const int SpotHappy = 5;
 
+	/// <summary>Spot animation 7: bending forward at the waist, picture set 6 - a sick guest (<c>0x004fed30</c>).</summary>
+	public const int SpotSick = 7;
+
+	/// <summary>The litter kind a sick guest leaves on their cell (<c>0x004fed5d</c>), record <c>0x0074f140</c>.</summary>
+	public const int LitterSick = 7;
+
 	/// <summary>Happiness above which a queuer plays spot animation 5 - <c>CMP AL,0x50</c> at <c>0x0050031c</c>.</summary>
 	public const int QueueHappyAbove = 80;
 
@@ -2168,7 +2214,7 @@ public sealed class PeepBehaviour
 	/// </summary>
 	/// <remarks>
 	/// The queue turn's two arms, the deciding turn's happy jump (<see cref="JumpsForJoy"/>) and its empty hand call
-	/// it. The original's fifth call is the deciding turn's 7, counted in <see cref="CountBeforeLeaving"/>.
+	/// it, and so does the deciding turn's vomit with 7 (<see cref="Vomits"/>).
 	/// </remarks>
 	internal void PlaySpotAnimation( Peep peep, int animation, int tick )
 	{
