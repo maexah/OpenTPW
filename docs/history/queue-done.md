@@ -12990,3 +12990,10 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   child in nine to twenty-five in a script chain's runs, `q612/run5/run.log`). Give `ParkScreams.Chain` the same empty-pass
   rule, with a test that fails when the pass is skipped, and confirm in a run by the first child's variation after a due
   millisecond.
+- [x] **Q576. A chain's range before its first child, and a chain of any variation's, by the set-up's draw** (optional; reach
+  only the staff's 188). From the run 6 review of Q563 and Q564 (`VERIFY-18.md`, Q563 4, Q564 1). The original's chain of any
+  variation ranges for its whole life by the variation its set-up drew by weight among all (`0x006bbfc5` ->
+  `FUN_006bc810`), its children writing nothing into it, and a held chain does before its first child; ours ranges by the
+  newest child's or the effect's first. Said at `ParkAudio.InRange` and `ParkScreams.InRange`. In Lost Kingdom only the
+  staff's 188 (a held chain, its fourth variation 85 of weight 1354 of 65532, the rest 90) can differ, and only in its
+  start window away. Build: draw the set-up's variation for range alone (kept apart from the first child's variation 1).
