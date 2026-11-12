@@ -1314,9 +1314,10 @@ filed the items that cite it.
   `WindowStack` flips the radio button up and `Put` returns before setting it down; the original's group with style
   0x10 sets it down again (`0x0066a455`..`0x0066a468`; frames `q364/orig/b-*.png`). `ParkLocator` already works round
   it. Read each screen group's style first.
-- [ ] **Q456. The entry price screen's Loans button in Instant Action.** From the week-end audit (D5, `VERIFY-16a.md`
-  Q366 1). The original disables it in game type 2 (`0x00499008`..`0x00499030`), as staff costs' (`ParkStaffCostsScreen.cs`
-  does it); ours takes the click, closes the screen and opens nothing.
+- [ ] **Q1356. The entry price screen's disabled Loans button, photographed.** Split from Q456 (built in a cloud lane with no
+  display). `ParkEntryPriceScreen` disables `0x4f3ac` in Instant Action, so it draws `b_loans`'s disabled frame. Confirm on a
+  desk: `park jungle`, `screen 10` in an Instant Action player's park, a screenshot of the button beside the staff costs
+  screen's (`screen 9`, `0x2dd`, already disabled there), and the same in a Full Simulation player's park, enabled.
 - [ ] **Q457. The satisfaction bar is masked to a byte.** From the week-end audit (D6, `VERIFY-16a.md` Q367/Q368).
   `ParkItemsScreen` runs satisfaction through `Bar()`'s `& 0xff`; the original does not (`0x00494031`, `0x00494199`,
   `0x00495888`, `0x00495959`) and the setter clamps 0..0x400 (`0x0066d885`). A test with -1 and 256.

@@ -13476,3 +13476,6 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
     whose parent is a sorted list. Tests `AHeadingClicksBySortedListsStyleNotItsOwn`, `EveryListScreensHeadingClicksSelect3`;
     an off-screen run's console `click` replied `click sound 189` on every heading and 31 on the all-things button. Not heard:
     no disk driver or original in the container, so the Confirm beside the original is still open.
+- [x] **Q456. The entry price screen's Loans button in Instant Action.** From the week-end audit (D5, `VERIFY-16a.md`
+  Q366 1). The original disables it in game type 2 (`0x00499008`..`0x00499030`), as staff costs' (`ParkStaffCostsScreen.cs`
+  does it); ours takes the click, closes the screen and opens nothing.

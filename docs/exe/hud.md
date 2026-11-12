@@ -513,7 +513,9 @@ and sideshows in each other's places while looking correct.
 
 **entryprice is not what its rects suggest.** Its three stacked right-hand buttons are **not** a
 spinner: they resolve to `b_staffcost`, `b_loans` and `b_finance`, and `FUN_00498c60` sends them to
-`FUN_004b2750`, `FUN_0049fb30` and `FUN_0049ac60` — this category's other three screens. The spinner
+`FUN_004b2750`, `FUN_0049fb30` and `FUN_0049ac60` — this category's other three screens. The loans button `0x4f3ac`
+is **disabled in game type 2**, Instant Action (`0x00499008`..`0x00499030`), as the staff costs screen's is; OpenTPW
+disables it there too and logs `Entry price: opened, fee N closed 0|1 loans on|off` (Q456). The spinner
 is `0x4f3ae`, control **type 12**, whose `op 0x0f` child is `b_minus` (left) and `op 0x0e` child is
 `b_plus` (right); `FUN_0066a5c4(&0,&10000)` gives it a range of **0–10000** and `FUN_0066a68d(&1)` a
 step of **1**. `0x4f3b0` is the black "Ticket Price" label (UITEXT 160), and `0x4f3b1` is `b_door`,
