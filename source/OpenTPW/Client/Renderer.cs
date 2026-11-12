@@ -78,6 +78,7 @@ public partial class Renderer
 		Input.IsSystemCursorVisible = false;
 
 		_pacing = StartPacing( Window, GameOptions.Current );
+		Display.Applied += OnDisplayApplied;
 
 		CreateGraphicsDevice();
 		// Swap the buffers so that the screen isn't a mangled mess
@@ -205,25 +206,28 @@ public partial class Renderer
 	}
 
 	/// <summary>
-	/// The frame limit's pacing, on the monitor's refresh rate as the desktop is in it. A first launch, with no <c>framelimit</c>
-	/// line read, takes that rate as its limit (<see cref="FramePacing.FirstLimit"/>); the next write of opentpw.cfg keeps it.
+	/// The frame limit's pacing, on the refresh rate of the mode the options put the display in (<see cref="FramePacing.RefreshInUse"/>).
+	/// A first launch, with no <c>framelimit</c> line read, takes that rate as its limit (<see cref="FramePacing.Start"/>).
 	/// </summary>
 	private static FramePacing StartPacing( Window window, GameOptions options )
 	{
-		var refresh = Display.Desktop( window )?.RefreshRate ?? 0;
-		var first = options.FrameLimit == FramePacing.NotChosen;
+		var refresh = FramePacing.RefreshInUse( options.DisplayMode, options.FullScreenSize, Display.Desktop( window )?.RefreshRate ?? 0 );
 
-		if ( first )
-			options.FrameLimit = FramePacing.FirstLimit( refresh );
+		Log.Info( FramePacing.Start( options, refresh ) );
 
-		var pacing = FramePacing.OnRealClock( refresh );
-		var limit = FramePacing.Clamp( options.FrameLimit );
+		return FramePacing.OnRealClock( refresh );
+	}
 
-		Log.Info( $"Frames: vsync {(options.VSync ? "on" : "off")}, {(limit > 0 ? $"limit {limit}" : "unlimited")}"
-			+ $"{(first ? $" (no framelimit line, so the monitor's refresh rate{(refresh > 0 ? "" : $", which SDL does not say, so {FramePacing.RefreshUnknown}")})" : "")}, "
-			+ $"refresh {refresh}: {(FramePacing.Limits( options.VSync, limit, refresh ) ? "the limiter paces" : options.VSync ? "VSync paces" : "nothing paces")}" );
+	/// <summary>The display was put into <paramref name="mode"/>: the limiter compares against that mode's refresh rate from now on.</summary>
+	private void OnDisplayApplied( DisplayMode mode, VideoMode fullScreen )
+	{
+		var refresh = FramePacing.RefreshInUse( mode, fullScreen, Display.Desktop( Window )?.RefreshRate ?? 0 );
 
-		return pacing;
+		if ( refresh == _pacing.RefreshRate )
+			return;
+
+		_pacing.UseRefresh( refresh );
+		Log.Info( $"Frames: the display is in {mode} at refresh {refresh}" );
 	}
 
 	public void Run()

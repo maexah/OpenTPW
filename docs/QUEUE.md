@@ -1477,8 +1477,7 @@ filed the items that cite it.
   `ParkGuestSprites.WriteShadow`; `park-engine.md`, "A person's shadow"). Confirm at high quality in both games (the
   original by its Options screen, ours by `save/Config.tcf`'s quality, `docs/TOOLING.md`, "This game at another graphics
   quality") by a frame pair at one camera, shadows on and off (`lib/shadowdiff.py`): the shadow is the person's own
-  shape, not `alphkid`'s, leaving about 152/255 (0.596) of the ground under its opaque texels. Also check the one thing the decode
-  leaves to the item's word: that the non-`0x40000` arm sets `0x800` (no depth write) as first person's does.
+  shape, not `alphkid`'s, leaving about 152/255 (0.596) of the ground under its opaque texels.
 - [ ] **Q522. The weather's drops in first person's fog.** From Q485 (`park-engine.md`, "First person's fog"): first person
   fogs every batch under render-word `0x2000`, but whether the rain's and snow's drops go through that batch (the callers
   of `SpriteBatch_AddQuad` include `FUN_0057be90`, `FUN_0057ed50`, `FUN_005860d0`, `FUN_00577ae0` and `FUN_0058a010`, none
@@ -3088,13 +3087,12 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
     (by the listing, not run; an original defect). `0x0048ee20` sends every held tag message 5 at the load and at teardown:
     whether that lands on a live challenge object is unproven. `0x0048ede0`'s branch is dead by CODE.
 
-- [ ] **Q1576. `REPAIREFFECT`'s particle and place (from Q448).** Decode in Ghidra: `FUN_00556de0`'s spawn (`0x005562a6`'s
+- [ ] **Q1576. `REPAIREFFECT`'s particle (from Q448).** Decode in Ghidra: `FUN_00556de0`'s spawn (`0x005562a6`'s
   first call), which thing it looks up from `+0xac`, what its `+0x68` is (the particle id), the place it resolves from the
-  model at `+0xc8`, and whether a second non-zero value over a live `+0xcc` stops the first; and `FUN_00556a80`, where
-  the two sounds and the picker are placed (ours uses the scream's place, `FUN_00556af0`, which reads the same
-  `[[[record+8]+4]+0x78]` chain). Then build the particle (`RideScript.RepairEffect`, counted `REPAIREFFECT_PARTICLE`
-  now) and its stop on nought and at the script's end, and move the sounds if the place differs. Also read whether the
-  handler or `BUMP 17`'s arm writes the result register (both leave it alone here; no shipped use reads it first).
+  model at `+0xc8`, and whether a second non-zero value over a live `+0xcc` stops the first. Then build the particle
+  (`RideScript.RepairEffect`, counted `REPAIREFFECT_PARTICLE` now) and its stop on nought and at the script's end. Also
+  read whether the handler or `BUMP 17`'s arm writes the result register (both leave it alone here; no shipped use reads
+  it first).
   Confirm: Lost Kingdom's Belly Bounce broken and mended, the particle in a frame beside the original's.
 
 - [ ] **Q1577. Splish Splash's water by its script, and the repair's sounds, beside the original (from Q448; the

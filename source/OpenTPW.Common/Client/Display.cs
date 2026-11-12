@@ -131,6 +131,8 @@ public static class Display
 	/// </summary>
 	public static void Apply( Window window, DisplayMode mode, VideoMode fullScreen )
 	{
+		var taken = default( VideoMode );
+
 		var sdl = window.SdlWindow;
 
 		// Out of any full screen first: a display cannot be given a new mode while it is being held
@@ -140,7 +142,9 @@ public static class Display
 		switch ( mode )
 		{
 			case DisplayMode.FullScreen:
-				SetFullScreenMode( window, fullScreen );
+				if ( SetFullScreenMode( window, fullScreen ) )
+					taken = fullScreen;
+
 				sdl.WindowState = NeoVeldrid.WindowState.FullScreen;
 				break;
 
@@ -157,7 +161,15 @@ public static class Display
 		// SDL hands the window its new size as an event the next pump reads, so the size above is the one it had before
 		// (Q1200: "FullScreen at 2560 x 1440, window 2560x1359"); the size it is put at is logged as it arrives.
 		Watch.Listen( window, handler => window.Resized += handler, mode, line => Log.Info( line ) );
+
+		Applied?.Invoke( mode, taken );
 	}
+
+	/// <summary>
+	/// Raised at the end of <see cref="Apply"/> with the mode the window was put in and the full-screen mode the display took, of no
+	/// size where it took none (not exclusive full screen, a size of nothing, or refused). The frame limiter's refresh rate follows it.
+	/// </summary>
+	public static event Action<DisplayMode, VideoMode>? Applied;
 
 	/// <summary>The resize <see cref="Apply"/> waits for, the first after it.</summary>
 	public static readonly ResizeWatch Watch = new();
@@ -206,15 +218,21 @@ public static class Display
 		}
 	}
 
-	private static unsafe void SetFullScreenMode( Window window, VideoMode wanted )
+	/// <summary>Asks the display for <paramref name="wanted"/>: false where it has no size or SDL refuses it.</summary>
+	private static unsafe bool SetFullScreenMode( Window window, VideoMode wanted )
 	{
 		if ( wanted.Width <= 0 || wanted.Height <= 0 )
-			return;
+			return false;
 
 		// Format and driver data left at zero, which asks SDL for the closest mode it has.
 		var mode = new SdlDisplayMode { W = wanted.Width, H = wanted.Height, RefreshRate = wanted.RefreshRate };
 
 		if ( Sdl2Window.SdlInstance.SetWindowDisplayMode( (Silk.NET.SDL.Window*)window.SdlWindow.SdlWindowHandle, ref mode ) != 0 )
+		{
 			Log.Warning( $"Display: the display would not take {wanted}, so full screen uses whatever mode it is in" );
+			return false;
+		}
+
+		return true;
 	}
 }

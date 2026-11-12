@@ -2714,7 +2714,7 @@ public sealed class RideScript
 	/// <c>BUMP 17</c>'s last operand, the script's 16-bit <c>+0xe6</c>: <c>0xffff</c> from the script loader
 	/// (<c>FUN_005587f0</c>) and again from a park's load (<c>0x00559f29</c>), so the first <c>BUMP 17</c> after either walks.
 	/// </summary>
-	private int _trackPiecesLast = -1;
+	private short _trackPiecesLast = -1;
 
 	/// <summary>
 	/// Where <c>BUMP 17</c> puts its ride's track pieces to a clip: the thing's two pieces' walks
@@ -2733,15 +2733,12 @@ public sealed class RideScript
 	/// </summary>
 	private void TrackPieces( int value )
 	{
-		// The field is a word: an operand outside 16 bits (none shipped: the four are literals 0 and 1) would compare
-		// in a width not read.
-		if ( value is < short.MinValue or > ushort.MaxValue )
-			Unimplemented.Report( "BUMP_17_WIDE_OPERAND" );
-
+		// The field is a word, stored truncated (0x00554a11) and compared sign-extended with the whole operand
+		// (0x005549fd), so an operand outside -32768..32767 never matches it and walks every time.
 		if ( value == _trackPiecesLast )
 			return;
 
-		_trackPiecesLast = value;
+		_trackPiecesLast = (short)value;
 
 		var running = value == 0;
 		var played = PlayTrackPieces( ThingId, running );
@@ -2783,17 +2780,30 @@ public sealed class RideScript
 	internal const int RepairOnRideSlot = (int)RideVariables.VAR_ONRIDE;
 
 	/// <summary>
+	/// Where <c>REPAIREFFECT</c>'s non-zero sounds start: (script, type, effect, place) to the park's audio as script sounds
+	/// with their handles dropped, answering how each start went, or null with no park audio. A test sets a recorder.
+	/// </summary>
+	internal static Func<int, int, int, Vector3, ParkAudio.ScriptSoundStart?> StartRepairSound = ( script, type, effect, at )
+		=> ParkAudio.Current?.StartScriptSound( script, type, effect, at, out _ );
+
+	/// <summary>
+	/// Where <c>REPAIREFFECT</c>'s nought plays the scream picker: (band, level, place, speed) to
+	/// <see cref="ParkAudio.SingleScream"/>, answering whether it played, or null with no park audio. A test sets a recorder.
+	/// </summary>
+	internal static Func<int, int, Vector3, int, bool?> PlayRepairScream = ( band, level, at, speed )
+		=> ParkAudio.Current?.SingleScream( band, level, at, speed );
+
+	/// <summary>
 	/// <c>REPAIREFFECT</c> (93, <c>0x005562a6</c>; docs/exe/park.md, "`REPAIREFFECT` (93)"): the repair's particle on for a
-	/// non-zero value and off for nought (<c>FUN_00556de0</c>), then the sounds of <see cref="RepairSounds"/> at the thing.
-	/// The two sounds' handles are dropped, as the original drops them: nothing stops them with the script.
+	/// non-zero value and off for nought (<c>FUN_00556de0</c>), then the sounds of <see cref="RepairSounds"/> where the
+	/// thing's model stands (<see cref="ParkObjects.TryModelOrigin"/>, <c>FUN_00556a80</c>). The two sounds' handles are
+	/// dropped, as the original drops them: nothing stops them with the script.
 	/// </summary>
 	/// <remarks>
 	/// <b>The particle is not built</b>: the spawn takes the thing's particle id at its <c>+0x68</c> and a place from the
 	/// model, neither read, so a non-zero value on a placed thing counts <c>REPAIREFFECT_PARTICLE</c>, and nought has no
-	/// particle to stop (<c>+0xcc</c> is never set here). The sounds play at the middle of the thing's cells, where a
-	/// scream sounds (<see cref="ParkObjects.TrySoundPlace"/>, <c>FUN_00556af0</c>): the original takes the place from
-	/// <c>FUN_00556a80</c>, which reads the same <c>[[[record+8]+4]+0x78]</c> chain and is otherwise not read (Q1576).
-	/// The register is left alone; whether the handler writes it was not read (Q1576).
+	/// particle to stop (<c>+0xcc</c> is never set here; Q1576). The register is left alone; whether the handler writes it
+	/// was not read (Q1576).
 	/// </remarks>
 	private void RepairEffect( int value )
 	{
@@ -2812,7 +2822,7 @@ public sealed class RideScript
 			return;
 		}
 
-		if ( ParkObjects.Current is not { } objects || !objects.TrySoundPlace( ThingId, out var at ) )
+		if ( ParkObjects.Current is not { } objects || !objects.TryModelOrigin( ThingId, out var at ) )
 		{
 			// The original indexes its model table with no guard here, so a script with no model faults.
 			++NotImplemented;
@@ -2822,13 +2832,13 @@ public sealed class RideScript
 
 		foreach ( var effect in globalRides )
 		{
-			var started = ParkAudio.Current?.StartScriptSound( Id, ParkAudio.GlobalRidesType, effect, at, out _ );
+			var started = StartRepairSound( Id, ParkAudio.GlobalRidesType, effect, at );
 			Log?.Info( $"{Name}: REPAIREFFECT {value}: global rides {effect} {started?.ToString() ?? "with no park audio"}" );
 		}
 
 		if ( picks )
 		{
-			var played = ParkAudio.Current?.SingleScream( VariableAt( RepairOnRideSlot ), 1, at, 1 );
+			var played = PlayRepairScream( VariableAt( RepairOnRideSlot ), 1, at, 1 );
 			Log?.Info( $"{Name}: REPAIREFFECT {value}: the scream picker with {VariableAt( RepairOnRideSlot )} aboard, effect {scream}, "
 				+ $"{(played is null ? "with no park audio" : played.Value ? "played" : "nothing played")}" );
 		}

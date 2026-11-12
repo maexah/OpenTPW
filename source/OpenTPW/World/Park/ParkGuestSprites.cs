@@ -667,7 +667,7 @@ public sealed class ParkGuestSprites : ModelEntity
 		}
 
 		var material = new Material( PeopleShader, ShadowMaterialFor( kind ) );
-		material.Set( "Color", ParkPersonShadows.IsOwnPicture( kind ) ? (Texture)_atlas! : _silhouette ??= new Texture( ParkPersonShadows.Silhouette ) );
+		material.Set( "Color", ShadowTextureIsAtlas( kind ) ? (Texture)_atlas! : _silhouette ??= new Texture( ParkPersonShadows.Silhouette ) );
 
 		_shadowModel = new Model( _shadowVertices, indices, material );
 		_shadowModel.EnableFrequentUpdates( _shadowVertices );
@@ -681,6 +681,12 @@ public sealed class ParkGuestSprites : ModelEntity
 
 	/// <summary>The silhouette shadow's: the people's with no depth written (word <c>0x...13</c> | <c>0x800</c>, <c>0x00589a51</c>) and the multiply blend.</summary>
 	internal const MaterialFlags SilhouetteShadowMaterial = PeopleMaterial | MaterialFlags.DisableDepthWrite | MaterialFlags.Multiply;
+
+	/// <summary>
+	/// Whether a <paramref name="kind"/> of shadow binds the bodies' atlas, their own pictures, rather than the silhouette
+	/// <c>alphkid</c>: first person's and the orbit view's at high (docs/exe/park-engine.md, "A person's shadow").
+	/// </summary>
+	internal static bool ShadowTextureIsAtlas( ParkPersonShadows.Kind kind ) => ParkPersonShadows.IsOwnPicture( kind );
 
 	/// <summary>The pipeline a <paramref name="kind"/> of shadow is drawn with.</summary>
 	internal static MaterialFlags ShadowMaterialFor( ParkPersonShadows.Kind kind )

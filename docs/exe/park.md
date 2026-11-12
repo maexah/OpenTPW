@@ -1141,12 +1141,15 @@ more than five variables with `VAR_ONRIDE` sixth, so the slot the nought reads b
 `0x0` for the global rides' 111 and 211 (the run below), so the dropped handles leave nothing playing on.
 **OpenTPW** (`RideScript.RepairEffect`, `RepairSounds`): a non-zero value plays 111 and 211 as script sounds of type 5
 (the global `cat_rides`) with their handles dropped; nought, where the script declares more than five variables, plays
-the picker as `SINGLESCREAM`'s grid with (the sixth, 1, 1). Both at the middle of the thing's cells, where a scream sounds
-(`FUN_00556af0`): `FUN_00556a80` reads the same `[[[record+8]+4]+0x78]` chain and is otherwise not read (Q1576). **Not
+the picker as `SINGLESCREAM`'s grid with (the sixth, 1, 1). Both where the model stands, as the original takes them
+from `FUN_00556a80` (`0x00556a80`..`0x00556aab`, read in objdump): `node = [[[record+8]+4]+0x78]`, then x, y, z from
+`node+0x40`, `+0x44`, `+0x48`, the model node's translation with no rectangle (`ParkObjects.TryModelOrigin`). That is
+not a scream's place, `FUN_00556af0`, which takes x and z from the middle of `0x466b70`'s rectangle and only the height
+`+0x44` from the node, so the two differ across the ground by the model's offset from its rectangle's middle. **Not
 built: the particle** (the thing's `+0x68` and the model's place are not read; a non-zero value on a thing counts
 `REPAIREFFECT_PARTICLE`, and nought has nothing at `+0xcc` to stop; Q1576). Measured in ours off-screen (Q448; the
 run's output was not kept): a broken Belly Bounce's repair played `hammer2.mp2` (111) and `tp_riderepaired` (211), then
-the picker with 0 aboard played nothing; a broken Splish Splash's played `rep_rustybolt.m` and `tp_riderepaired`. Not
+the picker with 0 aboard played nothing; a broken Splish Splash's played a variation of 111 (`rep_misc6.mp2` in the logged run) and `tp_riderepaired`. Not
 heard beside the original (Q1577).
 
 ### The lights (82-85) — decoded, unshipped

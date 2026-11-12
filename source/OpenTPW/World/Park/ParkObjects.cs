@@ -176,6 +176,25 @@ public sealed class ParkObjects : Entity
 	}
 
 	/// <summary>
+	/// Where a placed thing's model stands, its placed origin (<see cref="LobbyModel.PlacedOrigin"/>): the model node's
+	/// translation that <c>FUN_00556a80</c> reads at <c>[[[record+8]+4]+0x78]+0x40..0x48</c>, with no rectangle, where
+	/// <c>REPAIREFFECT</c> sounds (docs/exe/park.md, "`REPAIREFFECT` (93)"). False where nothing stands under the id.
+	/// </summary>
+	internal bool TryModelOrigin( int thingId, out Vector3 world )
+	{
+		if ( !_standing.TryGetValue( thingId, out var standing ) )
+		{
+			world = default;
+
+			return false;
+		}
+
+		world = standing.Model.PlacedOrigin;
+
+		return true;
+	}
+
+	/// <summary>
 	/// Where a thing's voice sounds: the middle of its rectangle (<see cref="BoxMiddle"/>) at the height the model stands at
 	/// (<see cref="LobbyModel.PlacedOrigin"/>), as <c>FUN_00556af0</c> takes it from <c>[[[record+8]+4]+0x78]+0x44</c>
 	/// (docs/exe/ride-operation.md). <see cref="TrySoundPlace"/> and <see cref="Place"/>'s log line both read it.

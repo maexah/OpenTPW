@@ -2655,10 +2655,12 @@ then set on the land: the plane through its heightfield cell's near corner and t
 truncation, the far corners clamped; not the triangle split `FUN_004527f0` uses), plus 0.6 (`0x008bd4ec`, 0.25 under
 render word `0x2000` or renderer 4, `0x00576a72`), the sprite's own height ignored (true only without the sprite flag `0x800`: see
 the unreached branches below); then through the draw matrix
-`[0x0087b088]`. Corners 0 and 1 carry the texture's top row and are the far end. Under `0x40000` the colour is
+`[0x0087b088]`. Corners 0 and 1 carry the texture's top row and are the far end. Both arms set `0x800` in the picture's
+state word (no depth write; `0x00589a51`, before the `0x40000` test) and clear `0x200` (`0x00589af6`, after the arms
+join). Only the colour and the blend are the arms' own: under `0x40000` the colour is
 `0xff000000 | ~(darkness × 0x010101)` and the state word's low byte `0x13` (SRCBLEND ZERO, DESTBLEND SRCCOLOR: the
-ground multiplied by the colour times the texel), with the picture's alpha test (16) kept, `0x800` set (no depth write)
-and `0x200` cleared; without it the colour is the darkness word itself and the picture's own blend. **Measured**
+ground multiplied by the colour times the texel), with the picture's alpha test (16) kept; without it the colour is the
+darkness word itself and the picture's own blend. **Measured**
 (`q480/`, `PREDICTION.txt`; the stock park at medium, `[0x008bcbc8]` `0x1444100`): count 1, darkness `0x67000000`, L
 (0.40825, -0.81650, 0.40825), across (0.40825, 0, -0.40825), m10 and m12 0.5, m11 0; with `0x20000` held the count
 read 0 and every shadow went. On bare ground a guest's shadow left 0.591 and 0.602 of the red and green

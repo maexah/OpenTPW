@@ -35,6 +35,37 @@ internal sealed class FramePacing
 	public static int FirstLimit( int? refreshRate )
 		=> refreshRate is { } rate && rate > 0 ? Math.Max( rate, LowestLimit ) : RefreshUnknown;
 
+	/// <summary>
+	/// The refresh rate of the mode the display is in: under <see cref="DisplayMode.FullScreen"/> the mode it was put into
+	/// (<see cref="GameOptions.FullScreenSize"/>, whose rate is the highest the mode list keeps for its size), otherwise, or
+	/// where that mode has no size or rate, the desktop's (<paramref name="desktop"/>, 0 if SDL will not say).
+	/// </summary>
+	public static int RefreshInUse( DisplayMode mode, VideoMode fullScreen, int desktop )
+		=> mode == DisplayMode.FullScreen && fullScreen is { Width: > 0, Height: > 0, RefreshRate: > 0 } ? fullScreen.RefreshRate : desktop;
+
+	/// <summary>
+	/// The start's choice: with no <c>framelimit</c> line read (a first launch) the limit becomes <see cref="FirstLimit"/> of
+	/// <paramref name="refreshRate"/>, which the next write of opentpw.cfg keeps; a limit read is left alone. Answers the line
+	/// the start logs. VSync is the device's own flag, made from <see cref="GameOptions.VSync"/> as the device is built
+	/// (<c>Renderer.CreateGraphicsDevice</c>), and is not set here.
+	/// </summary>
+	public static string Start( GameOptions options, int refreshRate )
+	{
+		var first = options.FrameLimit == NotChosen;
+
+		if ( first )
+			options.FrameLimit = FirstLimit( refreshRate );
+
+		var limit = Clamp( options.FrameLimit );
+
+		return $"Frames: vsync {(options.VSync ? "on" : "off")}, {(limit > 0 ? $"limit {limit}" : "unlimited")}"
+			+ $"{(first ? $" (no framelimit line, so the monitor's refresh rate{(refreshRate > 0 ? "" : $", which SDL does not say, so {RefreshUnknown}")})" : "")}, "
+			+ $"refresh {refreshRate}: {Who( options.VSync, limit, refreshRate )}";
+	}
+
+	private static string Who( bool vsync, int limit, int refreshRate )
+		=> Limits( vsync, limit, refreshRate ) ? "the limiter paces" : vsync ? "VSync paces" : "nothing paces";
+
 	/// <summary>A cap as opentpw.cfg's number gives it: none or below none is Unlimited, anything else at least <see cref="LowestLimit"/>.</summary>
 	public static int Clamp( int limit ) => limit <= 0 ? Unlimited : Math.Max( limit, LowestLimit );
 
@@ -80,7 +111,7 @@ internal sealed class FramePacing
 	public static string Line( bool vsync, int limit, int refreshRate, int frames, TimeSpan over, TimeSpan shortest, TimeSpan longest )
 	{
 		var cap = limit > 0 ? $"limit {limit}" : "unlimited";
-		var who = Limits( vsync, limit, refreshRate ) ? "the limiter paces" : vsync ? "VSync paces" : "nothing paces";
+		var who = Who( vsync, limit, refreshRate );
 		var average = frames > 0 ? over.TotalMilliseconds / frames : 0;
 
 		return $"Frames: vsync {(vsync ? "on" : "off")}, {cap}, refresh {refreshRate} ({who}): {frames} frames in {over.TotalSeconds:F2} s, "
@@ -90,8 +121,8 @@ internal sealed class FramePacing
 	private readonly Func<TimeSpan> _clock;
 	private readonly Action<int> _sleep;
 
-	/// <summary>The monitor's refresh rate as the game started, 0 if SDL would not say.</summary>
-	public int RefreshRate { get; }
+	/// <summary>The refresh rate of the mode the display is in (<see cref="RefreshInUse"/>), 0 if SDL would not say; <see cref="UseRefresh"/> changes it.</summary>
+	public int RefreshRate { get; private set; }
 
 	/// <summary>When the next frame may begin, while the limiter paces.</summary>
 	private TimeSpan? _due;
@@ -146,6 +177,21 @@ internal sealed class FramePacing
 	/// line; a change of the settings starts the measuring again.
 	/// </summary>
 	public void Count( GameOptions options, TimeSpan frame ) => Measure( options.VSync, Clamp( options.FrameLimit ), frame );
+
+	/// <summary>
+	/// The display was put into another mode (<see cref="Display.Apply"/>): the limiter compares against
+	/// <paramref name="refreshRate"/> from the next frame, its count starts again, and the frames are measured again.
+	/// </summary>
+	public void UseRefresh( int refreshRate )
+	{
+		RefreshRate = Math.Max( refreshRate, 0 );
+		_due = null;
+		_logged = false;
+		Measured = null;
+
+		if ( _measuring is { } setting )
+			Restart( setting );
+	}
 
 	/// <summary>The frames stop being measured until the next one (a minimised window, whose frames draw nothing), and the limiter's count starts again.</summary>
 	public void Interrupt()

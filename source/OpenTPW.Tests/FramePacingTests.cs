@@ -63,6 +63,73 @@ public class FramePacingTests
 		Assert.IsTrue( new GameOptions().VSync, "on by default, as the game always presented" );
 	}
 
+	/// <summary>
+	/// The start's choice (<see cref="FramePacing.Start"/>): a first launch's limit becomes the refresh rate it is given, or
+	/// <see cref="FramePacing.RefreshUnknown"/> for a rate SDL does not say, and a limit read from opentpw.cfg is kept.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutation:</b> the first launch's limit not set (it then runs uncapped, <c>Clamp( NotChosen )</c> being Unlimited,
+	/// and no <c>framelimit</c> line is ever written), or a read limit overwritten, fails. The device's VSync flag is made
+	/// from <see cref="GameOptions.VSync"/> as the device is built, which no test reaches: only a run checks it.
+	/// </remarks>
+	[TestMethod]
+	public void TheStartTakesTheRefreshRateOnlyOnAFirstLaunch()
+	{
+		var first = new GameOptions();
+		var line = FramePacing.Start( first, 144 );
+
+		Assert.AreEqual( 144, first.FrameLimit );
+		Assert.AreEqual( "Frames: vsync on, limit 144 (no framelimit line, so the monitor's refresh rate), refresh 144: VSync paces", line );
+
+		var unknown = new GameOptions { VSync = false };
+		StringAssert.Contains( FramePacing.Start( unknown, 0 ), "which SDL does not say, so 60)" );
+		Assert.AreEqual( FramePacing.RefreshUnknown, unknown.FrameLimit );
+
+		var chosen = new GameOptions { FrameLimit = 90 };
+		Assert.AreEqual( "Frames: vsync on, limit 90, refresh 144: the limiter paces", FramePacing.Start( chosen, 144 ) );
+		Assert.AreEqual( 90, chosen.FrameLimit );
+
+		var unlimited = new GameOptions { FrameLimit = FramePacing.Unlimited };
+		FramePacing.Start( unlimited, 144 );
+		Assert.AreEqual( FramePacing.Unlimited, unlimited.FrameLimit, "unlimited is a choice, not a first launch" );
+	}
+
+	/// <summary>
+	/// The limiter compares against the refresh rate of the mode the display is in: exclusive full screen's own mode, 144 on a
+	/// desktop at 60, else the desktop's. So with VSync on and a limit of 60, a display put into full screen at 144 has the
+	/// limiter pace at 60, frames 16.7 ms apart, where at the desktop's 60 it stands aside for VSync.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the desktop's rate under full screen (the limiter then stands aside and VSync paces at 144),
+	/// full screen's rate under borderless, or <c>UseRefresh</c> not changing the rate the limiter reads, fails.</remarks>
+	[TestMethod]
+	public void TheLimiterComparesAgainstTheRefreshOfTheModeInUse()
+	{
+		var fast = new VideoMode( 2560, 1440, 144 );
+
+		Assert.AreEqual( 144, FramePacing.RefreshInUse( DisplayMode.FullScreen, fast, 60 ) );
+		Assert.AreEqual( 60, FramePacing.RefreshInUse( DisplayMode.BorderlessFullScreen, fast, 60 ) );
+		Assert.AreEqual( 60, FramePacing.RefreshInUse( DisplayMode.Windowed, fast, 60 ) );
+		Assert.AreEqual( 60, FramePacing.RefreshInUse( DisplayMode.FullScreen, default, 60 ), "a mode the display did not take" );
+		Assert.AreEqual( 60, FramePacing.RefreshInUse( DisplayMode.FullScreen, new VideoMode( 1024, 768, 0 ), 60 ), "a mode with no rate" );
+
+		var clock = new FakeClock();
+		var pacing = new FramePacing( 60, clock.Read, clock.Sleep );
+		var options = new GameOptions { VSync = true, FrameLimit = 60 };
+
+		Run( pacing, clock, options, 10, _ => TimeSpan.FromMilliseconds( 1 ) );
+		Assert.AreEqual( 0, clock.Sleeps, "at the desktop's 60 VSync paces" );
+
+		pacing.UseRefresh( FramePacing.RefreshInUse( DisplayMode.FullScreen, fast, 60 ) );
+		Assert.AreEqual( 144, pacing.RefreshRate );
+
+		var starts = Run( pacing, clock, options, 10, _ => TimeSpan.FromMilliseconds( 1 ) );
+
+		Assert.IsTrue( clock.Sleeps > 0, "in full screen at 144 the limiter paces" );
+
+		for ( var i = 1; i < starts.Count; ++i )
+			Assert.IsTrue( (starts[i] - starts[i - 1]).TotalMilliseconds >= 16.6, $"frame {i} began early" );
+	}
+
 	/// <remarks><b>Mutation:</b> no floor lets 10 through; a floor on Unlimited makes it 30.</remarks>
 	[TestMethod]
 	public void TheLimitRunsFromThirtyToUnlimited()

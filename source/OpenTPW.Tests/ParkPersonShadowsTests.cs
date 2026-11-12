@@ -368,6 +368,22 @@ public class ParkPersonShadowsTests
 	}
 
 	/// <summary>
+	/// <b>Each shadow binds its own texture</b>: the orbit view's at high and first person's the bodies' atlas, their own
+	/// pictures; medium's the silhouette, and no shadow nothing of the atlas. What the bound texture draws is Q1588's
+	/// photograph's.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the atlas only for first person (the orbit view's at high then binds <c>alphkid</c> under the
+	/// atlas's uv), or for the silhouette too, fails.</remarks>
+	[TestMethod]
+	public void EachShadowBindsItsTexture()
+	{
+		Assert.IsFalse( ParkGuestSprites.ShadowTextureIsAtlas( ParkPersonShadows.Kind.None ) );
+		Assert.IsFalse( ParkGuestSprites.ShadowTextureIsAtlas( ParkPersonShadows.Kind.Silhouette ) );
+		Assert.IsTrue( ParkGuestSprites.ShadowTextureIsAtlas( ParkPersonShadows.Kind.FirstPersonOwnPicture ) );
+		Assert.IsTrue( ParkGuestSprites.ShadowTextureIsAtlas( ParkPersonShadows.Kind.OrbitOwnPicture ) );
+	}
+
+	/// <summary>
 	/// <b>First person's colour is black at the darkness alpha</b>: the light's darkness word, <c>trunc(-127 Ly) &lt;&lt; 24</c>,
 	/// 0x67000000 under the jungle sun (<c>0x00589750</c>, <c>0x00584d97</c>), not the silhouette's grey.
 	/// </summary>

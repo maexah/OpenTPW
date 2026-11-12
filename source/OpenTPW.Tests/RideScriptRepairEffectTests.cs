@@ -3,6 +3,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace OpenTPW.Tests;
@@ -18,6 +20,8 @@ public class RideScriptRepairEffectTests
 	private static int Word( Opcode opcode ) => unchecked( (int)(0x80000000u | (uint)opcode) );
 
 	private static int Lit( int value ) => value;
+
+	private static int Var( int index ) => unchecked( (int)(0x40000000u | (uint)index) );
 
 	private static RideScriptFile Build( int variableCount, params int[] body )
 	{
@@ -64,10 +68,18 @@ public class RideScriptRepairEffectTests
 
 	private Func<int, bool, int?>? _playTrackPieces;
 
+	private Func<int, int, int, Vector3, ParkAudio.ScriptSoundStart?>? _startRepairSound;
+
+	private Func<int, int, Vector3, int, bool?>? _playRepairScream;
+
 	private readonly List<(int Thing, bool Running)> _walks = [];
 
+	private readonly List<(int Script, int Type, int Effect, Vector3 At)> _started = [];
+
+	private readonly List<(int Band, int Level, Vector3 At, int Speed)> _screams = [];
+
 	[TestInitialize]
-	public void RecordTheWalks()
+	public void RecordTheWalksAndTheSounds()
 	{
 		_playTrackPieces = RideScript.PlayTrackPieces;
 		RideScript.PlayTrackPieces = ( thing, running ) =>
@@ -75,10 +87,29 @@ public class RideScriptRepairEffectTests
 			_walks.Add( (thing, running) );
 			return 8;
 		};
+
+		_startRepairSound = RideScript.StartRepairSound;
+		RideScript.StartRepairSound = ( script, type, effect, at ) =>
+		{
+			_started.Add( (script, type, effect, at) );
+			return ParkAudio.ScriptSoundStart.Started;
+		};
+
+		_playRepairScream = RideScript.PlayRepairScream;
+		RideScript.PlayRepairScream = ( band, level, at, speed ) =>
+		{
+			_screams.Add( (band, level, at, speed) );
+			return true;
+		};
 	}
 
 	[TestCleanup]
-	public void PutTheWalksBack() => RideScript.PlayTrackPieces = _playTrackPieces!;
+	public void PutTheWalksAndTheSoundsBack()
+	{
+		RideScript.PlayTrackPieces = _playTrackPieces!;
+		RideScript.StartRepairSound = _startRepairSound!;
+		RideScript.PlayRepairScream = _playRepairScream!;
+	}
 
 	/// <summary>
 	/// A non-zero value shows the repair: the global rides' 111 and 211, whatever else it is, and picks no scream. Made to
@@ -175,6 +206,97 @@ public class RideScriptRepairEffectTests
 
 		CollectionAssert.AreEqual( new[] { (33, true), (33, false), (33, true) }, _walks );
 		Assert.AreEqual( 0, script.NotImplemented, "BUMP 17 was counted" );
+	}
+
+	/// <summary>
+	/// <c>BUMP 17</c>'s field is a word (<c>0x00554a11</c>) compared sign-extended with the whole operand (<c>0x005549fd</c>):
+	/// 40000 in a variable walks both times (it is stored as -25536), and 65535 in a variable then the literal 65535 (-1)
+	/// walks once (stored as -1, which the literal matches). Made to fail by storing the whole int (40000 then walks once,
+	/// and the -1 walks again).
+	/// </summary>
+	[TestMethod]
+	public void Bump17KeepsItsOperandAsAWord()
+	{
+		var wide = Script( 12,
+			Word( Opcode.MULT ), Var( 0 ), Lit( 200 ), Lit( 200 ),
+			Word( Opcode.BUMP ), Lit( 17 ), Var( 0 ),
+			Word( Opcode.BUMP ), Lit( 17 ), Var( 0 ),
+			Word( Opcode.END ) );
+		wide.ThingId = 33;
+		wide.Turn( 0f );
+
+		CollectionAssert.AreEqual( new[] { (33, false), (33, false) }, _walks, "40000 twice" );
+
+		_walks.Clear();
+
+		var minusOne = Script( 12,
+			Word( Opcode.MULT ), Var( 1 ), Lit( 255 ), Lit( 257 ),
+			Word( Opcode.BUMP ), Lit( 17 ), Var( 1 ),
+			Word( Opcode.BUMP ), Lit( 17 ), Lit( 65535 ),
+			Word( Opcode.END ) );
+		minusOne.ThingId = 33;
+		minusOne.Turn( 0f );
+
+		CollectionAssert.AreEqual( new[] { (33, false) }, _walks, "65535, then the literal -1" );
+	}
+
+	/// <summary>
+	/// What the machine plays, recorded at its seams on the shipped Belly Bounce at (51,23), its model stood at its anchor's
+	/// corner (510, 230, 7): a 1 starts the global rides' 111 then 211 as type 5 under the script's id, and a 0 plays the
+	/// picker with (the sixth variable, 1, 1); all three at the model's placed origin (<c>FUN_00556a80</c>), not the middle
+	/// of its cells (525, 250, 7) where a scream sounds.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the place from <c>TrySoundPlace</c>, a type other than 5, the band from the fifth variable,
+	/// or the script's speed for the last 1 each fails here.</remarks>
+	[TestMethod]
+	public void TheRepairSoundsWhereTheModelStands()
+	{
+		var data = GameData.Required();
+		Log ??= new();
+		FileSystem = data;
+
+		ParkWorld world;
+
+		using ( var stream = new MemoryStream( data.ReadAllBytes( "levels/jungle/Easymode.TPWI" ) ) )
+			world = new ParkWorld( new SaveReader( stream ).ReadFile() );
+
+		var catalogue = new ParkItemCatalogue( "jungle", data );
+		var placed = world.Objects.Single( thing => (thing.CellX, thing.CellY) == (51, 23) );
+
+		Assert.IsTrue( catalogue.TryGet( placed.CatalogueId, out var item ) );
+
+		// A model with only the position the sounds read: the GPU-side parts are not built.
+		var model = (LobbyModel)RuntimeHelpers.GetUninitializedObject( typeof( LobbyModel ) );
+		var corner = new Vector3( 510f, 230f, 7f );
+
+		typeof( LobbyModel ).GetField( "_placedOrigin", BindingFlags.NonPublic | BindingFlags.Instance )!.SetValue( model, corner );
+
+		var objects = new ParkObjects( "jungle", null, null );
+
+		try
+		{
+			objects.StandPlaced( placed, item, model, RideAnimations.None(), null, [], 0, [], 0, () => default );
+
+			Assert.IsTrue( objects.TrySoundPlace( placed.ThingId, out var middle ) );
+			Assert.AreEqual( new Vector3( 525f, 250f, 7f ), middle, "the scream's place, which the repair does not use" );
+
+			var script = Script( 12,
+				Word( Opcode.COPY ), Var( 4 ), Lit( 7 ),
+				Word( Opcode.COPY ), Var( 5 ), Lit( 3 ),
+				Word( Opcode.REPAIREFFECT ), Lit( 1 ),
+				Word( Opcode.REPAIREFFECT ), Lit( 0 ),
+				Word( Opcode.END ) );
+			script.Id = 16;
+			script.ThingId = placed.ThingId;
+			script.Turn( 0f );
+
+			CollectionAssert.AreEqual( new[] { (16, 5, 111, corner), (16, 5, 211, corner) }, _started );
+			CollectionAssert.AreEqual( new[] { (3, 1, corner, 1) }, _screams );
+		}
+		finally
+		{
+			objects.Delete();
+		}
 	}
 
 	/// <summary>
