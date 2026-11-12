@@ -12,7 +12,12 @@ namespace OpenTPW.Tests;
 public class ParkWeatherFreshTests
 {
 	[TestInitialize]
-	public void StartTheCalendar() => GameCalendar.Rebase();
+	public void StartTheCalendar()
+	{
+		// The weather's stamps are the park state's calendar where there is one; these run on the calendar's own.
+		ParkState.ForgetCurrent();
+		GameCalendar.Rebase();
+	}
 
 	[TestCleanup]
 	public void LeaveTheCalendar() => GameCalendar.Rebase();
@@ -79,10 +84,10 @@ public class ParkWeatherFreshTests
 	/// <summary>
 	/// <b>Its first forecast comes on sweep 1</b>, its nought stamp being long past (the original's Halloween file saved on
 	/// sweep 4: forecast 1.00, due 93.16), <b>and the rolled quality stands until that lands</b>: unread and unchanged, the
-	/// wind with it, to sweep 92, then the forecast's on the day edge of sweep 93, where the original's is 94.
+	/// wind with it, to sweep 93, then the forecast's on the first tick past its due time, sweep 94, as the original's.
 	/// </summary>
 	/// <remarks><b>Mutations:</b> the first forecast waiting its three days; the forecast delivered at once; the delivery
-	/// leaving the stamp at nought.</remarks>
+	/// leaving the stamp at nought; the schedule on day edges (delivered on 93).</remarks>
 	[TestMethod]
 	public void TheFirstForecastComesOnTheFirstSweepAndLandsFourDaysLater()
 	{
@@ -104,17 +109,17 @@ public class ParkWeatherFreshTests
 			Assert.AreEqual( ParkWeather.ForecastDue( first.LastForecasted, 4 ), first.ForecastTime );
 			Assert.AreEqual( 0L, first.LastChanged );
 
-			for ( var sweep = 2; sweep <= 92; ++sweep )
+			for ( var sweep = 2; sweep <= 93; ++sweep )
 			{
 				GameCalendar.Update( sweep );
 				weather.Turn();
 			}
 
-			Assert.AreEqual( (rolled, forecast), (weather.Quality, weather.Forecast), "stood to sweep 92" );
+			Assert.AreEqual( (rolled, forecast), (weather.Quality, weather.Forecast), "stood to sweep 93" );
 			Assert.AreEqual( (90f, 0.5f), (weather.WindDirection, weather.WindForce) );
 			Assert.AreEqual( 0L, weather.Written( null ).LastChanged );
 
-			GameCalendar.Update( 93 );
+			GameCalendar.Update( 94 );
 			weather.Turn();
 
 			var delivered = Math.Clamp( forecast, 1, 100 );
@@ -132,39 +137,86 @@ public class ParkWeatherFreshTests
 		}
 	}
 
+	/// <summary>The park calendar on <paramref name="tick"/> at the shipped rate, a <c>FILETIME</c>: 3750 seconds a tick from 2000.</summary>
+	private static long On( int tick ) => ParkWorld.StaffState.FileTimeOf( GameCalendar.Epoch.AddSeconds( tick * 3750L ) );
+
 	/// <summary>
-	/// <b>A park with a file still applies its roll and takes the file's wind</b>, the deviation until Q529: stamped as it
-	/// opens, so its first forecast waits for the third calendar day's edge (sweep 47), and its force the roll's.
+	/// A file shaped as q528's second (<c>docs/exe/saves.md</c>, "Both games"): quality 10 applied on 16970, this game's
+	/// forecast of 83 made on 17004 and pending, the drops at 440 of 450, the storm armed, its thunder at (275.4, 300,
+	/// 269.2) in the original's axes, the wind 142 at 0.9. Saved on 17010.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> a loaded park standing as a fresh one does.</remarks>
+	private static ParkWorld.WeatherState Stormy => new( 10, On( 16970 ), On( 17004 ), ParkWeather.ForecastDue( On( 17004 ), 4 ), 83,
+		true, 440, 450, true, 120, 2, -20, new System.Numerics.Vector3( 275.4f, 300f, 269.2f ), 142f, 0.9f );
+
+	/// <summary>
+	/// <b>A loaded park runs on from its file</b>, as the original's load does: the record is taken whole and nothing is
+	/// applied, so it writes back as it was read; the drops stand at 440, within a step of their 450, so the ramp does not
+	/// move them; the file's forecast of 83 falls due on the first tick past 17004 + 92.16, 17097, which the original given
+	/// that file delivered on; the drops then walk down twenty a tick and are gone on 17118, the original's last tick of
+	/// rain; and the next forecast comes on the first tick past 17097 + 69.12, 17167, the original's.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the roll applied at the load; the file's forecast not taken; the drops not taken; the
+	/// delivery at the forecast's stamp; the next lead the warning's four days; the schedule on day edges.</remarks>
 	[TestMethod]
-	public void ALoadedParkAppliesItsRollAndWaitsItsThreeDays()
+	public void ALoadedParkRunsOnFromItsFile()
 	{
-		var weather = new ParkWeather( 139f, drawn: false );
+		GameCalendar.Rebase( 17010 );
+		var weather = new ParkWeather( Stormy, drawn: false );
 
 		try
 		{
-			Assert.AreEqual( 139f, weather.WindDirection );
-			Assert.AreEqual( (100 - weather.Quality) * 0.01f, weather.WindForce, 1e-5f );
-			Assert.AreNotEqual( 0L, weather.Written( null ).LastChanged );
+			Assert.AreEqual( Stormy, weather.Written( null ), "the record as it was read" );
+			Assert.AreEqual( (10, 440, 83, true), (weather.Quality, weather.Drops, weather.Forecast, weather.Lightning) );
+			Assert.AreEqual( (142f, 0.9f), (weather.WindDirection, weather.WindForce) );
 
+			int delivered = 0, dry = 0, next = 0;
+
+			for ( var tick = 17011; tick < 17300 && next == 0; ++tick )
+			{
+				GameCalendar.Update( tick );
+				weather.Turn();
+
+				if ( delivered == 0 && weather.Forecast < 0 )
+					delivered = tick;
+				else if ( delivered == 0 )
+					Assert.AreEqual( (10, 440), (weather.Quality, weather.Drops), $"stood on {tick}" );
+
+				if ( dry == 0 && delivered != 0 && weather.Drops == 0 )
+					dry = tick;
+
+				if ( delivered != 0 && tick > delivered && weather.Forecast >= 0 )
+					next = tick;
+			}
+
+			Assert.AreEqual( (17097, 17118, 17167), (delivered, dry, next) );
+			Assert.AreEqual( On( 17097 ), weather.Written( null ).LastChanged );
+			Assert.AreEqual( On( 17167 ), weather.Written( null ).LastForecasted );
+		}
+		finally
+		{
+			weather.Delete();
+		}
+	}
+
+	/// <summary>
+	/// <b>A file with a nought stamp forecasts on its first sweep</b>, as Restart Park's at tick nought does in the original
+	/// (<c>docs/exe/weather.md</c>, "A park's first days"): its quality stands, unapplied, until that forecast lands on 94.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the roll applied at the load (stamped, so it waits its three days).</remarks>
+	[TestMethod]
+	public void AFileWithANoughtStampForecastsOnItsFirstSweep()
+	{
+		var restart = new ParkWorld.WeatherState( 77, 0, 0, 0, 0, false, 0, 0, false, 0, 0, 0, null, 90f, 0.5f );
+		var weather = new ParkWeather( restart, drawn: false );
+
+		try
+		{
 			GameCalendar.Update( 1 );
 			weather.Turn();
 
-			Assert.AreEqual( -1, weather.Forecast );
-
-			var first = 0;
-
-			for ( var sweep = 2; sweep <= 120 && first == 0; ++sweep )
-			{
-				GameCalendar.Update( sweep );
-				weather.Turn();
-
-				if ( weather.Forecast >= 0 )
-					first = sweep;
-			}
-
-			Assert.AreEqual( 47, first, "the first sweep of its forecast: by day edges (Q529) the third calendar day's, not a one-day wait's (sweep 24 or under)" );
+			Assert.IsTrue( weather.Forecast >= 0, "a forecast on sweep 1" );
+			Assert.AreEqual( (77, On( 1 )), (weather.Quality, weather.Written( null ).LastForecasted) );
+			Assert.AreEqual( 0L, weather.Written( null ).LastChanged );
 		}
 		finally
 		{

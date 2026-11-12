@@ -88,8 +88,14 @@ public class ParkFlagsTests
 	[TestMethod]
 	public void AParkOpensWithItsFilesWindAndAChangeTurnsItUnlessHeld()
 	{
-		Assert.AreEqual( 139f, ParkWeather.StartingWind( 17f, 139f ) );
-		Assert.AreEqual( 17f, ParkWeather.StartingWind( 17f, null ), "a fresh park keeps the constructor's wind" );
+		var loaded = new ParkWeather( new ParkWorld.WeatherState( 78, 0, 0, 0, 0, false, 0, 0, false, 0, 0, 0, null, 139f, 0.22f ),
+			drawn: false );
+		Assert.AreEqual( 139f, loaded.WindDirection );
+		loaded.Delete();
+
+		var fresh = new ParkWeather( null, drawn: false );
+		Assert.AreEqual( 90f, fresh.WindDirection, "a fresh park keeps the constructor's wind" );
+		fresh.Delete();
 
 		Assert.AreEqual( 340f, ParkWeather.Turned( 10f, -30, held: null ), "wrapped below nought" );
 		Assert.AreEqual( 5f, ParkWeather.Turned( 350f, 15, held: null ), "wrapped past 360" );

@@ -4192,10 +4192,10 @@ from the running park (`ParkWorld.PutWeather`, handed `ParkWeather.Written` by `
 **Deviations, said at `ParkWorld.PutWeather` and `ParkWeather.Written`.** The original writes its live voice's handle,
 which names nothing in the process that loads the file and, being not nought, keeps that one's rain voice from starting
 until the drops next end or it snows (modes 1 and 2 stop the handle, whatever it names, and set it to nought); this game writes nought (in all 48 park files in the original's folders it is nought: none was raining).
-This park's schedule counts day edges of its own calendar (Q529), not the original's instants, so its forecast is made
-and delivered on a whole day where the original's is made on the first tick past an instant; the stamps written are
-the park calendar's on the tick it happened here, so the original loading the file runs its own schedule from them.
-A load here still reads only `mWindDir` (Q493): the quality, the forecast and the storm are rolled fresh (Q529). A fresh park's are the constructor's (`weather.md`, "A park's first days").
+This park's schedule runs on the original's instants (Q529): a forecast on the first tick past `mLastChanged` + 3 days,
+delivered on the first tick past its `mTime`, both stamps of the park calendar's tick, so either game loading the file
+runs the same schedule from them. A load here reads the whole record and runs on from it, applying nothing
+(`ParkWeather.RunOnFrom`, Q529); a fresh park's is the constructor's (`weather.md`, "A park's first days").
 
 **Measured across the files** (`q528/wsweep.py`, the 741 park files on this machine; `parkfile.weather`, `-W`): in the 48
 park files in the original's folders (three of them files this game wrote, kept there to be loaded; ten byte copies of
@@ -4226,8 +4226,10 @@ tick past 17096.16), the rain ending on 17118, and its next forecast came on 171
 (`FUN_0057d910`) only on a step of the ramp, and 440 against a target of 450 is within `SpeedOfChange`, so the original
 given the second file drew none until its delivery on 17097 started the drops down: filmed (`orig/e-rain-film.png`, from
 `orig/q528e.mkv`), no rain about 17093, streaks about 17101 and 17109, none past 17118. Its own files are the same: a
-park saved in steady rain and loaded is dry until the weather next changes. This game draws its rain from the drops
-it holds (Q529 reads them).
+park saved in steady rain and loaded is dry until the weather next changes. This game reads the drops (Q529)
+and, as the original, hands its rain a level only on a step of the ramp (`ParkWeather.StepRain`), so a file loaded with
+its drops within a step of their target should draw none until the weather next changes: read from the code and
+counted off-screen, not yet seen in a frame (Q1408).
 
 Not run: snow (only hallow snows), a quality forced here held against a delivery (the console's `weather` drops the
 pending forecast; `mOverridden` is not set by anything), Full Simulation (not asked: the weather is either mode's), the

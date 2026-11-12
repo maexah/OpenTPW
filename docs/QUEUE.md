@@ -1600,19 +1600,15 @@ filed the items that cite it.
   `0x00481570` inside the day-changed block (the call at `0x004f83ac`), and once at set-up (`0x0048166f`). Ours draws `GameCalendar.Now`,
   the date of the park's tick (Q149), so the two gadgets show one date in two letterings (`q149/side-by-side.png`). Confirm by both
   gadgets on one date.
-- [ ] **Q529. A loaded park's weather runs on from the file's.** From Q528 (`saves.md`, "OpenTPW's writer, the weather
-  thing"): the original's load reads all of the weather thing over its constructor's (`Weather_Serialise`,
-  `0x00512010`) and runs on from it, the rain, the storm, a pending forecast and its due time; ours reads only
-  `mWindDir` (`ParkWorld.WindDirection`) and rolls the rest fresh, though `ParkWorld.WeatherRecord` reads it all. Start
-  `ParkWeather` from the record, and schedule as the original does, on the park calendar's instants (`mLastChanged` +
-  3 days, the forecast's `mTime`; the first tick past each) rather than day edges of `GameCalendar` (Q149), so a
-  forecast read from a file falls due on the original's tick. Look first at what the load leaves undrawn: the original
-  sets the particles only on a step of the ramp, so a file whose drops stand at their target rains nowhere until the
-  next change (filmed, `q528/orig/e-rain-film.png`), and its voice's handle is the saving process's. A park with no file stands as the constructor leaves it (Q803). A file at tick
-  nought, as Restart Park reads, holds a nought stamp, so its load forecasts on sweep 1 where this game's applies a roll
-  (`docs/exe/weather.md`, "A park's first days"), and the instants move a fresh park's first delivery from sweep 93 to the original's 94. Confirm: q528's `run3/q528-fix2.TPWS`
-  loaded here and in the original, the quality, the drops and the forecast's delivery tick (17097) predicted, a frame
-  of each.
+- [ ] **Q1408. A loaded park's weather beside the original's, in frames.** From Q529 (built in a cloud lane with no
+  display, no original and no Ghidra): `ParkWeather.RunOnFrom` takes the whole weather record and the schedule runs on
+  the park calendar's instants, counted off-screen (Lost Kingdom's forecast made on 816 and delivered on 909; a park
+  saved in rain and loaded with its drops 460 of 450, no voice and no level until the next change). Not done there:
+  q528's `run3/q528-fix2.TPWS` loaded here and in the original, a frame of each (the original draws no rain until 17097,
+  `q528/orig/e-rain-film.png`; ours should draw none either, `ParkWeather.StepRain` handing the rain a level only on a
+  step) and the delivery on 17097 read in both; the compare's equality at `0x005129c5` (`FUN_005fc570`) read in Ghidra
+  (said "past" in `weather.md`, unreachable at the shipped rate); and a hallow file saved in snow, loaded (the record holds
+  no particle mode, so ours loads it as not snowing).
 - [ ] **Q712. The television static on entering or leaving first person.** From the fork watch of 2026-10-19
   (verify-advisor-ui.md L4; `park-engine.md`, "Entering or leaving first person shows 300 ms of television static"),
   with Q485's first person. On either edge of the camera flags `& 0x16` (a ride's view, first person) the original's

@@ -555,9 +555,9 @@ public class Level
 
 		load.Mark( "audio" );
 
-		// After the audio, because a loaded park opens with its weather already rolled and that first
-		// roll may want to start the rain straight away.
-		_ = new ParkWeather( park?.Save?.WindDirection );
+		// After the audio, because a change of the weather starts and stops its rain. A loaded park's runs on from the
+		// file's weather thing, applying nothing (ParkWeather.RunOnFrom).
+		_ = new ParkWeather( park?.Save?.WeatherRecord );
 		load.Mark( "weather" );
 
 		// The advisor last, as in the lobby: he rides on top of the rest and ducks everything above him
