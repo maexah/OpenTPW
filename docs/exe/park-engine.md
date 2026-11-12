@@ -5126,6 +5126,9 @@ drawn; from behind a logo reads mirrored.
 frame unless the clock is paused, so the two are equal at every read. D falls 0.24 a frame, so the ripples run out from
 the pole's top: the z ripple repeats every 3 of D (12.5 frames), the y wave every 4 (16.7 frames), the whole every 12 of D,
 20 of phase, 50 frames. The light comes from the normals through the model lighter, as the sea's (read, not measured).
+Ours keeps the two apart (Q504, a deviation said at `ParkSea.Phase`): both are stepped alike from one frame, the sea's
+wrapped at 4π (where its s has turned once) and the flags' at 20, as no one wrap keeps both waves; each draws what the
+original's unwrapped phase would.
 
 **Measured** (the stock park, `q325/stock.TPWS`, off-screen at 30 frames a second, camera B; `original/dynfaces.py`
 against `q491/flagmodel.py`, the model above): the two phases 431.996 to 467.995 in 3.01 s, equal in 298 reads of 298;

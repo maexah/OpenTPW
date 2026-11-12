@@ -441,6 +441,7 @@ Read this before aiming a click or comparing two pictures. Each fact names the i
 
 Each was found by trial in the item named, and cost a run to find.
 
+- **The sea's and the flags' phases read across their wraps** (Q504, `lib/consolerun.py`, off-screen): `40 park jungle`, `5 pause`, `3 sea phase 12.366`, `3 step 1`, `4 sea`, `3 flags`, `3 step 2`, `4 sea`, `3 flags`. Each step is a sixtieth of a second, 0.2 of phase, so the sea's reads 12.566 then 0.400 and its flags 12.566 then 12.966; `sea phase 19.8` and the same steps read the flags' 20 wrap (19.800, 0.000, 0.400). Without `pause` the replies lag the frame they name at xvfb's frame rate, so the two lines are not one frame's.
 - **The console's `walk` in a cloud container** (Q14, `lib/consolerun.py`): `40 park jungle`, `3 camcorder 481.897 166.285` (the path, so a short walk crosses no shut edge; `camcorder 500 500` stops at y 510 on the first walk), then `walk 1 0 N`. Each of the N steps is a fixed sixtieth of a second (`Time.StepDelta`), 0.667 units, whatever the frame rate (xvfb's 13 to 14 frames a second too), so N = 60 walks 40 units and `stand=` can be predicted from N before it is read back; it walks under `pause` as well, so a paused walk then a grab photographs a crossing.
 - **A fade's steps read in a run** (Q509, `lib/consolerun.py`, off-screen): `40 park jungle`, `2 speech 5` (his voice starts 0.8 s after the line is
   given, so a quieten sooner finds nothing), `0.02 quieten`, then `0.04 voices` lines: a stepping voice reads `fading <volume>`; the

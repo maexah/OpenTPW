@@ -96,8 +96,76 @@ public class ParkSeaTests
 	public void ThePhaseGainsTwelveASecondAndNothingWhilePaused()
 	{
 		// 0.4 a frame at 30 frames a second; the build squares' 0.1 would give 2.5.
-		Assert.AreEqual( 7f, ParkSea.Advance( 1f, 0.5f, paused: false ), 0.0001f );
-		Assert.AreEqual( 1f, ParkSea.Advance( 1f, 0.5f, paused: true ), 0.0001f );
+		Assert.AreEqual( 7f, ParkSea.Advance( 1f, 0.5f, paused: false, ParkSea.SeaPeriod ), 0.0001f );
+		Assert.AreEqual( 1f, ParkSea.Advance( 1f, 0.5f, paused: true, ParkSea.SeaPeriod ), 0.0001f );
+	}
+
+	/// <summary>Every corner of the quilt, at its column and row.</summary>
+	private static (int Column, int Row)[] Grid()
+		=> ParkSea.Quads().SelectMany( q => new[] { (q.Column, q.Row), (q.Column + 1, q.Row), (q.Column, q.Row + 1), (q.Column + 1, q.Row + 1) } )
+			.Distinct().ToArray();
+
+	/// <summary>
+	/// The sea's phase wraps at 4π (Q504): a frame from 0.2 short of it lands at 0.2, and every corner stands where the
+	/// unwrapped phase would stand it. Wrapping it at the flags' 20 instead would not keep the wave: 0.2 and 20.2 differ.
+	/// </summary>
+	[TestMethod]
+	public void TheSeasPhaseWrapsAtFourPiAndTheWaveIsTheSameEitherSide()
+	{
+		var before = ParkSea.SeaPeriod - 0.2f;
+		var after = ParkSea.Advance( before, 1f / 30f, paused: false, ParkSea.SeaPeriod );
+		Assert.AreEqual( 0.2f, after, 0.0001f, "wrapped" );
+
+		foreach ( var (column, row) in Grid() )
+		{
+			var wrapped = ParkSea.Point( Vector3.Zero, column, row, after );
+			var unwrapped = ParkSea.Point( Vector3.Zero, column, row, before + 0.4f );
+			Assert.AreEqual( unwrapped.Z, wrapped.Z, Table, $"column {column} row {row}" );
+		}
+
+		Assert.IsTrue( Grid().Any( p => MathF.Abs( ParkSea.Point( Vector3.Zero, p.Column, p.Row, 0.2f ).Z
+			- ParkSea.Point( Vector3.Zero, p.Column, p.Row, 20.2f ).Z ) > 0.5f ), "20 is not the sea's period" );
+	}
+
+	/// <summary>
+	/// The flags' phase wraps at 20 (Q504): a frame from 19.8 lands at 0.2, and every corner of every flag stands where
+	/// 20.2 would stand it. Wrapping it at the sea's 4π instead would not keep the wave: 0.2 and 0.2 + 4π differ.
+	/// </summary>
+	[TestMethod]
+	public void TheFlagsPhaseWrapsAtTwentyAndTheWaveIsTheSameEitherSide()
+	{
+		var after = ParkFlags.PhaseAfter( null, 19.8f, 1f / 30f, paused: false );
+		Assert.AreEqual( 0.2f, after, 0.0001f, "wrapped" );
+		Assert.AreEqual( 0.2f, ParkSea.Advance( 19.8f, 1f / 30f, paused: false, ParkSea.FlagsPeriod ), 0.0001f, "the sea steps the flags' alike" );
+
+		var wrapped = ParkFlags.Corners( after, 139f ).ToArray();
+		var unwrapped = ParkFlags.Corners( 20.2f, 139f ).ToArray();
+		for ( var at = 0; at < wrapped.Length; ++at )
+			Assert.IsTrue( (wrapped[at].Position - unwrapped[at].Position).Length < 0.01f, $"corner {at}" );
+
+		var sea = ParkFlags.Corners( 0.2f + ParkSea.SeaPeriod, 139f ).ToArray();
+		Assert.IsTrue( wrapped.Zip( sea ).Any( pair => (pair.First.Position - pair.Second.Position).Length > 0.5f ), "4π is not the flags' period" );
+	}
+
+	/// <summary>
+	/// A day of frames at 144 Hz still steps the phase 12/144 a frame: unwrapped, the float's spacing rounds the step to
+	/// 0.0625 by then (Q504).
+	/// </summary>
+	[TestMethod]
+	public void ADayAtOneHundredAndFortyFourHertzStillStepsTheWaveAtItsRate()
+	{
+		const float delta = 1f / 144f;
+		var (sea, flags) = (0f, 0f);
+
+		for ( var frame = 0; frame < 144 * 60 * 60 * 24; ++frame )
+		{
+			sea = ParkSea.Advance( sea, delta, paused: false, ParkSea.SeaPeriod );
+			flags = ParkSea.Advance( flags, delta, paused: false, ParkSea.FlagsPeriod );
+		}
+
+		var step = 12f / 144f;
+		Assert.AreEqual( step, ParkSea.Wrap( ParkSea.Advance( sea, delta, false, ParkSea.SeaPeriod ) - sea, ParkSea.SeaPeriod ), 1e-4f, "the sea" );
+		Assert.AreEqual( step, ParkSea.Wrap( ParkSea.Advance( flags, delta, false, ParkSea.FlagsPeriod ) - flags, ParkSea.FlagsPeriod ), 1e-4f, "the flags" );
 	}
 
 	[TestMethod]
@@ -217,6 +285,25 @@ public class ParkSeaTests
 			GameClock.Update( paused: true, GameClock.ParkCatchUp );
 			sea.Update();
 			Assert.AreEqual( 9f, sea.Phase, 0.0001f, "held while the clock is" );
+
+			// Q504: each phase wraps at its own period, from one frame's step.
+			Time.Delta = 1f / 30f;
+			GameClock.Update( paused: false, GameClock.ParkCatchUp );
+			sea.SetPhase( ParkSea.SeaPeriod - 0.2f );
+			sea.Update();
+			Assert.AreEqual( 0.2f, sea.Phase, 0.0001f, "the sea's wrapped at 4π" );
+			Assert.AreEqual( ParkSea.SeaPeriod + 0.2f, sea.FlagsPhase, 0.0001f, "the flags' not yet" );
+
+			sea.SetPhase( 19.8f );
+			Assert.AreEqual( 19.8f - ParkSea.SeaPeriod, sea.Phase, 0.0001f, "a phase set is wrapped for the sea" );
+			sea.Update();
+			Assert.AreEqual( 19.8f - ParkSea.SeaPeriod + 0.4f, sea.Phase, 0.0001f );
+			Assert.AreEqual( 0.2f, sea.FlagsPhase, 0.0001f, "the flags' wrapped at 20" );
+
+			// The original's phase as read live (park-engine.md, "The gates' flags"): 431.996 is 4.739 of the sea's and 11.996 of the flags'.
+			sea.SetPhase( 431.996f );
+			Assert.AreEqual( 4.7394f, sea.Phase, 0.001f );
+			Assert.AreEqual( 11.996f, sea.FlagsPhase, 0.001f );
 		}
 		finally
 		{

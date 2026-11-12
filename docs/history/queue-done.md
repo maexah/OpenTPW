@@ -12145,6 +12145,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q504. The sea's and the flags' phase is a float that grows without bound, and no one wrap keeps both seamless.**
+  `ParkSea.Phase` gains 12 a second off `Time.Delta`; at a high refresh rate the step (12 x Delta) is rounded against the
+  float's ulp after hours (numpy float32 at 144 Hz: rate x1.031 from 1.5 h, x0.9375 from 3 h, x1.125 from 6 h, x0.75
+  from 12 h, x1.5 from 24 h, stopped at about 48 h). The original's is a float32 too (`DAT_00871f60`, `DAT_00871ed0`)
+  but steps 0.4 a frame at 30 fps, so it is within 1.6% only to 12.1 h (phase 2^19) and stops at 2^23 (about 194 h).
+  The sea's wave is periodic in the phase every 4 pi (s = ... - 0.5 phase; the table index moves by 4,096) but the flags'
+  `Grid` is periodic every 20 (D = ... - 0.6 phase; the joint period of 3 and 4 in D is 12), and `ParkFlags` takes the
+  sea's phase, so wrapping the shared phase at either breaks the other at the wrap. Fix: keep two phases (the sea's
+  wrapped at 4 pi, the flags' at 20, both stepped alike from the same `Advance`), say it as a deviation at the site,
+  and test that a phase either side of each wrap gives the same wave. Said at `ParkSea.Phase`.
 
 ## B. Docs and comments
 

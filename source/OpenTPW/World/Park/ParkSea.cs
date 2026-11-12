@@ -76,14 +76,35 @@ public sealed class ParkSea : ModelEntity
 	/// <summary>The corner as the log and the console print it, "(380, -180, -5)".</summary>
 	public string CornerText => FormattableString.Invariant( $"({Corner.X:0.##}, {Corner.Y:0.##}, {Corner.Z:0.##})" );
 
+	/// <summary>How far the sea's phase runs before it starts again: 4π, where the wave's angle (half the phase back) has turned once.</summary>
+	public const float SeaPeriod = 4f * MathF.PI;
+
 	/// <summary>
-	/// The phase, <c>DAT_00871f60</c>. It grows without bound, as the original's, a float32 too. <b>Limit:</b> ours gains
-	/// 12 a second whatever the frame rate, so at a high refresh rate the step rounds against the float's spacing after
-	/// hours and the sea slows (at 144 Hz, from about 1.5 h; stopped at about 48 h), where the original's 0.4 a frame
-	/// holds to about 12 h and stops at about 194 h. No one wrap fixes it: the sea repeats every 4π of phase but
-	/// <see cref="ParkFlags"/>, which takes this phase, repeats every 20, and the two have no common period.
+	/// How far <see cref="FlagsPhase"/> runs before it starts again: 20, where <see cref="ParkFlags.Grid"/>'s D has fallen
+	/// 12, the joint period of its waves of 3 and 4.
+	/// </summary>
+	public const float FlagsPeriod = 20f;
+
+	/// <summary>
+	/// The sea's phase, <c>DAT_00871f60</c>, wrapped at <see cref="SeaPeriod"/>.
+	///
+	/// <para>
+	/// <b>A deviation (Q504).</b> The original's phase, and the flags' <c>DAT_00871ed0</c> beside it, are one float32
+	/// each that grows without bound and is stepped alike, so they are equal at every read. Ours gains 12 a second off
+	/// <see cref="Time.Delta"/>, so unwrapped, at a high refresh rate, its step would round against the float's spacing
+	/// after hours (at 144 Hz from about 1.5 h; stopped at about 48 h, where the original's 0.4 a frame holds to about
+	/// 12 h and stops at about 194 h). The sea repeats every 4π of phase and the flags every 20, with no common period,
+	/// so the two are kept apart, both stepped by <see cref="Advance"/> from the same frame: this one wrapped at 4π and
+	/// <see cref="FlagsPhase"/> at 20. Each draws the wave the original's one phase would, at any age of the park.
+	/// </para>
 	/// </summary>
 	public float Phase { get; private set; }
+
+	/// <summary>
+	/// The flags' phase, <c>DAT_00871ed0</c>, stepped beside <see cref="Phase"/> and wrapped at <see cref="FlagsPeriod"/>
+	/// (the deviation said at <see cref="Phase"/>); <see cref="ParkFlags"/> waves at it.
+	/// </summary>
+	public float FlagsPhase { get; private set; }
 
 	/// <summary>Each quad's texture, 0 to 2 for <c>gby_sur1</c> to <c>gby_sur3</c>, as drawn at load.</summary>
 	public IReadOnlyList<int> TextureWords => _words;
@@ -173,9 +194,19 @@ public sealed class ParkSea : ModelEntity
 	/// <summary>The corner in this engine's axes: the original's Y is up and its Z is this engine's Y, the swap every model's vertices take.</summary>
 	internal static Vector3 CornerOf( Vector3 waterStartPos ) => new( waterStartPos.X, waterStartPos.Z, waterStartPos.Y );
 
-	/// <summary>The phase after <paramref name="seconds"/>: 0.4 a frame at <see cref="FramesPerSecond"/>, nothing while paused.</summary>
-	internal static float Advance( float phase, float seconds, bool paused )
-		=> paused ? phase : phase + (PhasePerFrame * FramesPerSecond * seconds);
+	/// <summary>
+	/// The phase after <paramref name="seconds"/>: 0.4 a frame at <see cref="FramesPerSecond"/>, nothing while paused,
+	/// wrapped into [0, <paramref name="period"/>) (<see cref="SeaPeriod"/> or <see cref="FlagsPeriod"/>).
+	/// </summary>
+	internal static float Advance( float phase, float seconds, bool paused, float period )
+		=> Wrap( paused ? phase : phase + (PhasePerFrame * FramesPerSecond * seconds), period );
+
+	/// <summary><paramref name="phase"/> in [0, <paramref name="period"/>).</summary>
+	internal static float Wrap( float phase, float period )
+	{
+		var wrapped = phase % period;
+		return wrapped < 0f ? wrapped + period : wrapped;
+	}
 
 	private static Texture Load( string path )
 	{
@@ -262,7 +293,8 @@ public sealed class ParkSea : ModelEntity
 
 	protected override void OnUpdate()
 	{
-		Phase = Advance( Phase, Time.Delta, GameClock.Paused );
+		Phase = Advance( Phase, Time.Delta, GameClock.Paused, SeaPeriod );
+		FlagsPhase = Advance( FlagsPhase, Time.Delta, GameClock.Paused, FlagsPeriod );
 
 		Fill();
 		TranslucentModel?.UpdateVertices( _vertices );
@@ -299,8 +331,16 @@ public sealed class ParkSea : ModelEntity
 	/// </summary>
 	public void SetHeight( float height ) => Corner = Corner with { Z = height };
 
-	/// <summary>Puts the phase somewhere, the debug console's <c>sea phase</c>: a paused park shows the sea at any point of its wave.</summary>
-	public void SetPhase( float phase ) => Phase = phase;
+	/// <summary>
+	/// Puts the phase somewhere, the debug console's <c>sea phase</c>: a paused park shows the sea and the flags at any
+	/// point of their waves. <paramref name="phase"/> is the original's one phase, so each of the two takes it wrapped
+	/// at its own period.
+	/// </summary>
+	public void SetPhase( float phase )
+	{
+		Phase = Wrap( phase, SeaPeriod );
+		FlagsPhase = Wrap( phase, FlagsPeriod );
+	}
 
 	/// <summary>The census of the texture words, how many wear each of the three, for the log and the console.</summary>
 	public string Census() => string.Join( " ", Enumerable.Range( 0, TextureNames.Length )

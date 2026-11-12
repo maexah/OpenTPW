@@ -68,8 +68,8 @@ public sealed class ParkFlags : ModelEntity
 
 	/// <summary>
 	/// The phase the flags wave at, <c>DAT_00871ed0</c>. The original zeroes it with the sea's and steps the two alike,
-	/// so they are equal at every read: this takes <see cref="ParkSea.Phase"/>, and steps its own the sea's way only
-	/// where no sea is laid.
+	/// so they are equal at every read: this takes <see cref="ParkSea.FlagsPhase"/>, stepped beside the sea's and wrapped
+	/// at 20 (a deviation, said at <see cref="ParkSea.Phase"/>), and steps its own that way only where no sea is laid.
 	/// </summary>
 	public float Phase { get; private set; }
 
@@ -245,9 +245,9 @@ public sealed class ParkFlags : ModelEntity
 		}
 	}
 
-	/// <summary>The phase this frame: the sea's where one is laid, else this one stepped as the sea's is.</summary>
+	/// <summary>The phase this frame: the sea's flags' phase where a sea is laid, else this one stepped and wrapped as that is.</summary>
 	internal static float PhaseAfter( float? sea, float phase, float seconds, bool paused )
-		=> sea ?? ParkSea.Advance( phase, seconds, paused );
+		=> sea ?? ParkSea.Advance( phase, seconds, paused, ParkSea.FlagsPeriod );
 
 	/// <summary>
 	/// The flags' angle this frame, eased from <paramref name="shown"/> towards the weather's <paramref name="wind"/> the
@@ -277,7 +277,7 @@ public sealed class ParkFlags : ModelEntity
 
 	protected override void OnUpdate()
 	{
-		Phase = PhaseAfter( ParkSea.Current?.Phase, Phase, Time.Delta, GameClock.Paused );
+		Phase = PhaseAfter( ParkSea.Current?.FlagsPhase, Phase, Time.Delta, GameClock.Paused );
 
 		var wind = ParkWeather.Current?.WindDirection;
 		if ( wind != _seen )
