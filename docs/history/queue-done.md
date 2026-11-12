@@ -12145,6 +12145,31 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q771. A text control's bitmap is its box, and the original cuts the text at it; ours never cuts.** From the fork watch
+  2026-10-28 (verify-ui-hud H2, verify-other O2; `ui.md`, "The two-pass text class"). Every text control of the original makes its
+  bitmap once (guard `+0x44`) at its box's size: width (x1 - x0) x `[0xFAA5C4]` / 2048 toward nought (`0x48F47B`..`0x48F49E`,
+  `+0x3C`), height (y1 - y0) x `[0xFAA5C0]` / 1536 toward nought (`0x48F4A2`..`0x48F4C5`, `+0x3E`), allocated by slot `+0x28` =
+  `0x48F3D0` (`0x588940`, texels of the cache's format) in the plain class (vtables `0x6FF320`, `0x6FF500`) and the title class
+  (`0x6FF530`). The glyph blitter `0x6B4AA0` clips each glyph against that bitmap, so text past the box is cut: a line wider than
+  its box loses its end, a block taller than it its lower lines; right alignment's bound is the bitmap's width (`0x48F8BA`),
+  centre's half of it (`0x48F943`), left 0; the title class's grey copy, moved (-2, +2) inside the same bitmap, loses its two left
+  columns on a left-aligned string. Ours (`UiText.Build`) sizes its texture to the text plus its margin, so it never cuts: it
+  differs wherever a string is longer than its box (a longer build name in `VersionLabel`, a long player or park name, a
+  translated string). Count first over Lost Kingdom's screens which controls' text the original does cut (the box tree against the
+  strings' widths, `uitree.py`), then size `UiText`'s texture to the box by the same two divisions and clip at its edge, the grey
+  copy inside it. Confirm beside the original under Proton: one control whose string is wider than its box, predicting the last
+  visible column, and the bug put back.
+  Built (cloud lane c82, from `ui.md` and `hud.md` alone: no Ghidra, no original): `UiText`'s texture is the box over the
+  font's scale times the size drawn, cut toward nought (`BitmapOf`, the original's divisions at size 1), each line placed
+  by the renderer's rules (`LineLeft`: right at width less line, centre about the half of the unwrapped `0x4000` box or the
+  wrapped bitmap; `BlockTop`: the middle halved toward nought), the grey copy at (-2, +2) inside it (`Letter`).
+  `TextBitmapCutTests` (the shipped fonts: a line's end and start cut, lower lines cut, the copy moved inside) and
+  `ParkScreenLetteringTests` (the bitmap, the line and block places); eight bugs put back by hand each failed one. Census
+  (`OPENTPW_TEXT_CENSUS=1`, which now adds `; bitmap W x H, text W x H[, cut]`), off-screen at 1280 x 720 over the lobby,
+  gadget, buy, hire, All Staff and entry price: 67 texts, 15 cut, all the gadget's date (9), money (5) and the build label
+  (1); a probe of the shipped fonts found only the date losing ink (154 of 577 pixels: Q1449). The count over the
+  original's box tree (`uitree.py`) and the photograph are not done: Q1448. **Done 2026-11-12** (cloud lane c82,
+  `alexah/1061-text-control-clips-to-box`).
 
 ## B. Docs and comments
 

@@ -1957,20 +1957,18 @@ filed the items that cite it.
   the lobby camera's eye, target, right and up. Do Q681's measure first, so the light is judged on the file's own normals. Confirm
   beside the original under Proton: one island, the camera frozen (`X` or `freeze`) at two orbit angles, a lit face's colour
   against the original's; predict it first (ambient 68/255 plus 0xee/255 x max( 0, -d.n ) before the texel), and put the bug back.
-- [ ] **Q771. A text control's bitmap is its box, and the original cuts the text at it; ours never cuts.** From the fork watch
-  2026-10-28 (verify-ui-hud H2, verify-other O2; `ui.md`, "The two-pass text class"). Every text control of the original makes its
-  bitmap once (guard `+0x44`) at its box's size: width (x1 - x0) x `[0xFAA5C4]` / 2048 toward nought (`0x48F47B`..`0x48F49E`,
-  `+0x3C`), height (y1 - y0) x `[0xFAA5C0]` / 1536 toward nought (`0x48F4A2`..`0x48F4C5`, `+0x3E`), allocated by slot `+0x28` =
-  `0x48F3D0` (`0x588940`, texels of the cache's format) in the plain class (vtables `0x6FF320`, `0x6FF500`) and the title class
-  (`0x6FF530`). The glyph blitter `0x6B4AA0` clips each glyph against that bitmap, so text past the box is cut: a line wider than
-  its box loses its end, a block taller than it its lower lines; right alignment's bound is the bitmap's width (`0x48F8BA`),
-  centre's half of it (`0x48F943`), left 0; the title class's grey copy, moved (-2, +2) inside the same bitmap, loses its two left
-  columns on a left-aligned string. Ours (`UiText.Build`) sizes its texture to the text plus its margin, so it never cuts: it
-  differs wherever a string is longer than its box (a longer build name in `VersionLabel`, a long player or park name, a
-  translated string). Count first over Lost Kingdom's screens which controls' text the original does cut (the box tree against the
-  strings' widths, `uitree.py`), then size `UiText`'s texture to the box by the same two divisions and clip at its edge, the grey
-  copy inside it. Confirm beside the original under Proton: one control whose string is wider than its box, predicting the last
-  visible column, and the bug put back.
+- [ ] **Q1448. Photograph Q771's cut text beside the original's.** From Q771 (built in a cloud lane with no display and no
+  original). Under Proton, the stock park at 800 x 600: one control whose string is wider than its box, predicting the last
+  visible column from `UiText.LineLeft` and the bitmap's width, ours the same, then ours with the texture sized to the text
+  (the bug put back). Also look at a purple-skin title left-aligned (its grey copy's two left columns gone) and at the
+  gadget's date (Q1449). Count first over Lost Kingdom's screens which controls the original cuts (`uitree.py`, the box tree
+  against the strings' widths), as Q771 asked; the cloud lane counted only ours (15 of 67 texts cut, one losing ink).
+- [ ] **Q1449. Is a text control's bitmap its control's rect or its stream text rect?** From Q771. `+0x3C`/`+0x3E` are
+  (x1 - x0) and (y1 - y0) scaled (`0x48F47B`, `0x48F4A2`); which rectangle the skin reads them from is not read. `UiText`
+  uses `UiControl.TextRect` (op 3) where a control has one. It matters at the gadget's date `0x20`: its text rect is 78 x 16
+  pixels at 800 x 600, the control 98 x 30, so ours now cuts the stand-in date "02/02/2000" (98 font pixels) by ten columns a
+  side, and even the original's "2.2.2000" (Q527) would lose its top ink row. Read it in Ghidra (`0x48F3D0` and the skin's
+  rect), then check the original's date at 800 x 600 for that row; size the bitmap from the right one.
 - [ ] **Q772. A toggle that is on shows its op 0x12 help row, and the new player dialog's chosen toggle then shows none.** From
   the fork watch 2026-10-28 (verify-hz-ui-hud L3; static read, never seen on screen: no frame of the dialog exists). The button
   class's help getter `0x00669410` answers `+0x94` (op 0x12) when its state byte `+0x138` is exactly 1 (on, not held) and `+0x90`

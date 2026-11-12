@@ -1209,7 +1209,8 @@ after its poller starts**, so a key meant inside either line cannot be sent afte
   POLL prints a line only on a change, so the slot's taking and emptying lines carry the tick the park stood at; here
   `sweeps` before and after, `advisor` for `slot=304`, and the log's `post`/`withdraw message=304` lines.
 - **Each text against its box** (Q644): `OPENTPW_TEXT_CENSUS=1` logs every text as it is laid out, `UI text: "<text>" font
-  F, W x H in a box BW x BH, x S` and `OVER` where it passes its box, in any screen; `lib/screentext.py` reads it for the
+  F, W x H in a box BW x BH, x S` and `OVER` where it passes its box, then `; bitmap W x H, text W x H` in font pixels and
+  `, cut` where the bitmap cuts it (Q771: the texture is the box), in any screen; `lib/screentext.py` reads it for the
   buy and hire screens' every tab. The original's own: `q644/orig/run.sh` (the two screens by Q636's route, `FILE=`).
 - **A park screen's title in both games** (Q676): here `control <id>` ends `lettered font F in (r, g, b) with|without the
   edge` for any control holding text (an edit box aside), and `q676/ours.py <out> <bin> <ROUND>` opens all-visitors, all-items and all-staff by

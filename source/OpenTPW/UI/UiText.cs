@@ -16,25 +16,37 @@ namespace OpenTPW.UI;
 /// The original's first pass sets the glyph colour to (0x80, 0x80, 0x80, 0x80); in its A4R4G4B4 bitmap that
 /// is a grey of nibble 8 (0.533), not the half this uses, at alpha 17 x floor( c x 128 / 255 ), and the
 /// string's own texels replace the grey's wherever they are set, where this composites Over: a deviation,
-/// Q517. The original's bitmap is also its box, which cuts the text; this one never cuts: Q771.
+/// Q517. The texture is the box, as the original's bitmap is (<see cref="BitmapOf"/>), so text past it is cut (Q771).
 /// docs/exe/ui.md, "The two-pass text class".
 /// </para>
 /// </summary>
 internal sealed class UiText
 {
+	/// <summary>How far the purple skin's grey copy is moved: left and down by this (0x00491dcc..0x00491dfb).</summary>
 	private const int ShadowOffset = 2;
+
+	/// <summary>
+	/// The width of the box the renderer is handed for a label that does not wrap (<c>LabelSkin_Draw</c> 0x0048f830,
+	/// <c>+0xda</c> nought): left at the bitmap's 0, right at its width, centre about its half (0x0048f943).
+	/// </summary>
+	private const int UnwrappedBox = 0x4000;
 
 	private Texture? _texture;
 	private int _width;
 	private int _height;
 	private Layout _built;
+	private Measure _measured;
 	private List<string> _lines = [];
+	private int _textWidth;
+	private int _textHeight;
 
 	/// <summary>The laid-out text's RGBA pixels at the font's own size, and how many texels a pixel is copied to in <see cref="_texture"/>.</summary>
 	private byte[] _pixels = [];
 	private int _prescale;
 
-	private readonly record struct Layout( string Text, int Font, int Set, UiColour Colour, bool Shadow, int WrapWidth, TextAlign Across );
+	private readonly record struct Measure( string Text, int Font, int Set, int WrapWidth );
+
+	private readonly record struct Layout( Measure Measure, UiColour Colour, bool Shadow, TextAlign Across, TextAlign Down, int Width, int Height );
 
 	/// <param name="size">
 	/// How much larger than the original's the lettering is wanted (<see cref="UiControl.LetteringSize"/>): it is drawn
@@ -47,14 +59,22 @@ internal sealed class UiText
 		if ( string.IsNullOrEmpty( text ) || UiFonts.Get( font ) is not { } bitmap )
 			return;
 
-		var layout = new Layout( text, font, UiFonts.SetIndex, colour, shadow, wrap ? WrapWidthAt( area.Width, size ) : 0, across );
+		var measure = new Measure( text, font, UiFonts.SetIndex, wrap ? WrapWidthAt( area.Width, size ) : 0 );
+
+		if ( measure != _measured || _lines.Count == 0 )
+			Lay( bitmap, measure );
+
+		var (placed, drawn, prescale, width, height) = Plan( area, _textWidth, _textHeight, UiFonts.Scale, size );
+
+		// A box under one font pixel either way has no bitmap to letter into.
+		if ( width <= 0 || height <= 0 )
+			return;
+
+		var layout = new Layout( measure, colour, shadow, across, down, width, height );
 		var built = _texture == null || layout != _built;
 
 		if ( built )
 			Build( bitmap, layout );
-
-		var margin = shadow ? ShadowOffset : 0;
-		var (placed, drawn, prescale) = Plan( area, _width, _height, margin, UiFonts.Scale, size, across, down );
 
 		Upload( prescale, built );
 
@@ -63,9 +83,11 @@ internal sealed class UiText
 
 		if ( built && Census )
 		{
-			var (textWidth, textHeight) = (placed.Width - (margin * UiFonts.Scale * drawn), placed.Height - (margin * UiFonts.Scale * drawn));
+			var (textWidth, textHeight) = (_textWidth * UiFonts.Scale * drawn, _textHeight * UiFonts.Scale * drawn);
 			Log.Info( $"UI text: \"{text}\" font {font}, {textWidth:0} x {textHeight:0} in a box {area.Width:0} x {area.Height:0}, x {drawn:0.000}"
-				+ (textWidth > area.Width + 0.5f || textHeight > area.Height + 0.5f ? " OVER" : "") );
+				+ (textWidth > area.Width + 0.5f || textHeight > area.Height + 0.5f ? " OVER" : "")
+				+ $"; bitmap {width} x {height}, text {_textWidth} x {_textHeight}"
+				+ (_textWidth + (shadow ? ShadowOffset : 0) > width || _textHeight + (shadow ? ShadowOffset : 0) > height ? ", cut" : "") );
 		}
 
 		Material.UI.Set( "Color", _texture );
@@ -75,33 +97,69 @@ internal sealed class UiText
 	}
 
 	/// <summary>
-	/// <see cref="Place"/>, and with it how many texels a font pixel is copied to (<see cref="PrescaleFor"/>): chosen from
-	/// the scale the text is drawn at once its box has held it, not the size wanted.
+	/// How a text of <paramref name="textWidth"/> by <paramref name="textHeight"/> font pixels is drawn in
+	/// <paramref name="area"/>: the size it is drawn at (<see cref="SizeIn"/>), its bitmap at that size
+	/// (<see cref="BitmapOf"/>), that bitmap's place, its top-left at the box's from the top of the screen and
+	/// <paramref name="fontScale"/> times the size screen pixels a bitmap pixel, and how many texels a font pixel is copied
+	/// to (<see cref="PrescaleFor(float)"/>), chosen from the scale drawn at once the box has held the text, not the size wanted.
 	/// </summary>
-	internal static (Rectangle Placed, float Size, int Prescale) Plan( PixelRect area, int width, int height, int margin, float fontScale,
-		float wanted, TextAlign across, TextAlign down )
+	internal static (Rectangle Placed, float Size, int Prescale, int Width, int Height) Plan( PixelRect area, int textWidth, int textHeight,
+		float fontScale, float wanted )
 	{
-		var (placed, drawn) = Place( area, width, height, margin, fontScale, wanted, across, down );
+		var size = SizeIn( wanted, textWidth * fontScale, textHeight * fontScale, area.Width, area.Height );
+		var scale = fontScale * size;
+		var (width, height) = BitmapOf( area, scale );
 
-		return (placed, drawn, PrescaleFor( fontScale * drawn ));
+		return (new Rectangle( area.X, area.Y, width * scale, height * scale ), size, PrescaleFor( scale ), width, height);
 	}
 
 	/// <summary>
-	/// Where a laid-out text of <paramref name="width"/> by <paramref name="height"/> of the font's pixels (its shadow's
-	/// <paramref name="margin"/> among them) is drawn in <paramref name="area"/>, and at what size (<see cref="SizeIn"/>):
-	/// <paramref name="fontScale"/> screen pixels a font pixel times that size, its top-left from the top of the screen,
-	/// aligned by the text itself, the shadow hanging off its left and bottom.
+	/// The bitmap a text control letters into, in font pixels: its box over <paramref name="scale"/> screen pixels a font
+	/// pixel, each cut toward nought. At the original's size that is the original's own, made once at the control's size:
+	/// (x1 - x0) x the screen width / 2048 (<c>0x0048f47b</c>..<c>0x0048f49e</c>, <c>+0x3c</c>) by (y1 - y0) x the screen height
+	/// / 1536 (<c>0x0048f4a2</c>..<c>0x0048f4c5</c>, <c>+0x3e</c>), the same cut <see cref="WrapWidthOf"/> makes. Here it is made
+	/// again whenever the box or the size changes, as a window can be resized here; the original's is made once (guard <c>+0x44</c>).
+	/// A thousandth of a pixel is forgiven, so a text whose box held it at <see cref="SizeIn"/>'s size is not cut by a
+	/// float's rounding (30 / 1.2 is 24.99999 in floats).
 	/// </summary>
-	internal static (Rectangle Placed, float Size) Place( PixelRect area, int width, int height, int margin, float fontScale, float wanted,
-		TextAlign across, TextAlign down )
-	{
-		var size = SizeIn( wanted, (width - margin) * fontScale, (height - margin) * fontScale, area.Width, area.Height );
-		var scale = fontScale * size;
-		var x = Align( area.X, area.Width, (width - margin) * scale, across ) - (margin * scale);
-		var y = Align( area.Y, area.Height, (height - margin) * scale, down );
+	internal static (int Width, int Height) BitmapOf( PixelRect area, float scale )
+		=> ((int)((area.Width / scale) + 0.001f), (int)((area.Height / scale) + 0.001f));
 
-		return (new Rectangle( x, y, width * scale, height * scale ), size);
+	/// <summary>
+	/// A line's left edge in a bitmap <paramref name="width"/> wide, as the renderer places it (<c>0x006ae550</c>; docs/exe/hud.md,
+	/// "How a list's cells are aligned"): from the left at 0, from the right at the width less the line's, and centred
+	/// about the middle of the box the renderer is handed, half the line's width cut toward nought. A wrapping label's box
+	/// is the bitmap itself; a label that does not wrap is handed one <see cref="UnwrappedBox"/> wide about the bitmap's
+	/// half (0x0048f943). The centred move is shifted unsigned, so a wrapped line wider than its box moves off the bitmap.
+	/// </summary>
+	internal static int LineLeft( int width, int lineWidth, TextAlign across, bool wraps )
+	{
+		switch ( across )
+		{
+			case TextAlign.Start:
+				return 0;
+
+			case TextAlign.End:
+				return width - lineWidth;
+		}
+
+		var (left, box) = wraps ? (0, width) : ((width / 2) - (UnwrappedBox / 2), UnwrappedBox);
+		var move = (long)((uint)(box - lineWidth) >> 1);
+
+		return (int)Math.Min( left + move, int.MaxValue );
 	}
+
+	/// <summary>
+	/// The top of a block of lines <paramref name="blockHeight"/> high in a bitmap <paramref name="height"/> high
+	/// (<c>0x006aeb10</c>): at 0, at the bottom less the block, or in the middle, the difference halved toward nought and not
+	/// held, so a block taller than its bitmap rises above it and is cut at both edges.
+	/// </summary>
+	internal static int BlockTop( int height, int blockHeight, TextAlign down ) => down switch
+	{
+		TextAlign.Start => 0,
+		TextAlign.End => height - blockHeight,
+		_ => (height - blockHeight) / 2
+	};
 
 	/// <summary>
 	/// How much larger than the original's a text is drawn: <paramref name="wanted"/>, or less where its box
@@ -121,7 +179,10 @@ internal sealed class UiText
 		return MathF.Max( 1f, size );
 	}
 
-	/// <summary>Whether each text laid out is logged with its drawn size and its box (<c>OPENTPW_TEXT_CENSUS=1</c>).</summary>
+	/// <summary>
+	/// Whether each text laid out is logged with its drawn size and its box, its bitmap and its text in font pixels, and
+	/// whether the bitmap cuts it (<c>OPENTPW_TEXT_CENSUS=1</c>).
+	/// </summary>
 	private static readonly bool Census = Environment.GetEnvironmentVariable( "OPENTPW_TEXT_CENSUS" ) == "1";
 
 	/// <summary>
@@ -169,7 +230,7 @@ internal sealed class UiText
 	/// <summary>The lines the text was last laid out in, and the width in the font's pixels they were wrapped at (0 for none).</summary>
 	public IReadOnlyList<string> Lines => _lines;
 
-	public int WrapWidth => _built.WrapWidth;
+	public int WrapWidth => _measured.WrapWidth;
 
 	/// <summary>Releases the texture. Drawing again lays the text out afresh.</summary>
 	public void Delete()
@@ -178,43 +239,57 @@ internal sealed class UiText
 		_texture = null;
 	}
 
-	private static float Align( float start, float space, float size, TextAlign align ) => align switch
+	/// <summary>Breaks the text into its lines and measures the block they make, in the font's pixels.</summary>
+	private void Lay( BitmapFont font, Measure measure )
 	{
-		TextAlign.Start => start,
-		TextAlign.End => start + space - size,
-		_ => start + ((space - size) * 0.5f)
-	};
+		_measured = measure;
+		_lines = Wrap( font, measure.Text, measure.WrapWidth );
+		_textWidth = Math.Max( 1, _lines.Max( line => font.Measure( line ) ) );
+		_textHeight = Math.Max( 1, _lines.Count * font.LineHeight );
+	}
 
 	private void Build( BitmapFont font, Layout layout )
 	{
 		_built = layout;
+		_pixels = Letter( font, _lines, layout.Width, layout.Height, layout.Colour, layout.Shadow, layout.Measure.WrapWidth > 0, layout.Across,
+			layout.Down );
+		_width = layout.Width;
+		_height = layout.Height;
+	}
 
-		var lines = _lines = Wrap( font, layout.Text, layout.WrapWidth );
-		var margin = layout.Shadow ? ShadowOffset : 0;
-
-		var textWidth = Math.Max( 1, lines.Max( line => font.Measure( line ) ) );
-		var textHeight = Math.Max( 1, lines.Count * font.LineHeight );
-
-		var width = textWidth + margin;
-		var height = textHeight + margin;
+	/// <summary>
+	/// The RGBA pixels of <paramref name="lines"/> lettered into a bitmap <paramref name="width"/> by <paramref name="height"/>,
+	/// each line where the renderer puts it (<see cref="LineLeft"/>, <see cref="BlockTop"/>) and cut at the bitmap's edges. With
+	/// <paramref name="shadow"/>, the grey copy first, its box moved two left and two down in the same bitmap, so its left two
+	/// columns are cut where the text stands at the bitmap's left edge; then the text where it belongs (0x00491da1..0x00491e84).
+	/// </summary>
+	internal static byte[] Letter( BitmapFont font, IReadOnlyList<string> lines, int width, int height, UiColour colour, bool shadow,
+		bool wraps, TextAlign across, TextAlign down )
+	{
 		var pixels = new byte[width * height * 4];
+		var top = BlockTop( height, lines.Count * font.LineHeight, down );
 
-		var shadow = new UiColour( (byte)(layout.Colour.R / 2), (byte)(layout.Colour.G / 2), (byte)(layout.Colour.B / 2) );
-
-		for ( int i = 0; i < lines.Count; ++i )
+		if ( shadow )
 		{
-			var x = (int)Align( 0, textWidth, font.Measure( lines[i] ), layout.Across );
-			var y = i * font.LineHeight;
-
-			if ( layout.Shadow )
-				font.Write( lines[i], pixels, width, height, x, y + margin, shadow, 0.5f );
-
-			font.Write( lines[i], pixels, width, height, x + margin, y, layout.Colour, 1f );
+			var grey = new UiColour( (byte)(colour.R / 2), (byte)(colour.G / 2), (byte)(colour.B / 2) );
+			Write( font, lines, pixels, width, height, wraps, across, -ShadowOffset, top + ShadowOffset, grey, 0.5f );
 		}
 
-		_pixels = pixels;
-		_width = width;
-		_height = height;
+		Write( font, lines, pixels, width, height, wraps, across, 0, top, colour, 1f );
+
+		return pixels;
+	}
+
+	private static void Write( BitmapFont font, IReadOnlyList<string> lines, byte[] pixels, int width, int height, bool wraps, TextAlign across,
+		int moved, int top, UiColour colour, float opacity )
+	{
+		for ( int i = 0; i < lines.Count; ++i )
+		{
+			var left = LineLeft( width, font.Measure( lines[i] ), across, wraps ) + moved;
+
+			if ( left < width )
+				font.Write( lines[i], pixels, width, height, left, top + (i * font.LineHeight), colour, opacity );
+		}
 	}
 
 	/// <summary>

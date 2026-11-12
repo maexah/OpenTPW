@@ -42,10 +42,18 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the maintainer's pre-commit hook: grep it by Q-number.
 
-- **Q732 (a moved ticket ride meets the money test):** in a cloud container (no Ghidra, no original, no display; the run's output was not kept), `AMovedTicketRideIsRefusedWhereTheBankIsBelowItsPrice` (needing the game) passes, and four bugs put back by hand (the pickup not marking the hand, `PlaceCarried` not telling `Build`, the test made `<=`, the exemption dropped for the carry too) each failed it. An off-screen run (`consolerun.py`, a fresh Full Simulation player with no tickets, paused) stood Jurassic Tours unbought with `buy 1170 20 60`; at a bank of -10000 `move 13 40 70` answered "costs 3000 and the park has -7000 - sound 0xaf" and left it in the hand, marked moved; at 100000 `put 40 70` built it. Not checked: the original's move of an unbought ticket ride (no original here; the rule is from `docs/exe/hud.md`'s listing read), which refusal latch the move's click honours (`0x816d50` or `0x81b604`, not read), and the red squares and cash cursor on screen (no display; the squares are checked by the test's marker list only). Filed: none.
+- **Q771 (a text control's bitmap is its box, and the text is cut at it):** in a cloud container (no Ghidra, no original, no
+  photograph; the runs' output was not kept), `UiText`'s texture is now the box (`BitmapOf`), lettered by the renderer's
+  rules from `ui.md` and `hud.md`, the grey copy inside it. `TextBitmapCutTests` (3, needing the game) and two
+  `ParkScreenLetteringTests` pass, and eight bugs put back by hand each failed one. **This changes what is drawn and no
+  frame of it was seen**: an off-screen census run (`consolerun.py`, `OPENTPW_TEXT_CENSUS=1`, 1280 x 720, the lobby, the
+  gadget, buy, hire, All Staff and the entry price) cut 15 of 67 texts, the gadget's date, money and the build label; by a
+  probe of the fonts only the date loses ink, its stand-in "02/02/2000" ten columns a side (Q527, Q1449). The photograph
+  beside the original is Q1448.
 
 ## Numbers (take counts fresh; these go stale within a day)
 
+- Linux, 2026-11-12, Q771 (`dotnet test` on the test assembly as the user `tester`, a copy of the tree it owns; five tests added, three needing the game, one removed; built in a cloud container after group F): with the game, 5417 passed, 2 failed (`ACopyStartedOnAFolderAnotherProcessHoldsIsRefused`, which fails the same on `origin/main` there, and `AnExceptionBeforeTheMainLoopIsLoggedAndEndsTheRunWithExit1`, no libEGL), 2 skipped (the macOS and Windows folder tests) of 5421; with no game named, 2346 passed, the same 2 failed, 3073 skipped.
 - Linux, 2026-11-12, review fixes group F (`capped.sh`; three tests added, one needing the game; after group E): with the game, 5415 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5417; with no game named, 2347 passed, 0 failed, 3070 skipped.
 - Linux, 2026-11-12, review fixes group E (`capped.sh`; four tests added, one needing the game; after group D): with the game, 5412 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5414; with no game named, 2345 passed, 0 failed, 3069 skipped.
 - Linux, 2026-11-12, review fixes group D (`capped.sh`; three tests added, one needing the game; after Q732): with the game, 5408 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5410; with no game named, 2342 passed, 0 failed, 3068 skipped.

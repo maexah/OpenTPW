@@ -387,6 +387,24 @@ for a colour alpha under 255, nothing written at c = 0, and the string's texels 
 point filtering, clamp). `UiText` halves the colour (0.5, not 0.533) at half alpha (0.5, not 0.467) and composites Over, so it
 differs at glyph edges and in the copy's tone; Q517.
 
+**The bitmap is the box, so text past it is cut** (fork watch 2026-10-28, verify-ui-hud H2, verify-other O2; built Q771, from
+this page and `hud.md` alone, not re-read in Ghidra). Every text control makes its bitmap once (guard `+0x44`) at its box's
+size: (x1 - x0) x `[0xFAA5C4]` / 2048 toward nought (`0x48F47B`..`0x48F49E`, `+0x3C`) by (y1 - y0) x `[0xFAA5C0]` / 1536
+(`0x48F4A2`..`0x48F4C5`, `+0x3E`), allocated by slot `+0x28` = `0x48F3D0` in the plain class (vtables `0x6FF320`, `0x6FF500`)
+and this one (`0x6FF530`). The blitter `0x6B4AA0` clips each glyph to it: a line wider than the box loses its end (or its
+start, from the right), a block taller than it its lower lines. Each line stands where the renderer puts it (`hud.md`, "How a
+list's cells are aligned"): left at 0, right at the width less the line's (`0x48F8BA`), centred about the half (`0x48F943`) of
+the box the renderer is handed, which for a label that does not wrap is `0x4000` wide (`hud.md`, "The help bar's lettering"),
+so a line w wide stands at width / 2 - 0x2000 + (0x4000 - w) / 2; this copy's grey pass, moved (-2, +2), stays inside the same
+bitmap, so a left-aligned string's copy loses its two left columns. **OpenTPW** (`UiText.BitmapOf`, `LineLeft`, `BlockTop`,
+`Letter`): the texture is the box over the font's scale times the size drawn, cut toward nought (the original's own at size
+1), and lettered by those rules. Not read: whether the half is cut before the `0x2000` is taken (taken so: one column on an
+odd width), and whether `+0x3C` comes from the control's rect or its stream text rect (op 3; `UiControl.TextRect` is used
+here). That matters at the gadget's date `0x20`, whose text rect (182, 1061)-(383, 1103) is 78 x 16 pixels at 800 x 600
+against the control's 98 x 30: the census (Q771) found it the only text cut that loses ink in the lobby, the gadget, the buy and
+hire screens, All Staff and the entry price (its stand-in "02/02/2000" is 98 font pixels, Q527; even the original's "2.2.2000" loses its
+top ink row, the line 18 high, centred in 16); Q1449.
+
 ### `UI_SetTitle` (`0x00485d20`), and the buy and hire screens' titles and money
 
 Read 2026-10-25 (Q644, `q644/gd/00485d20.c`). Its arguments are the window, a control id and the text. **Once per

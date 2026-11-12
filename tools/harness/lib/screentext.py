@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """lib/screentext.py (Q644): the buy and hire screens and every tab of each, with each text measured against its box. screentext.py <outdir> <bin> [WxH]. On the desktop (a photograph).
-OPENTPW_TEXT_CENSUS=1: each text laid out logs 'UI text: "<text>" font F, W x H in a box BW x BH, x S[ OVER]'.
+OPENTPW_TEXT_CENSUS=1: each text laid out logs 'UI text: "<text>" font F, W x H in a box BW x BH, x S[ OVER]; bitmap W x H, text W x H[, cut]' (the tail since Q771).
 The stock park entered and paused, the window sized, the gadget's Buy (control 26) by a real click, the pointer on the
 second row, a frame; each buy tab (0x1fa-0x1fd) a frame; b_allstaff, a frame; each hire tab (0x2490-0x2494) a frame."""
 import os, sys

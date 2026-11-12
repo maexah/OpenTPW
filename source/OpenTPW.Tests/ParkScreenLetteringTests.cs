@@ -43,24 +43,51 @@ public class ParkScreenLetteringTests
 	}
 
 	/// <summary>
-	/// <b>The text is drawn at its size and aligned by itself</b>: a 100 x 25 text wanted 1.2 times in a 360 x 30 box is
-	/// 120 x 30, centred at 220; one with a shadow of 2 at 2 screen pixels a font pixel, to the end of a 1000-wide box, is
-	/// 244.8 x 64.8 with its text's right edge on the box's.
+	/// <b>A text's bitmap is its box at the size it is drawn, cut toward nought, and stands at the box's corner</b> (Q771): a
+	/// 100 x 25 text wanted 1.2 times in a 360 x 30 box at 1 screen pixel a font pixel is drawn at 1.2 into a bitmap of
+	/// 300 x 25; in a 1000-square box at 2 it is 416 square (1000 / 2.4 = 416.67), 998.4 on the screen; at the original's
+	/// size a 351.9 x 20.7 box is 351 x 20, not the 352 x 21 a rounding would make, nor the text's own 100 x 25.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> the size not used in the draw; the size used for the box but not the shadow.</remarks>
+	/// <remarks><b>Mutations:</b> the bitmap the text's size (the old rule); rounded, not cut; the size not used for the
+	/// bitmap; the bitmap placed by the text's alignment, not at the box's corner.</remarks>
 	[TestMethod]
-	public void TheTextIsDrawnAtItsSizeAlignedByItself()
+	public void ATextsBitmapIsItsBoxAtTheSizeDrawn()
 	{
-		var (placed, size) = UiText.Place( new PixelRect( 100, 200, 360, 30 ), 100, 25, 0, 1f, 1.2f, TextAlign.Centre, TextAlign.Centre );
+		var (placed, size, _, width, height) = UiText.Plan( new PixelRect( 100, 200, 360, 30 ), 100, 25, 1f, 1.2f );
 		Assert.AreEqual( 1.2f, size, 1e-5f );
-		Assert.AreEqual( (220, 200, 120, 30), ((int)MathF.Round( placed.X ), (int)MathF.Round( placed.Y ), (int)MathF.Round( placed.Width ),
-			(int)MathF.Round( placed.Height )), "the box holds 1.2" );
+		Assert.AreEqual( (300, 25), (width, height), "the box at 1.2 a font pixel" );
+		Assert.AreEqual( (100f, 200f), (placed.X, placed.Y), "at the box's corner" );
+		Assert.AreEqual( 360f, placed.Width, 1e-3f );
+		Assert.AreEqual( 30f, placed.Height, 1e-3f );
 
-		(placed, size) = UiText.Place( new PixelRect( 0, 0, 1000, 1000 ), 102, 27, 2, 2f, 1.2f, TextAlign.End, TextAlign.Start );
-		Assert.AreEqual( 1.2f, size, 1e-5f );
-		Assert.AreEqual( 755.2f, placed.X, 1e-3f, "the text's right edge on the box's, the shadow off its left" );
-		Assert.AreEqual( 244.8f, placed.Width, 1e-3f, "the whole texture at 2.4 a font pixel" );
-		Assert.AreEqual( 64.8f, placed.Height, 1e-3f );
+		(placed, size, _, width, height) = UiText.Plan( new PixelRect( 0, 0, 1000, 1000 ), 100, 25, 2f, 1.2f );
+		Assert.AreEqual( (1.2f, 416, 416), (size, width, height) );
+		Assert.AreEqual( 998.4f, placed.Width, 1e-3f );
+
+		(_, size, _, width, height) = UiText.Plan( new PixelRect( 0, 0, 351.9f, 20.7f ), 100, 25, 1f, 1f );
+		Assert.AreEqual( (1f, 351, 20), (size, width, height), "cut toward nought, as 0x0048f47b and 0x0048f4a2" );
+	}
+
+	/// <summary>
+	/// <b>Each line stands where the original's renderer puts it in the bitmap</b> (0x006ae550, 0x006aeb10; Q771): in a
+	/// bitmap 101 wide a line 30 wide stands at 0 from the left and 71 from the right; centred, a wrapping one at 35 ((101 -
+	/// 30) / 2 = 35.5 cut) and one that does not wrap at 35 (50 less 15); a line 31 wide at 35 and 34; one 131 wide, wider than
+	/// its bitmap, at -30 from the right and -16 centred and unwrapped, so both its ends are cut; a block 3 lines of 12 in a
+	/// bitmap 25 high stands at 0, -11 and -5 (-11 / 2 toward nought), so the top-aligned one loses its third line.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> centre rounded to nearest; the unwrapped centre from the bitmap's own width, not its half;
+	/// right-aligned held at 0; the block's middle held to the bitmap's top; halved toward minus infinity.</remarks>
+	[TestMethod]
+	public void EachLineStandsWhereTheOriginalsRendererPutsIt()
+	{
+		Assert.AreEqual( (0, 71), (UiText.LineLeft( 101, 30, TextAlign.Start, false ), UiText.LineLeft( 101, 30, TextAlign.End, false )) );
+		Assert.AreEqual( (35, 35), (UiText.LineLeft( 101, 30, TextAlign.Centre, true ), UiText.LineLeft( 101, 30, TextAlign.Centre, false )) );
+		Assert.AreEqual( (35, 34), (UiText.LineLeft( 101, 31, TextAlign.Centre, true ), UiText.LineLeft( 101, 31, TextAlign.Centre, false )) );
+		Assert.AreEqual( (-30, -16), (UiText.LineLeft( 101, 131, TextAlign.End, false ), UiText.LineLeft( 101, 131, TextAlign.Centre, false )) );
+		Assert.IsTrue( UiText.LineLeft( 101, 131, TextAlign.Centre, true ) >= 101, "a wrapped line wider than its box moves off it (the unsigned shift)" );
+		Assert.AreEqual( (0, -11, -5), (UiText.BlockTop( 25, 36, TextAlign.Start ), UiText.BlockTop( 25, 36, TextAlign.End ),
+			UiText.BlockTop( 25, 36, TextAlign.Centre )) );
+		Assert.AreEqual( 6, UiText.BlockTop( 25, 12, TextAlign.Centre ), "(25 - 12) / 2 = 6.5, cut" );
 	}
 
 	/// <summary>
@@ -103,14 +130,14 @@ public class ParkScreenLetteringTests
 			Screen.Size = new Point2( 2552, 1355 );
 			Assert.AreEqual( 1.764f, UiFonts.Scale, 1e-3f );
 
-			var (placed, drawn, copy) = UiText.Plan( new PixelRect( 0, 0, 360, 40 ), 100, 15, 0, UiFonts.Scale, 1.2f, TextAlign.Start, TextAlign.Start );
+			var (placed, drawn, copy, width, _) = UiText.Plan( new PixelRect( 0, 0, 360, 40 ), 100, 15, UiFonts.Scale, 1.2f );
 			Assert.AreEqual( (1.2f, 2), (drawn, copy), "the box holds 1.2" );
-			Assert.AreEqual( 100 * UiFonts.Scale * 1.2f, placed.Width, 1e-2f );
+			Assert.AreEqual( width * UiFonts.Scale * 1.2f, placed.Width, 1e-2f );
 
-			(placed, drawn, copy) = UiText.Plan( new PixelRect( 0, 0, 360, 28 ), 100, 15, 0, UiFonts.Scale, 1.2f, TextAlign.Start, TextAlign.Start );
+			(placed, drawn, copy, width, _) = UiText.Plan( new PixelRect( 0, 0, 360, 28 ), 100, 15, UiFonts.Scale, 1.2f );
 			Assert.AreEqual( 28f / (15 * UiFonts.Scale), drawn, 1e-4f, "the box holds 1.058" );
 			Assert.AreEqual( 1, copy, "drawn at 1.867 screen pixels a font pixel, so copied once" );
-			Assert.IsTrue( placed.Width / 100 < 2f, "the picture is drawn smaller than two texels a pixel would be" );
+			Assert.IsTrue( placed.Width / width < 2f, "the picture is drawn smaller than two texels a pixel would be" );
 		}
 		finally
 		{
