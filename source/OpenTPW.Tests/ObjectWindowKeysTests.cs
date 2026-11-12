@@ -81,8 +81,11 @@ public class ObjectWindowKeysTests
 		}
 	}
 
-	private sealed class Stepping( WindowStack stack ) : UiWindow( stack ), IObjectWindowSteps
+	private sealed class Stepping : UiWindow, IObjectWindowSteps
 	{
+		// A root as every real window has: the stack's keys look through each open window's controls (LIST_CURSOR_KEYS).
+		public Stepping( WindowStack stack ) : base( stack ) => Root = new UiControl();
+
 		public List<bool> Steps { get; } = [];
 
 		public void Step( bool newer ) => Steps.Add( newer );

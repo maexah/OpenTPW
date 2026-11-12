@@ -516,8 +516,8 @@ public class LobbyCameraMode : CameraMode
 		_leaveVertical = Decayed( _leaveVertical, VerticalDecay, Time.Delta );
 
 		// State 2 darkens the screen as the radius closes on 8: the render camera's +0x60 (0x005e052f), the whole of it just
-		// before the park is asked for (LobbyFade). Taken from the radius after this pass's decay, which is our reading of
-		// the order.
+		// before the park is asked for (LobbyFade). Taken from the radius after this pass's decay, as 0x005e0555 reads the
+		// radius 0x005e04ed stored.
 		_fadeTarget = _leaveRadius < ArrivedRadius ? 1f : LobbyFade.Target( _leaveRadius, settings.SpinRadius );
 
 		if ( _leaveRadius < ArrivedRadius )

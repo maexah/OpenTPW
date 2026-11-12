@@ -670,17 +670,11 @@ filed the items that cite it.
   Q538): report on a change. Status 24 seen in the original (Q1104, `q1104/orig/b-2-window.png`): an open bought TV Sim whose exit's
   path stub joins nothing shows EXIT NOT CONNECTED over its preview; ours showed nothing for the same file (`q1104/run2/window-open.png`). Confirm: each status photographed beside the original's.
 - [ ] **Q1500. The ride window's status box photographed beside the original's (from Q213).** Q213 letters `0x3e25` in
-  font slot 8, black, from the fork watch's decode (verify-ui-hud.md H3), confirmed by the `control` census only in a
+  font slot 8, in its status colour, from the fork watch's decode (verify-ui-hud.md H3), confirmed by the `control` census only in a
   cloud container with no display or original. Left, on the desk: a ride whose queue is cut off (status 22 or 23,
   "LINE NOT CONNECTED"), its window photographed in both games. The original's fills the striped box in two lines; ours
   sets no wrap (`TextWraps` false, as the shop's box), so if ours stays on one line, decode how the original breaks it
   (the text control's own wrap, or a break in UITEXT 388/389) and build that. Confirm: the two photographs side by side.
-- [ ] **Q1501. The shop window's status box recolours per status; the ride window's does not (from Q213).** The fork
-  watch (verify-ui-hud.md H3) says the shop's label is made by `0x004afaa0` black in font 8, as the ride's, and that the
-  ride's fill `FUN_004ade40` never sets its colour. `ParkShopWindow.Refresh` still sets `_status.TextColour` from
-  `ParkClosedStatus.Colour` (grey for CLOSED). Read the shop's own fill in Ghidra: if it sets no colour, drop the
-  recolour as Q213 did; if it does, say so in `docs/exe/ride-window-door.md`. Confirm: a closed shop's window, census
-  and photograph.
 - [ ] **Q1502. Q1111 and Q452 stand twice across the queue (found by Q213).** On `main` at `a27a188` both are unticked in
   `docs/QUEUE.md` and ticked, with their Done notes, in `docs/history/queue-done.md`, so `tools/maintainer/queue-sweep.py`
   refuses every commit that stages the queue ("Q-numbers would not resolve once each"). Q213's commit was swept by hand
@@ -720,12 +714,15 @@ filed the items that cite it.
     staff on the paths?
 
 
-- [ ] **Q1480. What `FUN_004fa990` reads past the map's last record, and whether its bytes are read unsigned (needs
-  Ghidra).** From Q1333. `PeepBehaviour.CountingRecord` reads the thing's bytes `+5` and `+7` zero-extended (the Q1332
-  reading of `0x004fa994`..`0x004fa9b6`, not re-read by Q1333, which had no Ghidra) and, for a pack of record 16384 or
-  more (a y byte of 128 or more, or x 128 or more on row 127), reads no cell, counts nobody and counts
-  `COUNTING_CELL_OFF_MAP`. Read the four instructions' extension (`MOVZX` or `MOVSX`) and what lies past the 68-byte
-  cell array at `[0x008023a0]`; build that arm, or say why it stays counted. Dead by content in the stock Lost Kingdom
+- [ ] **Q1480. What `FUN_004fa990` reads past the map's last record (needs Ghidra).** From Q1333.
+  `PeepBehaviour.CountingRecord` reads the thing's bytes `+5` and `+7` zero-extended (settled in the run 22 review:
+  `0x004fa990`..`0x004fa997`, `xor` then `mov al`/`mov dl`) and, for a pack of record 16384 or more (a y byte of 128 or
+  more, or x 128 or more on row 127), reads no cell, counts nobody and counts `COUNTING_CELL_OFF_MAP`; the needs turn's
+  region effects there read none (`CELL_EFFECTS_OFF_MAP`, `ParkPeople.CellEffects`). Read what lies past the array of
+  68-byte records at `[0x008023a0]`, and past the region effects' own index (`0x004d8410`); build that arm, or say why it
+  stays counted. A lead from objdump: the read stays inside the object at `[0x008023a0]` (a pack runs to 32895 x 68 =
+  `+0x2221bc`, and the region-effects array starts at `+0x1b1104`, `0x004d8410`'s `lea eax,[ecx+edx*2+0x1b1104]`), so it
+  does not fault: a pack of 16384 or more reads the type dword from that object's own later fields. Dead by content in the stock Lost Kingdom
   park (Q1333). Put the bug back for each test (`AGENTS.md` rule 6). No game run.
 
 - [ ] **Q1240. The remeasure tail's `+0x68` exit against `ReopenAfterRemeasure` (piece (5) of Q218, which needs Ghidra).**
@@ -1565,7 +1562,8 @@ filed the items that cite it.
   `Texture.LevelsFor` and in `docs/exe/textures.md`, "What the cut costs".
 - [ ] **Q1364. Q535's empty-hand latch, watched in the original.** From Q535 (built in a cloud lane with no original).
   On the stock park, bank held at 19 (`thingpoke.py`, `TOOLING.md`, "Recipes", Q542), click bare (10,10) with the hand
-  empty and read `[0x00816d50]` at `q532/orig/a-run.out`'s addresses: predicted 1; at 20, predicted 0 after the anchor.
+  empty and read `[0x00816d50]` at `q532/orig/a-run.out`'s addresses: predicted 1; at 20 the click refuses (Q1124; Q1126
+  watches it), with `d50` 1 until the next pass; at 40, predicted 0 after the anchor.
   Then open the mechanics' locator: predicted texture 1 after the refusal (red edges), beside OpenTPW's `strip`
   `| patrol 48` markers and a screenshot of each.
 - [ ] **Q1412. The placer's off-map latch.** From Q536. The placer (`FUN_00528a70`, called from mode 4's pass at
@@ -2449,7 +2447,7 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   - **Note (play test 2026-10-31):** still broken: about 1,000 `Camera: pan by key` lines in the log and not one from the pointer. Nothing counts the gap; add the count with the fix. Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
 - [ ] **Q28. Renaming parks and rides.** The save carries a name per park (`saves.md`, the `gms.dat` theme record's park name). No rename
   control exists; signs read fixed names (`ParkFixedItems.BuildSign`, `ParkObjects.BuildSign`,
-  `LobbyIsland.DisplayNames`). Decode where the original edits the name and what it writes, then build the
+  `LobbyIsland.ParkName`, through `ParkFixedItems.ParkDisplayName`). Decode where the original edits the name and what it writes, then build the
   control and make the three sign painters read the save's name.
   - **Note (fork review 2, 2026-10-16, `verify-objects-signs-other.md` H2):** `0x004990f0` opens the box (two
     14-character edits, title UITEXT `0xc2`); its OK, `0x004993e0`, sets the gate thing's two lines (`0x004e2950`,
@@ -2514,9 +2512,13 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
 - [ ] **Q1469. The carried candidate's figure and the red square under it (`STAFF_CARRY_PREVIEW`, Q40's leftover).** The
   place-staff mode's MOVE (`0x0046c480`) hangs a sprite of the candidate's kind in their costume under the pointer and draws
   one red marker square (texture 1) on a cell the click would refuse (`RefusesStaff` answers which, since Q40). Neither is
-  built; `ParkStaffPool.Carry` counts `STAFF_CARRY_PREVIEW`. Q40's notes above hold the decode so far: the figure's point,
-  height and banks (fork watch H2, where the sprite stands at terrain + height + 5 and its place on screen is unproven), and
-  the play test's report. Not decoded: the red square's height, size and blink, and whether it is the stranded person's square
+  built; `ParkStaffPool.Carry` counts `STAFF_CARRY_PREVIEW`. Q40's notes in `docs/history/queue-done.md` hold the decode so
+  far (the figure's point, height and banks, and the play test's report). Fork watch H2, carried here: `0x0046c480` takes the
+  point `0x007a1c90`, height less -5.0, heading 4, into `0x00475480`; `0x0046c730` maps type 4 to 8 to kinds 6, 5, 4, 7, 8
+  (`0x0046c87c`); the sprite script (`0x004766d0`..`0x00476940`, entry `0x15` of `0x0075a418`) stores `0x1200`, sets 6 and
+  plays frames 0 to 3. `0x00542010` adds the terrain (`0x004527f0`) to a hit height that is already absolute, so the
+  original counts the ground twice and the sprite stands at terrain + height + 5: where that lands on screen is unproven,
+  so capture before building and do not "fix" it unseen. Not decoded: the red square's height, size and blink, and whether it is the stranded person's square
   (`FUN_004fa030`). Decode those first, capture the original carrying a candidate over a refused cell and a path cell, then
   build both. Q1045 (`STAFF_PICKED_UP_PREVIEW`) asks whether type 6 shares this figure's path; fold it here if it does.
 - [ ] **Q43. The number read as a repeat delay is a priority, and the original throttles nothing.** Found by
@@ -2633,8 +2635,8 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
   word `[0x00f83778]+0x60`) and ours (`lib/lobbyentry.py`, its `f-NN` frames and means; `CANCEL=` for the Escape) entering
   Lost Kingdom from the same orbit: three radii in state 2 with the mean brightness falling in both, the last lobby frame
   before the loading screen, and an Escape at about 1.5 s into state 2 with the brightness back in both. Check too that the
-  island panel and the key puff are drawn over the black in the original as ours draws them (`Render_DrawView`, `0x00576e54`),
-  and whether state 2 writes its target before or after the pass's decay (`0x005e052f`-`0x005e05b4`, Ghidra). Confirm: the
+  advisor and the interface are drawn over the black in the original as ours draws them, or under it: `Render_DrawView`'s
+  rectangle (`0x00576e54`) is its last draw, after the model lists (`lobby.md`, "And the fly-in darkens the screen"). Confirm: the
   photographs side by side, and the fade word against ours' `fade=` at matching radii.
 - [ ] **Q62. What View the online world does offline. Decode first.** Found by Q41's decode. `IslandPanel_Callback`'s
   case for button `0x1e0e9` (`0x004b8c18`-`0x004b8c2f`) calls the island camera's `+0x20`, its deactivate

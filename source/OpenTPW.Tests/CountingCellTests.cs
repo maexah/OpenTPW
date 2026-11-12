@@ -44,6 +44,34 @@ public class CountingCellTests
 		Assert.IsNull( At( 128, 127 ), "the last row's x 128 is past the last record" );
 		Assert.IsNull( At( 5, 128 ), "a y byte of 128" );
 		Assert.IsNull( PeepBehaviour.CountingRecord( new FixedVector( 5 << 16, -1 ) ), "y just below nought is byte 255" );
+		Assert.AreEqual( (127, 5), At( -129, 5 ), "x -129 is byte 127: its own row" );
+		Assert.AreEqual( (0, 5), At( 256, 5 ), "x 256 is byte 0: its own row" );
+	}
+
+	/// <summary>
+	/// <b>The region effects off the map are those of the cell the same pack names</b> (<c>0x004cd4e0</c>, <c>0x004d8410</c>):
+	/// with effect 0 stamped round (2, 6), a guest at x 130 on row 5 gains its 2, where the same row's (2, 5) holds 1; past
+	/// the last record none, and the gap counted.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> off the map read as none (the rule before the run 22 review); x wrapped within its own row,
+	/// (2, 5).</remarks>
+	[TestMethod]
+	[DoNotParallelize]
+	public void AGuestOffTheMapTakesTheRegionEffectsOfTheNextRowsCell()
+	{
+		var people = new ParkPeople( Park( FileSystem = GameData.Required() ) );
+		var peep = people.Guests.Values.First();
+
+		people.State.StampEffect( 0, 2, 6 );
+		Assert.AreEqual( (2, 1), (people.State.EffectsAt( 2, 6 )[0], people.State.EffectsAt( 2, 5 )[0]), "the stamp" );
+
+		peep.Navigator.Position = FixedVector.AtCell( 130, 5 );
+		Assert.AreEqual( 2, people.CellEffects( peep ).Happiness, "x 130 on row 5 reads (2, 6)" );
+
+		var before = Unimplemented.Summary.FirstOrDefault( entry => entry.What == "CELL_EFFECTS_OFF_MAP" ).Times;
+		peep.Navigator.Position = FixedVector.AtCell( 5, 128 );
+		Assert.AreEqual( 0, people.CellEffects( peep ).Happiness, "past the last record" );
+		Assert.AreEqual( before + 1, Unimplemented.Summary.FirstOrDefault( entry => entry.What == "CELL_EFFECTS_OFF_MAP" ).Times );
 	}
 
 	/// <summary>

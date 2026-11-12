@@ -1,5 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Reflection;
 
 namespace OpenTPW.Tests;
 
@@ -13,17 +14,20 @@ namespace OpenTPW.Tests;
 /// </para>
 /// </summary>
 [TestClass]
+[DoNotParallelize]
 public class LobbyFadeTests
 {
 	private const float Pass = 1f / 30f;
 
 	private float _delta;
+	private float _rawDelta;
 
 	[TestInitialize]
 	public void Clear()
 	{
 		Log ??= new();
 		_delta = Time.Delta;
+		_rawDelta = Time.RawDelta;
 
 		LobbyCameraMode.ForgetIsland();
 		LobbyCameraMode.Paused = false;
@@ -32,9 +36,11 @@ public class LobbyFadeTests
 	[TestCleanup]
 	public void PutBack()
 	{
+		LobbyCountedGapsTests.SetCurrentPlayer( null );
 		LobbyCameraMode.ForgetIsland();
 		LobbyCameraMode.DebugOrbit = 0f;
 		Time.Delta = _delta;
+		Time.RawDelta = _rawDelta;
 	}
 
 	/// <summary>
@@ -109,7 +115,8 @@ public class LobbyFadeTests
 
 	/// <summary>
 	/// <b>State 2 writes the target from the radius it has just decayed to, and the whole of it at arrival</b>: the first decay
-	/// pass at 30 a second takes radius 70 to <c>70 x (1 - 0.7/30)</c> = 68.367, whose target is 0.0263; state 1 writes none.
+	/// pass at 30 a second takes radius 70 to <c>70 x (1 - 0.7/30)</c> = 68.367, whose target is 0.0263. (State 1's nought is
+	/// written by the camera's update, not here: <see cref="AnEscapeInStateTwoLiftsTheFadeThroughTheUpdate"/>.)
 	/// </summary>
 	[TestMethod]
 	public void StateTwoWritesTheTargetAndArrivalWritesTheWhole()
@@ -123,7 +130,6 @@ public class LobbyFadeTests
 		LobbyCameraMode.LeaveForPark( () => asked = true );
 
 		LobbyCameraMode.StepLeaving( settings );
-		Assert.AreEqual( 0f, LobbyCameraMode.FadeTarget, 1e-6f, "state 1 writes none" );
 
 		LobbyCameraMode.StepLeaving( settings );
 		var radius = 70f * (1f - (0.7f / 30f));
@@ -149,4 +155,68 @@ public class LobbyFadeTests
 		Assert.AreEqual( (byte)0, LobbyFade.Alpha );
 		Assert.AreEqual( 0f, LobbyFade.Value );
 	}
+
+	/// <summary>
+	/// <b>The lobby's end clears the fade</b>, so a park is never drawn under the fly-in's last black: the park draws
+	/// <see cref="LobbyFade"/> too and only the lobby steps it.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> <c>LobbyFade.Forget</c> left out of <see cref="LobbyCameraMode.ForgetIsland"/> fails this.</remarks>
+	[TestMethod]
+	public void TheLobbysEndClearsTheFade()
+	{
+		Time.Delta = 100f;
+		LobbyFade.Step( 1f );
+		SetStatic( "_fadeTarget", 1f );
+		Assert.AreEqual( (byte)255, LobbyFade.Alpha );
+
+		LobbyCameraMode.ForgetIsland();
+
+		Assert.AreEqual( (0f, 0f, (byte)0, 0f), (LobbyFade.Value, LobbyFade.Wanted, LobbyFade.Alpha, LobbyCameraMode.FadeTarget) );
+	}
+
+	/// <summary>
+	/// <b>Through the camera's update: state 2 darkens, and an Escape lifts it at once</b>. A fly-in stood at radius 39 by hand
+	/// (the stand-in island has no gate for state 1 to open) runs ten passes at 30 a second, the target rising from 0.5 as the
+	/// radius decays and the fade easing after it; after the cancel the next pass writes the target nought and closes an
+	/// eighth of the gap, the value times 7/8.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> the update's nought for states 0 and 1 left out (the stale target pulls the fade up, never lifting);
+	/// the update's <c>LobbyFade.Step</c> left out (the fade never moves); each fails this.
+	/// </remarks>
+	[TestMethod]
+	public void AnEscapeInStateTwoLiftsTheFadeThroughTheUpdate()
+	{
+		var camera = LobbyEyeHandoverTests.ACamera( out _ );
+		LobbyCountedGapsTests.SetCurrentPlayer( new Player( 0, "Test", new PlayerFile() ) );
+		LobbyCameraMode.BeginLobby();
+
+		Time.RawDelta = Time.Delta = Pass;
+		camera.Update();
+		Assert.AreEqual( 0f, LobbyFade.Value, "in orbit, no fade" );
+
+		var leaving = typeof( LobbyCameraMode ).GetField( "_leaving", BindingFlags.Static | BindingFlags.NonPublic )!;
+		leaving.SetValue( null, Enum.Parse( leaving.FieldType, "FlyingIn" ) );
+		SetStatic( "_leaveRadius", 39f );
+		SetStatic( "_leaveVertical", 20f );
+		SetStatic( "_whenArrived", (Action)(() => { }) );
+
+		for ( var i = 0; i < 10; ++i )
+			camera.Update();
+
+		var radius = 39f * MathF.Pow( 1f - (0.7f / 30f), 10f );
+		Assert.AreEqual( 1f - ((radius - 8f) / 62f), LobbyCameraMode.FadeTarget, 1e-3f, "state 2's target from the decayed radius" );
+		var before = LobbyFade.Value;
+		Assert.IsTrue( before > 0.3f, $"the fade eased up after it: {before}" );
+
+		typeof( LobbyCameraMode ).GetProperty( nameof( LobbyCameraMode.CurrentIsland ) )!.SetValue( null, null );
+		Assert.IsTrue( LobbyCameraMode.CancelLeave() );
+		camera.Update();
+
+		Assert.AreEqual( 0f, LobbyCameraMode.FadeTarget, "back in orbit, the target is nought" );
+		Assert.AreEqual( before * 7f / 8f, LobbyFade.Value, 1e-4f, "and the fade closes an eighth of the gap" );
+	}
+
+	private static void SetStatic( string name, object value )
+		=> typeof( LobbyCameraMode ).GetField( name, BindingFlags.Static | BindingFlags.NonPublic )!.SetValue( null, value );
 }

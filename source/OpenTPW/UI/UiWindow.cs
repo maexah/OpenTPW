@@ -50,6 +50,13 @@ internal abstract class UiWindow
 	public bool ClosesParkScreen { get; protected init; }
 
 	/// <summary>
+	/// Whether a <see cref="Modal"/> window leaves the advisor on top of its dimmer rather than taking him under it
+	/// (<see cref="WindowStack.UnderDimmer"/>). The new player dialog does: he explains that very dialog while it is open
+	/// (<c>FrontEndLines.ExplainNewPlayer</c>), and the deviation that dims him is for the pause and options menus.
+	/// </summary>
+	public bool KeepsTheAdvisorOnTop { get; protected init; }
+
+	/// <summary>
 	/// Whether the game is paused while it is open. The original's message box (0x0047f020) and options
 	/// screen (OptionsScreen_Open, 0x004a3a30) ask for a pause as they open, through 0x004092a0; the new
 	/// player dialog does not.

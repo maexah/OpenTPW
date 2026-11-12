@@ -241,9 +241,10 @@ public class ParkGateTests
 	/// the close at 0x0051643b; docs/exe/park-gate.md, "The later close check"). The closed park's message 0x81, posted by
 	/// the door, is said on the next sweep's turn of his; that sweep lands on a multiple of 30, so the retry runs on it
 	/// too. No word either turn reads is written by the other, so the console's order is what shows it: his line, then
-	/// the gate's, both on tick 780, and the gate commanded shut.
+	/// the gate's, both on tick 780, and the gate commanded shut; then the free list's (0x00516654), which follows the retry.
 	/// </summary>
-	/// <remarks><b>Mutation:</b> the retry back before his turn (after the rides') logs the gate first and fails.</remarks>
+	/// <remarks><b>Mutations:</b> the retry back before his turn (after the rides') logs the gate first; the retry after
+	/// <c>FreeDeletedThings</c> logs the free list first; each fails.</remarks>
 	[TestMethod]
 	public void TheRetryIsLoggedAfterTheAdvisorSpeaksOnTheSameSweep()
 	{
@@ -264,10 +265,14 @@ public class ParkGateTests
 		gate.Set( "VAR_STATUS", 1 );
 		state.SetGameTick( 779 );
 
+		// An id deleted before the sweep is freed at its end, which logs: the retry comes before the free list.
+		state.DeleteThing( 9000 );
+
 		var lines = new List<string>();
 		Logger.LogDelegate listen = ( _, text ) =>
 		{
-			if ( text.StartsWith( "Park advisor: attempt=" ) || text.StartsWith( "Gate retry:" ) )
+			if ( text.StartsWith( "Park advisor: attempt=" ) || text.StartsWith( "Gate retry:" )
+				|| text.StartsWith( "Park: thing 9000 freed" ) )
 				lines.Add( text );
 		};
 		Logger.OnLog += listen;
@@ -275,11 +280,12 @@ public class ParkGateTests
 		finally { Logger.OnLog -= listen; }
 
 		Assert.AreEqual( 780, state.GameTick );
-		Assert.AreEqual( 2, lines.Count, string.Join( "\n", lines ) );
+		Assert.AreEqual( 3, lines.Count, string.Join( "\n", lines ) );
 		StringAssert.StartsWith( lines[0], "Park advisor: attempt=1 message=129 " );
 		StringAssert.Contains( lines[0], " tick=780 " );
 		StringAssert.StartsWith( lines[1], "Gate retry: " );
 		StringAssert.Contains( lines[1], " tick 780 " );
+		StringAssert.StartsWith( lines[2], "Park: thing 9000 freed" );
 		Assert.AreEqual( 0, gate["VAR_COMMAND"], "the retry commanded the gate shut" );
 	}
 

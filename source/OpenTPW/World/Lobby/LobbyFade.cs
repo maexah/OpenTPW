@@ -13,15 +13,17 @@ namespace OpenTPW;
 /// </para>
 /// <para>
 /// <b>The ease is per pass in the original</b> (an eighth of the gap, <c>SAR 3</c>, not scaled by its delta), so its speed is
-/// the frame rate's. Converted through <see cref="Time.SmoothingFactor"/> at <see cref="Rate"/> (rule 10): an eighth a pass at the
-/// 30 passes a second the original runs at (its cap, measured in Q670) is the same curve per second on any machine.
+/// the frame rate's. Converted through <see cref="Time.SmoothingFactor"/> at <see cref="Rate"/> (rule 10): an eighth a pass at
+/// 30 passes a second, the rate Q670 measured the original at under the harness's 30 fps cap. The game has no cap of its own
+/// (about 275 a second uncapped, <c>docs/exe/park-engine.md</c>), so its fade runs faster on a faster machine; 30 is our
+/// chosen reference, the same curve per second on any machine.
 /// </para>
 /// </summary>
 internal static class LobbyFade
 {
 	/// <summary>
 	/// How fast the fade closes on its target, per second: <c>-30 ln( 7/8 )</c>, the original's eighth of the gap per lobby pass
-	/// (<c>0x005d8cb0</c>) at its 30 passes a second. A cancel's lift from full black to an alpha of nought takes the
+	/// (<c>0x005d8cb0</c>) at our reference 30 passes a second. A cancel's lift from full black to an alpha of nought takes the
 	/// original's ~42 passes, about 1.4 s, at this rate.
 	/// </summary>
 	internal const float Rate = 4.0059f;
@@ -82,8 +84,9 @@ internal static class LobbyFade
 	internal static string Describe() => $"fade={Value:F4} fadeTarget={Wanted:F4} fadeAlpha={Alpha}";
 
 	/// <summary>
-	/// The black rectangle over the whole view, drawn after the world and before the interface, as the original's view draws it
-	/// before its interface. Nothing is drawn at alpha nought.
+	/// The black rectangle over the whole view, drawn after the world and before the interface. That order is ours and open:
+	/// the original's rectangle (<c>0x00576e54</c>) is <c>Render_DrawView</c>'s last draw, after its model lists, which carry the
+	/// advisor and the interface's meshes (<c>docs/exe/lobby.md</c>; Q1472). Nothing is drawn at alpha nought.
 	/// </summary>
 	internal static void Draw()
 	{

@@ -3019,8 +3019,10 @@ sale leaves the tool so for a click was not read. In OpenTPW an edit of a thing 
   `testme.objdump`: in mode 1 `d58` is set only with a red answer (`0x00535ba4`, `0x00535cc8`, `0x00535d57`), so an
   unrefused preview leaves no latch, and the click's verdict is the run's middle square's. It charges bare ground and a
   loose queue end a second time (`FUN_00535600` answers 1 for types 0 and 3 under op 1, and a path is the op's own type,
-  `0x005358db`), so one square of bare ground needs twice the path's price; a path is not `m_end` with the flag nought
-  (`0x00535afb`..`0x00535b1e`) and goes on to the track-corner test (`0x00535bd7`, red, `d58`) and then blue
+  `0x005358db`), so one square of bare ground is charged at least twice (the run's total `DAT_0081af4c` is not zeroed by
+  the pass, so the original's threshold depends on how often message `0x1e` comes, Q541; ours is twice the path's price);
+  a path is not `m_end` with the last-square flag and `DAT_00820aa4` both nought (`0x00535afb`..`0x00535b1e`; the pass
+  clears them, `0x005361fa`..`0x00536210`) and goes on to the track-corner test (`0x00535bd7`, red, `d58`) and then blue
   (`0x00535bfe`); a loose queue end is `m_link` again (`0x00535d06`, no flag read). So a path whose track record is a
   corner or junction, `m_end` in the preview, refuses the click. The pass clears `d48`, `d50`, `d58` and `DAT_00816d5c`
   at its start (`0x005234ec`..`0x0052350a`), so what a refusing click sets lasts until the next pass.

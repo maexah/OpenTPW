@@ -9,7 +9,9 @@ namespace OpenTPW.Tests;
 /// him"). While a modal window is shown, the frame's end (<see cref="Level.RenderOverTheWorld"/>) draws the overlays inside
 /// the interface's pass, the depth cleared first, just before that window (<see cref="WindowStack.UnderDimmer"/>), and not
 /// again on top; with none shown, on top as before. These drive a real <see cref="WindowStack"/> whose windows record their
-/// draws; what the dimmed advisor looks like is a photograph of the running game.
+/// draws; what the dimmed advisor looks like is a photograph of the running game. The one production call,
+/// <c>Level.Render</c> handing in its own stack, is not driven here: it is checked by the console's <c>windows</c> census
+/// ("overlays under a dimmer"), Q1460's run.
 /// </summary>
 [TestClass]
 public class AdvisorUnderDimmerTests
@@ -30,9 +32,11 @@ public class AdvisorUnderDimmerTests
 
 	private sealed class AWindow : UiWindow
 	{
-		public AWindow( WindowStack stack, List<string> drawn, string name, bool modal ) : base( stack )
+		public AWindow( WindowStack stack, List<string> drawn, string name, bool modal, bool keepsTheAdvisorOnTop = false )
+			: base( stack )
 		{
 			Modal = modal;
+			KeepsTheAdvisorOnTop = keepsTheAdvisorOnTop;
 			Root = new Recorder( drawn, name ) { Rect = new UiRect( 100, 100, 700, 600 ) };
 		}
 	}
@@ -75,9 +79,9 @@ public class AdvisorUnderDimmerTests
 		Screen.Size = _screen;
 	}
 
-	private AWindow Open( string name, bool modal )
+	private AWindow Open( string name, bool modal, bool keepsTheAdvisorOnTop = false )
 	{
-		var window = new AWindow( _stack, _drawn, name, modal );
+		var window = new AWindow( _stack, _drawn, name, modal, keepsTheAdvisorOnTop );
 		_stack.Open( window );
 		return window;
 	}
@@ -130,6 +134,41 @@ public class AdvisorUnderDimmerTests
 		Frame();
 
 		CollectionAssert.AreEqual( new[] { "depth", "advisor", "menu", "box", "depth", "previews", "warning", "pointer" }, _drawn );
+	}
+
+	/// <summary>
+	/// The new player dialog dims the screen but keeps the advisor on top, since he explains it while it is open; a message
+	/// box over it still takes him under its own dimmer, between the two.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the hook run for every modal window, the dialog's flag not read, fails this.</remarks>
+	[TestMethod]
+	public void TheNewPlayerDialogLeavesTheAdvisorOnTop()
+	{
+		Open( "dialog", modal: true, keepsTheAdvisorOnTop: true );
+
+		Frame();
+
+		CollectionAssert.AreEqual( new[] { "dialog", "depth", "previews", "warning", "advisor", "pointer" }, _drawn );
+
+		_drawn.Clear();
+		Open( "box", modal: true );
+
+		Frame();
+
+		CollectionAssert.AreEqual( new[] { "dialog", "depth", "advisor", "box", "depth", "previews", "warning", "pointer" }, _drawn );
+	}
+
+	/// <summary>The real new player dialog is a dimmed window that keeps him on top.</summary>
+	/// <remarks><b>Mutation:</b> the flag left off the dialog fails this.</remarks>
+	[TestMethod]
+	public void OnlyTheNewPlayerDialogKeepsHimOnTop()
+	{
+		FileSystem = GameData.Required();
+
+		var frontEnd = (FrontEnd)System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject( typeof( FrontEnd ) );
+		var dialog = new NewPlayerDialog( _stack, frontEnd, 0 );
+
+		Assert.AreEqual( (true, true), (dialog.Modal, dialog.KeepsTheAdvisorOnTop) );
 	}
 
 	/// <summary>

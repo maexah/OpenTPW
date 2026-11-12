@@ -23,7 +23,10 @@ namespace OpenTPW;
 /// </summary>
 public sealed record LobbyScript
 {
-	/// <summary>A park with no script at all, so a missing file degrades rather than throws.</summary>
+	/// <summary>
+	/// A park with no script at all; <see cref="Read"/> gives it rather than throwing, and <see cref="LobbyIsland"/> refuses an
+	/// island whose script names no models.
+	/// </summary>
 	public static readonly LobbyScript Empty = new();
 
 	/// <summary>This park's place in the lobby's running order.</summary>
@@ -198,7 +201,7 @@ public sealed record LobbyScript
 
 		if ( stream == null )
 		{
-			Log.Warning( $"No lobby script for '{themeName}' - it gets no name, weather or flyers" );
+			Log.Warning( $"No lobby script for '{themeName}' - its island cannot be built" );
 			return Empty;
 		}
 

@@ -2572,7 +2572,8 @@ public sealed partial class ParkPeople : Entity
 		// 0x0051643b..0x00516639; docs/exe/park-gate.md, "The later close check"). Nothing in the game tells this from
 		// the order before it: no word either turn reads is written by the other (his turn writes his own records, the
 		// tags and the speech; the retry writes the gate's command, which the gate's script reads on its next turn), so
-		// only the log's order shows it (ParkGateTests.TheRetryIsLoggedAfterTheAdvisorSpeaksOnTheSameSweep).
+		// only the log's order shows it, the advisor's line, the retry's, then the free list's
+		// (ParkGateTests.TheRetryIsLoggedAfterTheAdvisorSpeaksOnTheSameSweep).
 		RetryGateClose();
 
 		// The sweep's end: the ids of the things deleted in it go back on the free list (0x00516654..0x00516685), before the tail.
@@ -3269,14 +3270,18 @@ public sealed partial class ParkPeople : Entity
 	/// <summary>
 	/// The happiness, illness and hunger words of the region effects on the guest's cell, which their needs turn adds
 	/// (<c>FUN_004d8410</c> at <c>0x005016ba</c>, the cell of the thing's own bytes <c>+5</c> and <c>+7</c>: its position, not the cell
-	/// list it is linked into, as <see cref="PeepBehaviour.OnACountingCell(FixedVector)"/> reads it). A cell off the map has none.
+	/// list it is linked into, as <see cref="PeepBehaviour.OnACountingCell(FixedVector)"/> reads it). The bytes are packed as the
+	/// counting rule packs them (<c>0x004cd4e0</c>, <see cref="PeepBehaviour.CountingRecord"/>), so a position off the map reads
+	/// the cell they name. Past the map's last record none are read here, counted as <c>CELL_EFFECTS_OFF_MAP</c>: what the
+	/// original reads there is not known (docs/QUEUE.md Q1480).
 	/// </summary>
 	internal (short Happiness, short Illness, short Hunger) CellEffects( Peep peep )
 	{
-		var (x, y) = peep.Navigator.Position.Cell;
-
-		if ( (uint)x >= ParkWorld.MapSize || (uint)y >= ParkWorld.MapSize )
+		if ( PeepBehaviour.CountingRecord( peep.Navigator.Position ) is not var (x, y) )
+		{
+			Unimplemented.Report( "CELL_EFFECTS_OFF_MAP" );
 			return default;
+		}
 
 		var words = State.EffectsAt( x, y );
 

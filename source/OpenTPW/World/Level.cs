@@ -3499,9 +3499,10 @@ public class Level
 	/// </summary>
 	/// <remarks>
 	/// <b>A deviation (Q18, at Alexah's request):</b> while a dimmed window is drawn (the game menu, a message box, the
-	/// options screen, the file screens), the overlays are drawn inside the HUD's pass instead, just before that window
-	/// (<see cref="WindowStack.UnderDimmer"/>, the depth cleared first), so its dimmer covers the advisor as it covers the
-	/// park. The original draws him after the HUD always (<c>docs/exe/ui.md</c>, "The advisor on screen"). The interface
+	/// options screen, the file screens, and the park's map, which covers him whole; not the new player dialog, which he
+	/// explains, <see cref="UiWindow.KeepsTheAdvisorOnTop"/>), the overlays are drawn inside the HUD's pass instead, just
+	/// before that window (<see cref="WindowStack.UnderDimmer"/>, the depth cleared first), so its dimmer covers the advisor
+	/// as it covers the park. The original draws him after the HUD always (<c>docs/exe/ui.md</c>, "The advisor on screen"). The interface
 	/// draws with no depth test, so the clear cannot cut into the windows drawn after him.
 	/// </remarks>
 	internal static void RenderOverTheWorld( RootPanel hud, WindowStack? windows, Action clearDepth, Action previews, Action warning,

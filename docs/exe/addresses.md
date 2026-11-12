@@ -142,8 +142,11 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x0046b74c` | WndProc, WM_ACTIVATEAPP losing the focus: the pause FUN_004092a0( 1, 1 ), which puts the pause overlay up | OpenTPW.Common/Client/Window.cs  |
 | `0x0046bb0b` | Window procedure `FUN_0046b600`: `GetKeyState` for Shift, Ctrl and Alt at each key, before `UI_PostKey` | OpenTPW.Tests/ParkCamcorderKeyOnReleaseTests.cs OpenTPW.Tests/ParkEscapeOnReleaseTests.cs OpenTPW.Tests/ParkFullScreenViewTests.cs OpenTPW/Global/Input.cs  |
 | `0x0046c480` | Place-staff mode (type 5, vtable `0x006fea40`) MOVE: carries the candidate's sprite under the pointer and draws a red square over a cell the click would refuse | OpenTPW/World/Park/ParkStaffPool.cs  |
-| `0x0046c730` | Place-staff mode OnInstall: carry cursor 9, and a sprite of the candidate's kind in their costume | OpenTPW/World/Park/ParkStaffPool.cs  |
+| `0x0046c730` | Place-staff mode OnInstall: carry cursor 9, and a sprite of the candidate's kind in their costume | OpenTPW.Tests/ParkStaffPlacementTests.cs OpenTPW/World/Level.cs OpenTPW/World/Park/ParkStaffPool.cs  |
+| `0x0046c928` | Place-staff FUN_0046c8e0: the cell rule's tests, from (the track record after the 12/17 parent, flags 0x40, mType 0/1/3/9) | OpenTPW.Tests/ParkStaffPlacementTests.cs OpenTPW/World/Park/ParkStaffPool.cs  |
+| `0x0046c974` | Place-staff FUN_0046c8e0: the cell rule's tests, to here | OpenTPW.Tests/ParkStaffPlacementTests.cs OpenTPW/World/Park/ParkStaffPool.cs  |
 | `0x0046c9b9` | Place-staff FUN_0046c8e0: the candidate's costume byte (+0x11 of the hand's record) pushed to the constructor, here the handyman's | OpenTPW/World/Park/ParkPeople.cs  |
+| `0x0046cb76` | Place-staff FUN_0046c8e0: a refused cell handed to the inert logger at level 2, then return | OpenTPW/World/Park/ParkStaffPool.cs  |
 | `0x0046cdc0` | Place-worker mode (type 6) OnUninstall: when the hand still names a worker, puts them down on their own current cell with the drop's body | OpenTPW.Tests/ParkHandTests.cs OpenTPW.Tests/ParkLeaveTests.cs OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004702ea` | FUN_004702d0, local x parent: each element the third product plus the second plus the first; the translation row adds the parent's last | OpenTPW/World/Ride/RideNodes.cs  |
 | `0x00470e90` | | OpenTPW.Files/Formats/Model/AnimationFile.cs  |

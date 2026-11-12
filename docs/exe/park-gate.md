@@ -53,10 +53,13 @@ position, not automatically counted because they are riding.
 turn, a new guest's first state and the staff window's PICK UP (`ParkStaffWindow.CanBePickedUp`, the call at
 `0x00505bf8`, through its static form) all ask it. The needs turn's region effects read the same position bytes
 (`0x00501691`, `0x0050169d`; `ParkPeople.CellEffects`). A position off the map reads the cell its two bytes pack to, as the
-original's does (Q1333, `PeepBehaviour.CountingRecord`): x 128 to 255, or a whole part below nought (its low byte),
-reads a cell of the next row; a pack past the map's last record (a y byte of 128 or more) counts nobody here and is
-counted as `COUNTING_CELL_OFF_MAP`, since what the original reads past its cell array is not known. That the bytes are
-read unsigned is the item's reading of `0x004fa994`..`0x004fa9b6` (Q1332), not re-read in Ghidra by Q1333. Dead by
+original's does (Q1333, `PeepBehaviour.CountingRecord`): the bytes are zero-extended (`0x004fa990`..`0x004fa997`, `xor`
+then `mov al`/`mov dl`; the needs turn's `0x0050168f`..`0x0050169d` the same), so x 128 to 255, or -1 to -128 (its low
+byte), reads a cell of the next row, and further out the low byte wraps again (-129 to -256 its own row). A pack past
+the map's last record (a y byte of 128 or more) counts nobody here and is counted as `COUNTING_CELL_OFF_MAP`, and the
+region effects there read none (`CELL_EFFECTS_OFF_MAP`), since what the original reads past its array of 68-byte records
+is not known (Q1480). The region effects off the map read the cell the same pack names (`0x004cd4e0` packs, `0x004d8410`
+masks to 16 bits and indexes; the review of run 22). Dead by
 content in the stock Lost Kingdom park: every person in `Easymode.TPWI` and every arrival cell is on the map
 (`CountingCellTests`), and a 150 s off-screen run of it (Q1333, its output not kept) logged no wrapped read (the
 line `Counting cell: a position off the map at ...`) and counted no `COUNTING_CELL_OFF_MAP`.

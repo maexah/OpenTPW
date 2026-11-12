@@ -73,6 +73,17 @@ public sealed class LobbyIsland : Entity
 	/// </summary>
 	private readonly IReadOnlyDictionary<string, Texture>? _sign;
 
+	/// <summary>
+	/// The name the island's sign letters: the park's <c>THEMENAMES.str</c> row (<see cref="ParkFixedItems.ParkDisplayName"/>),
+	/// or, where that has none, the ISLAND() line's own name.
+	/// </summary>
+	internal static string ShownName( string themeName, LobbyScript script )
+	{
+		var shown = ParkFixedItems.ParkDisplayName( themeName );
+
+		return shown.Length > 0 ? shown : script.ParkName;
+	}
+
 	public LobbyIsland( Vector3 _position, string themeName )
 	{
 		Position = _position;
@@ -82,8 +93,7 @@ public sealed class LobbyIsland : Entity
 
 		Script = LobbyScript.Read( themeName );
 
-		var shown = ParkFixedItems.ParkDisplayName( themeName );
-		ParkName = shown.Length > 0 ? shown : Script.ParkName;
+		ParkName = ShownName( themeName, Script );
 
 		// The two models are the ISLAND() line's folder, third and fourth names (the original builds one island per line,
 		// 0x005dfa60). Ours builds the four islands whatever their scripts hold (Level.SetupEntities), so a park whose

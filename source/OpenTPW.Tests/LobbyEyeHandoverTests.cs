@@ -299,7 +299,7 @@ public class LobbyEyeHandoverTests
 	/// An island on a stand: at (600, 400, 0), its camera target 12.5 above. The camera reads it as the lobby's only island
 	/// and reads the settings the shipped lobby.txt gives (spin radius 70, vertical offset 20, field of view 100).
 	/// </summary>
-	private static LobbyCameraMode ACamera( out LobbyIsland island )
+	internal static LobbyCameraMode ACamera( out LobbyIsland island )
 	{
 		var script = (LobbyScript)RuntimeHelpers.GetUninitializedObject( typeof( LobbyScript ) );
 		LobbyCountedGapsTests.SetField( script, "<CameraHeight>k__BackingField", 12.5f );

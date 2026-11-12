@@ -1041,6 +1041,11 @@ public static class ParkPathBuilding
 	/// is blue rather than <c>m_end</c>, and is red where its track record is a corner or junction (<c>0x00535bd7</c>), which
 	/// the preview's <c>m_end</c> answered before asking. In mode 1 <c>d58</c> is set only with a red answer, so the pass
 	/// leaves no latch for it. docs/exe/park-engine.md, "The unanchored click".
+	/// <para>
+	/// <b>The threshold is ours:</b> the run's total here is the strip's own (<see cref="QueueSquare.Owed"/>), so bare
+	/// ground is refused on a balance below twice the path price; the original's total <c>DAT_0081af4c</c> is zeroed only
+	/// by message <c>0x1e</c>, so its threshold depends on how often that comes (docs/QUEUE.md Q541).
+	/// </para>
 	/// </remarks>
 	internal static string FirstPathClick( ParkState state, IParkInitialState park, QueueSquare square, int price )
 	{

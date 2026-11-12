@@ -24,10 +24,15 @@ Read in a private copy of the `SimThemePark` Ghidra project, with all
   `0xff1e96ff` for 22 and 23. `FUN_004861e0` unpacks red from the low byte, then
   green and blue: **128/128/128** and **255/150/30**. The text table starts
   at `0x0074fbc0`; `FUN_004861d0` supplies the list's colour.
-- The ride window's status label (`0x3e25`) does not take that colour. It is made once by the window's vtable
-  slot `+0x10` (ride `0x004ad720`, shop `0x004afaa0`, sideshow `0x004b0ed0`): a text control on the base's `+0x1c`,
-  aligned (1, 1), font slot 8 (`0x00485a70( 8 )`, the list headings' slot), colour (0, 0, 0, 255), then hidden.
-  `FUN_004ade40` sets its text only, never its font or colour (fork watch 2026-11-12, verify-ui-hud.md H3; Q213).
+- The ride window's status label (`0x3e25`) takes that colour too. It is made once by the window's vtable
+  slot `+0x10` (ride `0x004ad720`, shop `0x004afaa0`, sideshow `0x004b0ed0`), which the base `0x0048cea0` calls
+  (`0x0048cf3a`) before the load: on the base's `+0x1c`, hidden, then a label aligned (1, 1), font slot 8
+  (`0x00485a70( 8 )`, the list headings' slot), colour (0, 0, 0, 255), with no text. When the status changes,
+  `FUN_004ade40` (`0x004ae0e0`..`0x004ae0f6`; the shop's `0x004b01d0` at `0x004b0633`) calls slot `+0x24`,
+  `0x0048d160` in all three windows, which shows or hides the label (`0x0065d9dd( status != 0 )`) and calls
+  `FUN_004861e0`, colouring it from `0x0074fb50` (`0x0048621b`) before its text. `0x0048d160` is
+  `FUN_004861e0`'s only caller (the list uses `FUN_004861d0`), so the black is never seen; entry 2,
+  BROKEN DOWN, is (255, 50, 30). Font slot 8 stays (review of run 22, VERIFY-18; Q213).
 - Condemned, missing/unfinished track, maintenance and breakdown statuses
   precede ordinary closure. Exit-disconnected status 24 also precedes it, and it
   is asked whatever the open word: the routine reads its second argument (every

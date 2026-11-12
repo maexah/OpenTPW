@@ -344,8 +344,9 @@ internal sealed class WindowStack : Panel
 	/// <summary>
 	/// What is drawn under the dimmer: run once, in this frame's draw, just before the first modal window neither hidden
 	/// nor put away (<see cref="UiWindow.Modal"/>: the LOLIGHT backdrop, or the park's map over the whole screen), with
-	/// that window; not run when no such window is drawn. The level hands it the advisor's pass, so the dimmer and the
-	/// window on it cover him (Q18, a deviation at Alexah's request: <c>docs/exe/ui.md</c>, "Pausing him").
+	/// that window, passing over one that <see cref="UiWindow.KeepsTheAdvisorOnTop"/>; not run when no such window is
+	/// drawn. The level hands it the advisor's pass, so the dimmer and the window on it cover him (Q18, a deviation at
+	/// Alexah's request: <c>docs/exe/ui.md</c>, "Pausing him").
 	/// </summary>
 	internal Action<UiWindow>? UnderDimmer { get; set; }
 
@@ -649,7 +650,7 @@ internal sealed class WindowStack : Panel
 				continue;
 
 			// What sits under the dimmer, once, before the first dimmed window.
-			if ( window.Modal && under != null )
+			if ( window.Modal && !window.KeepsTheAdvisorOnTop && under != null )
 			{
 				under( window );
 				under = null;

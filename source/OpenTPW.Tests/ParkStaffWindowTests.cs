@@ -817,10 +817,11 @@ public class ParkStaffWindowTests
 	/// <b>An empty-hand path click leaves the latch its own pass over the clicked cell sets</b>, as the original's hover passes
 	/// between the press and the release do (Q535): bare ground (10,10), one cell at 20, with 19 in the bank refuses on the
 	/// money (<c>0x00535931</c>) and leaves <see cref="ParkBuildMode.RefusalLatched"/> set, though arming the tool cleared it;
-	/// with exactly 20 the cell is affordable but the anchoring click asks twice it (Q1124) and anchors nothing; with 40 the
-	/// click anchors and the latch is clear.
+	/// with exactly 20 the cell is affordable but the anchoring click asks twice it (Q1124) and anchors nothing, as with 39,
+	/// one short of twice; with 40 the click anchors and the latch is clear.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> <c>RunPath</c> not storing its latch; the money test <c>Balance &lt;= owed</c>.</remarks>
+	/// <remarks><b>Mutations:</b> <c>RunPath</c> not storing its latch; the money test <c>Balance &lt;= owed</c>;
+	/// <c>RunPath</c>'s old inline anchor put back, or <c>FirstPathClick</c> handed a price of nought (each anchors at 20).</remarks>
 	[TestMethod]
 	public void AnEmptyHandPathClickLeavesTheLatchOfItsOwnPass()
 	{
@@ -841,7 +842,13 @@ public class ParkStaffWindowTests
 			"path: (10,10) would bring the run to 40 against a balance of 20 - nothing anchored, the path tool stays out" );
 		Assert.AreEqual( ParkBuildMode.Path, ParkBuildMode.Current );
 
-		state.Spend( -20 );
+		state.Spend( -19 );
+		Assert.AreEqual( 39, state.Balance );
+		StringAssert.Contains( Level.Current.ClickWorldAt( 10, 10, 0 ),
+			"path: (10,10) would bring the run to 40 against a balance of 39 - nothing anchored, the path tool stays out" );
+		Assert.AreEqual( (ParkBuildMode.Path, 0), (ParkBuildMode.Current, ParkBuildMode.Pending.Count) );
+
+		state.Spend( -1 );
 		Assert.AreEqual( 40, state.Balance );
 		Assert.AreEqual( "world click: path: anchored at (10,10) - click again to lay a run", Level.Current.ClickWorldAt( 10, 10, 0 ) );
 		Assert.IsFalse( ParkBuildMode.RefusalLatched, "one cell at 20 against 40 is affordable" );

@@ -123,7 +123,7 @@ belongs to or at the end. Grep it by area or Q-number; never read it whole.
   edit of a thing with no entrance) shows one square under the pointer and anchors as the original's first click does, on a fresh
   list with the click counter at nought, refusing a path and a second cell's price (Q1046; off-screen, `q1046/run1-fixed`: after
   the path tool's run, a queue run and two Backspaces end `nothing laid since the queue tool anchored`, the path left whole).
-  The path tool's first click asks its own verdict the same way, as a run's middle square: bare ground needs twice the path's 20,
+  The path tool's first click asks its own verdict the same way, as a run's middle square: bare ground needs twice the path's 20 here (the original's threshold depends on Q541),
   and a path anchors free (Q1124; off-screen, `q1124/run2-fixed`: at 39 and 30 `would bring the run to 40 ... nothing anchored`,
   the tool kept; at 40 anchored, and a path at 0).
   The path and queue tools' third anchored click since that reset posts the advisor's Backspace tip (`0xd6`, sample 464), and a change

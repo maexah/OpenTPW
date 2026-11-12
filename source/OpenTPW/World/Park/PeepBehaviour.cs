@@ -1648,7 +1648,8 @@ public sealed class PeepBehaviour
 	/// </summary>
 	/// <remarks>
 	/// The two bytes are packed as they are, <c>y * 128 + x</c> (<see cref="CountingRecord"/>), so a position off the
-	/// 128 x 128 map reads the cell its bytes name: x 128 or more, or below nought, reads a cell of another row. A pack
+	/// 128 x 128 map reads the cell its bytes name: x 128 to 255, or -1 to -128 (its low byte), reads a cell of the next row,
+	/// and further out the low byte wraps again. A pack
 	/// past the map's last record (a y byte of 128 or more) reads no cell here, counts nobody and is counted as
 	/// <c>COUNTING_CELL_OFF_MAP</c>.
 	/// </remarks>

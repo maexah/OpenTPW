@@ -245,8 +245,10 @@ internal sealed class ParkObjectWindow : UiWindow, IStatusBox, IObjectWindowStep
 			RightClicked = GoToThing
 		} );
 
-		// FUN_004ad720 makes the status box once: hidden, aligned (1, 1), font slot 8 (0x00485a70( 8 )), black. ShowTheDoor
-		// supplies the current warning; FUN_004ade40 sets its text only, never its font or colour (docs/exe/ride-window-door.md).
+		// FUN_004ad720 makes the status box once: hidden, aligned (1, 1), font slot 8 (0x00485a70( 8 )), black. When the
+		// status changes FUN_004ade40 calls slot +0x24 (0x004ae0f6 -> 0x0048d160), which shows it for a nonzero status and
+		// calls FUN_004861e0, colouring it from 0x0074fb50 before its text, so the black is never seen; ShowTheDoor does
+		// the same (docs/exe/ride-window-door.md).
 		_broken = _preview.Add( new UiControl
 		{
 			Id = 0x3e25,

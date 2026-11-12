@@ -1,5 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 namespace OpenTPW.Tests;
@@ -94,7 +95,10 @@ public class ValuesFromDataTests
 		Log ??= new();
 		FileSystem = GameData.Required();
 
-		Assert.AreEqual( 38, GameOptions.DuckingLevel( new SettingsFile( "/sound.sam" ) ) );
+		// The row itself, so a file without it cannot pass on the fallback, which is 38 too.
+		var file = new SettingsFile( "/sound.sam" );
+		Assert.AreEqual( "38", file.Entries.Single( pair => pair.Key == "SoundInfo.DUCKINGLEVEL" ).Value, "the shipped row" );
+		Assert.AreEqual( 38, GameOptions.DuckingLevel( file ) );
 		Assert.AreEqual( 0.38f, GameOptions.DuckLevel, 1e-6f, "the advisor's duck" );
 	}
 }

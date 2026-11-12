@@ -53,6 +53,7 @@ internal sealed class NewPlayerDialog : UiWindow
 		_frontEnd = frontEnd;
 		_slot = slot;
 		Modal = true;
+		KeepsTheAdvisorOnTop = true;
 
 		Root = Backdrop();
 

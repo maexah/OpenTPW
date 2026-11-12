@@ -126,4 +126,18 @@ public class LobbyScriptIslandsTests
 
 		Assert.AreEqual( "Lost Kingdom", LobbyScript.Read( "Jungle" ).ParkName, "a theme name in capitals finds the same file" );
 	}
+
+	/// <summary>
+	/// <b>The sign letters the park's THEMENAMES.str row over its ISLAND() line's name</b>: Fantasy's line names it
+	/// "Fantasy" and the sign reads "Wonder Land" (row 2); a theme with no row keeps its line's name.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the choice reversed (the line's name over the row) reads "Fantasy" and fails this.</remarks>
+	[TestMethod]
+	public void TheIslandsSignTakesTheThemeNamesRow()
+	{
+		var script = ReadShipped( "fantasy" );
+
+		Assert.AreEqual( "Wonder Land", LobbyIsland.ShownName( "Fantasy", script ) );
+		Assert.AreEqual( "Fantasy", LobbyIsland.ShownName( "Nowhere", script ), "no row: the line's own name" );
+	}
 }
