@@ -206,8 +206,8 @@ internal sealed class WindowStack : Panel
 	/// </summary>
 	private object? _pointed;
 
-	/// <summary>The row <see cref="_pointed"/> posted, so a control's row changed under the pointer is posted too.</summary>
-	private int _pointedRow = -1;
+	/// <summary>The <see cref="UiControl.HelpText"/> <see cref="_pointed"/> had when posted, so a row changed under the pointer is posted too.</summary>
+	private int _pointedHelp = -1;
 
 	/// <summary>Whatever is under the pointer that is neither a control nor the view: its row is none.</summary>
 	private static readonly object Background = new();
@@ -600,15 +600,11 @@ internal sealed class WindowStack : Panel
 		// A layer laid over the view is the control there, whose row is none (docs/exe/hud.md, "The help bar in first person").
 		var pointed = hit ?? (Covered || ModalUp || OnParkScreen( mouse.X, mouse.Y ) ? Background : Layer);
 
-		// Ours: a control's row changed under a pointer at rest is posted at once. The original posts the hovered control's
-		// row again when a button with flag 0x10 is let go (0x10004: 0x00669172 calls the sink's +0x1c, 0x00492320); whether
-		// it posts at any other change is not decoded (docs/exe/hud.md, "The help bar holds one posted row").
-		if ( pointed != _pointed || (hit != null && hit.ShownHelp != _pointedRow) )
-		{
-			_pointed = pointed;
-			_pointedRow = hit?.ShownHelp ?? -1;
-			PostHelp( _pointedRow, [] );
-		}
+		// Ours: a control's HelpText changed under a pointer at rest is posted at once; a change of its state alone is not, as a
+		// press posts nothing (0x10005). The release of a button with flag 0x10 posts in Release (docs/exe/hud.md, "The help
+		// bar holds one posted row").
+		if ( pointed != _pointed || (hit != null && hit.HelpText != _pointedHelp) )
+			PostPointed( pointed, hit );
 
 		// A screen's own post, from its frame message: the buy screen's row for the item under the pointer.
 		foreach ( var window in _windows.ToArray() )
@@ -622,6 +618,14 @@ internal sealed class WindowStack : Panel
 
 		WorldHelpPost = null;
 		_helpBar.Update( HelpRow, HelpValues );
+	}
+
+	/// <summary>Posts the row of what the pointer is on, the control's <see cref="UiControl.ShownHelp"/> or -1.</summary>
+	private void PostPointed( object? pointed, UiControl? hit )
+	{
+		_pointed = pointed;
+		_pointedHelp = hit?.HelpText ?? -1;
+		PostHelp( hit?.ShownHelp ?? -1, [] );
 	}
 
 	/// <summary>Posts row <paramref name="row"/> to the help bar, or empties it with -1 (<c>FUN_004924b0</c>).</summary>
@@ -952,6 +956,8 @@ internal sealed class WindowStack : Panel
 		if ( pressed != hit || pressed is UiButton { Enabled: false } or UiRepeatButton { HasRepeated: true } )
 			return;
 
+		var wasDown = pressed is UiButton { IsDown: true };
+
 		// A button tells its parent it was clicked, and UI_Init's hook on every message (0x00485780)
 		// clicks on that message whoever it was for. The purple buttons are not buttons to the
 		// original - they take the pointer themselves and tell nobody - so they are silent.
@@ -966,6 +972,17 @@ internal sealed class WindowStack : Panel
 		}
 
 		pressed.Clicked?.Invoke();
+
+		// The release of a button with flag 0x10 posts the hovered control's row as its state now stands (0x10004: the flip at
+		// 0x00669151/0x0066915f, then the sink's +0x1c at 0x00669172). A group's option that was already down is let go to state
+		// 0 there and put down again by the group after the post (0x0066a468), so its op 0x11 row stands until the pointer leaves.
+		if ( pressed is UiButton { HelpWhenOn: not null } posted && (posted.Toggles || posted.Parent is UiRadioGroup) )
+		{
+			PostPointed( posted, posted );
+
+			if ( wasDown && posted.Parent is UiRadioGroup )
+				PostHelp( posted.HelpText, [] );
+		}
 	}
 
 	/// <summary>

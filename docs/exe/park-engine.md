@@ -3229,7 +3229,11 @@ Bounce, every square texture 1 with walls over the ride, cursor 8. **OpenTPW** (
 fourteen in the same order on the same cells, puts the thing down at the centred picture's cell plus the turned map offset (`0x00529f74`), and wears `c_place` and
 `c_noplace`; the glide halves the distance each thirtieth of a second rather than each rendered frame, a said deviation.
 Not built: a track ride's first cells' squares (`CARRY_PREVIEW_TRACK_START`), and the latch the placer sets for an end
-facing off the map (`CARRY_PLACER_OFF_MAP_LATCH`, Q1412); the passes' money latch is built (Q536, `ParkBuilding.CarryPassLatched`).
+facing off the map (`CARRY_PLACER_OFF_MAP_LATCH`, Q1412), and the cell verdict's own latch (`FUN_00535670( 4, 0 )`: `d50` 1 on
+another thing's cell whose overwrite priority is not below the carried item's, `0x00535d95`; on a boundary piece, track `0x19`,
+`0x005358c0`; through `d58` from a type `0x15` cell or a track corner, `0x0053588e`; after a refused test the draw pass judges
+every square again with argument 1, `0x00533927`, so any judged cell latches; counted `CARRY_PASS_CELL_REFUSAL_LATCH`); the
+passes' money latch is built (Q536, `ParkBuilding.CarryPassLatched`).
 
 **`data/generic/dynamic/garrow.MD2` and `rarrow.MD2` are not markers and are never drawn.** They are a
 model version (`0x18`/`0x17`) the one `.md2` reader `FUN_0046d6d0` refuses — it frees and returns null

@@ -20,7 +20,8 @@ namespace OpenTPW.UI;
 /// </para>
 /// <para>
 /// Each toggle's help (358, 359) is its op 0x11 row and its op 0x12 row is -1, so the help bar is empty over the chosen
-/// one and shows the row over the other, or over one held down (<see cref="UiButton.HelpWhenOn"/>).
+/// one, held down or not, and shows the row over the other; a click on the chosen one shows its row until the pointer
+/// leaves (<see cref="UiButton.HelpWhenOn"/>).
 /// </para>
 /// <para>
 /// The tick (0x004a6b80) takes the trailing spaces off the name and does nothing if that leaves it

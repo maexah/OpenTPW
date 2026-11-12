@@ -44,7 +44,7 @@ The stream argument is **16-bit opcodes compiled into the executable**, not a fi
     op 0xe,f [rect] like 6/7
     op 0x10  [short n][rect] type 6, id n|0x11100000, RECURSE
     op 0x11  [dword] the UIHELPTEXT row
-    op 0x12  [dword] the help row a toggle shows while it is on (the button class's getter `0x00669410`: state byte `+0x138` == 1 gives `+0x94`, else `+0x90`; -1 posts the empty text; fork watch 2026-10-28, verify-hz-ui-hud L3). Ours: `UiButton.HelpWhenOn`, the rule in `UiButton.ShownHelp`; carried so far by the new player dialog's toggles alone (-1 each, Q772), every other button null and shown its op 0x11 row in every state
+    op 0x12  [dword] the help row a toggle shows while it is on (the button class's getter `0x00669410`: state byte `+0x138` == 1 gives `+0x94`, else `+0x90`; -1 posts the empty text; fork watch 2026-10-28, verify-hz-ui-hud L3). No post reads the held state: a press (`0x10005`) posts nothing, and the pointer coming on posts (`0x006692b2`) before it sets the held bit (`0x0066930f`), so the bar shows the op 0x12 row over a button that is on, held or not. Ours: `UiButton.HelpWhenOn`, the rule in `UiButton.ShownHelp`; carried so far by the new player dialog's toggles alone (-1 each, Q772). Every other button is null and shown its op 0x11 row in every state, ours' deviation where its layout gives an op 0x12 row: the buy, hire and staff screens' tabs and the all-items tabs (op 0x12 -1), the call-mechanic button `0x3e36` (-1) and the entry-price door `0x4f3b1` (193) show their op 0x11 row while on, and the patrol switch `0x510` (87) is Q1444's; the ride window's door `0x3e38` (13 / 12) and a shop's switch `0xc082` (31 / 30) carry it by swapping their `HelpText` with the state
 
 ### Operand sizes, read out of `UI_ParseTreeStream` rather than inferred
 
@@ -1812,12 +1812,16 @@ button's; from Buy onto a hoarding with the ground left last, 441 again; with th
 stood, and stood after Escape. Here
 `WindowStack.HelpRow` is the one row: a change of what is under the pointer (`WindowStack._pointed`: a control, a modal
 window's, a park screen's body or the cover, or the view) posts the control's row or -1, then the view's own post
-(`WindowStack.WorldHelpPost`, the park's `Level.HoverPosted`) is taken while the pointer is on the view. Ours posts a
-control's row again when it changes under a resting pointer. The original posts the hovered control's row again when a
+(`WindowStack.WorldHelpPost`, the park's `Level.HoverPosted`) is taken while the pointer is on the view. The original posts the hovered control's row again when a
 button whose flags (`FUN_0065d57c`) hold `0x10` is let go: the button class's proc, message `0x10004` (jump table
 `0x0066938c`, case `0x006690d6`), calls the sink's `+0x1c` at `0x00669172`, which is `0x00492320` and re-runs
 `FUN_00492070` for the sink's control (`+0x14`) while `+4` is set. Whether it posts again at a change made without a
-release is not decoded. Measured here
+release is not decoded. A press posts nothing (`0x10005` to the button, `0x00669003`..`0x006690c5`), and the leave of a held
+button clears its held bit (`0x00669278`), so the pointer coming back posts state 1's row. The release of a toggle that is
+a radio group's chosen option sets state 0, posts (op 0x11's row) and only then is put down again by the group with no post
+(`0x0066a468`), so that row stands until the pointer leaves. Ours posts a control's row again when the pointed control or
+its `HelpText` changes (the doors' and the gadget's swaps), never for its state alone, and `WindowStack.Release` posts the
+row after the release of a button that carries `HelpWhenOn` and is a switch or a group's option (Q772, review 22). Measured here
 (`q473/run1`, 10 of 10, and main's build `q473/ctl1`, which kept 441 over the hoarding and emptied the bar under the
 open screen).
 
@@ -3636,12 +3640,19 @@ withdrawals of 75; main's build counted `MARKER_WALL_CLEARS_REFUSAL_LATCH` 3 tim
 clear the latch. Not built: between the press and the release the original runs mode-1 hover passes over the clicked
 cell, so an empty-hand click on one unaffordable cell leaves `d50` 1 (the money arm, `0x00535931`) where ours leaves it 0;
 and the placer sets it on an entrance or exit facing off the map (`0x005295e8`, `0x00529730`; the arms not re-derived,
-counted `CARRY_PLACER_OFF_MAP_LATCH`, Q1412). **Built from the listing** (Q536, in no run of the original): mode 4's
-passes (`0x005235bb`..) set `d50` and `d5c` each tick while the item's price is above the bank's balance (`0x00523658`;
-the golden-ticket cost `+0xc4` unpaid sets neither, `0x005235e6`..`0x0052360b`), `ParkBuilding.CarryPassLatched` from
-the markers' frame; a console run on the stock park read `tool`'s latch 1 with a moved Belly Bounce ($ 500) held at a
-balance of 473 and 499, 0 at 500, 1 after the drop, and 0 then 1 for a carried one at 100000 then 100 (a carried
-thing's own squares are built, Q633; whether a moved ticket ride's pointer agrees is Q1413). In no game run: a refused queue or patrol click before the edges (a queue pass then Escape was, Q538), a track's refusal (no shipped
+counted `CARRY_PLACER_OFF_MAP_LATCH`, Q1412); and the cell verdict's own latch in the carry's and the move's passes
+(`FUN_00535670( 4, 0 )`: another thing's cell whose overwrite priority is not below the carried item's, `0x00535d95`; a
+boundary piece, `0x005358c0`; `d58` from a type `0x15` cell or a track corner copied in, `0x0053588e`; the draw pass's second
+verdict on every square, `0x00533927`), counted `CARRY_PASS_CELL_REFUSAL_LATCH`, so ours' edges go blue after the let-go where
+the original's stay red. **Built from the listing** (Q536, in no run of the original): mode 4's
+passes (`0x005235bb`..) set `d50` and `d5c` each tick while the item's price is above the bank's balance (`0x0052365c`;
+the golden-ticket cost `+0xc4` unpaid sets neither, `0x005235e6`..`0x0052360b`); a move is mode `0x3b`'s pass
+(`0x00523940`), priced in full (`0x0052398b`) with no ticket exemption, and latches through the cell verdict's money arm
+(`0x00535931`, `d5c` `0x0053593f`), which wants a price that is not nought (`0x0053590a`) and is never reached on a cell
+outside the park or NOMODIFY. `ParkBuilding.CarryPassLatched` takes both from the markers' frame; a console run on the
+stock park read `tool`'s latch 1 with a moved Belly Bounce ($ 500) held at a balance of 473 and 499, 0 at 500, 1 after
+the drop, and 0 then 1 for a carried one at 100000 then 100 (a carried thing's own squares are built, Q633; the moved
+ticket ride's pointer and latch in the original are Q1413). In no game run: a refused queue or patrol click before the edges (a queue pass then Escape was, Q538), a track's refusal (no shipped
 track reaches the path tool here; tested), Full Simulation (not
 asked: the locators are either mode's), the other three themes.
 

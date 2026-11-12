@@ -13810,14 +13810,20 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   class's help getter `0x00669410` answers `+0x94` (op 0x12) when its state byte `+0x138` is exactly 1 (on, not held) and `+0x90`
   (op 0x11) otherwise (Q684's note has the chain). The new player dialog's tree `0x753f50` gives every control op 0x12 -1 and the
   two mode toggles (`0x70d` Instant Action, `0x70e` Full Simulation, flags `0x11`) op 0x11 358 and 359, so the original's help bar
-  shows 358 or 359 over the toggle that is OFF (and while one is held down) and the empty text over the chosen one. Ours
+  shows 358 or 359 over the toggle that is OFF and the empty text over the chosen one (held down or not; corrected below). Ours
   (`NewPlayerDialog.cs`, `HelpText` 358 and 359 on both) shows the row on either, now marked at the site. Build: the help row of
   the chosen toggle empty. Confirm: first shoot the original's dialog with the pointer on each toggle in each mode (the help bar's
   text), predicting the chosen one empty; then ours the same, the bug put back.
   Built: the button class's getter rule (`UiButton.ShownHelp`): a button that carries its layout's op 0x12
-  (`UiButton.HelpWhenOn`) answers it while on and not held (`IsDown` and not `Pressed`, state byte exactly 1) and its op
+  (`UiButton.HelpWhenOn`) answers it while on and its op
   0x11 row otherwise; a button that does not carry one (null, every other screen's) keeps `HelpText` in every state, as
-  before. The window stack posts `ShownHelp`, so a pick's release re-posts at once (as `0x00669172` does). The dialog's two
+  before. The window stack posts `ShownHelp`, so a pick's release re-posts at once (as `0x00669172` does).
+  **Corrected by the run 22 review (VERIFY-15):** "while one is held down" above and the held rule were wrong of the
+  original: no post reads the held bit (a press posts nothing, `0x10005`; the pointer coming on posts before setting it,
+  `0x006692b2`/`0x0066930f`), so the chosen toggle shows the empty bar held or not, and its re-click's release posts state
+  0's row, 359, before the group puts it down again (`0x0066a468`), which stands until the pointer leaves. Ours now
+  ignores the held state, re-posts only on a change of control or `HelpText`, and posts at such a release
+  (`WindowStack.Release`); the test's held step expects -1 and the let-go 359. The dialog's two
   toggles carry 358 and 359 as op 0x11 and -1 as op 0x12, taken from this item's text (`0x753f50` not read here: no
   Ghidra, no `testme.exe` in the lane). The console's lobby `pointer` now also prints the posted help row, its text and
   `(down)` for a button that is down. Tests: `AToggleShowsItsSecondRowOnlyWhileItIsOnAndNotHeld` (no game) and

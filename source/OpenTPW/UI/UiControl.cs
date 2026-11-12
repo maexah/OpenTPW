@@ -417,14 +417,16 @@ internal class UiButton : UiControl
 	public bool Toggles { get; init; }
 
 	/// <summary>
-	/// The row it shows while it is on, its layout's op 0x12, or null where this game does not carry the layout's op 0x12
-	/// and the button shows <see cref="UiControl.HelpText"/> whatever its state. The button class's getter (<c>0x00669410</c>;
-	/// <c>docs/exe/hud.md</c>, the tree stream's op 0x12) answers this row when the state byte is exactly 1, on and not held
-	/// down, and the op 0x11 row otherwise; -1 is the empty bar.
+	/// The row it shows while it is on, its layout's op 0x12; -1 is the empty bar. The button class's getter (<c>0x00669410</c>;
+	/// <c>docs/exe/hud.md</c>, the tree stream's op 0x12) answers it when the state byte is exactly 1 and the op 0x11 row
+	/// otherwise, and no post reads the held state: a press posts nothing and the pointer coming on posts before it sets the
+	/// held bit, so the bar shows this row over a button that is down, held or not. <b>Ours:</b> null where this game does not
+	/// carry the layout's op 0x12, so the button shows <see cref="UiControl.HelpText"/> whatever its state - a deviation for a
+	/// button whose layout gives one; the ride window's and a shop's doors carry it by swapping their <c>HelpText</c> instead.
 	/// </summary>
 	public int? HelpWhenOn { get; init; }
 
-	internal override int ShownHelp => HelpWhenOn is { } on && IsDown && !Pressed ? on : HelpText;
+	internal override int ShownHelp => HelpWhenOn is { } on && IsDown ? on : HelpText;
 
 	/// <summary>Whether a click on it tells its parent, and so plays a click - see <see cref="UiSliderThumb"/> for one that does not.</summary>
 	internal virtual bool Clicks => true;

@@ -1583,12 +1583,12 @@ filed the items that cite it.
   `move 13 48 31` (refused: "costs 500 and the park has 473", the Belly Bounce held), then `drop`. Predict, and photograph
   beside `strip`'s `| patrol N` markers: the edges red (1) while it is held and still red after the drop (`tool` latch 1);
   blue again once a tool is armed and put away. If the original is to hand, read `[0x00816d50]` at the same steps.
-- [ ] **Q1413. A moved ticket ride's hover: latch and pointer.** From Q536. The carry's pass skips its money test for a
-  ride with a golden-ticket cost not yet bought (`0x005235e6`..`0x0052360b`), so by the decode a moved one sets neither
-  `d50` nor `d5c` in the hover; ours leaves the latch clear there (`CarryPassLatched`) but `Level.CarryCursor` shows
-  `c_cash` for it (`CarriedUnaffordable` honours the move's put-down test, Q732). Read in Ghidra whether `d5c` (and the
-  red squares) are set anywhere else for a moved one in the hover, and watch the original's cursor over bare ground with
-  a moved, unbought ticket ride dearer than the bank (`thingpoke.py`, Q542); make the pointer agree.
+- [ ] **Q1413. A moved ticket ride's hover: latch and pointer, watched in the original.** From Q536. A move's hover is
+  mode `0x3b`'s pass (`0x00523940`), priced in full (`0x0052398b`) with no golden-ticket exemption, latching through the
+  cell verdict's money arm (`0x00535931`, `d5c` `0x0053593f`); ours now latches there too (`CarryPassLatched` with
+  `CarryingMoved`, review 22) and `Level.CarryCursor` shows `c_cash` (`CarriedUnaffordable`, Q732). Watch the original with
+  a moved, unbought ticket ride dearer than the bank over bare ground (`thingpoke.py`, Q542): predicted `[0x00816d50]` 1,
+  `d5c` set, `c_cash` and red squares; ours the same beside it.
 - [ ] **Q537. The patrol pointer after a re-arm, watched in the original.** From the run 5 review (Q534 1). Re-arming
   the patrol tool over itself keeps `c_noplace` here (`ParkBuildMode.Arm`), by the decode (`FUN_004b5b50` ->
   `FUN_0046c350` -> `FUN_0046d5a0`; the setter `FUN_0052f200` sets a cursor for modes 3 and 1 only); not watched in
@@ -1889,7 +1889,8 @@ filed the items that cite it.
 - [ ] **Q1444. The new player dialog's help bar over each toggle, photographed in both games.** Split from Q772 (cloud lane
   c81, 2026-11-12), which built the rule from a static read and confirmed it by the console alone. Shoot the original's
   new player dialog with the pointer on each toggle before a pick, after picking Instant Action and after picking Full
-  Simulation, and one held down (the help bar's text), predicting the chosen one empty and the held one its row; then ours
+  Simulation, and the chosen one held down and let go (the help bar's text), predicting the chosen one empty, held or
+  not, and after its let-go its own row (358 or 359) until the pointer leaves; then ours
   the same (`pointer` in the lobby prints the row, its text and `(down)`), and once with the dialog's `HelpWhenOn = -1`
   taken out. If the original shows a row over the chosen toggle, the layout's op 0x12 or the getter's reading is wrong:
   read `0x753f50`'s stream and `0x00669410` again before changing anything. Also reconcile `hud.md`'s staff switch
@@ -2820,8 +2821,9 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
     the base control's vtable slot `+0x2c` returns `+0x90` (op 0x11, `0x0065bc70`), and the button class overrides it
     (`0x00669410`) with `byte [+0x138] == 1 ? [+0x94] : [+0x90]`; `+0x94` (op 0x12) defaults to -1 and is written by `0x00661850`.
     `+0x138` is the state byte (press `0x10005` ORs 2, the release `0x10004` of a toggle, flags `0x11`, flips bit 1 and re-asks
-    the help, `0x00669172`, the radio group sets 1 on its pick `0x0066a468`), so a toggle that is on (state exactly 1) shows its
-    op 0x12 row and one held down (3) its op 0x11 row; a row of -1 posts the empty text (`HelpBar_PostControlRow` `0x00492070`).
+    the help, `0x00669172`, the radio group sets 1 on its pick `0x0066a468`), so a toggle that is on (state exactly 1) answers its
+    op 0x12 row and one held down (3) its op 0x11 row - though no post reads state 3 (a press posts nothing; the pointer coming
+    on posts before setting bit 2), so the bar never shows that held row (review 22, VERIFY-15); a row of -1 posts the empty text (`HelpBar_PostControlRow` `0x00492070`).
     The map's six switches carry two rows each (`hud.md`); `hud.md`'s staff switch (`b_route`, second help 87) was measured NOT shown (`q431/confirm.py`): reconcile that run with this static reading (state byte exactly 1 while on). The new
     player dialog's own case is Q772.
   - **Note (fork watch 2026-11-12, verify-other.md L1):** the coaster lines are drawn by one of four routines picked by the picture's bits a

@@ -339,6 +339,92 @@ public class ParkBuildMarkersTests
 	}
 
 	/// <summary>
+	/// <b>A move's pass is mode <c>0x3b</c>'s, with no ticket exemption</b> (<c>0x00523940</c>, priced in full at
+	/// <c>0x0052398b</c>): a moved ticket ride not yet bought latches where its price is above the bank, through the cell
+	/// verdict's money arm (<c>0x00535931</c>), which wants a price that is not nought (<c>0x0053590a</c>) and a judged cell
+	/// that is neither outside the park nor NOMODIFY.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the ticket exemption kept for a move; the nought price let latch a move; the verdict's reach ignored.</remarks>
+	[TestMethod]
+	public void AMovesPassLatchesWithNoTicketExemption()
+	{
+		var tours = new ParkItemCatalogue.Item( 1170, "Tours", "", "ride", 0, 1, null, BuildPrice: 3000, GoldenTicketCost: 1 );
+		var free = new ParkItemCatalogue.Item( 1100, "shop", "", "shop", 1, 1, null, BuildPrice: 0 );
+		ushort[] none = [];
+
+		Assert.IsTrue( ParkBuilding.CarryPassLatched( new ParkState( false, 0, 2999 ), tours, none, moved: true ), "a moved ticket ride not yet bought" );
+		Assert.IsFalse( ParkBuilding.CarryPassLatched( new ParkState( false, 0, 3000 ), tours, none, moved: true ), "the price exactly" );
+		Assert.IsTrue( ParkBuilding.CarryPassLatched( new ParkState( false, 0, -5 ), free, none ), "the carry: nought above a debt" );
+		Assert.IsFalse( ParkBuilding.CarryPassLatched( new ParkState( false, 0, -5 ), free, none, moved: true ), "a move priced nought" );
+		Assert.IsFalse( ParkBuilding.CarryPassLatched( new ParkState( false, 0, 2999 ), tours, none, moved: true, verdictReached: false ),
+			"every judged cell outside the park or NOMODIFY" );
+	}
+
+	/// <summary>
+	/// <b>The cell verdict's own latches</b> (<c>FUN_00535670( 4, 0 )</c>), counted rather than built: another thing's cell whose
+	/// overwrite priority is not below the carried item's (<c>0x00535d95</c>), a boundary piece (<c>0x005358c0</c>), a type
+	/// <c>0x15</c> cell or a track corner (d58, <c>0x0053588e</c>); a lower priority, bare ground and a NOMODIFY or out-of-park
+	/// cell do not latch.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the priority test taken as strictly above; NOMODIFY or out-of-park let through; the track arms dropped.</remarks>
+	[TestMethod]
+	public void TheCellVerdictLatchesOnAnotherThingsCellAndTrack()
+	{
+		const ushort owner = 0x1234;
+		var ride = new ParkItemCatalogue.Item( 1100, "shop", "", "shop", 1, 1, null, BuildPrice: 10, OverwritePriority: 5 );
+		var state = new ParkState( false, 0, 1000 );
+		var was = ParkTrackTool.OverwritePriorityOf;
+
+		try
+		{
+			var held = 5;
+			ParkTrackTool.OverwritePriorityOf = ( _, parent ) => parent == owner ? held : null;
+			state.SetRecord( 10, 10, state.Record( 10, 10 ) with { Type = CellEdge.Footprint, ParentId = owner } );
+
+			Assert.IsTrue( ParkBuilding.CellVerdictLatches( state, ride, 10, 10 ), "another ride's cell, the same priority" );
+
+			held = 4;
+			Assert.IsFalse( ParkBuilding.CellVerdictLatches( state, ride, 10, 10 ), "a lower priority: allowed" );
+
+			held = 6;
+			state.SetRecord( 10, 10, state.Record( 10, 10 ) with { Flags = ParkPathBuilding.NoModify } );
+			Assert.IsFalse( ParkBuilding.CellVerdictLatches( state, ride, 10, 10 ), "NOMODIFY answers before the latch" );
+
+			state.SetRecord( 10, 10, state.Record( 10, 10 ) with { Flags = ParkPathBuilding.OutsideThePark } );
+			Assert.IsFalse( ParkBuilding.CellVerdictLatches( state, ride, 10, 10 ), "outside the park answers before the latch" );
+
+			Assert.IsFalse( ParkBuilding.CellVerdictLatches( state, ride, 11, 11 ), "bare ground" );
+
+			state.SetRecord( 12, 12, state.Record( 12, 12 ) with { TrackType = ParkTrackPieces.Boundary } );
+			Assert.IsTrue( ParkBuilding.CellVerdictLatches( state, ride, 12, 12 ), "a boundary piece" );
+
+			state.SetRecord( 13, 13, state.Record( 13, 13 ) with { Type = 0x15 } );
+			Assert.IsTrue( ParkBuilding.CellVerdictLatches( state, ride, 13, 13 ), "a type 0x15 cell, through d58" );
+
+			state.SetRecord( 14, 14, state.Record( 14, 14 ) with { TrackNeighbours = 0x01 | 0x04 } );
+			Assert.IsTrue( ParkBuilding.CellVerdictLatches( state, ride, 14, 14 ), "a track corner, through d58" );
+		}
+		finally
+		{
+			ParkTrackTool.OverwritePriorityOf = was;
+		}
+	}
+
+	/// <summary>
+	/// <b>A frame takes the latch from the hand's pass while a thing is in the hand</b>, and from the tool's strip otherwise
+	/// (<see cref="ParkBuildMarkers.FramePass"/>, the choice <c>OnUpdate</c> makes).
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the strip's latch taken while carrying (the hand's pass not wired); the hand's taken with nothing held.</remarks>
+	[TestMethod]
+	public void TheFrameTakesTheHandsPassWhileCarrying()
+	{
+		Assert.IsTrue( ParkBuildMarkers.FramePass( true, true, false, true ), "carrying, the hand's pass latched" );
+		Assert.IsFalse( ParkBuildMarkers.FramePass( true, true, true, false ), "carrying, the hand's pass clear" );
+		Assert.IsTrue( ParkBuildMarkers.FramePass( true, false, true, false ), "nothing held: the strip's" );
+		Assert.IsFalse( ParkBuildMarkers.FramePass( false, true, false, true ), "no cell picked: no hand's pass" );
+	}
+
+	/// <summary>
 	/// <b>Putting a tool away leaves the refusal latch as its last pass left it</b>: the setter clears the placer's
 	/// <c>DAT_0081b604</c> and <c>d48</c> (<c>FUN_0052f200( 0 )</c>), never <c>d50</c>. <b>Installing a tool clears it</b>,
 	/// because the install runs a pass under the old mode first (<c>FUN_0046d5a0</c>, <c>0x0046d5e8</c>). Leaving the

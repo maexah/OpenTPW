@@ -7,8 +7,8 @@ namespace OpenTPW.Tests;
 
 /// <summary>
 /// A toggle's help row: the button class's getter (<c>0x00669410</c>; <c>docs/exe/hud.md</c>, the tree stream's op 0x12)
-/// answers the op 0x12 row while the state byte is exactly 1, on and not held down, and the op 0x11 row otherwise. The new
-/// player dialog's two mode toggles carry 358 and 359 as op 0x11 and -1 as op 0x12 (Q772).
+/// answers the op 0x12 row while the state byte is exactly 1 and the op 0x11 row otherwise, and no post reads the held state.
+/// The new player dialog's two mode toggles carry 358 and 359 as op 0x11 and -1 as op 0x12 (Q772).
 /// </summary>
 [TestClass]
 public class ToggleHelpRowTests
@@ -21,15 +21,16 @@ public class ToggleHelpRowTests
 	private WindowStack _stack = null!;
 
 	/// <summary>
-	/// <b>The on row only while on and not held</b>, the op 0x11 row off, held off and held on; a button whose op 0x12 this
-	/// game does not carry keeps its op 0x11 row in every state.
+	/// <b>The on row while on, held or not</b> (no post reads the held bit: a press posts nothing, the pointer coming on posts
+	/// before it sets the bit, <c>0x006692b2</c> before <c>0x0066930f</c>), the op 0x11 row off and held off; a button whose op
+	/// 0x12 this game does not carry keeps its op 0x11 row in every state.
 	/// </summary>
 	/// <remarks>
-	/// <b>Mutations:</b> the on row answered while held down too (the state byte taken as bit 0, not exactly 1); the rows
-	/// swapped; the on row answered for a button that does not carry one.
+	/// <b>Mutations:</b> the held state read (the getter's state 3 posted); the rows swapped; the on row answered for a button
+	/// that does not carry one.
 	/// </remarks>
 	[TestMethod]
-	public void AToggleShowsItsSecondRowOnlyWhileItIsOnAndNotHeld()
+	public void AToggleShowsItsSecondRowWhileItIsOn()
 	{
 		var toggle = new UiButton { HelpText = 86, HelpWhenOn = 87, Toggles = true };
 
@@ -39,7 +40,7 @@ public class ToggleHelpRowTests
 		Assert.AreEqual( 86, toggle.ShownHelp, "off and held (state 2): op 0x11" );
 
 		toggle.IsDown = true;
-		Assert.AreEqual( 86, toggle.ShownHelp, "on and held (state 3): op 0x11" );
+		Assert.AreEqual( 87, toggle.ShownHelp, "on and held: the row the pointer coming on posts, before the held bit" );
 
 		toggle.Pressed = false;
 		Assert.AreEqual( 87, toggle.ShownHelp, "on (state exactly 1): op 0x12" );
@@ -51,9 +52,14 @@ public class ToggleHelpRowTests
 	/// <summary>
 	/// <b>The new player dialog's chosen toggle shows the empty bar</b>, and the other its row: before a pick both show
 	/// theirs; the release that picks Instant Action empties the bar under the resting pointer; Full Simulation still shows
-	/// 359, and once picked shows none while Instant Action shows 358 again; Full Simulation held down shows 359.
+	/// 359, and once picked shows none while Instant Action shows 358 again. Full Simulation pressed again posts nothing
+	/// (<c>0x10005</c>), so the bar stays empty while it is held; let go, the release posts state 0's row, 359
+	/// (<c>0x00669172</c>), before the group puts it down again (<c>0x0066a468</c>), and 359 stands. Left while held and come
+	/// back to, it posts -1 again: the leave clears the held bit (<c>0x00669278</c>) and the pointer coming on posts before
+	/// setting it.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> the dialog without its op 0x12 rows (the row shown over either); the held state ignored.</remarks>
+	/// <remarks><b>Mutations:</b> the dialog without its op 0x12 rows (the row shown over either); the held state read (359
+	/// held and on coming back); the row re-posted on a state change (-1 after the let-go); the release's post left out.</remarks>
 	[TestMethod]
 	public void TheNewPlayerDialogsChosenToggleShowsNoHelpRow()
 	{
@@ -102,11 +108,22 @@ public class ToggleHelpRowTests
 
 			Frame( false, OnFullSimulation, 1300 );
 			Frame( true, OnFullSimulation, 1400 );
-			Assert.AreEqual( 359, _stack.HelpRow, "the chosen one held down (state 3): its op 0x11 row" );
+			Assert.AreEqual( -1, _stack.HelpRow, "the chosen one held down: the press posts nothing" );
 
 			Frame( false, OnFullSimulation, 1500 );
 			Frame( false, OnFullSimulation, 1600 );
-			Assert.AreEqual( -1, _stack.HelpRow, "let go, still chosen: empty again" );
+			Assert.AreEqual( (1, 359), (Mode( 0x70e ), _stack.HelpRow), "let go, still chosen: state 0's row, posted before the group's restore" );
+
+			Frame( true, OnFullSimulation, 1700 );
+			Frame( true, OnTheName, 1800 );
+			Assert.AreEqual( 356, _stack.HelpRow, "held, the pointer on the name box" );
+
+			Frame( true, OnFullSimulation, 1900 );
+			Assert.AreEqual( -1, _stack.HelpRow, "held, the pointer back on: posted before the held bit is set" );
+
+			Frame( false, OnFullSimulation, 2000 );
+			Frame( false, OnFullSimulation, 2100 );
+			Assert.AreEqual( (1, 359), (Mode( 0x70e ), _stack.HelpRow), "let go: 359 again" );
 		}
 		finally
 		{

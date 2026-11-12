@@ -239,8 +239,8 @@ public static class ParkBuilding
 		// the placement mode - and, for a move, which has no such click, in the put-down's own preview,
 		// where a price above the balance turns the cell red (FUN_00535670). A mystery ride's preview sets the run's
 		// price to nought and skips the test (BuildTool_PreviewPass, 0x005235e6..0x00523613): it is never refused for money.
-		// The move tool's put-down has no such skip: it prices the ride in full (0x0052398b) and the cell test refuses it
-		// above the balance (FUN_00535670), so a moved ticket ride meets the money test (docs/exe/hud.md, "Spending golden tickets").
+		// The move tool's pass (mode 0x3b, 0x00523940) has no such skip: it prices the ride in full (0x0052398b) and the cell test
+		// refuses it above the balance (FUN_00535670), so a moved ticket ride meets the money test (docs/exe/hud.md, "Spending golden tickets").
 		if ( Unaffordable( state, item, moved ) )
 			return $"buy: '{item.Name}' costs {item.BuildPrice} and the park has {state.Balance}";
 
@@ -1312,8 +1312,8 @@ public static class ParkBuilding
 
 	/// <summary>
 	/// Whether what is in the hand is the move tool's (<c>0x3b</c>, <see cref="PickUp(int)"/>) rather than the carry's
-	/// (mode 4: a buy row, a Ctrl+click's other of a thing). The move's put-down prices the item in full and meets the
-	/// money test with no golden-ticket exemption (<c>0x00523940</c>..<c>0x005239fc</c>, <c>0x0052398b</c>); the carry's skips it
+	/// (mode 4: a buy row, a Ctrl+click's other of a thing). The move's pass (mode <c>0x3b</c>) prices the item in full and meets
+	/// the money test with no golden-ticket exemption (<c>0x00523940</c>..<c>0x005239fc</c>, <c>0x0052398b</c>); the carry's skips it
 	/// for a ticket ride not yet bought (<c>0x005235e6</c>..<c>0x00523613</c>). docs/exe/hud.md, "Spending golden tickets".
 	/// </summary>
 	/// <remarks>The move's click is refused by the carry's latch, <c>0x00816d48</c> (<c>FUN_00524960</c> tests it at
@@ -1446,13 +1446,15 @@ public static class ParkBuilding
 	}
 
 	/// <summary>
-	/// Whether the carry's pass (mode 4, <c>FUN_005234d0</c>) leaves the refusal latch <c>DAT_00816d50</c> set with the
-	/// pointer on (x, y): the pass clears it (<c>0x005234f2</c>) and sets it, with <c>d5c</c>, where the item's BuildPrice
-	/// (<c>+0x1b8</c>) is above the bank's balance (<c>0x0052365c</c>, <c>0x00523662</c>). A ride with a golden-ticket cost
+	/// Whether the hand's pass leaves the refusal latch <c>DAT_00816d50</c> set with the pointer on (x, y). The carry's pass
+	/// (mode 4, <c>FUN_005234d0</c>) clears it (<c>0x005234f2</c>) and sets it, with <c>d5c</c>, where the item's BuildPrice
+	/// (<c>+0x1b8</c>) is above the bank's balance (<c>0x0052365c</c>, <c>0x00523662</c>); a ride with a golden-ticket cost
 	/// (<c>+0xc4</c>) not yet bought (<c>FUN_004d4b70</c>) prices the run at nought and skips that test
-	/// (<c>0x005235e6</c>..<c>0x0052360b</c>), a move's as well: the move's own money test is its put-down's
-	/// (<c>0x0052398b</c>), not this pass's. The original skips the pass's latch under the layout replay
-	/// (<c>[0x00785a2c]</c>), which ours never runs. docs/exe/hud.md, "The patrol edges".
+	/// (<c>0x005235e6</c>..<c>0x0052360b</c>). A move is mode <c>0x3b</c>'s pass (<c>0x00523940</c>): it prices the run in full
+	/// (<c>0x0052398b</c>) with no ticket exemption, and latches through the cell verdict's money arm (<c>0x00535931</c>, d5c
+	/// <c>0x0053593f</c>), which a cell outside the park or NOMODIFY never reaches. The cell verdict's other latches are counted,
+	/// not built. The original skips the pass's latch under the layout replay (<c>[0x00785a2c]</c>), which ours never runs.
+	/// docs/exe/hud.md, "The patrol edges".
 	/// </summary>
 	internal static bool CarryPassLatched( int pointerX, int pointerY )
 	{
@@ -1460,23 +1462,82 @@ public static class ParkBuilding
 			|| !catalogue.TryGet( Carrying, out var item ) )
 			return false;
 
+		var (cellX, cellY) = CarriedAnchorUnder( state, item, pointerX, pointerY, out _ );
+
 		// The placer (FUN_00528a70, called at 0x0052390e) also sets the latch at 0x005295e8 and 0x00529730, for an entrance
 		// or exit facing off the map; which arm reaches each store is not re-derived (Q1412), so where ours finds an end
 		// facing off the map it is counted and the latch left to the money test.
-		if ( item.HasEntrance && !ParkTrackAddOn.Is( item ) )
-		{
-			var (cellX, cellY) = CarriedAnchorUnder( state, item, pointerX, pointerY, out _ );
+		if ( item.HasEntrance && !ParkTrackAddOn.Is( item ) && EndFacesOffMap( item, cellX, cellY, CarryingAngle ) )
+			Unimplemented.Report( "CARRY_PLACER_OFF_MAP_LATCH" );
 
-			if ( EndFacesOffMap( item, cellX, cellY, CarryingAngle ) )
-				Unimplemented.Report( "CARRY_PLACER_OFF_MAP_LATCH" );
-		}
+		var judged = JudgedCells( item, cellX, cellY, CarryingAngle ).ToList();
 
-		return CarryPassLatched( state, item, GoldenTickets.Rides );
+		if ( CarryPassLatched( state, item, GoldenTickets.Rides, CarryingMoved, judged.Any( cell => ReachesTheVerdict( state, cell.X, cell.Y ) ) ) )
+			return true;
+
+		// The cell verdict (FUN_00535670( 4, 0 )) latches d50 on another thing's cell whose overwrite priority is not below the
+		// carried item's (0x00535d95), a boundary piece (0x005358c0), and a type 0x15 cell or a track corner or junction
+		// through d58 (0x0053588e); after a refused test the draw pass judges every square again (0x00533927), so any judged
+		// cell latches. Not built: counted (docs/exe/hud.md, "The patrol edges").
+		if ( judged.Any( cell => CellVerdictLatches( state, item, cell.X, cell.Y ) ) )
+			Unimplemented.Report( "CARRY_PASS_CELL_REFUSAL_LATCH" );
+
+		return false;
 	}
 
-	/// <summary>The carry pass's money verdict (<see cref="CarryPassLatched(int, int)"/>): dearer than the bank, an unbought ticket ride never.</summary>
-	internal static bool CarryPassLatched( ParkState state, ParkItemCatalogue.Item item, IReadOnlyCollection<ushort>? rides )
-		=> !GoldenTickets.IsMystery( item, rides ) && item.BuildPrice > state.Balance;
+	/// <summary>
+	/// The pass's money verdict (<see cref="CarryPassLatched(int, int)"/>). The carry's: dearer than the bank, an unbought ticket
+	/// ride never. A move's (<paramref name="moved"/>): dearer than the bank with a price that is not nought (<c>0x0053590a</c>),
+	/// ticket ride or not, where some judged cell reaches the verdict's money arm (<paramref name="verdictReached"/>).
+	/// </summary>
+	internal static bool CarryPassLatched( ParkState state, ParkItemCatalogue.Item item, IReadOnlyCollection<ushort>? rides,
+		bool moved = false, bool verdictReached = true )
+		=> moved
+			? item.BuildPrice != 0 && item.BuildPrice > state.Balance && verdictReached
+			: !GoldenTickets.IsMystery( item, rides ) && item.BuildPrice > state.Balance;
+
+	/// <summary>The cells the pass judges for a thing anchored at (x, y): its picture's, then the cells its ends face, on the map.</summary>
+	private static IEnumerable<(int X, int Y)> JudgedCells( ParkItemCatalogue.Item item, int cellX, int cellY, int angle )
+	{
+		var cells = ParkObjects.CoveredCells( item, cellX, cellY, angle ).ToList();
+
+		if ( item.HasEntrance && !ParkTrackAddOn.Is( item ) )
+		{
+			var (entryX, entryY) = RotateDelta( item.EntryDeltaX, item.EntryDeltaY, angle );
+			cells.Add( Step( cellX + entryX, cellY + entryY, CellEdge.Opposite( RotateBit( item.EntryDirection, angle ) ) ) );
+
+			var (exitX, exitY) = RotateDelta( item.ExitDeltaX, item.ExitDeltaY, angle );
+
+			if ( item.HasQueue && (entryX != exitX || entryY != exitY) )
+				cells.Add( Step( cellX + exitX, cellY + exitY, RotateBit( item.ExitDirection, angle ) ) );
+		}
+
+		return cells.Where( cell => ParkState.OnMap( cell.X, cell.Y ) );
+	}
+
+	/// <summary>Whether the cell verdict reaches its latches for a cell: not NOMODIFY (<c>0x005356aa</c>), not outside the park (<c>0x005357c7</c>).</summary>
+	private static bool ReachesTheVerdict( ParkState state, int x, int y )
+		=> (state.Record( x, y ).Flags & (ParkPathBuilding.NoModify | ParkPathBuilding.OutsideThePark)) == 0;
+
+	/// <summary>
+	/// Whether the cell verdict latches d50 on a cell for the carried item, money aside (<see cref="CarryPassLatched(int, int)"/>):
+	/// another thing's cell whose overwrite priority is not below the item's, a boundary piece, a type 0x15 cell, or a track
+	/// corner or junction. The owner record's kind byte (<c>0x00535767</c>..<c>0x00535788</c>) is not read here.
+	/// </summary>
+	internal static bool CellVerdictLatches( ParkState state, ParkItemCatalogue.Item item, int x, int y )
+	{
+		if ( !ReachesTheVerdict( state, x, y ) )
+			return false;
+
+		var cell = state.Record( x, y );
+
+		if ( cell.Type is CellEdge.Footprint or CellEdge.RideEnd or CellEdge.RideFarEnd )
+			return ParkTrackTool.OverwritePriorityOf( state, cell.ParentId ) is not { } other || other >= item.OverwritePriority;
+
+		var track = ParkTrackAddOn.Head( state, x, y );
+
+		return track.TrackType == ParkTrackPieces.Boundary || cell.Type == 0x15 || ParkPathBuilding.TrackCornerOrJunction( track );
+	}
 
 	/// <summary>Whether a thing anchored at (x, y) faces an end off the map, as <see cref="EndRefusal"/>'s off-map arms find it.</summary>
 	internal static bool EndFacesOffMap( ParkItemCatalogue.Item item, int cellX, int cellY, int angle )

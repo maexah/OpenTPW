@@ -275,13 +275,11 @@ public sealed class ParkBuildMarkers : ModelEntity
 		var strip = picked ? ParkPathBuilding.Strip( x, y, out latched ) : [];
 		var carried = picked ? ParkBuilding.CarrySquares( x, y ) : [];
 
-		// The carry's own pass (mode 4) clears the latch and sets it again while the thing in the hand is dearer than the bank.
+		// The hand's own pass (mode 4, or 0x3b for a move) clears the latch and sets it again while the thing in the hand is dearer than the bank.
 		var carrying = ParkBuilding.Carrying != 0;
+		var passLatched = FramePass( picked, carrying, latched, picked && carrying && ParkBuilding.CarryPassLatched( x, y ) );
 
-		if ( picked && carrying )
-			latched = ParkBuilding.CarryPassLatched( x, y );
-
-		ParkBuildMode.RefusalLatched = LatchAfterFrame( ParkBuildMode.RefusalLatched, ParkBuildMode.Current, carrying, picked, latched );
+		ParkBuildMode.RefusalLatched = LatchAfterFrame( ParkBuildMode.RefusalLatched, ParkBuildMode.Current, carrying, picked, passLatched );
 
 		if ( picked && ParkGround.Current?.Heightfield is { } ground )
 			_glideTarget = (x * ground.CellSizeX, y * ground.CellSizeY);
@@ -328,6 +326,13 @@ public sealed class ParkBuildMarkers : ModelEntity
 	/// </summary>
 	internal static bool LatchAfterFrame( bool latch, int mode, bool carrying, bool picked, bool passLatched )
 		=> picked && (mode != ParkBuildMode.None || carrying) ? passLatched : latch;
+
+	/// <summary>
+	/// Which pass a frame takes the latch from: the hand's (<paramref name="carryLatched"/>, <see cref="ParkBuilding.CarryPassLatched(int, int)"/>)
+	/// while a thing is in the hand and a cell is picked, the tool's strip's (<paramref name="stripLatched"/>) otherwise.
+	/// </summary>
+	internal static bool FramePass( bool picked, bool carrying, bool stripLatched, bool carryLatched )
+		=> picked && carrying ? carryLatched : stripLatched;
 
 	/// <summary>
 	/// The patrol edges' squares: the original's verdict for them (<c>FUN_00535670( 0x36 )</c>, <c>0x005356df</c>) is the
