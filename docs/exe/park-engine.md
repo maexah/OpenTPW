@@ -4022,8 +4022,8 @@ original under Proton, `q780/orig/O1`). Lost Kingdom's add-ons (1500 to 1502) ar
   (`FUN_0044b3c0( instance, 1, n )`, the lookup record whose hide word is n; show is `and ~0x10`, hide is `or 0x80000010`;
   the whole rule, where the count goes back to nought and the caps measured: `park.md`, "The walk", Q778). Not read: what
   `[esp + 0x50]` holds in the demolisher's add-on arm (`0x00528512`..`0x0052852d`; Q1000 read it: the demolisher's third argument, below), `FUN_00523230`'s cells.
-**OpenTPW** (Q780, `ParkTrackAddOn`, `ParkBuilding`): the console's `carry <item> <thing>` stands in for the Buy Upgrades row
-(Q512); the preview snaps and turns the hand, the squares and the test pass judge by the verdict's add-on arm, the commit stamps
+**OpenTPW** (Q780, `ParkTrackAddOn`, `ParkBuilding`): the ride window's Buy Upgrades row (Q512, `UI.ParkUpgradesWindow`) and the
+console's `carry <item> <thing>` take it into the hand through `ParkBuilding.CarryFor`; the preview snaps and turns the hand, the squares and the test pass judge by the verdict's add-on arm, the commit stamps
 the picture by kind at the model's cell (`mTopLeft`, the original's rule, and every other item's non-empty picture cells from the model's cell too, Q744), the
 thing keeps `mUpgradeParent`, and the put-down walks the circuit. Counted: `FUN_00523230`'s passes (`TRACK_ADD_ON_PASSES`) and the
 sale (`SALE_TRACK_ADD_ON`); the pieces' clips that follow the walk are Q781's (`park.md`, "The pieces' clips"). The arm's rotation to 0 (`0x005259fc`) is built: the hand's

@@ -1063,7 +1063,7 @@ internal sealed class ParkObjectWindow : UiWindow, IStatusBox
 	}
 
 	/// <summary>
-	/// One of the bottom row's verbs. Delete, move, queue and the door are built; the rest are counted by name.
+	/// One of the bottom row's verbs. Delete, move, queue, the upgrades list and the door are built; the rest are counted by name.
 	/// </summary>
 	private void Verb( int id, string what )
 	{
@@ -1090,6 +1090,11 @@ internal sealed class ParkObjectWindow : UiWindow, IStatusBox
 			case 0x3e34:
 				Log.Info( $"Ride window: {ParkPathBuilding.EditQueue( ThingId )}" );
 				Stack.Close( this );
+				return;
+
+			// FUN_004af600 opens the Buy Upgrades list at 0x004af8ec (FUN_004ae560), over this window.
+			case 0x3e35:
+				Stack.Open( new ParkUpgradesWindow( Stack, ThingId, this ) );
 				return;
 
 			// FUN_004af600 -> FUN_0048ccf0 uses the switch's new down state, with no handler guard.

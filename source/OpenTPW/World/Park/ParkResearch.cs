@@ -691,4 +691,7 @@ public sealed class ParkResearch
 
 	/// <summary>The upgrade tier researched, 0 to 2 (<c>+0x14</c>), which a finished item's next upgrade starts after.</summary>
 	public int TierResearched( int itemId ) => _items.TryGetValue( itemId, out var entry ) ? entry.Tier : 0;
+
+	/// <summary>The item's control record's price (<c>+0x04</c>): the save's, or the item's own build price for one it lacks. Nought for an item nobody knows.</summary>
+	public int Price( int itemId ) => _prices.GetValueOrDefault( itemId );
 }
