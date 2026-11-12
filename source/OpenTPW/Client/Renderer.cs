@@ -30,9 +30,33 @@ public partial class Renderer
 
 	public Action? OnRender;
 
+	/// <summary>The window's size at the start as the settings ship it, where they will not read.</summary>
+	internal const int ShippedWidth = 1280, ShippedHeight = 720;
+
+	/// <summary>
+	/// The window's size at the start, the GameWindowSize setting's. A settings file that will not read (a damaged
+	/// <c>user.config</c>) is not a reason to stop, as <see cref="GameDir"/>'s GamePath is not: it is logged and
+	/// the size the setting ships with is taken.
+	/// </summary>
+	internal static (int Width, int Height) StartSize( Func<System.Drawing.Point> setting )
+	{
+		try
+		{
+			var size = setting();
+
+			return (size.X, size.Y);
+		}
+		catch ( Exception e )
+		{
+			Log.Warning( $"Window: the GameWindowSize setting could not be read, so {ShippedWidth} x {ShippedHeight} is taken - {e.Message}" );
+			return (ShippedWidth, ShippedHeight);
+		}
+	}
+
 	public Renderer()
 	{
-		Window = new( Settings.Default.GameWindowSize.X, Settings.Default.GameWindowSize.Y, "Theme Park World", true );
+		var (width, height) = StartSize( () => Settings.Default.GameWindowSize );
+		Window = new( width, height, "Theme Park World", true );
 		Window.Resized += OnWindowResized;
 
 		// While it is still hidden, so the window is never shown under the icon the desktop hands out to

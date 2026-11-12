@@ -122,4 +122,25 @@ public class GameDataTests
 		}
 		finally { System.IO.Directory.Delete( folder, true ); }
 	}
+
+	/// <summary>
+	/// A bare <c>--game</c>, the last argument, names no folder: it is refused with its own reason for Q978's box, and
+	/// nothing else is looked in (not the working directory, not the build's folder).
+	/// </summary>
+	[TestMethod]
+	[DataRow( "--game" )]
+	[DataRow( "--game=" )]
+	public void ABareGameArgumentIsRefusedWithItsOwnReason( string bare )
+	{
+		var old = System.Environment.GetEnvironmentVariable( GameData.GamePathVariable );
+		System.Environment.SetEnvironmentVariable( GameData.GamePathVariable, null );
+
+		try
+		{
+			Assert.IsFalse( GameDir.Find( ["--fullscreen", bare], [], "/no/such/box/folder" ) );
+			Assert.AreEqual( "Game files: --game was given with no folder after it.", GameDir.Reasons.FirstOrDefault() );
+			Assert.AreEqual( 2, GameDir.Reasons.Count, string.Join( "\n", GameDir.Reasons ) );
+		}
+		finally { System.Environment.SetEnvironmentVariable( GameData.GamePathVariable, old ); }
+	}
 }

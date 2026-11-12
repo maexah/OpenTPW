@@ -520,9 +520,6 @@ public static class ParkFileWriter
 				body = loaded.TrackRides.SpliceWhole( body, tracksOut, writtenTracks );
 				body = run.ModelStates.Splice( body, goneSlots, madeModels );
 
-				if ( run.Built is { } built )
-					loaded.PutControls( body, built );
-
 				if ( made.Count > 0 || gone.Count > 0 )
 					edits = new ParkWorld.ObjectEdits( records, gone );
 
@@ -534,6 +531,11 @@ public static class ParkFileWriter
 					QueueCells = [.. cellsInOrder.Select( entry => (entry.Key, handles[entry.Key], freed.GetValueOrDefault( entry.Key )) )]
 				};
 			}
+
+			// Whether or not anything structural changed: an item bought and sold since the load keeps its first-build stamp,
+			// as the original's control does (0x004dd0e1), and ParkWorth ages the item by it.
+			if ( run.Built is { } built )
+				loaded.PutControls( body, built );
 		}
 
 		people = null;

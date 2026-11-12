@@ -340,7 +340,8 @@ public class ParkLoadScreenTests
 	/// <b>A park asked for by file is read from that file</b>, not from the newest in the folder: the older file is
 	/// the shipped park's copy, 755, and the newer one will not read.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> the file ignored reads the newer one and gives nothing.</remarks>
+	/// <remarks><b>Mutations:</b> the file ignored reads the newer one and gives nothing; <see cref="Level.MadeFresh"/> taken for a
+	/// file reads nothing.</remarks>
 	[TestMethod]
 	public void AParkAskedForByFileIsReadFromThatFile()
 	{
@@ -357,6 +358,8 @@ public class ParkLoadScreenTests
 		Assert.IsInstanceOfType( park, typeof( ParkWorld ) );
 		Assert.AreEqual( 755, park!.GameTick );
 		Assert.IsNull( Level.CreatePark( "jungle", balance, catalogue ), "entered, the newest is read, which will not" );
+		Assert.IsInstanceOfType( Level.CreatePark( "jungle", balance, catalogue, Level.MadeFresh ), typeof( FreshPark ),
+			"made fresh, whatever the folder holds (Restart Park on a fresh park)" );
 	}
 
 	private static string Shape( StringPart[] parts )

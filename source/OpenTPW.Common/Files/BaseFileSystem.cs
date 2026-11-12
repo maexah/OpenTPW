@@ -388,6 +388,25 @@ public class BaseFileSystem
 	}
 
 	/// <summary>
+	/// Says that something outside this class made or deleted <paramref name="relativePath"/> (a folder made with
+	/// <see cref="Directory.CreateDirectory(string)"/>, a player's folder deleted): what was remembered about the
+	/// directories it sits in, and about it and every directory inside it, is dropped, so a name asked for since is
+	/// matched against what is really there and not against a name that has gone.
+	/// </summary>
+	public void Changed( string relativePath )
+	{
+		var absolutePath = GetAbsolutePath( relativePath );
+
+		foreach ( var directory in listings.Keys )
+		{
+			if ( directory == absolutePath || directory.StartsWith( absolutePath + Path.DirectorySeparatorChar, StringComparison.Ordinal ) )
+				listings.TryRemove( directory, out _ );
+		}
+
+		Forget( absolutePath );
+	}
+
+	/// <summary>
 	/// Drops what was remembered about the directories a written file sits in, up to the base directory, so a
 	/// name written since is matched against what is really there. Writing is the only thing this class does
 	/// that changes what a directory holds.

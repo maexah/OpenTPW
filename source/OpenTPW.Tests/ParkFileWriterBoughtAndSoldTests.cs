@@ -574,6 +574,25 @@ public class ParkFileWriterBoughtAndSoldTests
 	}
 
 	/// <summary>
+	/// An item bought and sold since the load, with nothing else bought, sold or relisted: its control still takes the
+	/// running stamp, as the original's keeps the one its constructor set (<c>0x004dd0e1</c>).
+	/// </summary>
+	[TestMethod]
+	public void AControlIsWrittenWhenNothingStructuralChanged()
+	{
+		var was = shipped.ObjectControlRecords.Single( control => control.ItemId == CrazyApe );
+		var built = new Dictionary<int, (int Standing, uint FirstBuilt)> { [CrazyApe] = (was.Standing, 924) };
+
+		Assert.AreNotEqual( 924u, was.FirstBuilt, "the file's stamp is not the one written" );
+
+		var written = Written( Things( built: built ), out _ );
+		var ape = written.ObjectControlRecords.Single( control => control.ItemId == CrazyApe );
+
+		Assert.AreEqual( (was.Standing, 924u), (ape.Standing, ape.FirstBuilt) );
+		Assert.AreEqual( shipped.Objects.Count, written.Objects.Count, "nothing was bought or sold" );
+	}
+
+	/// <summary>
 	/// What cannot be written is refused: a made id the file holds for a thing still standing (42 and 13 are not
 	/// deleted here), a gone id that is no object, a thing with no people given, an object of the file's deleted and kept.
 	/// </summary>

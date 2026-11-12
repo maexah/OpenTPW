@@ -843,7 +843,8 @@ the write after a park is built from the lobby, and not after one built again fr
 Restart Park), and it is `Level.WritePark( "restart", ".INTS" )`. Restart Park quietens the advisor and asks for the
 player's `restart.INTS`, found in any case, as a Load Park row does, ending the scene and building it again from the
 file where the original reads it over the running park; with no such file it logs and loads nothing. A park made fresh
-writes its `restart.INTS` as it is entered (Q783), so its Restart Park loads that file; only where nothing could be written is it made fresh again.
+writes its `restart.INTS` as it is entered (Q783), so its Restart Park loads that file; only where nothing could be written is it made fresh again
+(`Level.MadeFresh`, never the folder's newest park file, Q997), and with no park running (one that did not read) nothing is loaded.
 With nobody playing, which only the console's `park` reaches, the copy beside the level is read again.
 
 **Measured (Q248).** In the original under Proton, the reference player's `restart.INTS` moved aside and Lost Kingdom

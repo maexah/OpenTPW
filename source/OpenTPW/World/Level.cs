@@ -622,6 +622,12 @@ public class Level
 	internal static IParkInitialState? CreatePark( string theme, ParkBalance balance, ParkItemCatalogue catalogue,
 		string? parkFile = null )
 	{
+		if ( parkFile == MadeFresh )
+		{
+			Log.Info( $"{theme}: the park is made fresh again, as asked" );
+			return MakeFresh( theme, balance, catalogue );
+		}
+
 		if ( parkFile != null )
 			return ReadPark( theme, SaveFileSystem, parkFile );
 
@@ -632,6 +638,17 @@ public class Level
 			return ReadPark( theme, SaveFileSystem, own );
 
 		Log.Info( $"{theme}: {player.Name} has no park file for this theme, so the park is made fresh" );
+		return MakeFresh( theme, balance, catalogue );
+	}
+
+	/// <summary>
+	/// Asked for in place of a park file (<see cref="Game.RequestParkLoad"/>), a world made fresh whatever the player's folder
+	/// holds: Restart Park on a park made fresh with no <c>restart.INTS</c> behind it. No file is named by it.
+	/// </summary>
+	internal const string MadeFresh = "";
+
+	private static FreshPark MakeFresh( string theme, ParkBalance balance, ParkItemCatalogue catalogue )
+	{
 		var park = new FreshPark( theme, balance, catalogue );
 		Log.Info( $"{theme}: {park.Census()}" );
 		return park;
