@@ -12145,6 +12145,25 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q1292. A mechanic arriving at a ride that waits for an upgrade does the upgrade's work (from Q272).** Q272 gave
+  `StaffBehaviour.ArriveAtTheRide` the arrival's third test (`FUN_004da740`, `0x004da7ca`) and counts it,
+  `MECHANIC_UPGRADE_ARRIVAL`, sending him to his decide. What state `0xd` counts down for an upgrade is read (`ride-operation.md`, "State `0xd`"):
+  the descriptor's dword at `+0x1fc + 0x40 x` the ride's byte `+0x50` (`0x004da409`), times `WorkDuration`, not divided
+  by 100. Name that descriptor field (0x3c into tier l + 1's record if the records start at `Upgrades[0].CostOfResearch`,
+  `+0x180`) and read it in `ItemDescriptionFile`, then put him to work for it and let `FUN_004df8f0`'s
+  upgrade arm finish it (`RIDE_UPGRADE_COMPLETION`); the search's own `MECHANIC_UPGRADE_JOB` belongs with it. Nothing
+  here puts a ride in state 2 (the Buy Upgrades order is not built, and the stock park is Instant Action), so the path
+  is reached only by a file that holds one. Confirm: a ride put to state 2 with a mechanic on his way, his
+  `mDurationOfRepair` and the ride's level read in both games.
+  **Done 2026-11-12** (cloud lane c91; no Ghidra, no original, no photograph): the descriptor field is
+  `Upgrades[n].DurationOfUpgrade`, the tier record's last dword (`+0x3c`), named from `ItemDescriptionFile.Schema`'s
+  record order with the other 15 slots placed; every `Rides.sam` gives 0, 2, 4. `ItemDescriptionFile.DurationOfUpgradeAt`
+  and `InitCapacityAt` read it and the later tiers' capacity; the search takes a state 2 ride (no advisor `0x46` for it),
+  the arrival starts `DurationOfUpgrade[l + 1] x WorkDuration` sweeps (`StaffBehaviour.UpgradeWorkFor`), and
+  `ParkRideOperation.Repair`'s upgrade arm raises the level, withdraws the tier's `CostOfUpgrade` and holds its speed,
+  capacity and duration as the constructor does. `MECHANIC_UPGRADE_JOB` is gone; the effect sprite is counted,
+  `RIDE_UPGRADE_EFFECT`. Off-screen, the stock park with the Belly Bounce written to state 2: mechanic 26 (grade 3)
+  found it, worked 60 sweeps and left it at level 1, 75 / 7 / 30, 400 withdrawn. Left: Q1484 to Q1486.
 
 ## B. Docs and comments
 

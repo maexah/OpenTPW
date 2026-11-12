@@ -243,11 +243,11 @@ hurry speed, where the handyman's walk to a toilet takes one.
 cleared and he decides ("UNUSUAL INCIDENT"). Then a step of the walk (`FUN_004fa2a0`), with no tiring: arrived,
 a ride broken down, waiting for an upgrade or calling goes to state `0xd`, and any other sends him to his
 decide with the ride still named; a walk that fails clears `+0x218` and decides. Unlike the handyman's arrival,
-his own cell is not held against the entry. OpenTPW's `ArriveAtTheRide` asks all three, the upgrade first: a ride waiting for an upgrade is counted, `MECHANIC_UPGRADE_ARRIVAL`, and sends him to his decide, since the upgrade's work in state `0xd` is not built (its count is read, below; only which `.sam` key fills its descriptor field is not; Q272; the search passes such a ride over, `MECHANIC_UPGRADE_JOB`, so only a mechanic loaded on his way to one arrives at it).
+his own cell is not held against the entry. OpenTPW's `ArriveAtTheRide` asks all three, the upgrade first, and puts him to work on a ride waiting for an upgrade for the count below (Q1292); a ride whose next tier would pass the third (level 2 or more, only a save's byte) or whose item is not known is counted, `MECHANIC_UPGRADE_ARRIVAL`, and sends him to his decide.
 
 **State `0xd`.** The setter queues animation `0x12` and sets `+0x214` (`mDurationOfRepair`): for a repair
 `(100 - the State of repair's byte) x MechanicConstsPerGrade.WorkDuration / 100` in whole sweeps
-(`0x004da42a`; 80, 60, 40, 30, 20 by grade, `0x0078542c`), for an upgrade the dword at descriptor `+0x1fc + 0x40 x` the ride's byte `+0x50` (`0x004da409`; the item by `FUN_004dd4e0`), times the same `WorkDuration` (`0x004da410`), not divided by 100 (`0x004da3e8`..`0x004da418`). Which `.sam` key fills that dword is not read: 0x3c into tier l + 1's record if the records start at `Upgrades[0].CostOfResearch`, `+0x180`.
+(`0x004da42a`; 80, 60, 40, 30, 20 by grade, `0x0078542c`), for an upgrade the dword at descriptor `+0x1fc + 0x40 x` the ride's byte `+0x50` (`0x004da409`; the item by `FUN_004dd4e0`), times the same `WorkDuration` (`0x004da410`), not divided by 100 (`0x004da3e8`..`0x004da418`). That dword is `+0x3c` into tier l + 1's record (the records start at `Upgrades[0].CostOfResearch`, `+0x180`), the record's last: **`Upgrades[l + 1].DurationOfUpgrade`** (Q1292). Named from the compiled schema as OpenTPW holds it (`ItemDescriptionFile.Schema`, read record by record at `0x00744b30`), which lists a tier's nought-and-up keys in record order, `CostOfUpgrade` (`+0x38`) then `DurationOfUpgrade`, with every other slot of the 16 already placed (`+0x04` the bounded `EstimatedPriceVariance`, `+0x24` `RedLineDuration` by the same order); the offset of the key's own schema record was not re-read in Ghidra. Every `Rides.sam` of the four themes gives tiers 0, 1 and 2 the values 0, 2 and 4, which no item overrides, so a ride at level nought takes 2 x `WorkDuration` (160 sweeps for a grade nought mechanic, 40 for grade 4) and one at level 1, 4 x.
 `FUN_004da830`, a turn: a turn of work (`FUN_00506760`); the count down one while it is not nought; at nought,
 on a ride of state 1, `VAR_BREAKSTAT` is written nought (`FUN_004e03f0`) and the turn ends there while
 `VAR_BROKEN` still reads above nought (`FUN_004e0410`, "Ride has finished fix anim" when it does not); then
@@ -264,9 +264,20 @@ whose circuit is not closed is shut again.
 the original, loading the file saved as he set off, read him assigned on its first tick and had the pot open 42
 ticks after the load, where the run that wrote it took 42 sweeps from the same moment.
 
-**Where OpenTPW differs.** An object waiting for an upgrade is passed over by the search, counted
-(`MECHANIC_UPGRADE_JOB`), a mechanic arriving at one is sent to his decide, counted (`MECHANIC_UPGRADE_ARRIVAL`), and `Repair` on one is counted and does nothing (`RIDE_UPGRADE_COMPLETION`): nothing
-here puts a ride in state 2. Advisor message `0x46` is posted with the ride (`advisor-park.md`, "A mechanic on his way"). The coaster's
+**The upgrade's completion, as OpenTPW builds it** (Q1292; `ParkRideOperation.Repair`): the repair's common part
+(`+0x44` 100, `VAR_WORN` 0, the assigned member and `mRequestedService` nought), then the level one higher
+(`0x004df966`), the new tier's `CostOfUpgrade` withdrawn (`0x004dfa96`), and the new tier's `InitSpeed`, `InitCapacity`
+and `InitDuration` held as the constructor holds them (`0x004dfa9b`..`0x004dfbdf`: speed as it is, capacity's low byte
+held to Min/MaxCapacity when they sum above nought, duration's low byte held to Min/MaxDuration), each written to the
+thing and its script only where the tier's own is above nought; `VAR_BREAKSTAT` and the hoardings are the broken arm's,
+not this one's; then the open's tail. The Belly Bounce from level nought: 75, 7 and 30, and 400 withdrawn. The order
+of these writes inside the arm is not read; the result is the same in any order.
+
+**Where OpenTPW differs.** The upgrade's effect sprite (`0x004dfa54`) is not drawn, counted (`RIDE_UPGRADE_EFFECT`).
+A completion with no item, or whose level would pass the third tier, is counted and leaves the ride
+(`RIDE_UPGRADE_COMPLETION`), as an arrival at such a ride is counted (`MECHANIC_UPGRADE_ARRIVAL`). Nothing here puts a
+ride in state 2 (the Buy Upgrades order is not built), so the upgrade's work is reached only by a park file that holds
+one. Advisor message `0x46` is posted with the ride (`advisor-park.md`, "A mechanic on his way"). The coaster's
 circuit test after the open is counted (`OPEN_GUARD_COASTER_TRACK_RECORD`). A thing in the hand is passed
 over. The five "non-openable" log lines are not written.
 
@@ -3206,7 +3217,7 @@ park, a walk that fails (tested only).
 |---|---|---|---|
 | A hire's first decide | at once, in every kind's constructor: the mechanic's `0x004d9fc4`, the handyman's `0x004d6c73`, the entertainer's `0x004d4430`, the guard's on `mGameTick & 3` (`0x004d5e76`), the researcher's on a draw (`0x005026cb`) | the same (`StaffBehaviour.Hired`, from `ParkPeople.Hire`; "The decide's differences, in both games") | every hire |
 | The mechanic, the handyman and the entertainer with no work | walk about | walk about: the mechanic and the handyman on every decide, the entertainer on `mGameTick & 3` (`StaffBehaviour.WalkAbout`, `Entertain`; "The no-work walk, in both games") | from their saved walks' ends |
-| The mechanic's search for a ride | `FUN_004daa90` on every decide not too tired | built (`StaffBehaviour.FindRide`; "The mechanic's repair"); an upgrade job is counted, `MECHANIC_UPGRADE_JOB` | every mechanic decide |
+| The mechanic's search for a ride | `FUN_004daa90` on every decide not too tired | built (`StaffBehaviour.FindRide`; "The mechanic's repair"), a ride waiting for an upgrade among them (Q1292) | every mechanic decide |
 | The handyman's searches | litter `FUN_004c8ed0` at his decide and at his idle pre-step, then a toilet `FUN_004d7880` | the litter search counted, `HANDYMAN_LITTER_SEARCH`, and answers none; the toilet search built (`StaffBehaviour.FindToilet`; "A toilet's dirt") | every handyman decide; no cell here holds litter (Q225) |
 | The entertainer's performance | a draw mod 3 of nought, a guest in reach: a second draw, the bank's state animation, state `0xe` for WorkDuration + 1 sweeps, effect `0x87` ("The entertainer's performance") | built (`StaffBehaviour.Perform`; "The performance, in both games"); the look is `ParkPeople.GuestsNear`, each guest at the cell the park has them linked into; effect `0x87` played (`StaffBehaviour.PlaySound`, Q135) | a third of the entertainer's decides |
 | The stand as a member goes idle | SetState(0) queues animation 3 every time (`FUN_004fa460`) | queued from a performance and after a clean only; any other idle keeps the picture it had | every idle |

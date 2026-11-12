@@ -38,7 +38,7 @@ operation share it. Rest and strike walks retain their general routing. Guests a
 
 The original multi-cell random walk and slot-selection order are built for staff inside their area
 (`LinkedWander`, [ride-operation.md](ride-operation.md), "Q108"); the zero-link recovery is built too
-(Q112, the same page, "OpenTPW takes the arm"), and the no-work walk of every kind is built (Q133); so is the work, the handyman's clean of a dirty toilet, the mechanic's repair and the entertainer's performance, apart from the handyman's litter search, which is counted and finds nothing (`HANDYMAN_LITTER_SEARCH`), and the mechanic's upgrade job (`MECHANIC_UPGRADE_JOB`); the researcher's points are spent by the lab (Q701). A worker deliberately dropped on
+(Q112, the same page, "OpenTPW takes the arm"), and the no-work walk of every kind is built (Q133); so is the work, the handyman's clean of a dirty toilet, the mechanic's repair and the entertainer's performance, apart from the handyman's litter search, which is counted and finds nothing (`HANDYMAN_LITTER_SEARCH`); the researcher's points are spent by the lab (Q701). A worker deliberately dropped on
 unlinked terrain or already outside is not the linked-path containment case verified here. No blanket restriction was added to hiring,
 placement, rest or strike travel.
 

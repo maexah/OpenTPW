@@ -39,9 +39,8 @@ namespace OpenTPW;
 /// </para>
 /// <para>
 /// <b>What is deliberately not built.</b> A handyman's litter (<c>FUN_004c8ed0</c>): the search is counted where
-/// the original makes it and answers as finding nothing. Counted the same way, where the original does each: a
-/// mechanic's upgrade job, advisor message <c>0x46</c> for a ride nobody called him to, and a rest area's
-/// <c>VAR_STAFFIN</c> count with its resting-staff list.
+/// the original makes it and answers as finding nothing. Counted the same way, where the original does it: a
+/// rest area's <c>VAR_STAFFIN</c> count with its resting-staff list.
 /// </para>
 /// <para>
 /// <b>The strike is built</b>: the arm every decide opens with, the walk to the picket (state 4) and the
@@ -70,6 +69,9 @@ public sealed class StaffBehaviour
 
 	/// <summary>An object's item's <c>TrackType</c>, which the repair's open asks; nought where nothing answers.</summary>
 	public Func<ParkWorld.CatalogueObject, int>? TrackTypeOf { get; init; }
+
+	/// <summary>An object's item, which an upgrade's work and completion read their tier from; null where nothing answers.</summary>
+	public Func<ParkWorld.CatalogueObject, ParkItemCatalogue.Item?>? ItemOf { get; init; }
 
 	/// <summary>
 	/// The member of staff with a thing id, which a toilet's forgetting asks of whoever it is assigned to
@@ -626,8 +628,8 @@ public sealed class StaffBehaviour
 	/// <b>Every kind walks about when it has no work.</b> The mechanic and the handyman look for work and, with
 	/// none, set off on a random walk every time; the entertainer and the guard stay on one choice in four, where
 	/// the researcher researches. The mechanic's search, the handyman's toilet search and the entertainer's look
-	/// find work; the handyman's litter search and the mechanic's upgrade job are counted where the original makes
-	/// them.
+	/// find work, the mechanic's a ride waiting for an upgrade among it; the handyman's litter search is counted where
+	/// the original makes it.
 	/// </para>
 	/// </summary>
 	private void Decide( Staff staff, PeepWalk walk, int tick )
@@ -667,9 +669,9 @@ public sealed class StaffBehaviour
 							AssignedStaff = (ushort)staff.ThingId, TimeMarkedForMaintenance = tick
 						} );
 
-						// A ride nobody called him to gets advisor message 0x46 with the ride as its subject
-						// (0x004da6bf; docs/exe/advisor-park.md, "A mechanic on his way").
-						if ( broken.RequestedService == 0 )
+						// A ride nobody called him to and not waiting for an upgrade gets advisor message 0x46 with
+						// the ride as its subject (0x004da6bf; docs/exe/advisor-park.md, "A mechanic on his way").
+						if ( broken.RequestedService == 0 && broken.State != 2 )
 							_state.AdvisorMessages?.Post( ParkAdvisorMessages.MechanicOnHisWay, tick, broken.ThingId );
 
 						Log.Info( $"Staff: mechanic {staff.ThingId} found ride {broken.ThingId} that needs fixing, "
@@ -886,14 +888,12 @@ public sealed class StaffBehaviour
 	/// The mechanic's search for a ride to fix - <c>FUN_004daa90</c>, over the park's objects from the
 	/// mechanics' cursor (<see cref="ParkState.ObjectsFromTheMechanicsCursor"/>;
 	/// <c>docs/exe/ride-operation.md</c>, "The mechanic's search"). An object is a candidate when it is broken
-	/// down (state 1), or a mechanic has been called to it and it is no toilet, and nobody else is assigned to
-	/// it (<see cref="AssignedTo"/>). The nearest wins, cell to cell from the mechanic's own, squared and
-	/// strictly, at any distance; no route is asked for here.
+	/// down (state 1), or a mechanic has been called to it and it is no toilet, or it is waiting for an upgrade
+	/// (state 2, <c>FUN_004e03e0</c>), and nobody else is assigned to it (<see cref="AssignedTo"/>). The nearest
+	/// wins, cell to cell from the mechanic's own, squared and strictly, at any distance; no route is asked for here.
 	/// </summary>
 	/// <remarks>
-	/// <b>Not built, counted.</b> An object waiting for an upgrade (state 2) is a candidate in the original;
-	/// here it is passed over, <c>MECHANIC_UPGRADE_JOB</c>. A thing in the hand is passed over, as
-	/// <see cref="FindToilet"/> passes it over.
+	/// A thing in the hand is passed over, as <see cref="FindToilet"/> passes it over.
 	/// </remarks>
 	/// <returns>The ride's thing id, or nought.</returns>
 	private int FindRide( Staff staff, PeepWalk walk, int tick )
@@ -910,15 +910,8 @@ public sealed class StaffBehaviour
 			if ( !candidate.IsPlaced )
 				continue;
 
-			if ( candidate.State == 2 )
-			{
-				Unimplemented.Report( "MECHANIC_UPGRADE_JOB" );
-
-				continue;
-			}
-
 			if ( candidate.State != ParkRideChoice.StateRefusedOne
-				&& !(candidate.RequestedService != 0 && !candidate.IsToilet) )
+				&& !(candidate.RequestedService != 0 && !candidate.IsToilet) && candidate.State != 2 )
 				continue;
 
 			var assigned = AssignedTo( candidate, tick );
@@ -943,25 +936,33 @@ public sealed class StaffBehaviour
 	/// <summary>
 	/// The end of a mechanic's walk to a ride - <c>FUN_004da740</c>'s arrival: a ride still broken down or
 	/// still calling for him is repaired, for <see cref="MechanicWorkDurationAt"/> sweeps scaled by the State of
-	/// repair it has lost, cut to a byte (<c>FUN_004da370</c>, <c>0x004da42a</c>); any other sends him back to
-	/// his decide, the ride still named.
+	/// repair it has lost, cut to a byte (<c>FUN_004da370</c>, <c>0x004da42a</c>); a ride waiting for an upgrade
+	/// (state 2, <c>FUN_004e03e0</c>, <c>0x004da7ca</c>), asked first, is upgraded, for
+	/// <see cref="UpgradeWorkFor"/> sweeps; any other sends him back to his decide, the ride still named.
 	/// </summary>
 	/// <remarks>
-	/// <b>Not built, counted.</b> The arrival's third test, a ride waiting for an upgrade (state 2,
-	/// <c>FUN_004e03e0</c>, <c>0x004da7ca</c>), puts him to work in the original (<c>FUN_004da370</c> with
-	/// <c>0xd</c>, <c>0x004da7fa</c>) for the descriptor's dword at <c>+0x1fc + 0x40 x</c> the ride's level times
-	/// <c>WorkDuration</c> (<c>0x004da409</c>), whose <c>.sam</c> key is not read (<c>docs/exe/ride-operation.md</c>,
-	/// "State <c>0xd</c>"). Here it is counted,
-	/// <c>MECHANIC_UPGRADE_ARRIVAL</c>, and he is sent back to his decide.
+	/// A ride whose next tier would pass the third, which only a save can hold, or whose item is not known, is
+	/// counted, <c>MECHANIC_UPGRADE_ARRIVAL</c>, and he is sent back to his decide (the original reads past the
+	/// tier records there).
 	/// </remarks>
 	private void ArriveAtTheRide( Staff staff, PeepWalk walk, ParkWorld.CatalogueObject ride, int tick )
 	{
 		if ( ride.State == 2 )
 		{
-			Unimplemented.Report( "MECHANIC_UPGRADE_ARRIVAL" );
-			Log.Info( $"Staff: mechanic {staff.ThingId} arrived at ride {ride.ThingId} on mGameTick {tick}, "
-				+ "waiting for an upgrade: the upgrade's work is not built" );
-			Decide( staff, walk, tick );
+			if ( UpgradeWorkFor( staff, ride ) is not { } work )
+			{
+				Unimplemented.Report( "MECHANIC_UPGRADE_ARRIVAL" );
+				Log.Info( $"Staff: mechanic {staff.ThingId} arrived at ride {ride.ThingId} on mGameTick {tick}, "
+					+ $"waiting for an upgrade from level {ride.UpgradeLevel}, past the third tier or of no known item: not built" );
+				Decide( staff, walk, tick );
+
+				return;
+			}
+
+			staff.StartRepairing( work );
+
+			Log.Info( $"Staff: mechanic {staff.ThingId} starts upgrading ride {ride.ThingId} from level {ride.UpgradeLevel} "
+				+ $"on mGameTick {tick}, {staff.DurationOfRepair} sweeps to go" );
 
 			return;
 		}
@@ -981,6 +982,24 @@ public sealed class StaffBehaviour
 
 		Log.Info( $"Staff: mechanic {staff.ThingId} starts repairing ride {ride.ThingId} on mGameTick {tick}, "
 			+ $"{staff.DurationOfRepair} sweeps to go" );
+	}
+
+	/// <summary>
+	/// How many sweeps an upgrade keeps a mechanic at work - <c>FUN_004da370</c>'s <c>0xd</c> arm for a ride in
+	/// state 2 (<c>0x004da3e8</c>..<c>0x004da418</c>): the item's <c>DurationOfUpgrade</c> for the tier above the
+	/// ride's level (the descriptor's <c>+0x1fc + 0x40 x</c> the level, <c>0x004da409</c>) times the grade's
+	/// <see cref="MechanicWorkDurationAt"/> (<c>0x004da410</c>), not divided by 100 (<c>docs/exe/ride-operation.md</c>,
+	/// "State <c>0xd</c>").
+	/// </summary>
+	/// <returns>The count, or null where the next tier would pass the third or the item is not known.</returns>
+	internal int? UpgradeWorkFor( Staff staff, ParkWorld.CatalogueObject ride )
+	{
+		var next = (byte)ride.UpgradeLevel + 1;
+
+		if ( next >= ItemDescriptionFile.Tiers || ItemOf?.Invoke( ride ) is not { } item )
+			return null;
+
+		return item.DurationOfUpgradeAt( next ) * MechanicWorkDurationAt( staff.PayGrade );
 	}
 
 	/// <summary>
@@ -1004,7 +1023,7 @@ public sealed class StaffBehaviour
 					return;
 			}
 
-			ParkRideOperation.Repair( _state, script, ride.ThingId, TrackTypeOf?.Invoke( ride ) ?? 0 );
+			ParkRideOperation.Repair( _state, script, ride.ThingId, TrackTypeOf?.Invoke( ride ) ?? 0, ItemOf?.Invoke( ride ) );
 		}
 
 		Log.Info( $"Staff: mechanic {staff.ThingId} finished repairing ride {staff.ObjectToRepair} on mGameTick {tick}" );

@@ -395,7 +395,13 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004d8ba0` | FUN_004d8b40: | OpenTPW/World/Park/CellSearch.cs  |
 | `0x004d8be7` | FUN_004d8b40: the sum, to here | OpenTPW/World/Park/CellSearch.cs  |
 | `0x004d8c67` | `FUN_004d8c60` returns without writing when the back cell is nought | OpenTPW.Tests/ParkStrandedTests.cs OpenTPW/World/Park/ParkState.cs  |
+| `0x004da3e8` | `FUN_004da370`'s `0xd` arm for an upgrade begins: `DurationOfUpgrade` of tier level + 1 times `WorkDuration`, not divided by 100 (to `0x004da418`) | OpenTPW.Tests/ParkMechanicRepairTests.cs OpenTPW/World/Park/StaffBehaviour.cs  |
 | `0x004da409` | `FUN_004da370`, state 0xd for an upgrade: the descriptor's dword at `+0x1fc + 0x40 x` the ride's byte `+0x50`, times `WorkDuration` (0x004da410) | OpenTPW/World/Park/StaffBehaviour.cs  |
+| `0x004da410` | `FUN_004da370`, state 0xd for an upgrade: the `DurationOfUpgrade` dword times the grade's `WorkDuration` | OpenTPW/World/Park/StaffBehaviour.cs  |
+| `0x004da418` | `FUN_004da370`'s `0xd` arm for an upgrade ends: the count written to `+0x214` (`mDurationOfRepair`) | OpenTPW.Tests/ParkMechanicRepairTests.cs OpenTPW/World/Park/StaffBehaviour.cs  |
+| `0x004da42a` | `FUN_004da370`, state 0xd for a repair: (100 - the State of repair's byte) x `WorkDuration` / 100 | OpenTPW.Tests/ParkMechanicRepairTests.cs OpenTPW/World/Park/StaffBehaviour.cs  |
+| `0x004da6bf` | `FUN_004da5b0`: advisor message `0x46` posted for a ride neither called for nor waiting for an upgrade | OpenTPW.Tests/ParkMechanicRepairTests.cs OpenTPW/World/Advisor/ParkAdvisorMessages.cs OpenTPW/World/Park/StaffBehaviour.cs  |
+| `0x004da7ca` | `FUN_004da740`: the arrival's test of state 2, waiting for an upgrade (`FUN_004e03e0`) | OpenTPW.Tests/ParkMechanicRepairTests.cs OpenTPW/World/Park/StaffBehaviour.cs  |
 | `0x004db169` | Object constructor FUN_004db090: mTotalCosts +0x184 zeroed | OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x004db389` | FUN_004db090: mQualityOfGoods +0x18c = 50 | OpenTPW.Tests/ParkBankTests.cs OpenTPW/World/Park/ParkBuilding.cs  |
 | `0x004db3ad` | Object constructor FUN_004db090: mPricePerUse +0x194 copied unclamped from UsageInfo.InitPricePerUse (+0xe4) | OpenTPW.Files/Formats/ItemDescriptionFile.cs OpenTPW.Tests/ParkStartingSettingsTests.cs OpenTPW/World/Park/ParkBuilding.cs  |
@@ -440,6 +446,12 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x004deb26` | `FUN_004de840`'s second switch: `ADD AL,0x80` for direction `0x04`, so 191 gives 63 | OpenTPW/World/Park/ParkQueuePlace.cs  |
 | `0x004decd1` | `FUN_004dec30` reads the ENTRY cell's `mDirection` | OpenTPW/World/Park/ParkQueuePlace.cs  |
 | `0x004df3ea` | `FUN_004df390` logs "Opening non-openable ride!" five times when its guard refuses, and opens anyway | OpenTPW/World/Park/ParkRideOperation.cs  |
+| `0x004df966` | `FUN_004df8f0`'s upgrade arm: the ride's level (`+0x50`) one higher | OpenTPW/World/Park/ParkRideOperation.cs  |
+| `0x004dfa54` | `FUN_004df8f0`'s upgrade arm: the upgrade's effect sprite started (`RIDE_UPGRADE_EFFECT`) | OpenTPW/World/Park/ParkRideOperation.cs  |
+| `0x004dfa96` | `FUN_004df8f0`'s upgrade arm: the new tier's `CostOfUpgrade` withdrawn (`FUN_004d01f0`) | OpenTPW/World/Park/ParkRideOperation.cs  |
+| `0x004dfa9b` | `FUN_004df8f0`'s upgrade arm: the new tier's speed, capacity and duration, held as the constructor holds them, begin (to `0x004dfbdf`) | OpenTPW.Tests/ParkMechanicRepairTests.cs OpenTPW/World/Park/ParkBuilding.cs OpenTPW/World/Park/ParkRideOperation.cs  |
+| `0x004dfaf6` | `FUN_004df8f0`'s upgrade arm: the new tier's `InitCapacity` passed to the capacity setter `FUN_004dd7f0` | OpenTPW.Files/Formats/ItemDescriptionFile.cs  |
+| `0x004dfbdf` | `FUN_004df8f0`'s upgrade arm: the new tier's settings end | OpenTPW.Tests/ParkMechanicRepairTests.cs OpenTPW/World/Park/ParkBuilding.cs OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x004e0554` | `FUN_004e0450` puts the queue's head out (`FUN_005012f0`) | OpenTPW.Tests/ParkClosedRideTests.cs OpenTPW/World/Park/ParkPeople.cs  |
 | `0x004e058a` | FUN_004e0560, a sideshow's excitement: 20 - trunc(chance x sqrt(clamp(cost - price, 0, 100)) x 0.1 x -0.8f), from | OpenTPW/World/Park/ParkRideScore.cs  |
 | `0x004e05d4` | FUN_004e0560, a sideshow's excitement: to here | OpenTPW/World/Park/ParkRideScore.cs  |
