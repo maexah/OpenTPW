@@ -1396,16 +1396,6 @@ filed the items that cite it.
     `dynamic.wad`; `data/generic/dynamic` has none, so the markers must load from the level's. `0x0053567a`..`0x00535681`
     returns 2 for `0x1f` (slot 2 is `orange`); the call with `0x11f` is `0x00524234`/`0x00524453`. The face's path through
     `0x00532fc0` is not traced.
-- [ ] **Q504. The sea's and the flags' phase is a float that grows without bound, and no one wrap keeps both seamless.**
-  `ParkSea.Phase` gains 12 a second off `Time.Delta`; at a high refresh rate the step (12 x Delta) is rounded against the
-  float's ulp after hours (numpy float32 at 144 Hz: rate x1.031 from 1.5 h, x0.9375 from 3 h, x1.125 from 6 h, x0.75
-  from 12 h, x1.5 from 24 h, stopped at about 48 h). The original's is a float32 too (`DAT_00871f60`, `DAT_00871ed0`)
-  but steps 0.4 a frame at 30 fps, so it is within 1.6% only to 12.1 h (phase 2^19) and stops at 2^23 (about 194 h).
-  The sea's wave is periodic in the phase every 4 pi (s = ... - 0.5 phase; the table index moves by 4,096) but the flags'
-  `Grid` is periodic every 20 (D = ... - 0.6 phase; the joint period of 3 and 4 in D is 12), and `ParkFlags` takes the
-  sea's phase, so wrapping the shared phase at either breaks the other at the wrap. Fix: keep two phases (the sea's
-  wrapped at 4 pi, the flags' at 20, both stepped alike from the same `Advance`), say it as a deviation at the site,
-  and test that a phase either side of each wrap gives the same wave. Said at `ParkSea.Phase`.
 - [ ] **Q505. The picker stands still in first person, a ride's view and the view of `0x10`.** From the review of Q472b (`handoff/review3/VERIFY-13.md`, q472b 1): the original skips the picker and the packer while
   `[0x790ab0] & 0x16` is set (`0x0054e2c0` `test al,0x16`, then `jne`; first person is `0x202`), so its cell stays where it
   was. Ours runs `ParkPicking.Update` every park frame, counted `PICK_IN_FIRST_PERSON` in `Level.Update` in first

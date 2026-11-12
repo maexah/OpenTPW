@@ -2388,7 +2388,7 @@ public static class DebugConsole
 
 			// The harbour's moving sea: its corner, phase, folder and texture words; `sea y <h>` moves its corner's
 			// height, as the original's was held under Line01 to read the lake alone, and `sea phase <p>` puts its wave
-			// anywhere, which a paused park then holds.
+			// and the flags' anywhere (each wrapped at its own period), which a paused park then holds.
 			case "sea":
 				if ( ParkSea.Current is not { } sea )
 				{
@@ -2402,7 +2402,7 @@ public static class DebugConsole
 				if ( parts.Length >= 3 && parts[1] == "phase" )
 					sea.SetPhase( Argument( 2 ) );
 
-				Reply( $"sea: corner {sea.CornerText} phase {sea.Phase:0.000} from {sea.Folder} words {sea.Census()}" );
+				Reply( $"sea: corner {sea.CornerText} phase {sea.Phase:0.000} flags {sea.FlagsPhase:0.000} from {sea.Folder} words {sea.Census()}" );
 				break;
 
 			// The gates' flags: how many, their phase (the sea's), the angle they stand at and the weather's wind it eases to,
