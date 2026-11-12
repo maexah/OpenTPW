@@ -12145,6 +12145,28 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q419. The hire screen's candidate box is empty.** From the run review, 2026-10-16. On the same file the
+  original's hire screen shows the chosen candidate's figure where this game's box is black (`q412/run-fix2/3-screen.png`
+  beside `q412/orig/a-button.png`; the same in `q415`). The candidates' names differ too, which may be the pool's
+  top-up (Q356's note); not looked into. Decode what the original draws there first. Confirm: the box beside the
+  original's on the same file, a screenshot and the census of what is drawn.
+  - **Note (fork watch 2026-10-16, `verify-audio-fx.md` O4):** the figure is made at `0x0049bb4a` to `0x0049bb64`:
+    `0x00475a10( 0x0074f758, kind, bank, 1, x, y, z )`, the sprite kind by role from the table at `0x0049bb90` (roles 0
+    to 4: 5, 6, 4, 7, 8), the bank the candidate's byte `+9`, set 1, the handle kept at `[0x007ca310]`, then
+    `0x004755d0( handle, 8, 8.0f )`, register 8 the draw scale. The script is read (the note of 2026-11-12, below).
+  - **Note (play test 2026-10-21, note 18):** the hire screen shows no staff picture. Figure made at `0x0049bb4a` to
+    `0x0049bb64`, sprite script `0x0074f758`, frames 0 to 7 (QUEUE:1170-1173).
+  - **Note (play test 2026-10-31):** the same missing figure is reported on the placing cursor (Q40); settle whether this box and Q31b's `STAFF_WINDOW_PREVIEW` share one decode. Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
+  - **Note (fork watch 2026-11-12, verify-ui-hud.md H1):** the script `0x0074f758` is SetLocal 16 = `0x51000`, SetSet 1, SetLocal 15 (the
+    facing) = 5, Frame 0 to 7, Jump back to its start. `0x0049ba00` (one caller, `0x0049b97b`, in the hire handler) returns at
+    once with no candidate, and remakes the figure only when the candidate's dword `+0` (the role) or byte `+9` differs from
+    `[0x007523e8]`/`[0x007523ec]`; message `0x14` (`0x0049b7b4`) deletes it and sets both to -1. It stands on control `0x2484`'s
+    rect: x = ( left + ( right − left ) / 2 − `0x3f8` ) / 1024, y = ( `0x300` − bottom + ( bottom − top ) / 4 ) / 768, z =
+    1 − ( depth + 1 ) / 40 (`0x00476a70`); the sprite steps every 62 ms (`0x004759c4`).
+  - **Done (2026-11-12, cloud lane c97):** built as `ParkHireFigure` (`docs/exe/hud.md`, "The candidate's figure in the
+    portrait `0x2484`"): the script at word 1832, the remake rule, the kind by role, the costume's bank, facing 5 drawn as 3
+    reflected, the place, the steps, the free. The size is a stand-in, counted (`STAFF_PORTRAIT_SIZE`, Q1513); the photograph
+    beside the original is Q1512. The names' difference is not looked into.
 
 ## B. Docs and comments
 

@@ -196,6 +196,9 @@ public class Level
 	/// <summary>The theme folder this level was built from - "jungle", "fantasy", "hallow" or "space".</summary>
 	public string ThemeName { get; private init; }
 
+	/// <summary>How many banks of each people's sprite kind the park draws over, read as it loads; null outside a park.</summary>
+	internal ParkSpriteBanks? SpriteBanks { get; private set; }
+
 	/// <param name="parkStart">What the park is built from: a park file already read (a Load Park row, Alt+L, Restart Park), a world made fresh, or null for the one the park is entered with.</param>
 	internal Level( string levelName, Scene kind = Scene.Lobby, ParkStart? parkStart = null )
 	{
@@ -497,7 +500,7 @@ public class Level
 		// high it is under them; they are sprites rather than models, so they are nothing to do with the
 		// objects above and only need the save that named them.
 		// How many banks of each kind the guests draw over, the kid banks capped by the detail file.
-		var banks = ParkSpriteBanks.Read( FileSystem, ThemeName, NumKids() );
+		var banks = SpriteBanks = ParkSpriteBanks.Read( FileSystem, ThemeName, NumKids() );
 
 		_ = new ParkGuestSprites( ThemeName, park, banks );
 		load.Mark( "guest sprites" );

@@ -444,6 +444,14 @@ Read this before aiming a click or comparing two pictures. Each fact names the i
 
 Each was found by trial in the item named, and cost a run to find.
 
+- **The hire screen's figure, a row hovered and the screen shut, in a cloud lane** (Q419, `lib/consoledrive.py`): `park
+  jungle`, `pause`, `hirescreen`, `step 8`, then `hirefigure` (the figure's role, costume, kind, bank, program, picture and
+  place; `made N` counts the makes on that screen). A row is hovered by a real pointer move, not the console's `click` (which
+  chooses the row): take `control 248e`'s `at (X,Y) size (W,H)`, scale = W / 796, and move with `xdotool mousemove --window
+  <the window named Theme Park World> X+0.3W Y+(441−179)×scale+dy` for dy from 2 in steps of 3 until `Hire screen: candidate
+  <id>` is logged (the stock park's second cleaner, candidate 8, at dy 20 at 1280 x 720). `control -2` answers nothing (the
+  console takes hex ids); the exit button is the console's `click` at X + (1930.5 − 1017)×scale, Y + (859.5 − 179)×scale,
+  after which `hirefigure` says `no hire screen`. Open the mechanics' tab with `control 2493`'s `middle` and `click`.
 - **Which click sound a button plays, in a cloud lane** (Q711, `lib/consoledrive.py`): `park jungle`, then `hirescreen` (or `screen 4`, `screen 6`), `control <hex id>` for a button's `middle`, and `click X Y`: the reply ends `click sound 189` (`Select3`), `click sound 31` (`BUTTON01`) or `no click sound`. A list's headings are ids `10` up; the hire screen's all-things button `2495` is a plain one (31). The console prints its replies as `[dbg] control ...`, so an `ask` regex anchored on `^control` waits out its timeout: match `control 0x`.
 - **The sea's and the flags' phases read across their wraps** (Q504, `lib/consolerun.py`, off-screen): `40 park jungle`, `5 pause`, `3 sea phase 12.366`, `3 step 1`, `4 sea`, `3 flags`, `3 step 2`, `4 sea`, `3 flags`. Each step is a sixtieth of a second, 0.2 of phase, so the sea's reads 12.566 then 0.400 and its flags 12.566 then 12.966; `sea phase 19.8` and the same steps read the flags' 20 wrap (19.800, 0.000, 0.400). Without `pause` the replies lag the frame they name at xvfb's frame rate, so the two lines are not one frame's.
 - **The console's `walk` in a cloud container** (Q14, `lib/consolerun.py`): `40 park jungle`, `3 camcorder 481.897 166.285` (the path, so a short walk crosses no shut edge; `camcorder 500 500` stops at y 510 on the first walk), then `walk 1 0 N`. Each of the N steps is a fixed sixtieth of a second (`Time.StepDelta`), 0.667 units, whatever the frame rate (xvfb's 13 to 14 frames a second too), so N = 60 walks 40 units and `stand=` can be predicted from N before it is read back; it walks under `pause` as well, so a paused walk then a grab photographs a crossing.

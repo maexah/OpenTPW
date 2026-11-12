@@ -214,6 +214,8 @@ public sealed class SpriteScript
 
 	private const int FramesLocal = 14;         // +0xbc, the set's frames a direction, which a state start writes
 
+	private const int FacingLocal = 15;         // +0xc0, the direction a draw flagged 0x40000 shows (the hire figure's)
+
 	private const int DrawFlagsLocal = 16;           // +0xc4, the draw's flags (0x00542075), which every person script sets
 
 	private const int LeadInLocal = 17;         // +0xc8, a state group's third byte, on a sprite made on a state
@@ -330,6 +332,32 @@ public sealed class SpriteScript
 	];
 
 	/// <summary>
+	/// The hire screen's candidate figure, <c>0x0074f758</c> (word 1832), as the fork watch read it (<c>docs/QUEUE.md</c>
+	/// Q419's note of 2026-11-12, <c>verify-ui-hud.md</c> H1; not read here in Ghidra): the draw flags set to
+	/// <see cref="StaffFigureFlags"/>, set 1 (the walk), the facing local set to 5, frames nought to seven, and a jump
+	/// back to its start. Its words are laid out by the operand counts, as every other script's here.
+	/// </summary>
+	private static readonly ScriptStep[] StaffFigure =
+	[
+		new( SpriteOp.SetLocal, DrawFlagsLocal, StaffFigureFlags ),
+		new( SpriteOp.SetSet, 1, 0 ),
+		new( SpriteOp.SetLocal, FacingLocal, 5 ),
+		new( SpriteOp.Frame, 0, 0 ), new( SpriteOp.Frame, 1, 0 ), new( SpriteOp.Frame, 2, 0 ), new( SpriteOp.Frame, 3, 0 ),
+		new( SpriteOp.Frame, 4, 0 ), new( SpriteOp.Frame, 5, 0 ), new( SpriteOp.Frame, 6, 0 ), new( SpriteOp.Frame, 7, 0 ),
+		new( SpriteOp.Jump, StaffFigureEntry, 0 )
+	];
+
+	/// <summary>Where the hire screen's figure script starts, <c>0x0074f758</c>, which <c>FUN_0049ba00</c> hands the sprite maker.</summary>
+	public const int StaffFigureEntry = 1832;
+
+	/// <summary>
+	/// The draw flags the hire figure's script writes, <c>0x51000</c>. Its <c>0x40000</c> draws the sprite at sector 0 with no
+	/// camera term (<c>0x005421cc</c>, <c>docs/exe/park-engine.md</c>), so the facing local alone picks its direction; what its
+	/// <c>0x10000</c> and <c>0x1000</c> do is not decoded.
+	/// </summary>
+	public const int StaffFigureFlags = 0x51000;
+
+	/// <summary>
 	/// Where each of the four state scripts starts - the table at <c>0x0074f7c8</c>, indexed by a state group's
 	/// first byte less one. Only the first is copied here; no shipped bank names another.
 	/// </summary>
@@ -387,6 +415,14 @@ public sealed class SpriteScript
 		foreach ( var (at, step) in StateScript )
 			program[at] = step;
 
+		var word = StaffFigureEntry;
+
+		foreach ( var step in StaffFigure )
+		{
+			program[word] = step;
+			word += LengthOf( step.Op );
+		}
+
 		return program;
 	}
 
@@ -402,7 +438,7 @@ public sealed class SpriteScript
 	/// than trusted.
 	///
 	/// <para>
-	/// Only the twenty-one scripts people use, the let-go balloon's and a bank's first state script are copied out of
+	/// Only the twenty-one scripts people use, the let-go balloon's, a bank's first state script and the hire screen's figure are copied out of
 	/// the executable, so this is false for a position inside any of the others - which is the honest answer, not a
 	/// denial that they exist.
 	/// </para>
@@ -466,6 +502,9 @@ public sealed class SpriteScript
 	/// and kept through every start after it (<c>FUN_00475b80</c> writes no local but a state's two).
 	/// </summary>
 	public int DrawFlags => _locals[DrawFlagsLocal];
+
+	/// <summary>The direction a draw flagged <c>0x40000</c> shows, local 15 (<c>+0xc0</c>); only the hire figure's script writes it.</summary>
+	public int Facing => _locals[FacingLocal];
 
 	/// <summary>
 	/// Whether the script has reached its end word: hidden and stopped, the instance's state 4. Nothing a person
