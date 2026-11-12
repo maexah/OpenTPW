@@ -1324,8 +1324,9 @@ public static class ParkBuilding
 	/// money test with no golden-ticket exemption (<c>0x00523940</c>..<c>0x005239fc</c>, <c>0x0052398b</c>); the carry's skips it
 	/// for a ticket ride not yet bought (<c>0x005235e6</c>..<c>0x00523613</c>). docs/exe/hud.md, "Spending golden tickets".
 	/// </summary>
-	/// <remarks>Which refusal latch the move's click honours (<c>0x816d50</c> or <c>0x81b604</c>) was not read; it is taken to
-	/// be the carry's, as a cash item's move already is.</remarks>
+	/// <remarks>The move's click is refused by the carry's latch, <c>0x00816d48</c> (<c>FUN_00524960</c> tests it at
+	/// <c>0x00524a63</c>, and the cell test's money refusal sets it); the move pass's own <c>0x0081b604</c> only marks its
+	/// second pass's cells refused (docs/exe/hud.md, "Spending golden tickets").</remarks>
 	public static bool CarryingMoved { get; private set; }
 
 	/// <summary>
@@ -1483,7 +1484,7 @@ public static class ParkBuilding
 	/// first (<see cref="ParkTrackAddOn.Snap"/>), which may turn the hand as the original's preview turns <c>[0x0081d7a4]</c>.
 	/// </summary>
 	/// <param name="previewCell">The preview's cell, <c>[0x008186a4]</c>: the pointer's, or an add-on's snapped one.</param>
-	private static (int X, int Y) CarriedAnchorUnder( ParkState state, ParkItemCatalogue.Item item, int pointerX, int pointerY,
+	internal static (int X, int Y) CarriedAnchorUnder( ParkState state, ParkItemCatalogue.Item item, int pointerX, int pointerY,
 		out (int X, int Y) previewCell )
 	{
 		previewCell = (pointerX, pointerY);

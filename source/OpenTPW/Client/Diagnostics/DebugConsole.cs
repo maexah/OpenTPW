@@ -3350,7 +3350,6 @@ public static class DebugConsole
 			+ $"strikes/s={script?.StrikesPerSecond:F3} flyers={script?.FlyingMeshes.Count}";
 	}
 
-	/// <summary>The control with <paramref name="id"/> in the tree under <paramref name="control"/>, or null - for `control`.</summary>
 	/// <summary>Whether a control or any control above it is not shown, so it is neither drawn nor takes the pointer.</summary>
 	private static bool Hidden( UI.UiControl? control )
 	{
@@ -3363,6 +3362,7 @@ public static class DebugConsole
 		return false;
 	}
 
+	/// <summary>The control with <paramref name="id"/> in the tree under <paramref name="control"/>, or null - for `control`.</summary>
 	private static UI.UiControl? FindControl( UI.UiControl? control, int id, bool shown = false )
 	{
 		if ( control == null || (shown && !control.Visible) )

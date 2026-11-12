@@ -257,37 +257,44 @@ public class ParkModelTablesTests
 
 	/// <summary>
 	/// An idle channel's marks are its last clip's, which the file does not name: they stand while nothing is started
-	/// on it, and go when something is, a transform-only node's hidden bit apart.
+	/// on it, and stand still when something is, as the engine takes nothing off a channel on role 12 (<c>0x00473096</c>)
+	/// and binds the new clip alone (<c>0x00473117</c>).
 	/// </summary>
 	[TestMethod]
 	public void AnIdleChannelsMarksStandUntilItIsStarted()
 	{
 		var (model, clips, _) = Load( CrazyApe );
 		var fresh = new ParkModelTables.Running( model, 1 );
+		var build = clips.Clip( 0, 0 )!;
+		var ride = clips.Clip( 3, 0 )!;
 
-		fresh.Started( 0, clips.Clip( 0, 0 )!, 0f );
+		fresh.Started( 0, build, 0f );
 
 		var file = fresh.Words( [Ended] );
 		var kept = new ParkModelTables.Running( file, [null] );
 
 		CollectionAssert.AreEqual( file, kept.Words( [Ended] ) );
 
-		kept.Started( 0, clips.Clip( 3, 0 )!, Ended );
+		kept.Started( 0, ride, Ended );
 
-		uint[] riding = [0, 0, 0, 0, 0xa0, 0xa2, 0xa2, 1, 1, .. Enumerable.Repeat( 0x601u, 24 ), 0xc20];
+		var words = kept.Words( [5f] );
+		var buildOnly = build.Tracks.Select( track => track.Node ).Except( ride.Tracks.Select( track => track.Node ) ).ToArray();
 
-		CollectionAssert.AreEqual( riding, kept.Words( [5f] ), "the build clip's marks, which no clip of the file's accounts for, gone; the dummy shown as the file has it" );
+		Assert.IsTrue( buildOnly.Length > 0, "the build clip moves nodes the ride clip does not" );
+		Assert.IsTrue( buildOnly.All( node => (words[node] & ParkModelTables.TrackBits) == (file[node] & ParkModelTables.TrackBits) ), "the build clip's marks, which no clip of the file's accounts for, stand" );
+		Assert.IsTrue( ride.Tracks.All( track => (words[track.Node] & ParkModelTables.Tracked) != 0 ), "the ride clip bound" );
 
-		// And a mesh the unnamed clip left hidden is shown again: the build clip, started afresh, has not yet hidden the crate.
+		// And a mesh the unnamed clip left hidden stays hidden: the crate.
 		var again = new ParkModelTables.Running( file, [null] );
 
-		again.Started( 0, clips.Clip( 0, 0 )!, Ended );
-		Assert.AreEqual( (0xa1u, 0xa0u), (file[7], again.Words( [-1f] )[7]) );
+		again.Started( 0, build, Ended );
+		Assert.AreEqual( (0xa1u, 0xa1u), (file[7], again.Words( [-1f] )[7]) );
 	}
 
 	/// <summary>
 	/// Of a model's several channels, a clip started on one leaves the marks only the others' clips account for,
-	/// whether its own last clip is named or not; one clip on two lanes loses its marks with either.
+	/// whether its own last clip is named or not, and its own named last clip's go while an unnamed one's stand; one
+	/// clip on two lanes loses its marks with either.
 	/// </summary>
 	[TestMethod]
 	public void AClipStartedOnOneLaneLeavesTheOthers()
@@ -317,7 +324,7 @@ public class ParkModelTablesTests
 			var words = kept.Words( [9f, 1f, Ended] );
 
 			Assert.IsTrue( onlyFirst.All( node => (words[node] & ParkModelTables.Tracked) != 0 ), $"named {named}" );
-			Assert.IsTrue( onlySecond.All( node => (words[node] & ParkModelTables.TrackBits) == 0 ), $"named {named}" );
+			Assert.IsTrue( onlySecond.All( node => ((words[node] & ParkModelTables.Tracked) != 0) == !named ), $"named {named}: an unnamed last clip's marks stand" );
 		}
 
 		// Two lanes on one clip: the one taken off takes the marks the other's shares with it.
@@ -345,8 +352,8 @@ public class ParkModelTablesTests
 	/// <summary>
 	/// The totem's two clips that share nodes, on two of its channels, and a third clip started in place of one of
 	/// them: the one taken off takes the track bits of the nodes both move, the other channel's clip is not bound again (<c>FUN_00472f60</c> binds only the new clip,
-	/// <c>0x00473117</c>), and its own nodes keep theirs. Where the outgoing clip is not named, every track bit goes
-	/// and the others' clips put theirs back, so the shared nodes keep them there.
+	/// <c>0x00473117</c>), and its own nodes keep theirs. Where the outgoing clip is not named (role 12 in the engine),
+	/// nothing is taken off (<c>0x00473096</c>), so its nodes and the shared ones keep their marks.
 	/// </summary>
 	[TestMethod]
 	public void ATrackTwoChannelsShareGoesWithTheClipTakenOff()
@@ -383,7 +390,7 @@ public class ParkModelTablesTests
 			var words = replaced.Words( [9f, 1f, Ended, Ended] );
 
 			Assert.IsTrue( onlyKept.All( node => (words[node] & ParkModelTables.Tracked) != 0 ), $"named {named}: the kept clip's own node" );
-			Assert.IsTrue( onlyOutgoing.All( node => (words[node] & ParkModelTables.TrackBits) == 0 ), $"named {named}: the outgoing clip's own nodes" );
+			Assert.IsTrue( onlyOutgoing.All( node => ((words[node] & ParkModelTables.Tracked) != 0) == !named ), $"named {named}: the outgoing clip's own nodes" );
 			Assert.IsTrue( both.All( node => ((words[node] & ParkModelTables.Tracked) != 0) == !named ), $"named {named}: the nodes both clips move" );
 		}
 	}
@@ -529,6 +536,79 @@ public class ParkModelTablesTests
 		var idle = RideAnimations.None();
 
 		CollectionAssert.AreEqual( new[] { float.MaxValue }, idle.NodeFrames(), "an idle channel reads past any clip's end" );
+	}
+
+	/// <summary>
+	/// A stop (role 12) or a role the model has no clips for takes the outgoing clip's marks off and binds none
+	/// (<c>FUN_00472f60</c>, <c>0x00473131</c>); a freeze, a hold, an entry past a role's count and a stop with the
+	/// caller's <c>0x4</c> or <c>0x8</c> take nothing off; and a start with the caller's <c>0x4</c> binds the new clip over
+	/// the old one's marks (<c>0x0047309f</c>).
+	/// </summary>
+	[TestMethod]
+	public void AStopTakesTheLastClipsMarksOffAndAFreezeDoesNot()
+	{
+		var (model, clips, _) = Load( CrazyApe );
+		var build = clips.Clip( 0, 0 )!;
+		var ride = clips.Clip( 3, 0 )!;
+		var buildNodes = build.Tracks.Select( track => track.Node ).ToArray();
+		var buildOnly = buildNodes.Except( ride.Tracks.Select( track => track.Node ) ).ToArray();
+		var lacking = Enumerable.Range( 0, RideAnimations.RoleCount ).First( role => clips.EntryCount( role ) == 0 );
+		uint[] built = [0x0, 0xa0, 0xa0, 0x20, 0xa0, 0xa2, 0xa2, 0xa1, 0xa1, .. Enumerable.Repeat( 0x601u, 24 ), 0x420];
+
+		Assert.IsTrue( buildOnly.Length > 0 );
+
+		foreach ( var (role, entry, flags, why) in new[]
+		{
+			(AnimTimeControl.FreezeAtStart, 0, 0, "a freeze"),
+			(AnimTimeControl.HoldAtEnd, 0, 0, "a hold"),
+			(0, 99, AnimTimeControl.StartAtOnceFlag, "an entry past the role's count"),
+			(RideAnimations.NoRole, 0, AnimTimeControl.StartAtOnceFlag | AnimTimeControl.KeepPoseFlag, "a stop with 0x4"),
+			(RideAnimations.NoRole, 0, AnimTimeControl.StartAtOnceFlag | AnimTimeControl.KeepShownFlag, "a stop with 0x8"),
+		} )
+		{
+			clips.Nodes = new ParkModelTables.Running( model, clips.ChannelCount );
+			clips.Trigger( 0, 0, AnimTimeControl.StartAtOnceFlag, 1f, 0 );
+			clips.Trigger( role, entry, flags, 1f, 0 );
+			CollectionAssert.AreEqual( built, clips.Nodes.Words( [Ended] ), why );
+		}
+
+		foreach ( var (role, why) in new[] { (RideAnimations.NoRole, "a stop"), (lacking, "a role the ape has no clips for") } )
+		{
+			clips.Nodes = new ParkModelTables.Running( model, clips.ChannelCount );
+			clips.Trigger( 0, 0, AnimTimeControl.StartAtOnceFlag, 1f, 0 );
+
+			var expected = (uint[])built.Clone();
+
+			ParkModelTables.Show( expected, build, clips.NodeFrames()[0] );
+			ParkModelTables.Unbind( expected, build );
+
+			clips.Trigger( role, 0, AnimTimeControl.StartAtOnceFlag, 1f, 0 );
+
+			var words = clips.Nodes.Words( [Ended] );
+
+			Assert.IsTrue( buildNodes.All( node => (words[node] & ParkModelTables.TrackBits) == 0 ), why );
+			CollectionAssert.AreEqual( expected, words, why );
+
+			// Nothing is bound in its place, so a second stop takes nothing more off.
+			clips.Trigger( RideAnimations.NoRole, 0, AnimTimeControl.StartAtOnceFlag, 1f, 0 );
+			CollectionAssert.AreEqual( expected, clips.Nodes.Words( [Ended] ), why );
+		}
+
+		// The caller's 0x4 on a start: the build clip's own nodes keep their marks, and the ride clip is bound.
+		var keepPose = new ParkModelTables.Running( model, 1 );
+
+		keepPose.Started( 0, build, 0f );
+		keepPose.Started( 0, ride, Ended, takeOff: false );
+
+		var kept = keepPose.Words( [5f] );
+
+		Assert.IsTrue( buildOnly.All( node => (kept[node] & ParkModelTables.Tracked) != 0 ), "0x4: the old clip's marks stand" );
+		Assert.IsTrue( ride.Tracks.All( track => (kept[track.Node] & ParkModelTables.Tracked) != 0 ), "0x4: the new clip bound" );
+
+		clips.Nodes = new ParkModelTables.Running( model, clips.ChannelCount );
+		clips.Trigger( 0, 0, AnimTimeControl.StartAtOnceFlag, 1f, 0 );
+		clips.Trigger( 3, 0, AnimTimeControl.StartAtOnceFlag | AnimTimeControl.KeepPoseFlag, 1f, 0 );
+		Assert.IsTrue( buildOnly.All( node => (clips.Nodes.Words( clips.NodeFrames() )[node] & ParkModelTables.Tracked) != 0 ), "0x4 through the players" );
 	}
 
 	/// <summary>

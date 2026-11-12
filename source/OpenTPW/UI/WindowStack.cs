@@ -981,13 +981,12 @@ internal sealed class WindowStack : Panel
 
 		// The original's box moves its caret, and Shift its selection, on Left, Right, Home and End, and deletes forward
 		// on Delete (FUN_00667a72: 0x2500, 0x2700, 0x2400, 0x2300, 0x2e00). Here the caret is always at the end, so each
-		// is dropped and counted. Up and Down (0x2600, 0x2800) move a line only in a box flagged 0x80; in any other they are
-		// sent to the box's window as 0x805, as is every key the box does not take (0x00667c68). Save Park's handler has no
-		// 0x805 arm (0x0049ec35); what the window's default (vtable +0x118, 0x0065f688) and the new player dialog's
-		// handler make of it is not read (Q1260), so Up and Down are dropped and counted until it is.
+		// is dropped and counted. Up and Down (0x2600, 0x2800) move a line only in a box flagged 0x80; in a name box they
+		// are sent to its window as 0x805 (0x00667c68), which no handler takes and [window+0x118]'s default drops
+		// (0x0065fba2; docs/exe/hud.md, "Up and Down in a name box"), so here they are dropped too, uncounted.
 		foreach ( var key in Input.KeysPressed )
 		{
-			if ( key is Key.Delete or Key.Left or Key.Right or Key.Home or Key.End or Key.Up or Key.Down )
+			if ( key is Key.Delete or Key.Left or Key.Right or Key.Home or Key.End )
 				Unimplemented.Report( $"EDIT_BOX_KEY_{key.ToString().ToUpperInvariant()}" );
 		}
 

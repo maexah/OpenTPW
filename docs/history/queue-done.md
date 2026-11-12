@@ -13304,8 +13304,8 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   Jurassic Tours unbought through `Build`, moves it with the bank below 3000 (refused, still in the hand, marked moved,
   squares red), checks 3000 passes and 2999 refuses at that cell, and that a buy-list carry of it is not refused; four
   bugs put back by hand each failed it. Off-screen run (fresh Full Simulation player, no tickets): `move 13 40 70` at
-  -10000 answered "costs 3000 and the park has -7000 - sound 0xaf"; `put 40 70` at 100000 built it. Not read: which of
-  `0x816d50`/`0x81b604` the move's click honours (taken as the carry's). Not observed in the original (no original in the
+  -10000 answered "costs 3000 and the park has -7000 - sound 0xaf"; `put 40 70` at 100000 built it. Which latch the move's
+  click honours: read in the listing (`0x00524a63`, the carry's `0x00816d48`; run 22 review). Not observed in the original (no original in the
   lane). **Done 2026-11-12** (cloud lane c34, `alexah/1013-moved-ticket-ride-money-test`).
 - [x] **Q1160. The unjoined queue's tag is about the ride, and a polled line's thing reaches its tag.** From the fork watch
   2026-11-12 (`verify-advisor.md` A1). In the original a polled record's speech (`FUN_0059b620`) asks the score callback again
@@ -13426,3 +13426,15 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   line to -1 and its said and slaps to nought, keeping the tick, on the player's first park only (the gms.dat byte
   read `0x005b0597`, written `0x005b0109`). Ours keeps Easymode.TPWI's said bytes, so 0xb9 and 0x11a are never said.
   `PlayerFile.FirstParkToCome` is never cleared here. Confirm: a new player's first park in both games, tick 877.
+- [x] **Q1260. What the window's default and the new player dialog make of a name box's 0x805 (from Q1164).** **Settled
+  by the run 22 review (VERIFY-10), from the listing:** neither acts. The one hook (`0x00485780`) has no `0x805` arm, both
+  handlers hand it to `0x0047ee90`, and the window's default is the field `[window+0x118]` = `0x0065f6d1`, which drops it
+  (`0x0065fba2`); Tab (`0x803`) is dropped there too. The counts are removed and `hud.md` and `WindowStack.Keyboard` say
+  so (`TheBoxDropsUpAndDownSilently`). The box
+  (`FUN_00667a72`) sends every key it does not take to its window as `0x805` (`0x00667c68`, `0x00667cb0`, `0x00667fd3`);
+  Save Park's handler (`0x0049ea30`) passes it through `0x0047ee90` (only arm `0x14`) to the window's default, vtable
+  `+0x118` (`0x0065f688`). Read that default and the new player dialog's handler (its name box `0x004a6f8e`,
+  `lobby.md`) for `0x805`. If either acts on Up or Down, build it; if neither does, remove the `EDIT_BOX_KEY_UP` and
+  `_DOWN` counts (Q1164) and say so in `hud.md` and at `WindowStack.Keyboard`. Also list the other keys the box does not
+  take (Tab is `0x803`; PageUp, PageDown, the function keys) and whether any reaches an arm. Needs Ghidra; no game run
+  unless the reading leaves it open.

@@ -47,7 +47,7 @@ The ones that have bitten more than once.
 - **59** — Ask whether a measured magnitude is sensible before writing prose; where a name and a value disagree, the value is evidence.
 - **69** — Decide in advance what result supports and what refutes; if an outcome fits both, the instrument does not discriminate.
 - **85** — Print a field's distinct values before filtering a census on it, and write the sampling interval beside "never observed".
-- **86** — A pause that stops the world may stop the thing you measure: under `pause` anything on `Time.Delta` freezes.
+- **86** — A pause that stops the world may stop the thing you measure: under `pause` anything on `Time.Delta` freezes; advance it deliberately with `step <n>`, and stepping advances everything on that clock.
 - **87** — A capture shows one side of the subject: confirm the subject is in the frame and pin the viewpoint before differencing.
 - **90** — Measure the control floor before quoting a pixel percentage, then look at the shape of the difference image.
 - **93** — Check a threshold against the region's reachable maximum, and judge a mostly-empty control by its parts.
@@ -69,17 +69,17 @@ The ones that have bitten more than once.
 - **21** — "Nothing writes X" means "nothing in [a,b) writes X"; write the range beside the finding, because the writer lives at the edge.
 - **33** — A negative result describes the instrument's reach, not the data; say which encodings and ranges were swept.
 - **36** — Prove a search could find a presence, the same way, before believing an absence; a four-character tag has two spellings.
-- **43** — Never let a check's failure mode be an empty string: print a count and pair "nothing found" with a positive control.
+- **43** — Never let a check's failure mode be an empty string: print a count and pair "nothing found" with a positive control; check a tool exists, anchor a search for a short or comma-formatted number, and test its own `$?` or `PIPESTATUS`.
 - **79** — A loop that collects runs its whole budget; only a loop that waits may exit early, or the truncation reads as a finding.
 - **102** — A reader that says "there is no such memory" can be wrong; read a load-bearing number by a second path, best from the file itself.
 - **105** — A four-character tag compared as a dword is stored backwards; search both byte orders before recording an absence.
 
 ## Controls and mutations
 
-- **3** — Assert the manipulation took effect, with one thing that must change and one that must not: a zero difference from a no-op manufactured a bug.
+- **3** — Assert the manipulation took effect, with one thing that must change and one that must not: a zero difference from a no-op manufactured a bug; make the fixed probe report INCONCLUSIVE when the thing that must change did not.
 - **9** — When a control fails twice, suspect the predicate, not the threshold; an unexplained 0.00 or 100.00 is explained or distrusted.
-- **26** — Restore from a copy, never from version control, and keep an md5 before and after every control.
-- **48** — Include a mutation you expect to survive, and say so: a survivor names an unpinned claim.
+- **26** — Restore from a copy, never from version control, and keep an md5 before and after every control. Commit before running a control.
+- **48** — Include a mutation you expect to survive, and say so: a survivor names an unpinned claim; re-run, as a pin is not a pin until the mutation it was written for fails.
 - **50** — Neither side of a control substitution may be empty; wrap mutate-measure-restore so the restore always runs, and check the md5 after every control.
 - **65** — Evaluate every guard before a band edge at the test's inputs, and land a control somewhere different from what it controls.
 - **66** — Give the two sides of an "these lookups agree" assertion different not-found fallbacks, or two failures pass.
@@ -118,7 +118,7 @@ The ones that have bitten more than once.
 
 - **13** — An archive member is addressed without the archive's extension; derive paths from the walk and read the resolver before editing one.
 - **14** — A table that checked out does not vouch for its neighbour; check the dispatcher's bounds and downgrade a source that was wrong once.
-- **15** — Use the parser the tree already has, grep the notes before re-deriving, and re-run a delegate's command when its finding carries weight.
+- **15** — Use the parser the tree already has, grep the notes before re-deriving, and re-run a delegate's command when its finding carries weight. For "has this been pushed", ask `git ls-remote <remote>`, never a tracking ref.
 - **19** — A coverage count nominates; the handler decides: an instruction can park, fault, or need a subsystem that is not there.
 - **20** — A block's address range is not its behaviour: follow every exit to a `RET` and compute what is reachable.
 - **28** — A float-heavy format with no byte over 0x7f has been through a text decoder; check the extraction before parsing it.
@@ -142,22 +142,22 @@ The ones that have bitten more than once.
 - **62** — A swap has a new mechanism, a consumer and a crutch, and the risk is the consumer: follow the value to the line that reads it.
 - **64** — A test count in a commit message is about that commit alone; take it from that commit's own worktree build.
 - **67** — Where behaviour is randomised, accumulate observations over the run and assert over the collection; a flaky test is worse than none.
-- **68** — Ask which clock a restored timestamp was taken against, and assert position, not state.
-- **75** — Coverage is decided by fixtures as much as by assertions: name the construction path that reaches new code and test it.
+- **68** — Ask which clock a restored timestamp was taken against, name which clock a field is denominated in, and assert position, not state.
+- **75** — Coverage is decided by fixtures as much as by assertions: name the construction path that reaches new code and test it, have that test assert the state is LEFT, not merely entered, and build the real thing rather than widening an old assertion.
 - **84** — A test that a state was reached says nothing about what happens in it: diff what is set against what is handled.
-- **113** — A test step that can run without a build tests the previous build; check the build's exit code.
+- **113** — A test step that can run without a build tests the previous build; check the build's exit code, and make the harness refuse to return a verdict when the build failed.
 - **117** — A count quoted from someone else's measurement names their population, not your test's.
 - **120** — A test stepped at one frame rate cannot tell per-second from per-frame; step it at a second rate.
 - **124** — An invariant between events is pinned only if checked between them, and a rare case only if the test forces it.
 
 ## Shell and harness traps
 
-- **7** — `sys.exit()` in a `finally:` replaces the exception in flight; a harness broken and a subject broken must print different things.
+- **7** — `sys.exit()` in a `finally:` replaces the exception in flight; a harness broken and a subject broken must print different things. Catch `BaseException` before the `finally` and print it.
 - **10** — `cmd | tail; echo $?` reports tail's status; capture the command's own exit code or it is decoration.
-- **12** — A "must be" banner needs a comparison that can exit non-zero, and one stale path makes `git add` stage nothing.
+- **12** — A "must be" banner needs a comparison that can exit non-zero, and one stale path makes `git add` stage nothing. Do not trust `set -e` to enforce a precondition.
 - **88** — A debug command that looks like a query can be a setter; read the handler before polling it.
 - **89** — A behaviour change can delete the instrument you verify with; prefer an observable the subject cannot switch off.
-- **91** — Under `pause` nothing eased on `Time.Delta` moves, so a paused grab can show the picture from before the work.
+- **91** — Under `pause` nothing eased on `Time.Delta` moves, so a paused grab can show the picture from before the work; step or resume before grabbing a camera move, a walk or an animation.
 - **94** — Drain the reply queue before reading a reply, or you read the answer to an earlier command.
 - **96** — `pkill -f PATTERN` kills the shell running it when the pattern is in its own command line.
 - **98** — A debug selector can be read by a branch the subject never takes; assert the state the subject uses, not the one you set.

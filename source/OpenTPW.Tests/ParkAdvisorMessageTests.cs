@@ -5035,6 +5035,27 @@ public class ParkAdvisorMessageTests
 	}
 
 	/// <summary>
+	/// Only row 113's line takes the unjoined queue's ride: another polled row said while a queue is unjoined (row 259,
+	/// the rides shut, two of three) keeps the subject it was posted with, nought, and its second word stays null.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> <c>ThingOf</c> without its <c>QueueNotJoined</c> test.</remarks>
+	[TestMethod]
+	public void AnotherRowSaidWhileAQueueIsUnjoinedKeepsItsOwnSubject()
+	{
+		var cursor = new ParkAdvisorMessages.PollCursor { Row = 259 };
+		var messages = new ParkAdvisorMessages( Settings(), cursor: cursor );
+		var facts = new ParkAdvisorMessages.ParkFacts( Closed: false, Rides: 3, Sideshows: 1, WaitingToOpen: 0, UnjoinedQueue: 44 ) { RidesShut = 2 };
+		var groups = new List<(int, int, int?)>();
+		var said = 0;
+
+		messages.Tick( 1, 0, ( _, _ ) => { ++said; return 5000; },
+			( group, subject, second ) => groups.Add( (group, subject, second) ), () => facts );
+
+		Assert.AreEqual( (1, 1), (said, groups.Count), "row 259 said on its poll's sweep" );
+		Assert.AreEqual( (0, (int?)null), (groups[0].Item2, groups[0].Item3), "posted about nought, and so said" );
+	}
+
+	/// <summary>
 	/// The cursor is the park file's: the shipped park's row 277 has row 282 scored on the fifth sweep, tick 760
 	/// of a park whose first sweep is 756, and row 185 on the 122nd, tick 877; a row below the table is refused.
 	/// </summary>

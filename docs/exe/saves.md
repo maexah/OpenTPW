@@ -1422,8 +1422,11 @@ follow the list. It runs after the scripts, the track rides and the models are s
   slot, state 1, an empty loop stack (`+0x1c` 20), alpha 255, scale 1, the program and the place, the interval `0x3e` at
   `+0x80` (`0x004759c4`; a person's, a balloon's and a bubble's own interval is written over it) and, at `+0x7c`, the clock
   the file is written with (its `CLOK`) plus that `0x3e`, as the constructor stores its clock plus the interval (`0x004759df`;
-  Q274): a sprite made here waits one interval after a load before its first turn, as the original's does, where a
-  nought here was a time already past. A head made here (below) takes the same two words, where one of the original's
+  Q274): a sprite made here waits one interval after the original loads the file before its first turn, as the
+  original's own does, where a nought here was a time already past (OpenTPW's reader does not read `+0x7c`). **A
+  deviation:** a kept sprite's `+0x7c` stays the file's word while `CLOK` moves to the running clock, so in a file
+  written later it lies in the past and the sprite takes its turn at once when the original loads it; the original's
+  own live sprites stand about one interval from `CLOK`. A head made here (below) takes the same two words, where one of the original's
   that has run its turn holds that turn's clock plus its interval (not compared). A live slot's handle is the slot's own number, which the reader only tests against nought.
   **`+0xbc` is the frames a direction of the set the sprite was made on** ("A sprite's `+0xbc`", below): a made
   person's is their bank's set 0's, and a state's animation started since writes its own set's over a made
@@ -2206,7 +2209,7 @@ is laid over the fresh node's: the reader clears the eleven bits below on the no
 
 | File | Node | What sets it |
 |---|---|---|
-| `0x1` | `0x10` | hidden. A clip's hide list, as the clip is bound (`FUN_00472d70`), on a node without `0x80000000`; taken off again, for the hide list and the tracks of the clip a channel last ran, by `FUN_004726d0`, which then binds every running channel's clip again; where the model's own `+4` holds `0x8` it first takes the bit off every node, a `0x80000000` one too (`0x00472763`). Its one caller is `FUN_0044e380` |
+| `0x1` | `0x10` | hidden. A clip's hide list, as the clip is bound (`FUN_00472d70`), on a node without `0x80000000`; taken off again, for the hide list and the tracks of the clip a channel last ran, by `FUN_004726d0`, which then binds every running channel's clip again; where the model's own `+4` holds `0x8` it first takes the bit off every node, a `0x80000000` one too (`0x00472763`; `FUN_00472310`'s like branch, `0x00472355`). Its one caller is `FUN_0044e380` |
 | `0x2` | `0x20` | every child of the node is a childless transform-only node: the item loader's closing loop over the nodes (`FUN_004629d0`, `0x00462fbc`), which walks the child chain and tests each child's file flag `0x200` and its own first child. The Crazy Ape's two arms, which hold only head and nose markers |
 | `0x4` | `0x8000` | not looked for; in no record of 7,688 |
 | `0x8` | `0x10000` | the mesh was morphed and its face normals are stale: set by the morph (`FUN_00471860`, `FUN_004714a0`), cleared by `FUN_00473a40`, which works the normals out again, from the pose walk (`0x0044afd8`, for a node with `0x10000000`), from `FUN_00473c30` and from the model's advance `FUN_00473c70` (`0x00473ddf`, for a model whose mesh data's `+0x30` holds `0x4`) |
@@ -2313,14 +2316,19 @@ Built on 2026-10-09 (Q257b). `ParkModelTables` holds the rule: `NodeWordsAtRest`
 model's `Running`: made fresh from the item's `.md2` as a thing is bought (`ParkRides.BindNew`), and from the
 file's own words and each channel's clip as a load ends (`ParkRides.Restore`, the words read into
 `SavedThing.NodeWords`). `RideAnimations.StartOn` tells it of each clip started without the keep-shown flag, and
-`Advance` of a clip promoted from the queue; a loop's wrap and a hold bind nothing. The writer takes
+`Advance` of a clip promoted from the queue; a loop's wrap and a hold bind nothing. A channel with no clip bound
+(the engine's role 12: nothing started on it since it was made, or the file had it idle) has nothing taken off as
+its next clip is bound (`0x00473096` skips `FUN_00472310`), and a stop (role 12, or a role the model has no clips
+for, without the caller's `0x4` or `0x8`) takes the last clip off and binds none (`0x00473121`..`0x00473131`; the
+Hot Pot's boats, `0x00544e25`, `0x005486e4`). A caller's `0x4` alone skips the take-off and still binds
+(`0x0047309f`). The writer takes
 `Nodes.Words( frames )`: for a made record with `Lookups` and `SharedFlags` (`ParkThingStates.MadeRecord`'s
 `ModelTables`), for a kept one over the record's own words (`WrittenModel.NodeWords`, `Put`). A kept record's
 lookup records are left the file's.
 
 **Deviations, each said at its site.** Bit `0x8` is never set, and a file's is kept. A clip promoted from the
-queue is bound whether or not its model is in view. A clip started takes off the channel's last clip and binds the new one, nothing else, as `FUN_00472f60` does (`0x004730a9`, `0x00473117`), so a track bit two channels' clips share goes with the outgoing clip (Q277). Where a channel the file
-had idle is started, its unnamed last clip's marks cannot be told from another idle channel's, and all go; there, and only there, the other channels' clips mark their nodes again in their place. A
+queue is bound whether or not its model is in view. A clip started takes off the channel's last clip and binds the new one, nothing else, as `FUN_00472f60` does (`0x004730a9`, `0x00473117`), so a track bit two channels' clips share goes with the outgoing clip (Q277). `Unbind` leaves out two branches of `FUN_00472310`: an additive model's mask (`0x800000` alone, `0x004723a4`) and
+model flag `0x8`'s `0x10` off every node (`0x00472355`). A
 thing bought whose model will not read declares no tables (`SAVE_PARK_MADE_MODEL_TABLES`, counted), and so no
 head.
 

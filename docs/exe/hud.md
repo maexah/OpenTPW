@@ -1378,13 +1378,16 @@ control constructor stores the layout's flags at `+0x48` (`0x0065bd2c`) and the 
   to `0x3943d` with no click** (`0x00499707`..`0x00499711`), Tab swaps the lines, **Enter on the second line posts `0x100` with -1 and clicks**
   (`0x00499736`..`0x0049973e`), and **Escape closes by `0x00658d9f( window, 4 )`, silent** (`0x004996bf`..`0x004996ca`). Every root carries layout flags
   `0x1`, so the click is `0x1f`. Save Park (`0x0049ea30`) is the one box that clicks on Escape too (it posts `0x100` with -2).
-- **Up and Down in a name box (Q1164; decode from the run 22 review of Q285, `review22/q285` F2, not re-read here).** The box
-  (`FUN_00667a72`) moves its caret a line on Up and Down (`0x2600`, `0x2800`) only when flagged `0x80`; in any other box it
-  sends the key to its window as `0x805` (`0x00667c68`, `0x00667cb0`), as it does every key it does not take (`0x00667fd3`).
-  Save Park's handler (`0x0049ea30`) has no `0x805` arm and hands it to `0x0047ee90`, whose only arm is `0x14`, then to the
-  window's default through its vtable `+0x118` (`0x0065f688`). **Not read:** that default, and the new player dialog's
-  handler for `0x805` (Q1260). Until they are, OpenTPW drops Up and Down in a focused box and counts them,
-  `EDIT_BOX_KEY_UP` and `EDIT_BOX_KEY_DOWN` (`WindowStack.Keyboard`), as it counts Delete, Left, Right, Home and End.
+- **Up and Down in a name box (Q1164; decode from the run 22 review of Q285 and Q1164).** The box (`FUN_00667a72`) moves
+  its caret a line on Up and Down (`0x2600`, `0x2800`) only when flagged `0x80`; in any other box it sends the key to its
+  window as `0x805` (`0x00667c68`, `0x00667cb0`), as it does every key it does not take (`0x00667fd3`), through
+  `0x00658d9f`, which hands it to the one hook ever installed (`0x00485780`, no `0x805` arm, returns 0 at `0x00485a44`) and
+  then the window. Save Park's handler (`0x0049ea30`, `0x0049ec35`) and the new player dialog's (`0x004a6d00`, `0x004a6db8`)
+  take `0x802` and `0x804` alone and hand the rest to `0x0047ee90`, whose only arm is `0x14`; it calls the window's
+  default through the window's own field `[window+0x118]` (`0x0065f688`), which for a type-1 root the base constructor
+  sets to `0x0065f6d1` (`0x0065bd42`), and that has no `0x805` case (`0x0065fba2`, `xor eax,eax`). So Up and Down, and Tab
+  (`0x803`) in these two boxes, are **dropped silently**; OpenTPW drops them and counts nothing (`WindowStack.Keyboard`).
+  Not parsed: that each box is a direct child of its root (the tree records at `0x007523f0`, `0x00753f50`).
 - **The staff rename box.** `0x004b6110` is refused while a box is open (`[edi+0xc]`) or with no selected thing (`[0x007c2658]`), and the thing's class
   byte `[+2]` must be 4, 5, 6, 7 or 8. It opens table `0x007572e8` with callback `0x004b6320` (`0x0065fd0e`), properties 0 = the thing and 1 = the window;
   the title control `0x5daa` reads **UITEXT 195** (`0x004b6226`), the one edit `0x5dab` has buffer `0x007cc360` and a limit of **32** characters
@@ -4560,7 +4563,7 @@ the cell colour, the click, the carry, the purchase and the lab; the help state 
   the ride in the hand.
 - **The carry** (`BuildTool_PreviewPass`, `0x005235e6`..`0x00523613`): an item with a cost not yet bought sets the run's
   price to nought (`FUN_0052fb90( 0 )`) and skips the price-against-bank test below it, so it is never refused for
-  money; the original shows "$ 0" under the balance while carrying it (`q709/orig/a-place.png`). The move tool's put-down (`0x00523940`..`0x005239fc`) has no such exemption: it sets the run's price to the item's full `+0x1b8` (`0x0052398b`) and meets the cell test `0x00535905`..`0x0053592b`, so a moved ticket ride is refused where its price is above the bank (read from the listing, not observed). OpenTPW matches it (Q732): the hand marks a move (`ParkBuilding.CarryingMoved`, set by `PickUp` alone), and `PlacementRefusal`'s money test skips a ticket ride only for a carry; which latch, `0x816d50` or `0x81b604`, the move's click honours was not read and is taken to be the carry's.
+  money; the original shows "$ 0" under the balance while carrying it (`q709/orig/a-place.png`). The move tool's put-down (`0x00523940`..`0x005239fc`) has no such exemption: it sets the run's price to the item's full `+0x1b8` (`0x0052398b`) and meets the cell test `0x00535905`..`0x0053592b`, so a moved ticket ride is refused where its price is above the bank (read from the listing, not observed). OpenTPW matches it (Q732): the hand marks a move (`ParkBuilding.CarryingMoved`, set by `PickUp` alone), and `PlacementRefusal`'s money test skips a ticket ride only for a carry. The move's click is refused by the carry's latch: `FUN_00524960` tests `0x00816d48` (`0x00524a63`) for every mode but `0x38`, and the cell test's money refusal sets it (`0x00535937`); the move pass's own `0x0081b604` (`0x005239d0`) only makes its second pass mark every cell refused (`0x0053319a`).
 - **The purchase** (`Object_Construct` `0x004db090`, `0x004db4a6`..`0x004db4f6`): such an item calls
   `GoldenTicket_SpendForRide` (`0x004d4ad0`) **in place of** the withdrawal of its price, and ignores its answer.
   In game type 1 (online) that does nothing; in any other, where the tickets suffice, `PlayerProgress_BuyRide`

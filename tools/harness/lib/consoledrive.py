@@ -4,7 +4,9 @@
 consolerun.py's interactive sibling for a cloud lane (no python-xlib, Q862): a run script imports it, starts the game with
 `Drive(out, bin, game)`, then `ask(command, until)` sends one console command and returns the lines printed up to the
 first one matching the regex `until` (or the timeout); `key(name)` and `click(x, y)` are real X events by xdotool on the
-run's own Xvfb display, and on no other: each is refused where `run_display` cannot find that Xvfb in the run's session; `quit()` ends the run and kills what is left. Everything the game prints is in <out>/stdout.txt,
+run's own Xvfb display, and on no other: each is refused where `run_display` cannot find that Xvfb in the run's session;
+`bar_click(which)` clicks the message bar's first or second button there (`bar_button`, also barclick.sh's, for
+consolerun.py); `quit()` ends the run and kills what is left. Everything the game prints is in <out>/stdout.txt,
 each command after `>>> `.
 
 As consolerun.py, the game never runs on <game> itself (consolegame.py): <out>/game links to <game>'s entries with a COPY
@@ -46,6 +48,34 @@ def run_display(sid):
     if xvfb is None or game != xvfb:
         return None
     return {"DISPLAY": xvfb[0], "XAUTHORITY": xvfb[1]}
+
+
+def bar_button(stdout, which="first", high=720):
+    """The window point (x, y) of the message bar's first or second button, from the last `bar: out=1 rect=X,Y` a `tags`
+    reply printed in the file `stdout`, or None where no reply had the bar out. The buttons sit at the bar's
+    +(28,9)..(131,112) and +(28,117)..(131,219) (ParkGadget, 0x10d30 and 0x10d2f), clicked at +(79,60) and +(79,168); the
+    virtual screen is 1536 high and pinned left and bottom, so on a window at least 4:3 wide a point is its virtual one
+    times the window's height `high` over 1536 (720 is consolerun.py's and Drive's window). The console's `click` reaches
+    the window stack only, never the gadget, so this is clicked as a real X event (`window_click`)."""
+    found = re.findall(r"bar: out=1 rect=(-?\d+),(-?\d+)", open(stdout, errors="replace").read())
+    if not found:
+        return None
+    a, b = (int(v) for v in found[-1])
+    return (a + 79) * high // 1536, (b + (168 if which == "second" else 60)) * high // 1536
+
+
+def window_click(display, x, y):
+    """A real click at (x, y) in the game's own window, the one named exactly `Theme Park World`, on `display` (the
+    {DISPLAY, XAUTHORITY} run_display answered, never the caller's): False, and nothing sent, where no such window is
+    visible there."""
+    env = dict(os.environ, **display)
+    found = subprocess.run(["xdotool", "search", "--onlyvisible", "--name", "^Theme Park World$"], env=env,
+                           stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True).stdout.split()
+    if not found:
+        return False
+    subprocess.run(["xdotool", "windowfocus", "--sync", found[0], "mousemove", "--window", found[0], str(int(x)), str(int(y)),
+                    "click", "1"], env=env, check=False)
+    return True
 
 
 def free_display(first):
@@ -108,19 +138,35 @@ class Drive:
     def collect(self, secs):
         time.sleep(secs); return self.drain()
 
-    def _xdotool(self, *args):
-        """xdotool on the run's own Xvfb only (run_display): where the display this run picked (free_display) is not this
-        run's server (Xvfb failed to start on it, another server took it), nothing is sent and the refusal is logged."""
+    def _own(self, what):
+        """The run's own display (run_display), or None, logged as refused, where the display this run picked
+        (free_display) is not this run's server (Xvfb failed to start on it, another server took it)."""
         found = run_display(self.p.pid)
         if found != {"DISPLAY": self.display, "XAUTHORITY": self.auth}:
-            self.log.write(f"!!! refused xdotool {' '.join(args)}: {self.display} is not this run's Xvfb ({found})\n"); self.log.flush()
-            print(f"consoledrive: xdotool refused, {self.display} is not this run's Xvfb ({found})")
-            return
-        subprocess.run(["xdotool", *args], env=dict(os.environ, **found), check=False)
+            self.log.write(f"!!! refused {what}: {self.display} is not this run's Xvfb ({found})\n"); self.log.flush()
+            print(f"consoledrive: {what} refused, {self.display} is not this run's Xvfb ({found})")
+            return None
+        return found
+
+    def _xdotool(self, *args):
+        """xdotool on the run's own Xvfb only (_own): elsewhere nothing is sent."""
+        if (found := self._own(f"xdotool {' '.join(args)}")) is not None:
+            subprocess.run(["xdotool", *args], env=dict(os.environ, **found), check=False)
 
     def key(self, name): self._xdotool("key", name)
 
     def click(self, x, y): self._xdotool("mousemove", str(int(x)), str(int(y)), "click", "1")
+
+    def bar_click(self, which="first", high=720):
+        """A real click on the message bar's first or second button (bar_button, from the last `tags` reply with the bar
+        out), in the game's window on the run's own Xvfb: False where the bar is not out, the display is not the run's,
+        or the window is not found."""
+        point = bar_button(os.path.join(self.out, "stdout.txt"), which, high)
+        found = self._own(f"bar_click {which}")
+        if point is None or found is None:
+            return False
+        self.log.write(f"!!! bar_click {which} at {point[0]} {point[1]}\n"); self.log.flush()
+        return window_click(found, *point)
 
     def quit(self):
         try:
@@ -134,3 +180,26 @@ class Drive:
             time.sleep(5)
         if consolegame.save_sum(self.game) != self.before:
             print("consoledrive: the game folder's save/ CHANGED during the run")
+
+
+if __name__ == "__main__":
+    # consoledrive.py barclick <stdout.txt> first|second [window height]: barclick.sh's body, for consolerun.py's `!` line.
+    # It acts only where CONSOLERUN_SID (the run's session, which consolerun.py gives a `!` line) leads run_display to the
+    # very DISPLAY and XAUTHORITY this process was given; anywhere else, a desk's own DISPLAY too, it sends nothing, exit 1.
+    if len(sys.argv) < 4 or sys.argv[1] != "barclick":
+        raise SystemExit("usage: consoledrive.py barclick <stdout.txt> first|second [window height]")
+    out, which = sys.argv[2], sys.argv[3]
+    high = int(sys.argv[4]) if len(sys.argv) > 4 else 720
+    sid = os.environ.get("CONSOLERUN_SID", "")
+    own = run_display(int(sid)) if sid.isdigit() else None
+    if own is None or own != {"DISPLAY": os.environ.get("DISPLAY"), "XAUTHORITY": os.environ.get("XAUTHORITY")}:
+        print(f"barclick: refused, DISPLAY {os.environ.get('DISPLAY')} is not a consolerun.py run's own Xvfb ({own})")
+        raise SystemExit(1)
+    point = bar_button(out, which, high)
+    if point is None:
+        print(f"barclick: no bar out in {out}")
+        raise SystemExit(1)
+    print(f"barclick: {which} button at {point[0]} {point[1]} on {own['DISPLAY']}")
+    if not window_click(own, *point):
+        print(f"barclick: no visible window named 'Theme Park World' on {own['DISPLAY']}")
+        raise SystemExit(1)

@@ -300,12 +300,21 @@ public sealed class RideAnimations
 		{
 			// The model's nodes are marked as the clip's only where the start binds it, which the caller's 0x8 says it
 			// does not (0x00473117); the frame the outgoing clip stood on is what its visibility tracks leave behind.
+			// The caller's 0x4 alone keeps the outgoing clip's marks (0x0047309f) and still binds.
 			if ( (flags & AnimTimeControl.KeepShownFlag) == 0 )
-				Nodes?.Started( index, clip, channel.IsIdle ? float.MaxValue : channel.AnimFrame );
+				Nodes?.Started( index, clip, channel.IsIdle ? float.MaxValue : channel.AnimFrame,
+					takeOff: (flags & AnimTimeControl.KeepPoseFlag) == 0 );
 
 			// Every start of a clip is a bind, the same clip again included; what it puts back and hides is the drawn
 			// side's, by the caller's 0x4 and 0x8 (PoseChannel).
 			_bound[index] = new Bind( _bound[index].Start + 1, flags );
+		}
+		else if ( (role == NoRole || (role >= 0 && role < RoleCount && _roles[role].Length == 0))
+			&& (flags & (AnimTimeControl.KeepPoseFlag | AnimTimeControl.KeepShownFlag)) == 0 )
+		{
+			// A stop, or a role the model has no clips for, takes the outgoing clip's marks off and binds none
+			// (0x00473121..0x00473131); a freeze or hold (13, 14) and an entry past a loaded role's count take nothing off.
+			Nodes?.Stopped( index, channel.IsIdle ? float.MaxValue : channel.AnimFrame );
 		}
 
 		// Where the outgoing clip had already run past its end, the new one starts that far in rather than

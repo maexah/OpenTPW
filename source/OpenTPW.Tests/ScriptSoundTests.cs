@@ -1109,6 +1109,7 @@ public class ScriptSoundTests
 	/// off, a chain whose set-up drew the fourth stays out of range and makes no child; one that drew another makes its
 	/// first child at once, the effect's first, which it then ranges by.
 	/// </summary>
+	/// <remarks>The nought at the first child is not observed: the held child writes its own variation into the chain straight after, so deleting the nought passes too.</remarks>
 	[TestMethod]
 	public void BeforeItsFirstChildTheStaffsChainRangesByItsSetUpsDraw()
 	{

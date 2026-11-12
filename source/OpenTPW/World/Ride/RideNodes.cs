@@ -378,9 +378,9 @@ public sealed class RideNodes
 
 	/// <summary>
 	/// <paramref name="x"/>, <paramref name="y"/>, <paramref name="z"/> over their length, as <c>FUN_00556b90</c> works
-	/// it: <c>(x*x + y*y) + z*z</c> summed at the 53-bit precision Proton's control word holds (<c>docs/exe/park-engine.md</c>,
-	/// "Which rounding is live is not settled"), the root stored as a float (<c>0x00556cba</c>) and each element divided
-	/// by that float (<c>0x00556cc6</c>, <c>0x00556ccc</c>).
+	/// it: <c>(x*x + y*y)</c> (<c>0x00556cba</c>) <c>+ z*z</c> (<c>0x00556cc6</c>) summed at the 53-bit precision Proton's
+	/// control word holds (<c>docs/exe/park-engine.md</c>, "Which rounding is live is not settled"), the root stored as a
+	/// float (<c>0x00556ccc</c>) and each element divided by that float (<c>0x00556cd6</c>, <c>0x00556cdc</c>, <c>0x00556ce2</c>).
 	/// </summary>
 	public static Numerics.Vector3 UnitOf( float x, float y, float z )
 	{

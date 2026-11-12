@@ -289,6 +289,7 @@ public class ParkFileWriterPeopleTests
 			"the made guest's: due at the clock plus 0x3e, at its own interval" );
 		Assert.AreEqual( (unchecked((int)(clock + 0x3e)), 0x4a), (Word( balloonSlot, 0x7c ), Word( balloonSlot, 0x80 )),
 			"the made balloon's: the same deadline, at its own interval" );
+		// A deviation, said at PutSprite: a kept sprite's stays the file's word while the clock moves on.
 		Assert.AreEqual( BitConverter.ToInt32( shipped.SpriteRecordOf( keptSlot )!, 0x7c ), Word( keptSlot, 0x7c ), "a kept sprite's is the file's" );
 
 		// Read back: the written file loads, and the made guest is on their sprite again.

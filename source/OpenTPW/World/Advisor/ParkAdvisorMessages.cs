@@ -1847,7 +1847,8 @@ internal sealed class ParkAdvisorMessages
 	/// <summary>
 	/// The thing a row's score leaves in the balance object's +4 (FUN_0059c0a0 copies it out at 0x0059c217), which the
 	/// speech writes into the record (0x0059b6cf): row 113's is the ride whose queue is not joined (0x0059ef60). Nought
-	/// for every other built row; rows 86-89, 140 and 141 leave one too and are not built (docs/QUEUE.md Q1264).
+	/// for every other built row that has a tag. Rows 238 to 257 leave their outlet and figure too (0x0059fb60..0x005a0290),
+	/// but have no tag (group 383), so nothing hears them. Rows 86-89, 140 and 141 are not built (docs/QUEUE.md Q1264).
 	/// </summary>
 	private int ThingOf( Topic topic ) => topic.QueueNotJoined ? _park?.Invoke().UnjoinedQueue ?? 0 : 0;
 

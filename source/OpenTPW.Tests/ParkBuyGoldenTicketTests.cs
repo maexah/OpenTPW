@@ -232,6 +232,14 @@ public class ParkBuyGoldenTicketTests
 			Assert.IsFalse( ParkBuilding.CarrySquares( state, item, to.X, to.Y, 0 ).Any( square => square.Marker == ParkPathBuilding.MarkerRed ),
 				"and not red for a carry" );
 
+			// Through the pointer, as the renderer and the cash cursor ask, on a cell whose anchor is the free one: the hand's
+			// own move mark reaches the squares.
+			var (pointerX, pointerY) = Enumerable.Range( -12, 25 ).SelectMany( dy => Enumerable.Range( -12, 25 ).Select( dx => (X: to.X + dx, Y: to.Y + dy) ) )
+				.First( cell => ParkBuilding.CarriedAnchorUnder( state, item, cell.X, cell.Y, out _ ) == (to.X, to.Y) );
+			var pointed = ParkBuilding.CarrySquares( pointerX, pointerY );
+
+			Assert.IsTrue( pointed.Count > 0 && pointed.All( square => square.Marker == ParkPathBuilding.MarkerRed ), "the pointer's squares red" );
+
 			SetBalance( 3000 );
 			Assert.IsNull( ParkBuilding.PlacementRefusal( state, item, to.X, to.Y, 0, 0, moved: true ), "equal passes" );
 

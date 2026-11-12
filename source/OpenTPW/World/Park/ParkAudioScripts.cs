@@ -983,6 +983,10 @@ public sealed partial class ParkAudio
 	/// </summary>
 	private void NextChainChild( ScriptVoice sound )
 	{
+		// A held chain, fresh or put back, takes the nought at its first child (0x006bbe93 clears the flags, 0x006bdb29 is
+		// the only writer of 0x20). Deviation: a keyed chain of any variation is noughted here too and ranges by its first
+		// variation, where the original's would range by nought (0x006bc650 reads 0x0070a834, 0.0); none ships, as every
+		// key is on a held (0x400) record.
 		if ( sound.ListEmpty && sound.Key != 0 && !sound.FirstChildTaken )
 		{
 			sound.Variation = -1;

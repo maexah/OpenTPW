@@ -204,13 +204,13 @@ public class ParkSaveScreenTests
 	}
 
 	/// <summary>
-	/// <b>Up and Down are dropped and counted</b>, each under its own name: the original's box sends them to its window
-	/// as <c>0x805</c> (<c>0x00667c68</c>), and what the window's default makes of it is not read (Q1260). The name is
-	/// unchanged, the screen stays open, and no other key is counted.
+	/// <b>Up and Down are dropped silently</b>: the original's box sends them to its window as <c>0x805</c>
+	/// (<c>0x00667c68</c>), which neither the hook, Save Park's handler nor the window's default takes (<c>0x0065fba2</c>;
+	/// docs/exe/hud.md, "Up and Down in a name box"). The name is unchanged, the screen stays open, and nothing is counted.
 	/// </summary>
-	/// <remarks><b>Mutations:</b> the keys counting nothing; one counted under the other's name; either closing the screen.</remarks>
+	/// <remarks><b>Mutations:</b> the keys counted as a gap; either moving the caret or closing the screen.</remarks>
 	[TestMethod]
-	public void TheBoxDropsAndCountsUpAndDown()
+	public void TheBoxDropsUpAndDownSilently()
 	{
 		var stack = APark();
 		var screen = OpenSavePark( stack );
@@ -224,10 +224,7 @@ public class ParkSaveScreenTests
 
 		Assert.AreEqual( "abc", screen.Name, "nothing moved, the letter on the end" );
 		Assert.IsTrue( stack.Windows.Contains( screen ), "the screen stays open" );
-		CollectionAssert.AreEqual( new[] { 1, 2 },
-			new[] { "EDIT_BOX_KEY_UP", "EDIT_BOX_KEY_DOWN" }
-				.Select( what => Unimplemented.Summary.FirstOrDefault( gap => gap.What == what ).Times ).ToArray() );
-		Assert.AreEqual( 2, Unimplemented.Summary.Count( gap => gap.What.StartsWith( "EDIT_BOX_KEY_" ) ), "no other key counted" );
+		Assert.AreEqual( 0, Unimplemented.Summary.Count( gap => gap.What.StartsWith( "EDIT_BOX_KEY_" ) ), "no key counted" );
 	}
 
 	/// <summary>

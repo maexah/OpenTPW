@@ -34,8 +34,18 @@ internal static class OneCopy
 	/// <summary>Ahead of the folder's hash in the mutex's name.</summary>
 	public const string Prefix = @"Global\OpenTPW.OneCopy.";
 
-	/// <summary>The running copy's mutex, held until the process ends; never closed, so never collected.</summary>
-	private static Mutex? _held;
+	/// <summary>The running copy's mutexes, held until the process ends; never closed, so never collected.</summary>
+	private static IDisposable? _held;
+
+	/// <summary>One copy's mutexes, let go of together.</summary>
+	private sealed class Held( Mutex[] mutexes ) : IDisposable
+	{
+		public void Dispose()
+		{
+			foreach ( var mutex in mutexes )
+				mutex.Dispose();
+		}
+	}
 
 	/// <summary>
 	/// The mutex's name for <paramref name="gameFolder"/>: one name for every spelling of one folder (relative or full, with
@@ -47,8 +57,20 @@ internal static class OneCopy
 
 	/// <summary><see cref="Name(string)"/> with whether case counts given, for a test of both systems' rules on one.</summary>
 	internal static string Name( string gameFolder, bool ignoreCase )
+		=> Name( gameFolder, ignoreCase, followLinks: true );
+
+	/// <summary>
+	/// The name a build before Q1174 took for <paramref name="gameFolder"/>: as spelled, no link followed. <see cref="Open"/>
+	/// takes it beside <see cref="Name(string)"/>, so a copy of such a build still running on a folder with a link along its
+	/// path refuses this one and is refused by it; one spelling is one folder, so it refuses nothing more.
+	/// </summary>
+	internal static string SpelledName( string gameFolder )
+		=> Name( gameFolder, OperatingSystem.IsWindows() || OperatingSystem.IsMacOS(), followLinks: false );
+
+	private static string Name( string gameFolder, bool ignoreCase, bool followLinks )
 	{
-		var key = Path.TrimEndingDirectorySeparator( WithoutLinks( Path.GetFullPath( gameFolder.Trim() ) ) );
+		var full = Path.GetFullPath( gameFolder.Trim() );
+		var key = Path.TrimEndingDirectorySeparator( followLinks ? WithoutLinks( full ) : full );
 
 		if ( ignoreCase )
 			key = key.ToUpperInvariant();
@@ -59,14 +81,17 @@ internal static class OneCopy
 		return Prefix + Convert.ToHexString( hash, 0, 16 );
 	}
 
-	/// <summary>Links followed in one path before it is taken as it stands: a loop of links ends here.</summary>
+	/// <summary>
+	/// Links followed in one path before it is taken as it stands: a guard. A loop of links does not exist to
+	/// <see cref="DirectoryInfo"/> (its stat fails), so the walk ends at it before the cap.
+	/// </summary>
 	private const int MaxLinks = 40;
 
 	/// <summary>
 	/// <paramref name="fullPath"/> with every link along it followed, from the root down: a symbolic link or a junction at
 	/// any component, not only the last (which is all <see cref="Directory.ResolveLinkTarget"/> looks at), and a link whose
 	/// target holds links of its own. A component that does not exist, or cannot be read, ends the walk and the rest is kept
-	/// as spelled. A subst drive is not a link and is not followed (Q1248).
+	/// as spelled; a loop of links is such a component, so the walk ends without reaching <see cref="MaxLinks"/>. A subst drive is not a link and is not followed (Q1248).
 	/// </summary>
 	internal static string WithoutLinks( string fullPath )
 	{
@@ -140,27 +165,36 @@ internal static class OneCopy
 	}
 
 	/// <summary>
-	/// Makes the mutex for <paramref name="gameFolder"/>. Answers it where this is the first copy; null with a null
-	/// <paramref name="unknown"/> where another copy made it first (the handle is closed, as 0x0045f699 closes it); null with
-	/// <paramref name="unknown"/> saying why where the system would not say either way.
+	/// Makes the mutexes for <paramref name="gameFolder"/>, its <see cref="Name(string)"/> and, where a link makes it
+	/// another, its <see cref="SpelledName"/>. Answers them where this is the first copy; null with a null
+	/// <paramref name="unknown"/> where another copy made either first (the handles are closed, as 0x0045f699 closes it);
+	/// null with <paramref name="unknown"/> saying why where the system would not say either way.
 	/// </summary>
-	internal static Mutex? Open( string gameFolder, out string? unknown )
+	internal static IDisposable? Open( string gameFolder, out string? unknown )
 	{
 		unknown = null;
-		var name = Name( gameFolder );
+		var made = new List<Mutex>();
 
 		try
 		{
-			var mutex = new Mutex( false, name, out var createdNew );
+			foreach ( var name in new[] { Name( gameFolder ), SpelledName( gameFolder ) }.Distinct() )
+			{
+				var mutex = new Mutex( false, name, out var createdNew );
 
-			if ( createdNew )
-				return mutex;
+				made.Add( mutex );
 
-			mutex.Dispose();
-			return null;
+				if ( !createdNew )
+				{
+					made.ForEach( held => held.Dispose() );
+					return null;
+				}
+			}
+
+			return new Held( [.. made] );
 		}
 		catch ( Exception e ) when ( e is UnauthorizedAccessException or IOException or WaitHandleCannotBeOpenedException or ArgumentException )
 		{
+			made.ForEach( held => held.Dispose() );
 			unknown = $"One copy: whether another copy runs on {gameFolder} cannot be told ({e.GetType().Name}: {e.Message}); this one runs";
 			return null;
 		}

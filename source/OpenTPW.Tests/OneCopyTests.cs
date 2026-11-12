@@ -139,7 +139,53 @@ public class OneCopyTests
 			if ( !Link( inner, Path.Join( root, "real" ) ) || !Link( outer, "inner" ) )
 				Assert.Inconclusive( "this system will not make a symbolic link" );
 
-			Assert.AreEqual( game, OneCopy.WithoutLinks( Path.Join( outer, "game" ) ) );
+			// Both sides through WithoutLinks: the temporary folder may itself lie under a link (macOS's /var).
+			var followed = OneCopy.WithoutLinks( Path.Join( outer, "game" ) );
+
+			Assert.AreEqual( OneCopy.WithoutLinks( game ), followed );
+			StringAssert.EndsWith( followed, Path.Join( "real", "game" ) );
+		}
+		finally
+		{
+			Directory.Delete( root, recursive: true );
+		}
+	}
+
+	/// <summary>
+	/// A copy of a build before Q1174, which named a folder as spelled, still holds the spelled name of a folder with a
+	/// link along its path: a copy started there now is refused, and one started first takes that name too.
+	/// </summary>
+	[TestMethod]
+	public void AnOlderCopyHoldingTheSpelledNameRefusesThisOne()
+	{
+		var (root, game) = RealFolder();
+
+		try
+		{
+			var link = Path.Join( root, "link" );
+
+			if ( !Link( link, game ) )
+				Assert.Inconclusive( "this system will not make a symbolic link" );
+
+			Assert.AreNotEqual( OneCopy.Name( link ), OneCopy.SpelledName( link ), "the link makes the two names differ" );
+
+			using ( var older = new System.Threading.Mutex( false, OneCopy.SpelledName( link ), out var createdNew ) )
+			{
+				Assert.IsTrue( createdNew );
+
+				using var refused = OneCopy.Open( link, out var unknown );
+
+				Assert.IsNull( refused, "an older copy on the folder as spelled must refuse this one" );
+				Assert.IsNull( unknown );
+			}
+
+			using var first = OneCopy.Open( link, out _ );
+
+			Assert.IsNotNull( first );
+
+			using var older2 = new System.Threading.Mutex( false, OneCopy.SpelledName( link ), out var madeNew );
+
+			Assert.IsFalse( madeNew, "this copy holds the spelled name too" );
 		}
 		finally
 		{
@@ -169,8 +215,12 @@ public class OneCopyTests
 		}
 	}
 
+	/// <summary>
+	/// A loop of links does not exist to <see cref="DirectoryInfo"/> (its stat fails), so the walk ends at it as at any
+	/// missing component and the path is named as spelled; the cap on links followed is a guard this does not reach.
+	/// </summary>
 	[TestMethod]
-	public void ALoopOfLinksEndsAndGivesAName()
+	public void ALoopOfLinksDoesNotExistSoTheWalkEndsThere()
 	{
 		var root = Folder( string.Empty );
 		Directory.CreateDirectory( root );

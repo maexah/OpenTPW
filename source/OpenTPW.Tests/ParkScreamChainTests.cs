@@ -317,6 +317,7 @@ public class ParkScreamChainTests
 	/// range 95 and weight a million, a listener 70 off. The set-up draws the second, so the chain is in range at once and
 	/// makes its first child, of the first variation; from then on it ranges by 50 and makes no more.
 	/// </summary>
+	/// <remarks>The nought at the first child is not observed: the held child writes its own variation into the chain straight after, so deleting the nought passes too.</remarks>
 	[TestMethod]
 	public void BeforeItsFirstChildAChainRangesByItsSetUpsDraw()
 	{

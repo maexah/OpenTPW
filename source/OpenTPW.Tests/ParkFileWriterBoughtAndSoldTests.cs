@@ -1811,6 +1811,11 @@ public class ParkFileWriterBoughtAndSoldTests
 		foreach ( var (at, value) in new[] { (0x10, 1696), (0x1c, 19), (0x74, 1), (0x78, 0), (0x80, 0x3e), (0xbc, 8), (0x114, 1), (0xa4, BitConverter.SingleToInt32Bits( 1f )), (0xa8, BitConverter.SingleToInt32Bits( 1f )) } )
 			Assert.AreEqual( value, HeadField( written, body, 20, at ), $"+0x{at:x}" );
 
+		// Its first turn is due one interval past the clock the file is written with (0x004759df).
+		var due = unchecked((int)(written.Clock.Reading!.Value + 0x3e));
+
+		Assert.AreEqual( (due, due), (HeadField( written, body, 11, 0x7c ), HeadField( written, body, 20, 0x7c )), "+0x7c" );
+
 		Assert.IsFalse( written.People.Any( person => person.SpriteSlot is 11 or 20 ), "no person is given a head's slot" );
 	}
 

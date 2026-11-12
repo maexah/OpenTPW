@@ -6,7 +6,7 @@ folder or `ref` player. Where those are set up, prefer parkrun.py with OFFSCREEN
 folder (OpenTPW.dll), <game> the game folder, <script> a text file of lines `SECS COMMAND`: each command is written to the
 console's stdin, then the run waits SECS seconds; `#` starts a comment. The run first waits 25 s for the lobby. A command
 that starts with `!` is not the console's: the rest is run in a shell with DISPLAY and XAUTHORITY set to the run's own Xvfb, its output
-in stdout.txt after `!!! `; where that Xvfb cannot be found in the run's session (consoledrive.run_display), the line is
+in stdout.txt after `!!! `, and CONSOLERUN_SID set to the run's session, by which barclick.sh checks it is on that Xvfb; where that Xvfb cannot be found in the run's session (consoledrive.run_display), the line is
 refused and logged, never run on the caller's DISPLAY, which on a desk is the desktop (AGENTS.md rule 12) (Q994: a real key press where the console has none; focus the window first,
 `xdotool windowfocus --sync`, docs/TOOLING.md has the line).
 
@@ -28,6 +28,8 @@ os.makedirs(out, exist_ok=True)
 # The run's own game folder: links to the game's entries, its own copy of save/ (consolegame.py).
 private, xdg, before = consolegame.private_game(out, game, "consolerun")
 env = consolegame.console_env(out, private, xdg, os.environ.get("CONSOLERUN_AUDIODRIVER", "dummy"))
+env["SDL_VIDEODRIVER"] = "x11"      # as consoledrive.py: the game opens on the run's Xvfb, never a desk's Wayland
+env.pop("WAYLAND_DISPLAY", None)
 p = subprocess.Popen(["xvfb-run", "-a", "-s", "-screen 0 1280x1024x24", "dotnet", os.path.join(binp, "OpenTPW.dll"), "--game", private],
                      stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env,
                      start_new_session=True)
@@ -53,7 +55,7 @@ for line in open(script):
             print(f"consolerun: refused `{cmd}`, the run's own Xvfb was not found")
             time.sleep(float(secs))
             continue
-        shell = subprocess.run(cmd[1:], shell=True, env=dict(env, **found), stdout=subprocess.PIPE,
+        shell = subprocess.run(cmd[1:], shell=True, env=dict(env, **found, CONSOLERUN_SID=str(p.pid)), stdout=subprocess.PIPE,
                                stderr=subprocess.STDOUT, text=True)
         log.write("".join(f"!!! {l}\n" for l in shell.stdout.splitlines()) + f"!!! exit {shell.returncode}\n"); log.flush()
         time.sleep(float(secs))

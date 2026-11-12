@@ -2262,14 +2262,6 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   finance and park-info toggles and the list headings' buttons letter one way always. First read which of Lost Kingdom's
   buttons are of the class (their layouts' controls), then build the states. Confirm: hover and press one toggle in both
   games, photographs side by side.
-- [ ] **Q1260. What the window's default and the new player dialog make of a name box's 0x805 (from Q1164).** The box
-  (`FUN_00667a72`) sends every key it does not take to its window as `0x805` (`0x00667c68`, `0x00667cb0`, `0x00667fd3`);
-  Save Park's handler (`0x0049ea30`) passes it through `0x0047ee90` (only arm `0x14`) to the window's default, vtable
-  `+0x118` (`0x0065f688`). Read that default and the new player dialog's handler (its name box `0x004a6f8e`,
-  `lobby.md`) for `0x805`. If either acts on Up or Down, build it; if neither does, remove the `EDIT_BOX_KEY_UP` and
-  `_DOWN` counts (Q1164) and say so in `hud.md` and at `WindowStack.Keyboard`. Also list the other keys the box does not
-  take (Tab is `0x803`; PageUp, PageDown, the function keys) and whether any reaches an arm. Needs Ghidra; no game run
-  unless the reading leaves it open.
 - [ ] **Q1165. The arrival manager reads this sweep's rain (from Q570).** From the run 22 review of Q570 (`review22/q570`,
   finding 1). In the original the weather (thing 7) turns in the sweep's walk, before the tail, and the tail's arrival
   manager then reads its drops (`FUN_004cf5b0`, `0x004cf609` World_Weather, `0x004cf60e` `mov ecx,[eax+0x30]`, k 0.8 or 1.2
@@ -3293,7 +3285,6 @@ Back to the advisor in a park; saving a fresh park is Q783, in section A. Also l
   - `ALL_STAFF_SCREEN` (`ParkCategoryScreens.cs`); dead by CODE at its site: the work is removing the unreachable arm (`AGENTS.md` rule 3), not building it
   - `ALL_VISITORS_SCREEN` (`ParkCategoryScreens.cs`); dead by CODE at its site: the work is removing the unreachable arm (`AGENTS.md` rule 3), not building it
   - `UNKNOWN_CATEGORY_SCREEN` (`ParkCategoryScreens.cs`); dead by CODE at its site: the work is removing the unreachable arm (`AGENTS.md` rule 3), not building it
-  - `OBJECT_WINDOW_HIGHER_PRIORITY_STATUS` (`ParkClosedStatus.cs`; `ride-window-door.md`)
   - `TAG_BAR_BUTTON` (`ParkGadget.cs`; `hud.md`, `advisor-park.md`)
   - `STAFF_PORTRAIT_ACTOR` (`ParkHireScreen.cs`)
   - `RIDE_EXCITEMENT_BAR` (`ParkObjectWindow.cs`; `park-engine.md`)
@@ -3545,14 +3536,11 @@ state machine.
   first sample's channel and their second's 0 to 10 s apart beyond the first's length, not at once; and the bus's voice
   back in range (waits nought) unchanged. Confirm in both games (`mixer.py`, `voices.py`; ours `scriptsounds` and the
   `Park audio: the land's own ambient 2 ... ms of silence after it` lines, which now print on the first too).
-- [ ] **Q1244. Whether a keyed chain of any variation ranges by variation 1 after its first child, and 188's set-up draw in the running game.**
-  From Q576 (a cloud lane, no Ghidra). `audio.md`, "Which variation it plays", reads that the shared tick (`0x006bdae0`)
-  noughts the chain's own variation at its first child where the effect has a key and `0x20` is clear (`0x006bdb10`), and
-  "A script's sounds" that a chain of any variation ranges by its set-up's draw "for its whole life". Q576 built the first
-  reading for both classes (`ScriptVoice.RangeVariation` noughted in `NextChainChild`), so a keyed chain of any variation
-  ranges by its first variation after its first child. Read `0x006bdb10` and the any-variation vtable (`0x0070a970`'s
-  chain) in Ghidra and settle which holds; no Lost Kingdom effect tells them apart (only the held 188 has two ranges).
-  Then confirm 188 in the running game: Q576's stock-park runs (190 s, camera on the Staff Room) never started it, so
+- [ ] **Q1244. 188's set-up draw in the running game.** From Q576 (a cloud lane, no Ghidra). The listing question is
+  settled by the run 22 review: a held chain, fresh or put back, takes the nought at its first child (`0x006bbe93` clears
+  the flags, `0x006bdb29` is the only writer of `0x20`); a keyed chain of any variation would range by nought after it
+  (`0x006bc650` -> `0x0070a834` = 0.0), and none ships (ours' deviation is said at `ParkAudioScripts.NextChainChild`).
+  Confirm 188 in the running game: Q576's stock-park runs (190 s, camera on the Staff Room) never started it, so
   start it (a staff in the Staff Room) with the listener 87 to 89 from it and read its "its own variation N of range R"
   start line against whether its first child comes.
 - [ ] **Q578. Whether the land's following voices are heard through a pause in the original.** From the run 6 review (group N, Q558 1's decode, `audio.md`, "The pause substitution"): a voice

@@ -1063,7 +1063,8 @@ public sealed partial class ParkWorld
 	/// scale 1, the interval <c>0x3e</c> at <c>+0x80</c> (<c>0x004759c4</c>), <paramref name="due"/> at <c>+0x7c</c>, and nought
 	/// elsewhere; the program, place, alpha and picture are the caller's to write, and the caller's interval over the constructor's.
 	/// <paramref name="due"/> is the written clock plus <c>0x3e</c>, as the constructor stores its clock plus that interval
-	/// (<c>0x004759df</c>), so a sprite made here waits one interval after a load before its first turn, as the original's does.
+	/// (<c>0x004759df</c>), so a sprite made here waits one interval after the original loads the file before its first turn,
+	/// as the original's own does; OpenTPW's reader does not read <c>+0x7c</c>.
 	///
 	/// <para>
 	/// Its <c>+0xbc</c> is <paramref name="setByte"/>, the frames a direction of the set it is made on
@@ -1180,6 +1181,9 @@ public sealed partial class ParkWorld
 	/// and with <see cref="WrittenPerson.SpriteLoops"/> its loop stack: the room left, the words pushed and the
 	/// count of loops it is inside (<c>0x004763c6</c>), the words below the room left as they lie, as a pop leaves them
 	/// (<c>FUN_00475260</c>), and with <see cref="WrittenPerson.SpriteFlags"/> its drawing flags.</summary>
+	/// <remarks>A deviation: a kept sprite's <c>+0x7c</c> stays the file's word while the written clock moves on, so in a file
+	/// written later it lies in the past and the sprite takes its first turn at once when the original loads it, where the
+	/// original's own live sprites stand about one interval from <c>CLOK</c> (docs/exe/saves.md, "The sprite table").</remarks>
 	private static void PutSprite( byte[] record, WrittenPerson person, Sprite picture )
 	{
 		Put32( record, SpritePcAt, picture.Pc );

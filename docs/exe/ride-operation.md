@@ -2545,7 +2545,7 @@ sweep (`0x00506298`), after `FUN_00506d10` has set state 0 with stamp 0. The res
   idle is over on the next sweep. Case 6 always stamps (`0x005055b1`). The same setter writes the purpose speed
   `+0xc2`: nought in cases 0 and 5 (`0x00505555`, `0x00505590`) and 25 in case 4 (`0x0050556c`), the words at
   `0x0075c7f0` and `0x0075c7f2`. Case 5 also writes nought to the facing (`0x00505582`), so a striker's turns on
-  the picket start from 0 (Q281: taken from the week-end audit's reading of the setter, not re-read in Ghidra).
+  the picket start from 0 (Q281; the setter's case 5, `0x00505582`, read in the listing by the run 22 review).
 - **State 6** (OpenTPW's `Waiting`; no string names it; `STAFFSTATES.str` holds Idle, Patrolling, Working, Resting, On
   strike, Picked up): `FUN_005056e0` leaves it for 0 once mGameTick − `+0x200` > 3 × IdleDuration, unsigned
   (`0x00505745`). Nothing in the executable enters state 6; only a saved `mState` can.

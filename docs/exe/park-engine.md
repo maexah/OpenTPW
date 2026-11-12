@@ -4405,7 +4405,7 @@ The ride-window door and its ordinary closed warning are implemented in Q92; see
 
 Read 2026-11-12 (Q1105) in `testme.objdump`. **`FUN_004ad4e0` sets which verbs are shown** (`UI_SetVisible`,
 `0x0065d9dd`, flag `+0x48` bit 0). The window's thing is `[0x007c2658]` and its item is `FUN_004dd4e0`, the descriptor
-found by the thing's word `+0xe`. It runs when the window opens (`0x004ae975`) and whenever the window's status `+8` changes. That status is
+found by the thing's word `+0xe`. It runs each time the window is given a thing, on opening and on each arrow (`FUN_004ae940`, vtable `+4`, `0x004ae975`; the arrows call it at `0x0048cca5`), and whenever the window's status `+8` changes. That status is
 `FUN_00485f60( thing, 2 )`, compared and stored at `0x004ae0e0`..`0x004ae0fb` (the statuses are in
 [ride-window-door.md](ride-window-door.md)). `b_erase` is never touched.
 
@@ -4425,7 +4425,7 @@ found by the thing's word `+0xe`. It runs when the window opens (`0x004ae975`) a
 **Measured in both games on one file** (Q1105, `q1105/`): ours' stock park with a TV Sim (Aztec Mayhem, item 1104) and a
 Dino Karts (1150) bought, saved, and loaded in the original. The original's tree (`uitree.py PID 0x007c24c8`, which prints
 ` hidden` for bit 0 clear) has the node (625,800)..(779,953) hidden for the TV Sim and shown for the karts, and it is the
-only hidden node of 49. Ours' `control 3e2a` ends ` hidden` and ` mesh b_track` alone. Both games draw the same thing:
+only hidden node of 42. Ours' `control 3e2a` ends ` hidden` and ` mesh b_track` alone. Both games draw the same thing:
 the third place is empty for the TV Sim and holds the button for the karts (`q1105/orig/b-2-tvwindow.png`,
 `c-2-kartwindow.png`; `q1105/run1/window-tvsim.png`, `window-karts.png`). The original also draws the karts' `b_move`
 greyed, and ours does not (Q1111). Ours hides `b_track` (`ParkObjectWindow.ShowsTheTrack`). It does not yet have the

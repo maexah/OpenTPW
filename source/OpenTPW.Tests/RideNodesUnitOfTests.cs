@@ -35,7 +35,7 @@ public class RideNodesUnitOfTests
 		Assert.AreEqual( "3CBD7781 3F7FEE79 328FF638", Bits( RideNodes.UnitOf( 0.02313441f, 0.99999785f, 1.6763806E-08f ) ) );
 	}
 
-	/// <summary><b>A node with no matrix points along z</b>, and the unit z is its own unit.</summary>
+	/// <summary><b>The unit z is its own unit.</b></summary>
 	[TestMethod]
 	public void TheUnitZIsItsOwnUnit()
 	{

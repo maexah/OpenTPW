@@ -153,7 +153,10 @@ public static class ParkModelTables
 	/// <summary>
 	/// Takes <paramref name="clip"/>'s marks off as the engine does when another clip is started on its channel
 	/// (<c>FUN_00472310</c>): the track bits of each node it has a track for, and the hidden bit of each node of its
-	/// hide list and of its tracks, a transform-only node's apart.
+	/// hide list and of its tracks, a transform-only node's apart. Two branches of the engine's are not taken: on a
+	/// model whose mesh data <c>+0x30</c> holds <c>0x4</c> (an additive one, the coaster pylons) its track mask is
+	/// <c>0x800000</c> alone, no saved bit, so no track bit would come off (<c>0x004723a4</c>); and with <c>0x8</c> in the
+	/// model's <c>+4</c> it takes <c>0x10</c> off every node, a locked one too (<c>0x00472355</c>).
 	/// </summary>
 	public static void Unbind( uint[] words, AnimationFile clip )
 	{
@@ -227,44 +230,46 @@ public static class ParkModelTables
 		/// <paramref name="clip"/> is started on <paramref name="channel"/> and bound (a start without the
 		/// caller's <c>0x8</c>; <c>FUN_00472f60</c>): the clip the channel last ran is taken off
 		/// (<see cref="Unbind"/>, <c>0x004730a9</c>), its visibility tracks first laid down as they stood at
-		/// <paramref name="outgoingFrame"/>, which is what a transform-only node keeps of them; and the new clip is
+		/// <paramref name="outgoingFrame"/>, which is what a transform-only node keeps of them, unless
+		/// <paramref name="takeOff"/> is false (the caller's <c>0x4</c>, <c>0x0047309f</c>); and the new clip is
 		/// bound, its hide list applied (<c>0x00473117</c>). Nothing else: the other channels' clips do not mark
-		/// their nodes again, so a track bit the outgoing clip shares with another channel's goes with it.
-		///
-		/// <para>
-		/// Deviation: where the channel has no clip to take off (nothing was started on it, or the file had it idle
-		/// and does not name its last clip), every track bit and every mesh's hidden bit is taken off in its place,
-		/// and the other channels' clips put their track bits back; marks another idle channel's unnamed clip left
-		/// go with them.
-		/// </para>
+		/// their nodes again, so a track bit the outgoing clip shares with another channel's goes with it. A channel
+		/// with no clip bound (nothing started on it, or the file had it idle: the engine's role 12) has nothing
+		/// taken off (<c>0x00473096</c>).
 		/// </summary>
-		public void Started( int channel, AnimationFile clip, float outgoingFrame )
+		public void Started( int channel, AnimationFile clip, float outgoingFrame, bool takeOff = true )
 		{
 			ArgumentNullException.ThrowIfNull( clip );
 
 			if ( channel < 0 || channel >= _bound.Length )
 				return;
 
-			if ( _bound[channel] is { } outgoing )
+			if ( takeOff && _bound[channel] is { } outgoing )
 			{
 				Show( _words, outgoing, outgoingFrame );
 				Unbind( _words, outgoing );
-			}
-			else
-			{
-				for ( var node = 0; node < _words.Length; ++node )
-					_words[node] &= ~((_words[node] & TransformOnly) != 0 ? TrackBits : TrackBits | Hidden);
-
-				for ( var other = 0; other < _bound.Length; ++other )
-				{
-					if ( other != channel && _bound[other] is { } standing )
-						Bind( _words, standing, hide: false );
-				}
 			}
 
 			_bound[channel] = clip;
 
 			Bind( _words, clip, hide: true );
+		}
+
+		/// <summary>
+		/// <paramref name="channel"/> is stopped (a start of role 12, or of a role the model has no clips for, without
+		/// the caller's <c>0x4</c> or <c>0x8</c>; <c>FUN_00472f60</c> at <c>0x00473121</c>): the clip it last ran is taken
+		/// off as <see cref="Started"/> takes it (<c>0x00473131</c>), and nothing is bound in its place. A channel with
+		/// nothing bound is left as it is.
+		/// </summary>
+		public void Stopped( int channel, float outgoingFrame )
+		{
+			if ( channel < 0 || channel >= _bound.Length || _bound[channel] is not { } outgoing )
+				return;
+
+			Show( _words, outgoing, outgoingFrame );
+			Unbind( _words, outgoing );
+
+			_bound[channel] = null;
 		}
 
 		/// <summary>
