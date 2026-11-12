@@ -1278,9 +1278,9 @@ public sealed class PeepBehaviour
 	/// <para>
 	/// <b>The happy jump comes first and is built</b> (<see cref="JumpsForJoy"/>), ending the turn. <b>Watching an
 	/// entertainer is built</b> and ends the turn (<see cref="Watch"/>), and so is the litter arm, in
-	/// <see cref="CountBeforeLeaving"/>. <b>The vomit, the fireworks and the pranks are counted, not built</b>:
-	/// <see cref="CountBeforeLeaving"/> and <see cref="CountAfterLeaving"/>, either side of the leave test as the
-	/// original has them.
+	/// <see cref="CountBeforeLeaving"/>, and the pranks (<see cref="Prank"/>). <b>The vomit and the fireworks are counted,
+	/// not built</b>: <see cref="CountBeforeLeaving"/> and <see cref="WatchOrPrank"/>, either side of the leave test as
+	/// the original has them.
 	/// </para>
 	/// </summary>
 	private void Decide( Peep peep, PeepWalk walk, int tick )
@@ -1299,7 +1299,7 @@ public sealed class PeepBehaviour
 		if ( WantsToLeave( peep ) && Leave( peep, walk, admission, draw, tick ) )
 			return;
 
-		if ( CountAfterLeaving( peep, walk, admission, draw ) )
+		if ( WatchOrPrank( peep, walk, admission, draw, tick ) )
 			return;
 
 		switch ( draw % 3 )
@@ -1386,10 +1386,11 @@ public sealed class PeepBehaviour
 	internal Func<int, int, (int X, int Y)?> EntertainerToWatch { get; set; } = static ( _, _ ) => null;
 
 	/// <summary>
-	/// Whether another guest on this guest's cell holds a balloon - the walk of the cell's things at
-	/// <c>0x004ff156</c>. <see cref="ParkPeople"/> hands in its own; nothing handed in is nobody.
+	/// A prankster's third prank on (x, y) - the walk of the cell's things at <c>0x004ff156</c>: the balloon of another
+	/// guest there who holds one let go (<c>FUN_004fe950</c>); answers that guest, or null for nobody.
+	/// <see cref="ParkPeople"/> hands in its own; nothing handed in is nobody.
 	/// </summary>
-	internal Func<Peep, int, int, bool> BalloonBeside { get; set; } = static ( _, _, _ ) => false;
+	internal Func<Peep, int, int, Peep?> LetGoABalloonBeside { get; set; } = static ( _, _, _ ) => null;
 
 	/// <summary>
 	/// The deciding turn's first arm, (a) - <c>0x004fecd2</c>..<c>0x004fecea</c>: more than <see cref="HappyJumpGap"/>
@@ -1545,17 +1546,16 @@ public sealed class PeepBehaviour
 
 	/// <summary>
 	/// The deciding turn's two arms between the leave test and the split (<c>0x004fef19</c>..<c>0x004ff3ae</c>):
-	/// watching fireworks, counted, or an entertainer, built (<see cref="Watch"/>), and a prankster's three pranks by
-	/// <see cref="Peep.PrankeryIndex"/>, on the turn's one draw, each counted where the original tests it.
+	/// watching fireworks, counted, or an entertainer, built (<see cref="Watch"/>), and a prankster's pranks, built
+	/// (<see cref="Prank"/>).
 	/// </summary>
 	/// <remarks>
 	/// Watching fireworks ends the original's turn; here it is counted and the turn goes on to the pranks and the split,
 	/// without asking the entertainer (dead by content: no Lost Kingdom item sets <c>IsFireworks</c>). The fireworks'
-	/// script variable 0 is not read. A prank whose own test fails (the stink bomb's roll, no balloon on the cell) does
-	/// nothing in the original and counts nothing here.
+	/// script variable 0 is not read.
 	/// </remarks>
 	/// <returns>Whether the turn ends here, the guest watching an entertainer.</returns>
-	private bool CountAfterLeaving( Peep peep, PeepWalk walk, ParkAdmission admission, int draw )
+	private bool WatchOrPrank( Peep peep, PeepWalk walk, ParkAdmission admission, int draw, int tick )
 	{
 		var (x, y) = walk.Position.Cell;
 
@@ -1565,31 +1565,78 @@ public sealed class PeepBehaviour
 		else if ( Watch( walk, x, y ) )
 			return true;
 
+		Prank( peep, admission, x, y, draw, tick );
+
+		return false;
+	}
+
+	/// <summary>
+	/// A prankster's prank (<c>0x004ff108</c>..<c>0x004ff3ae</c>; <c>docs/exe/ride-operation.md</c>, "The state-6 turn,
+	/// in order", (f)): below happiness <see cref="PrankBelow"/> and the turn's draw % 101 under
+	/// <see cref="Peep.PrankeryIndex"/>, by that index: 100 a stink bomb, litter of kind
+	/// <see cref="ParkState.StinkBombLitter"/> on the cell, when the draw % 100 is under
+	/// <see cref="ParkAdmission.StinkbombLikelihood"/>; 101 litter of kind 1 + the draw % 5; 102 another guest's balloon
+	/// on the cell let go (<see cref="LetGoABalloonBeside"/>). A prank done sends message <c>0xe</c>
+	/// (<see cref="ParkState.HearPrank"/>) and puts the prankster's happiness up one; one not done (the bomb's roll, no
+	/// balloon on the cell) does nothing. The turn goes on to the split either way.
+	/// </summary>
+	/// <remarks>
+	/// The litter is dropped whether or not the cell already holds some (the original's <c>FUN_004d93b0</c> leaves such a
+	/// cell as it was), and the prank counts as done all the same. Counted, not built: the stink bomb's sound <c>0xcf</c>,
+	/// whose category is not read (<c>DECIDE_PRANK_STINK_BOMB_SOUND</c>), and the event <c>0xf</c>
+	/// (<c>DECIDE_PRANK_EVENT</c>): this project keeps no event ring.
+	/// </remarks>
+	private void Prank( Peep peep, ParkAdmission admission, int x, int y, int draw, int tick )
+	{
 		if ( (byte)(int)peep.Happiness >= PrankBelow || draw % 101 >= (byte)peep.PrankeryIndex )
-			return false;
+			return;
+
+		string done;
 
 		switch ( (byte)peep.PrankeryIndex )
 		{
 			case 100:
-				if ( draw % 100 < admission.StinkbombLikelihood )
-					Unimplemented.Report( "DECIDE_PRANK_STINK_BOMB" );
+				if ( draw % 100 >= admission.StinkbombLikelihood )
+					return;
+
+				State.DropLitter( x, y, ParkState.StinkBombLitter );
+				Unimplemented.Report( "DECIDE_PRANK_STINK_BOMB_SOUND" );
+				done = "a stink bomb";
 
 				break;
 
 			case 101:
-				Unimplemented.Report( "DECIDE_PRANK_LITTER" );
+				var kind = 1 + (draw % LitterKindsDropped);
+
+				State.DropLitter( x, y, kind );
+				done = $"litter of kind {kind}";
 
 				break;
 
 			case 102:
-				if ( BalloonBeside( peep, x, y ) )
-					Unimplemented.Report( "DECIDE_PRANK_BALLOON" );
+				if ( LetGoABalloonBeside( peep, x, y ) is not { } victim )
+					return;
+
+				done = $"the balloon of person {victim.ThingId} let go";
 
 				break;
+
+			default:
+				return;
 		}
 
-		return false;
+		Unimplemented.Report( "DECIDE_PRANK_EVENT" );
+		State.HearPrank( peep.ThingId, x, y, tick );
+
+		var was = peep.Happiness;
+		peep.Happiness = Peep.Change( peep.Happiness, PrankHappiness );
+
+		Log.Info( $"Person {peep.ThingId}: prank {peep.PrankeryIndex} on ({x},{y}), {done}, happiness {was:0.##} to "
+			+ $"{peep.Happiness:0.##}, tick {tick}" );
 	}
+
+	/// <summary>What a prank done adds to the prankster's happiness: one (<c>[0x00700794]</c>, -1.0, taken off).</summary>
+	public const float PrankHappiness = 1f;
 
 	/// <summary>
 	/// A deciding guest watching an entertainer (<c>0x004fefcf</c>..<c>0x004ff0f4</c>): with one performing beside

@@ -170,6 +170,19 @@ internal sealed class ParkAdvisorMessages
 	internal const int LotsOfPranks = 264;
 
 	/// <summary>
+	/// Messages 0x7d to 0x7f, posted only: a prank done, by the bus message's id % 3 (ReceiveMessage arm 0x0059b221),
+	/// rows 125 to 127, scored by PrankSbomb.Score, PrankLitter.Score and PrankBalloon.Score (0x0059f360 to 0x0059f380).
+	/// Not built: their responses, 302 to 307, are not read (<see cref="ParkState.HearPrank"/> counts them).
+	/// </summary>
+	internal const int PrankStinkBomb = 0x7d, PrankLitter = 0x7e, PrankBalloon = 0x7f;
+
+	/// <summary>
+	/// The advice a prank by guest <paramref name="guestId"/> posts: <see cref="PrankStinkBomb"/> + id % 3, whatever prank
+	/// the guest played (the record's <c>+0xc</c>, <c>DIV 3</c> at <c>0x004ff2f8</c>).
+	/// </summary>
+	internal static int PrankAdviceOf( int guestId ) => PrankStinkBomb + (int)((uint)guestId % 3);
+
+	/// <summary>
 	/// Messages 0xee to 0x101, polled: rows 238 to 257, the lines about the value and satisfaction of the food, the
 	/// other shops, the restaurants, the drinks and the sideshows, poor then great (0x0059fb60 to 0x005a0290), each its
 	/// row's number (<see cref="OutletTopics"/>).

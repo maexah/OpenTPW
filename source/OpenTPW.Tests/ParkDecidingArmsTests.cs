@@ -6,9 +6,9 @@ using System.Linq;
 namespace OpenTPW.Tests;
 
 /// <summary>
-/// The deciding turn's arms either side of its leave test - <c>FUN_004fec90</c>: the happy jump, built; the vomit,
-/// litter, watching fireworks and the pranks, counted, each test asserting the count moves exactly where the
-/// original's own test holds; and watching an entertainer, built.
+/// The deciding turn's arms either side of its leave test - <c>FUN_004fec90</c>: the happy jump, built; the vomit and
+/// watching fireworks, counted, each test asserting the count moves exactly where the original's own test holds; and
+/// the litter, watching an entertainer and the pranks, built.
 ///
 /// <para>
 /// These read real game files and are skipped where there is no installation - see <see cref="GameData"/>.
@@ -55,7 +55,7 @@ public class ParkDecidingArmsTests
 			state: people.State )
 		{
 			EntertainerToWatch = people.Behaviour.EntertainerToWatch,
-			BalloonBeside = people.Behaviour.BalloonBeside
+			LetGoABalloonBeside = people.Behaviour.LetGoABalloonBeside
 		};
 
 		guest.SetState( PeepState.Deciding, tick: 1, new Random( 1 ) );
@@ -549,64 +549,190 @@ public class ParkDecidingArmsTests
 		}
 	}
 
-	/// <summary>
-	/// <b>A prank is counted below happiness 15 on a draw under the prankery, by the prankery's own arm</b>
-	/// (<c>0x004ff108</c>..<c>0x004ff150</c>): 100 a stink bomb on <c>StinkbombLikelihood</c> of a hundred draws, 101
-	/// litter, 102 a balloon held by somebody else on the cell.
-	/// </summary>
-	[TestMethod]
-	public void APrankIsCountedByThePrankerysOwnArm()
-	{
-		string[] names = ["DECIDE_PRANK_STINK_BOMB", "DECIDE_PRANK_LITTER", "DECIDE_PRANK_BALLOON"];
-		(int, int, int) Counts() => (Counted( names[0] ), Counted( names[1] ), Counted( names[2] ));
-		var (bombs, litter, balloons) = Counts();
-
-		// A draw the stink bomb's two tests pass, on the split's idle arm.
-		var passes = SeedWhere( roll => roll % 3 == 2 && roll % 101 < 100 && roll % 100 < 25 );
-		var fails = SeedWhere( roll => roll % 3 == 2 && roll % 101 < 100 && roll % 100 >= 25 );
-
-		void Prank( int prankery, float happiness, int seed, (int X, int Y)? balloonAt = null, bool ownBalloon = false )
+	/// <summary>A seed whose first two rolls satisfy the test.</summary>
+	private static int SeedWhere( Func<int, int, bool> test )
+		=> Enumerable.Range( 0, 20000 ).First( candidate =>
 		{
-			var (guest, turn, people) = DecidingAt( 47, 22, seed );
+			var random = new Random( candidate );
+			var first = random.Next();
 
-			guest.PrankeryIndex = prankery;
-			guest.Happiness = happiness;
-			// Not so low that the leave test takes the turn first: the byte is 1 or more.
-			guest.ExitLevel = 50;
+			return test( first, random.Next() );
+		} );
 
-			if ( ownBalloon )
-				guest.Balloon = Balloon.Make( guest.ThingId, 4, now: 0 );
+	/// <summary>The cell the pranksters stand on, and the cell beside it.</summary>
+	private const int PrankX = 47, PrankY = 22;
 
-			if ( balloonAt is var (x, y) )
-			{
-				var other = people.Guests[people.Admit( x, y )];
-				other.Balloon = Balloon.Make( other.ThingId, 4, now: 0 );
-			}
+	/// <summary>
+	/// A prankster deciding on <see cref="PrankX"/>, <see cref="PrankY"/> with the prankery and happiness given, whose id
+	/// % 3 is <paramref name="idModThree"/> where one is asked for, and a guest holding a balloon on
+	/// <paramref name="balloonAt"/> where one is given; then one turn on <paramref name="seed"/>.
+	/// </summary>
+	private (Peep Guest, ParkPeople People, Peep? Other) Prank( int prankery, float happiness, int seed,
+		(int X, int Y)? balloonAt = null, bool ownBalloon = false, int idModThree = -1 )
+	{
+		var (guest, turn, people) = DecidingAt( PrankX, PrankY, seed );
 
-			turn( 2 );
+		while ( idModThree >= 0 && guest.ThingId % 3 != idModThree )
+		{
+			guest.SetState( PeepState.Wandering, tick: 1, new Random( 1 ) );
+			guest = people.Guests[people.Admit( PrankX, PrankY )];
+			guest.SetState( PeepState.Deciding, tick: 1, new Random( 1 ) );
+			guest.Vomit = guest.Litter = 0f;
 		}
 
-		Prank( 100, 15f, passes );
-		Prank( 0, 14f, passes );
-		Prank( 100, 14f, fails );
-		Prank( 100, 14f, SeedWhere( roll => roll % 3 == 2 && roll % 101 == 100 && roll % 100 < 25 ) );
-		Assert.AreEqual( (bombs, litter, balloons), Counts(),
-			"happiness 15, no prankery, a failed bomb roll, a draw not under the prankery" );
+		var walk = people.AnyWalkFor( guest.ThingId )!;
+		var behaviour = new PeepBehaviour( Park(), new Random( seed ),
+			new ParkAdmission( new ParkBalance( "jungle", easyMode: true ), 20 ), state: people.State )
+		{
+			LetGoABalloonBeside = people.Behaviour.LetGoABalloonBeside
+		};
 
-		Prank( 100, 14.9f, passes );
-		Assert.AreEqual( (bombs + 1, litter, balloons), Counts(), "prankery 100" );
+		guest.PrankeryIndex = prankery;
+		guest.Happiness = happiness;
+		// Not so low that the leave test takes the turn first: the byte is 1 or more.
+		guest.ExitLevel = 50;
 
-		Prank( 101, 14f, passes );
-		Assert.AreEqual( (bombs + 1, litter + 1, balloons), Counts(), "prankery 101" );
+		if ( ownBalloon )
+			guest.Balloon = Balloon.Make( guest.ThingId, 4, now: 0 );
 
-		Prank( 102, 14f, passes );
-		Prank( 102, 14f, passes, ownBalloon: true );
-		Prank( 102, 14f, passes, balloonAt: (47, 23) );
-		Assert.AreEqual( (bombs + 1, litter + 1, balloons), Counts(),
-			"prankery 102: nobody's balloon, their own, and one on the next cell" );
+		Peep? other = null;
 
-		Prank( 102, 14f, passes, balloonAt: (47, 22) );
-		Assert.AreEqual( (bombs + 1, litter + 1, balloons + 1), Counts(), "prankery 102, a balloon on the cell" );
+		if ( balloonAt is var (x, y) )
+		{
+			other = people.Guests[people.Admit( x, y )];
+			other.Balloon = Balloon.Make( other.ThingId, 4, now: 0 );
+			other.BalloonLife = 37;
+		}
+
+		behaviour.Step( guest, walk, playing: null, tick: 2 );
+
+		return (guest, people, other);
+	}
+
+	private static readonly string[] PrankCounts =
+		["DECIDE_PRANK_EVENT", "PRANK_GUARD_SENT", "DECIDE_PRANK_STINK_BOMB_SOUND", "LITTER_STINK_BOMB_PARTICLE"];
+
+	private static int[] Counts() => [.. PrankCounts.Select( Counted )];
+
+	/// <summary>
+	/// <b>No prank is played at happiness 15, with no prankery, on a failed bomb roll or on a draw not under the
+	/// prankery</b> (<c>0x004ff108</c>..<c>0x004ff150</c>, <c>0x004ff24b</c>): nothing on the cell, happiness as it was,
+	/// no message sent.
+	/// </summary>
+	[TestMethod]
+	public void NoPrankIsPlayedWhereItsTestsFail()
+	{
+		var passes = SeedWhere( roll => roll % 3 == 2 && roll % 101 < 100 && roll % 100 < 25 );
+		var fails = SeedWhere( roll => roll % 3 == 2 && roll % 101 < 100 && roll % 100 >= 25 );
+		var notUnder = SeedWhere( roll => roll % 3 == 2 && roll % 101 == 100 && roll % 100 < 25 );
+		var from = Counts();
+
+		foreach ( var (prankery, happiness, seed, why) in new[]
+		{
+			(100, 15f, passes, "happiness 15"), (0, 14f, passes, "no prankery"), (100, 14f, fails, "the bomb's roll 25 or more"),
+			(100, 14f, notUnder, "a draw % 101 of 100"), (101, 15.5f, passes, "litter at the byte 15")
+		} )
+		{
+			var (guest, people, _) = Prank( prankery, happiness, seed );
+
+			Assert.AreEqual( (0, happiness), (people.State.CellAt( PrankX, PrankY ).Litter, guest.Happiness), why );
+		}
+
+		CollectionAssert.AreEqual( from, Counts(), "no event, no message, no sound" );
+	}
+
+	/// <summary>
+	/// <b>Prankery 100 drops a stink bomb</b>: litter of kind 8 on the cell, region effect 5 round it (happiness -3 on
+	/// the cell itself), the sound and the particle counted, message <c>0xe</c> and the event counted, and the
+	/// prankster's happiness up one (14.9 to 15.9: the byte 14 is under 15). The writer takes the effect off again, as
+	/// the litter is not written (Q1288).
+	/// </summary>
+	[TestMethod]
+	public void APranksterOfAHundredDropsAStinkBomb()
+	{
+		var seed = SeedWhere( roll => roll % 3 == 2 && roll % 101 < 100 && roll % 100 < 25 );
+		var file = Park();
+		// The cell's effects in a park where the bomb's roll fails, a turn that plays no prank.
+		var before = Prank( 100, 14.9f, SeedWhere( roll => roll % 3 == 2 && roll % 100 >= 25 ) ).People.State
+			.EffectsAt( PrankX, PrankY ).ToArray();
+		var from = Counts();
+
+		var (guest, people, _) = Prank( 100, 14.9f, seed );
+
+		Assert.AreEqual( (ParkState.StinkBombLitter, 15.9f), (people.State.CellAt( PrankX, PrankY ).Litter, guest.Happiness) );
+		Assert.AreEqual( before[0] - 3, people.State.EffectsAt( PrankX, PrankY )[0], "effect 5's happiness on its own cell" );
+		Assert.AreEqual( before[1] + 3, people.State.EffectsAt( PrankX, PrankY )[1], "and its illness" );
+		CollectionAssert.AreEqual( new[] { from[0] + 1, from[1] + 1, from[2] + 1, from[3] + 1 }, Counts(),
+			"the event, the guard, the sound and the particle" );
+
+		var written = Level.WrittenEffects( file, people.State, _ => true );
+		var at = ((PrankY * ParkWorld.MapSize) + PrankX) * ParkWorld.EffectWords;
+		CollectionAssert.AreEqual( before, written[at..(at + ParkWorld.EffectWords)], "the writer takes the effect off" );
+	}
+
+	/// <summary>
+	/// <b>Prankery 101 drops litter of kind 1 + the turn's own draw % 5</b> (<c>0x004ff237</c>), not a fresh draw's and
+	/// not the draw % 5 alone, with no stink bomb's effect, and happiness up one.
+	/// </summary>
+	[TestMethod]
+	public void APranksterOfAHundredAndOneDropsLitterOfTheTurnsDraw()
+	{
+		var seed = SeedWhere( ( roll, next ) => roll % 3 == 2 && roll % 5 == 3 && next % 5 != 3 && next % 5 != 2 );
+		var before = Prank( 0, 3f, seed ).People.State.EffectsAt( PrankX, PrankY ).ToArray();
+
+		var (guest, people, _) = Prank( 101, 3f, seed );
+
+		Assert.AreEqual( (4, 4f), (people.State.CellAt( PrankX, PrankY ).Litter, guest.Happiness) );
+		CollectionAssert.AreEqual( before, people.State.EffectsAt( PrankX, PrankY ).ToArray(), "no region effect" );
+	}
+
+	/// <summary>
+	/// <b>Prankery 102 lets go the balloon of another guest on the prankster's cell</b> (<c>0x004ff156</c>..
+	/// <c>0x004ff1f7</c>, <c>FUN_004fe950</c>): that guest holds none, theirs bursts where it was, and their balloon's
+	/// life is left. The prankster's own balloon and one on the next cell are not let go, and with none on the cell the
+	/// prank is not done: no message, happiness as it was.
+	/// </summary>
+	[TestMethod]
+	public void APranksterOfAHundredAndTwoLetsGoABalloonOnTheirCell()
+	{
+		var seed = SeedWhere( roll => roll % 3 == 2 );
+		var from = Counts();
+
+		foreach ( var (balloonAt, own, why) in new[] { ((PrankX, PrankY + 1), false, "the next cell"), (((int, int)?)null, true, "their own") } )
+		{
+			var (guest, people, other) = Prank( 102, 10f, seed, balloonAt, own );
+
+			Assert.AreEqual( (10f, 0), (guest.Happiness, people.Bursting.Count), why );
+			Assert.IsTrue( (other ?? guest).Balloon != null, $"{why}: still held" );
+		}
+
+		CollectionAssert.AreEqual( from, Counts(), "no prank done, no message" );
+
+		var (prankster, park, victim) = Prank( 102, 10f, seed, balloonAt: (PrankX, PrankY) );
+
+		Assert.AreEqual( (11f, null, 37, 1), (prankster.Happiness, victim!.Balloon, victim.BalloonLife, park.Bursting.Count) );
+		Assert.AreEqual( from[0] + 1, Counted( PrankCounts[0] ), "the event" );
+	}
+
+	/// <summary>
+	/// <b>The advice a prank posts is by the prankster's id % 3, not by the prank played</b> (the bus record's
+	/// <c>+0xc</c>, <c>DIV 3</c> at <c>0x004ff2f8</c>; <c>ReceiveMessage</c> arm <c>0x0059b221</c>): 0 the stink bomb's
+	/// row 125, message <c>0x7d</c>, 1 the litter's, 2 the balloon's. A litter prank (prankery 101) by a guest whose id
+	/// % 3 is nought posts the stink bomb's, which is counted as its rows are not built.
+	/// </summary>
+	[TestMethod]
+	public void ThePranksAdviceIsByTheGuestsIdModThree()
+	{
+		Assert.AreEqual( (0x7d, 0x7e, 0x7f, 0x7d), (ParkAdvisorMessages.PrankAdviceOf( 3 ), ParkAdvisorMessages.PrankAdviceOf( 4 ),
+			ParkAdvisorMessages.PrankAdviceOf( 5 ), ParkAdvisorMessages.PrankAdviceOf( 99 )) );
+
+		var seed = SeedWhere( roll => roll % 3 == 2 );
+		var (bombs, litter) = (Counted( "PARK_ADVISOR_PRANK_STINK_BOMB" ), Counted( "PARK_ADVISOR_PRANK_LITTER" ));
+
+		var (guest, _, _) = Prank( 101, 10f, seed, idModThree: 0 );
+
+		Assert.AreEqual( (0, 11f), (guest.ThingId % 3, guest.Happiness) );
+		Assert.AreEqual( (bombs + 1, litter), (Counted( "PARK_ADVISOR_PRANK_STINK_BOMB" ), Counted( "PARK_ADVISOR_PRANK_LITTER" )) );
 	}
 
 	/// <summary><b>The stink bomb's chance is the balance file's</b>, 25 in a hundred.</summary>

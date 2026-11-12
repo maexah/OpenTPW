@@ -1647,7 +1647,7 @@ decide, where the original's comes after it.
 | The dead end and the stamp | thought `0x11`, `+0x198` stamped, every route refused until a map edit | the same, for a guest (`PeepBehaviour.SetRandomDest`, `RefusedAsStranded`; "Q110b") | not by the stock park left alone; by a player who cuts a queue's tail off its path ("Q110") |
 | A map type write's block stamp | a fresh counter value in the cell's 16 × 16 block | the same, where a cell becomes ground, path or queue (`ParkState.SetRecord`, `ClearRecord`, `StampBlock`) | every path or queue cell laid or cleared, every sale |
 | The split's events 1 and 2 | pushed onto the guest's event ring | counted, `DECIDE_NOTHING_CHOSEN_EVENT` and `DECIDE_CHOSEN_EVENT`; no ring is kept | every choice |
-| Arms (a), (b), (c), (e), (f) | run before the split | (e)'s entertainer arm built: face him, the turn ends (`PeepBehaviour.Watch`, `ParkPeople.EntertainerToWatch`; "Q668"); the rest counted at each arm's own test (`PeepBehaviour.CountBeforeLeaving`, `CountAfterLeaving`; "Q111") | (a) above 80; (c) the Drinks Shop's litter and the bin at (44,29); (e) the entertainer, thing 27; (f) pranksters |
+| Arms (a), (b), (c), (e), (f) | run before the split | (e)'s entertainer arm built: face him, the turn ends (`PeepBehaviour.Watch`, `ParkPeople.EntertainerToWatch`; "Q668"); (f)'s pranks built (`PeepBehaviour.Prank`; "Q228"); the rest counted at each arm's own test (`PeepBehaviour.CountBeforeLeaving`, `WatchOrPrank`; "Q111") | (a) above 80; (c) the Drinks Shop's litter and the bin at (44,29); (e) the entertainer, thing 27; (f) pranksters |
 | Leaving | state 6 only: happiness byte 0, `mExitLevel` exactly 0, or shut; −25 every turn it holds; (47,9)/(48,9); state `0x12` only on a route | the same (`PeepBehaviour.WantsToLeave`, `Leave`, Q109); the second pass in walking mode 1 is counted, `LEAVE_ROUTE_MODE_1_RETRY`; a guest reaching state 19 is taken out at the crossing, where the original walks them on to a bus stop (Q128) | every leaver |
 
 **Q109: when a guest leaves** is built in `PeepBehaviour.Decide` (`WantsToLeave`, `Leave`), as the listing reads
@@ -1792,7 +1792,7 @@ What it looks like is not checked here (no display to photograph; Q1340).
 `DECIDE_HAPPY_SPOT_ANIMATION`, `DECIDE_VOMIT` and, for litter (until Q225, below, which builds the arm),
 `DECIDE_LITTER_BIN_ERRAND` with a `HoldsLitter` thing inside the reach or `DECIDE_LITTER_DROPPED` without; `CountAfterLeaving` counts `DECIDE_WATCH_FIREWORKS` (dead by
 content in Lost Kingdom), else runs the entertainer's arm, **built by Q668** (`PeepBehaviour.Watch`, below), then
-counts `DECIDE_PRANK_STINK_BOMB`, `DECIDE_PRANK_LITTER` or `DECIDE_PRANK_BALLOON`, all on the turn's one draw. **Each
+counted `DECIDE_PRANK_STINK_BOMB`, `DECIDE_PRANK_LITTER` or `DECIDE_PRANK_BALLOON`, all on the turn's one draw (until Q228, below, which builds them). **Each
 count is of deciding turns on which the arm's own test held**, and differs from the original's reach in three ways,
 said at the site: no counted arm ends the turn; nothing clears a test (the jump's stamp, the levels zeroed), so a guest
 counts on every turn it holds; the bin's route is not asked (until Q225). The fireworks' script variable is not read. The console's
@@ -1811,6 +1811,25 @@ arm runs on turns the original would end at (a) or (b). A bin with `mEntryPos` n
 and passed over; Lost Kingdom's one bin has one. Off-screen on the shipped park (`consolerun.py`, cloud lane c42, output not
 kept): a guest made at (46,31) at litter 90 set off for bin 17 on sweep 882 and put it in on 904, `VAR_TRIGGER` read 1 seven
 times a quarter-second apart, then 0; one at (47,22) dropped kind 3 there on 882, `cell 47 22` then `litter 3`.
+
+**Q228: the pranks, arm (f), are built** (`PeepBehaviour.Prank`, `ParkPeople.LetGoABalloonBeside`, `ParkState.HearPrank`,
+`ParkState.DropLitter`), from (f) above, "The prankster" in "A balloon" and Q228's notes, with no Ghidra on the lane. Below
+happiness 15 and the turn's draw % 101 under the prankery: 100, on the draw % 100 under `StinkbombLikelihood`, litter of
+kind 8, which stamps region effect 5 round the cell; 101, litter of kind 1 + the draw % 5; 102, the first other guest on the
+cell holding a balloon lets it go, its life left. A prank done counts the event `0xf` (`DECIDE_PRANK_EVENT`: no ring is
+kept), sends message `0xe` (`HearPrank`: the advisor's message `0x7d` + the guest's id % 3, whatever the prank, and the guard
+sent) and puts happiness up one; one not done does nothing. Litter on a cell that already holds some leaves the cell as it
+was, and the prank still counts as done. **Counted, not built:** the stink bomb's sound `0xcf`, whose category is not read
+(`DECIDE_PRANK_STINK_BOMB_SOUND`); kind 8's particle effect `0x32` (`LITTER_STINK_BOMB_PARTICLE`); the advisor's rows 125 to
+127, whose responses 302 to 307 are not read (`PARK_ADVISOR_PRANK_STINK_BOMB`, `_LITTER`, `_BALLOON`, Q1632); the guard
+sent, whose escort is not read (`PRANK_GUARD_SENT`, Q1633). **Deviation:** "the first other guest on the cell" is the
+first in the sweep's order, as this project keeps no thing list a cell; with two balloons on one cell the one let go may
+differ. The writer, which writes the file's cells (Q1288), takes a stink bomb's effect off what it writes. Off-screen on the
+shipped park (`consolerun.py`, cloud lane c120, output not kept): every guest at happiness 10 and prankery 100 gave five
+stink bombs in 25 s, the first `Person 38: prank 100 on (52,27), a stink bomb, happiness 10 to 11, tick 930` with `Park:
+message 0xe, a prank by guest 38 on (52,27), sub 2, advisor message 0x7f`; at 101, nine litter pranks of kinds 1 to 5 in 30 s; the census then read 14 `DECIDE_PRANK_EVENT`, 14 `PRANK_GUARD_SENT`,
+five `DECIDE_PRANK_STINK_BOMB_SOUND`, four `LITTER_STINK_BOMB_PARTICLE` (the fifth bomb fell on a cell already littered)
+and the advisor's rows 4, 3 and 7 by id % 3. No balloon prank was run: the console gives no guest a balloon (Q1634).
 
 Predicted and read in Lost Kingdom (`q111confirm.py`, `q111/run1`). The stock park left alone 120 s: vomit, litter,
 pranks and fireworks all nought as predicted, the happy jump 0 (0 to 40 predicted), an entertainer beside 4 (0 to 60).
@@ -3285,7 +3304,7 @@ cell of the guest's own bytes (`+5`, `+7`; `FUN_004cd4e0` packs it, `FUN_004d841
 three words, added to happiness (`+0x19c`), illness (`+0x1b0`) and hunger (`+0x1a8`), each held to 0..100, in every
 state, before the drift. In a Lost Kingdom park as shipped the one happiness word in the cells is the entertainer's: 2 on his cell and 1 on the four
 orthogonal cells beside (effect 0 divides by |dx| + |dy| + 1, so a diagonal gains 0, 2/3 cut to nought); a sick guest's
-litter (effect 2, -1) and a stink bomb (effect 5, -3) add their own once those arms are built (Q225, Q228). Of the six cells a
+litter (effect 2, -1) and a stink bomb (effect 5, -3, stamped since Q228) add their own once those arms are built (Q226). Of the six cells a
 guest watches from, the four beside him gain 1 a needs turn. `EntertainerConstsPerGrade[g].HappinessEffectOnCell` (4 to 20, the per-grade record's `+4`,
 `0x0078539c`) is read by no instruction: the stamp is RegionFX[0]'s whatever his grade. OpenTPW: `Peep.Tick`'s `cell`,
 from `ParkPeople.CellEffects` (Q668).
@@ -3410,7 +3429,7 @@ use that dirties a toilet swaps 1 for 6 and the clean swaps them back; the conso
 An entertainer's and a guard's is stamped where they are hired, moved before their turn on the sweep that finds them
 on another cell than `Staff.RecordedCell` (`ParkPeople.MoveEffect`), and taken off round that cell as they are
 fired; `staff` prints the cell recorded. Measured in `saves.md`, "OpenTPW's writer, the staff's region effects".
-**Not built:** litter dropped by a guest (Q225) stamps nothing, as kinds 1 to 5 stamp nothing; the sick's and the stink bomb's are not dropped (Q226, Q228); fireworks' is not taken off on their spent turn (`FIREWORKS_SPENT_REGION_EFFECT`, counted at
+**Not built:** litter dropped by a guest (Q225) stamps nothing, as kinds 1 to 5 stamp nothing; the sick's is not dropped (Q226); the stink bomb's stamps effect 5 as it is dropped (Q228, `ParkState.DropLitter`), and nothing takes it off, as nothing removes litter here; fireworks' is not taken off on their spent turn (`FIREWORKS_SPENT_REGION_EFFECT`, counted at
 their purchase; a sale always takes it off), and the guest's needs turn adds the cell's first three words (Q668), and
 the chooser still divides by the file's attraction word.
 
@@ -3667,7 +3686,7 @@ per rendered frame; the two other callers of the placement are not reproduced; w
 while a park's menu has paused the clock is not traced; a saved balloon's first turn is one interval after the load,
 as a person's is. A balloon saved while it bursts, which no guest names any more, goes on bursting after the load on its
 saved loop stack (`ParkPeople`, `Balloon.Saved`; none of the 79 balloons in Alexah's four played saves that hold any is bursting). No prank
-and no challenge exists here to read it.
+and no challenge exists here to read it; the prank lets one go since Q228 (`ParkPeople.LetGoABalloonBeside`).
 
 ### A costume
 

@@ -1453,7 +1453,7 @@ public class Level
 	/// Every cell's region effects as the file holds its things (<c>docs/exe/saves.md</c>, "OpenTPW's writer, the
 	/// region effects"): the running park's, with each object's effect as its written record has it. A thing
 	/// bought and not written holds none; a thing sold and still written holds the file's; and where the objects
-	/// go out as the file's, a toilet dirtied or cleaned since holds the file's too.
+	/// go out as the file's, a toilet dirtied or cleaned since holds the file's too. A stink bomb dropped since the load holds none, as its litter is not written.
 	/// </summary>
 	/// <param name="written">Whether an object goes into the file: a kept one, or one bought and written whole.</param>
 	/// <param name="asTheFile">Whether the kept objects' records are left as the file has them.</param>
@@ -1482,6 +1482,10 @@ public class Level
 
 			Move( thing, off: false );
 		}
+
+		// A stink bomb dropped since the load is not written (Q1288), so neither is the effect it stamped.
+		foreach ( var (x, y) in state.StinkBombsNotIn( loaded ) )
+			state.RegionEffects.Stamp( effects, ParkRegionEffects.StinkBomb, x, y, off: true );
 
 		return effects;
 	}

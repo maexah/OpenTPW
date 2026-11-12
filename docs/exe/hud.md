@@ -3197,7 +3197,7 @@ a chase abandoned that month, counted since its load).
 **OpenTPW** (Q395). `ParkWorld.MisbehavingKids` reads the three (record `+73468`), `PutMisbehavingKids` writes them;
 `ParkState.MisbehavingKids` takes the file's month two at a load and nought for the third, where the original's is its
 load's unzeroed memory (a deviation, said at the site); `TurnTheMonth` zeroes the month's two; `money` and the close's
-line print them. Nothing counts into them: the guard's chase waits on the pranks (`DECIDE_PRANK_*`). Row 12 reads this
+line print them. Nothing counts into them: the guard's chase waits on the guard a prank sends (`PRANK_GUARD_SENT`, Q1633). Row 12 reads this
 month's (Q413), row 264 too (Q414; `advisor-park.md`, "Lots of pranks"), and row 98 this month's got away (Q418; `advisor-park.md`, "Kids who got away"), and row 22 the same with a guard on the staff (Q423; `advisor-park.md`, "Kids who got away from a guard"). With them the close is built whole (`ANALYSER_MONTH_CLOSE` gone).
 **Confirmed** (`q395/`): the stock park with the three written 5, 2 and 9 (`kids.TPWS`), loaded; `money` read `misbehaving
 kids 5 got away 2 ever 0`; the close on tick 1470 named `misbehaving kids 0 got away 0 ever 0`, the file held 0, 0, 0 and

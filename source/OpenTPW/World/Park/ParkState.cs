@@ -1320,7 +1320,7 @@ public sealed class ParkState
 	/// The park analyser's three counts of misbehaving kids (<c>+0x21bfc</c> to <c>+0x21c04</c>): the month's two the
 	/// file's at a load and the third nought, and all three nought in a park made with no file (<c>FUN_004c58c0</c>);
 	/// <see cref="TurnTheMonth"/> zeroes the month's two. What
-	/// counts into them, a guard's chase ending (<c>FUN_004c74f0</c>), waits on the pranks (<c>DECIDE_PRANK_*</c>).
+	/// counts into them, a guard's chase ending (<c>FUN_004c74f0</c>), waits on the guard a prank sends (<c>PRANK_GUARD_SENT</c>).
 	/// </summary>
 	public ParkWorld.MisbehavingKidCounts MisbehavingKids { get; private set; }
 
@@ -1448,6 +1448,31 @@ public sealed class ParkState
 	/// <c>0x85</c> + kind about no thing (<c>0x00503c8e</c>), which Instant Action slots at -1 and never says.
 	/// </summary>
 	internal void HearGroupOpened( int kind, int tick ) => AdvisorMessages?.Post( ParkAdvisorMessages.NewRideGroup + kind, tick );
+
+	/// <summary>
+	/// Message <c>0xe</c>, a prank done (<c>0x004ff2c7</c>..<c>0x004ff307</c>: the guest's id at <c>+8</c>, id % 3 at
+	/// <c>+0xc</c>), as its two known receivers hear it. The advisor (<c>ReceiveMessage</c> arm <c>0x0059b221</c>) would
+	/// post message <see cref="ParkAdvisorMessages.PrankAdviceOf"/>, about the guest and their cell; rows 125 to 127 are
+	/// not built (their responses' rows are not read), so each is counted by its own name. The staff send a guard, the
+	/// idle or walking one nearest the staff HQ (<c>0x005099c0</c>), whose escort is not read: counted as
+	/// <c>PRANK_GUARD_SENT</c> (<c>docs/exe/advisor-park.md</c>, "Rows settled from the bytes by the fork watch
+	/// (2026-10-16)"; Q228's notes).
+	/// </summary>
+	internal void HearPrank( int guestId, int x, int y, int tick )
+	{
+		var advice = ParkAdvisorMessages.PrankAdviceOf( guestId );
+
+		Log.Info( $"Park: message 0xe, a prank by guest {guestId} on ({x},{y}), sub {guestId % 3}, advisor message 0x{advice:x}, "
+			+ $"mGameTick {tick}" );
+
+		Unimplemented.Report( advice switch
+		{
+			ParkAdvisorMessages.PrankStinkBomb => "PARK_ADVISOR_PRANK_STINK_BOMB",
+			ParkAdvisorMessages.PrankLitter => "PARK_ADVISOR_PRANK_LITTER",
+			_ => "PARK_ADVISOR_PRANK_BALLOON"
+		} );
+		Unimplemented.Report( "PRANK_GUARD_SENT" );
+	}
 
 	/// <summary>
 	/// Whole days since the newest member of staff was made - <c>FUN_004c90d0</c>: now less
@@ -2462,8 +2487,9 @@ public sealed class ParkState
 	/// <remarks>
 	/// <b>Not built: the sprite</b> (<c>0x004d94cb</c>), whose place the original takes by reseeding the park's generator
 	/// with the cell id and drawing twice (Q1288); so this neither reseeds nor draws <see cref="RandomSeed"/>, and counts
-	/// each drop as <c>LITTER_SPRITE_AND_RESEED</c>. Only kinds 1 to 5 reach it,
-	/// so kind 7's and 8's region effects and kind 8's particle are not built (the sick and the stink bomb, Q226, Q228).
+	/// each drop as <c>LITTER_SPRITE_AND_RESEED</c>. Kinds 1 to 5 and 8 reach it: kind 8, a prankster's stink bomb,
+	/// stamps region effect 5 round the cell (<c>FUN_004d8440( 5, cell )</c>), and its particle effect <c>0x32</c> is
+	/// counted (<c>LITTER_STINK_BOMB_PARTICLE</c>). Kind 7's region effect is the sick's (Q226), which nothing here drops.
 	/// The online visit's refusal does not arise: there is none.
 	/// </remarks>
 	internal bool DropLitter( int x, int y, int kind )
@@ -2480,10 +2506,35 @@ public sealed class ParkState
 
 		cell.Litter = kind;
 		cell.LitterCollector = 0;
+
+		if ( kind == StinkBombLitter )
+		{
+			StampEffect( ParkRegionEffects.StinkBomb, x, y );
+			Unimplemented.Report( "LITTER_STINK_BOMB_PARTICLE" );
+		}
+
 		// The sprite, its place and the reseed of the park's generator with the cell id (0x004d94cb..0x004d953f).
 		Unimplemented.Report( "LITTER_SPRITE_AND_RESEED" );
 
 		return true;
+	}
+
+	/// <summary>The litter kind a prankster's stink bomb drops (<c>0x004ff27e</c>), the one kind with region effect 5.</summary>
+	internal const int StinkBombLitter = 8;
+
+	/// <summary>
+	/// The cells whose running litter is a stink bomb that <paramref name="park"/>'s cell does not hold: the writer,
+	/// which writes the file's cell records (Q1288), takes their region effect off what it writes.
+	/// </summary>
+	internal IEnumerable<(int X, int Y)> StinkBombsNotIn( IParkInitialState park )
+	{
+		for ( var i = 0; i < _cells.Length; ++i )
+		{
+			var fileLitter = i < park.Cells.Count ? park.Cells[i].Litter : 0;
+
+			if ( _cells[i].Litter == StinkBombLitter && fileLitter != StinkBombLitter )
+				yield return (i % ParkWorld.MapSize, i / ParkWorld.MapSize);
+		}
 	}
 
 	/// <summary>

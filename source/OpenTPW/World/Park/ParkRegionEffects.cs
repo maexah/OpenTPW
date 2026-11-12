@@ -19,6 +19,9 @@ public sealed class ParkRegionEffects
 	/// <summary>A thing's that provides security.</summary>
 	public const int Security = 4;
 
+	/// <summary>A stink bomb's, litter of kind 8 (<see cref="ParkState.StinkBombLitter"/>), while it lies on its cell.</summary>
+	public const int StinkBomb = 5;
+
 	/// <summary>A toilet's while it is dirty.</summary>
 	public const int DirtyToilet = 6;
 

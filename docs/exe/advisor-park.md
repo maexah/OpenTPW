@@ -2365,8 +2365,8 @@ the visitors are misbehaving. You should hire some soon!" (`Language/american`'s
 
 A topic scored from the same `ParkFacts`, which now carry this month's kids (`ParkState.MisbehavingKids.Month`, the
 file's at a load since Q395). The guards are the kind's members rows 28 to 32 already read. The poll line ends
-` closed=N guards=N kids=N`. `ParkTags.Rows` lists row 14. Nothing here counts a kid (the chase waits on the pranks,
-`DECIDE_PRANK_*`), so in this game too the count comes from the file.
+` closed=N guards=N kids=N`. `ParkTags.Rows` lists row 14. Nothing here counts a kid (the chase waits on the guard a prank
+sends, `PRANK_GUARD_SENT`), so in this game too the count comes from the file.
 
 **The scenes** (`q413/mkkids.py`): `noguard.TPWS`, the stock park paused on tick 765 with its guard dismissed
 (`lib/pathscene.py ... 760 0 -- "fire 28"`), then the kids written with `parkfile.thing_set` (thing 5, `+73468`):
@@ -2436,7 +2436,7 @@ guards, not the days. The two keys are the schema's records at `0x007384f4` and 
 
 A topic scored from `ParkFacts.MisbehavingKids` (Q413's), and nothing else of them. The poll line ends ` closed=N
 guards=N kids=N`, the facts beside the score though it reads only the kids. Its group is the topic's default, `0x17f`, so
-`ParkTags` leaves no tag. Nothing here counts a kid (the chase waits on the pranks, `DECIDE_PRANK_*`), so the count comes
+`ParkTags` leaves no tag. Nothing here counts a kid (the chase waits on the guard a prank sends, `PRANK_GUARD_SENT`), so the count comes
 from the file.
 
 **The scenes**: Q413's `three.TPWS` (no guard, 3 kids, 9 got away) and `guard.TPWS` (the shipped file, its guard kept, 4
@@ -2507,7 +2507,7 @@ hasn't seen it. Make sure your guards are patrolling all areas of the park, or b
 A topic scored from `ParkFacts.KidsGotAway`, which `ParkPeople.AdvisorFacts` fills from
 `ParkState.MisbehavingKids.GotAwayThisMonth` (the file's at a load since Q395, zeroed at a month's close). The poll line
 ends ` closed=N guards=N gotaway=N`, the facts beside the score though it reads only the count. `ParkTags.Rows` lists row
-100. Nothing here counts a kid who got away (the chase waits on the pranks, `DECIDE_PRANK_*`), so the count comes from the
+100. Nothing here counts a kid who got away (the chase waits on the guard a prank sends, `PRANK_GUARD_SENT`), so the count comes from the
 file.
 
 **The scenes**: `q414/two.TPWS` (no guard, 2 kids, 9 got away; row 264 silent on it), and `q418/mkkids.py`'s
@@ -2571,7 +2571,7 @@ reads "If you built some security cameras it would help your guards do their job
 
 A topic scored from `ParkFacts`: the guards (`Staff.Guards.Members`) and `KidsGotAway`, both already read by rows 12 and 98.
 The poll line ends ` closed=N guards=N gotaway=N`. `ParkTags.Rows` lists row 24. Nothing here counts a kid who got away
-(the chase waits on the pranks, `DECIDE_PRANK_*`), so the count comes from the file.
+(the chase waits on the guard a prank sends, `PRANK_GUARD_SENT`), so the count comes from the file.
 
 **The scenes** (`q423/mkkids.py`, the analyser's three counts written as Q418's): `five.TPWS` (the shipped file, its guard
 kept, five got away), `four.TPWS` (the same, four) and `noguard.TPWS` (Q413's `noguard.TPWS`, five got away).
@@ -5189,7 +5189,7 @@ game run. Row numbers are metadata rows; the rows' keys are in the Advisor.sam s
 | 3 `VisitorsThirsty` (message 3) | `0x0059c9d0` | the count of park guests whose thirst float `+0x1a4`, cut by `__ftol` to its low byte, is above `VisitorsThirsty.ThirstierThan` (`+0xb0`), times `.ScorePerThirstyPerson` (`+0xac`); the count is `0x004c93f0`, ECX ignored | built, Q530 ("Thirsty and hungry guests") |
 | 4 `VisitorsHungry` (message 4) | `0x0059ca00` | the same with hunger `+0x1a8` (`0x004c9340`), `HungrierThan` `+0xb8`, `ScorePerHungryPerson` `+0xb4` | built, Q530 |
 | 85 `FeaturesNotEnoughToilets` | `0x0059e420` | **always nought**: it runs the average toilet queue (`0x004cca40`) and discards it (`FSTP ST0` at `0x0059e444`; `XOR EAX,EAX; RET` at `0x0059e446`), reading neither `.AverageQueueLongerThan` nor `.Score`. Its lines (responses 233-234) are never said by the original | built as a nought, Q530 |
-| 125-127 prank advice | `0x0059f360`, `0x0059f370`, `0x0059f380` | the keys `PrankSbomb.Score`, `PrankLitter.Score`, `PrankBalloon.Score` (`+0x3d4`, `+0x3d8`, `+0x3dc`), 35 each in the shipped file (above the 25 cut) | unbuilt |
+| 125-127 prank advice | `0x0059f360`, `0x0059f370`, `0x0059f380` | the keys `PrankSbomb.Score`, `PrankLitter.Score`, `PrankBalloon.Score` (`+0x3d4`, `+0x3d8`, `+0x3dc`), 35 each in the shipped file (above the 25 cut) | counted by row as the prank's message `0xe` is heard (`ParkState.HearPrank`, Q228): `PARK_ADVISOR_PRANK_STINK_BOMB`, `_LITTER`, `_BALLOON`; the responses 302 to 307 (but 304's sample, 338) and the rows' metadata are not read (Q1632) |
 | 167 (message `0xa7`) | `0x0059f9a0` | the constant 10000; posted when the last research project is finished, at `0x00503ee9` in Instant Action and at `0x00503f8d` in Full Simulation once every park of the player's is all researched (`park-engine.md`, "The lab at work") | built, Q550: posted about no thing, responses 380-381 (samples 452-453) on the theme's own advisor, group `0x17f` (no tag); said first on the end's tick in both games |
 | 168 (message `0xa8`) | `0x0059f9b0` | the constant 9999; nothing found posts it | unbuilt |
 

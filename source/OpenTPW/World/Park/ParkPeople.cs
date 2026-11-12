@@ -314,7 +314,7 @@ public sealed partial class ParkPeople : Entity
 			MayCrossTheRoad = MayCrossTheRoad,
 			// And who stands near a deciding guest, which only the holder of everybody's walk can say.
 			EntertainerToWatch = EntertainerToWatch,
-			BalloonBeside = BalloonBeside,
+			LetGoABalloonBeside = LetGoABalloonBeside,
 			// And the bin a guest's litter goes into, told through its script.
 			TriggerBin = TriggerBin
 		};
@@ -1590,21 +1590,29 @@ public sealed partial class ParkPeople : Entity
 	private const string BinTrigger = "VAR_TRIGGER";
 
 	/// <summary>
-	/// Whether another guest on (x, y) holds a balloon, for a prankster's third prank (<c>0x004ff1c8</c>..
-	/// <c>0x004ff1d9</c>: not themselves, a guest, <c>mBalloonScript</c> set).
+	/// A prankster's third prank on (x, y) (<c>0x004ff156</c>..<c>0x004ff1f7</c>): the first other guest there holding a
+	/// balloon (not themselves, a guest, <c>mBalloonScript</c> set) lets it go (<c>FUN_004fe950</c>), its life left, and
+	/// it bursts at once where it was. Answers that guest, or null for nobody.
 	/// </summary>
-	private bool BalloonBeside( Peep prankster, int x, int y )
+	/// <remarks>
+	/// DEVIATION: the original walks the cell's thing list, which this project does not keep; "first" here is the
+	/// sweep's order of the guests (<see cref="Peeps"/>), so with two balloons on one cell the one let go may differ.
+	/// </remarks>
+	private Peep? LetGoABalloonBeside( Peep prankster, int x, int y )
 	{
 		foreach ( var peep in _peeps )
 		{
-			if ( peep == prankster || peep.Balloon == null || !_walks.TryGetValue( peep.ThingId, out var walk ) )
+			if ( peep == prankster || peep.Balloon == null || !_walks.TryGetValue( peep.ThingId, out var walk )
+				|| walk.Position.Cell != (x, y) )
 				continue;
 
-			if ( walk.Position.Cell == (x, y) )
-				return true;
+			peep.LetGoOfTheBalloon();
+			TakeLetGo( peep );
+
+			return peep;
 		}
 
-		return false;
+		return null;
 	}
 
 	/// <summary>

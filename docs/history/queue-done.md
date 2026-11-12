@@ -12145,6 +12145,31 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q228. A prankster plays no pranks.** Found by Q111, arm (f). Below happiness 15, on a draw under the
+  prankery: a stink bomb (litter type 8, sound `0xcf`) on `PeepInfo.StinkbombLikelihood` of a hundred, litter, or
+  the balloon of another guest on the cell let go; event `0xf`, a type-`0xe` bus message and happiness up one. After
+  Q225. Decode what the bus message's receivers do with it before building. Counted as
+  `DECIDE_PRANK_STINK_BOMB`, `DECIDE_PRANK_LITTER` and `DECIDE_PRANK_BALLOON`. Confirm: `need prankery 102` beside a
+  guest holding a balloon, the balloon let go; a screenshot.
+  - **Note (fork review 2, 2026-10-16, `verify-economy-guests-paths.md` L3):** the receiver: the guard sent is the
+    idle or walking one (state 0 or 1) nearest the staff HQ's own cell; `0x005099c0` never reads the prankster's cell,
+    and a tie goes to the newest hire. The HQ sits at (0, 0) in Easymode and in all five Full Simulation saves, so it
+    is the guard nearest the map's corner wherever the prank is. Not read: anything else acting on message `0xe`, the
+    escort `0x004d6a50`'s arms.
+  - **Note (fork watch 2026-10-16, `verify-advisor.md` lead B):** the advisor's half of the bus message is decoded
+    (`advisor-park.md`, "Rows settled from the bytes"): `ReceiveMessage` arm `0x0059b221` takes the guest's id and
+    packed cell and switches on the message's `+0xc` (the guest's id % 3): 0 posts advisor message `0x7d`, 1 `0x7e`, 2
+    `0x7f` (rows 125-127, getters `0x0059f360`, `0x0059f370`, `0x0059f380`, keys `PrankSbomb`, `PrankLitter` and
+    `PrankBalloon` `.Score`, 35 each, above the 25 cut). The prank done is `mPrankeryIndex` 100 + id % 3, so the
+    advice names the prank done for a guest the constructor made.
+  **Done 2026-11-12** (cloud lane c120; no Ghidra, no original): `PeepBehaviour.Prank` plays the three pranks on the
+  turn's one draw (100: litter kind 8 on the draw % 100 under `StinkbombLikelihood`, stamping region effect 5; 101: kind
+  1 + draw % 5; 102: `ParkPeople.LetGoABalloonBeside`, the first other holder on the cell in the sweep's order, a
+  deviation said at the site); a prank done counts `DECIDE_PRANK_EVENT`, sends message `0xe` (`ParkState.HearPrank`:
+  advisor message `0x7d` + id % 3, counted by row, and `PRANK_GUARD_SENT`) and puts happiness up one. The writer takes a
+  stink bomb's effect off what it writes (Q1288 writes the litter). `ParkDecidingArmsTests`: five tests replace the count
+  test; ten bugs put back by hand each failed one. Off-screen in the shipped park: 5 stink bombs and 9 litter pranks in
+  55 s. Left: Q1632 (the advisor's rows), Q1633 (the sound, the particle, the guard), Q1634 (the balloon seen).
 
 ## B. Docs and comments
 
