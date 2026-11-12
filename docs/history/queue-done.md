@@ -12145,6 +12145,18 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q1166. A looped Layer I voice's later passes start one frame in.** From the run 22 review of Q659 (`review22/q659`,
+  `VERIFY-6.md` F1). In the original a looped voice of an in-memory bank (BANK byte +9 bit 0x1; `0x006ba690`,
+  `0x006ba725`) rewinds through `0x006c84a0`, which for Layer I decodes and drops 0x300 bytes (`0x006c84b5`..`0x006c84cc`),
+  so pass 1 plays decode bytes [0, D) and every later pass [0x300, 0x300 + D); the builder clears request 0x40 before the
+  start (`0x006ba59d`, `0x006ba93a`), so the start's own skip (`0x006c8358`) does not fire for a count > 1. A streamed
+  bank's voice (`0x0070ae90`, rewind `0x006c8b10`) never skips. OpenTPW wraps every pass to frame 0 (`Voice`, said there),
+  so Lost Kingdom's river and waterfall dip ~17 ms each 1.7-1.8 s (`docs/exe/audio.md`, "A looped Layer I voice's later
+  passes start one frame in"). Build: keep 384 / ch more frames of a Layer I clip, carry the layer and the bank's flag
+  (the category's BANK record, byte +9), and wrap a looped in-memory Layer I voice to 384 / ch. Test: a looped clip's
+  second pass starts at 384 / ch, a streamed bank's at 0, a one-shot's length unchanged. Confirm in both games by a
+  capture of the fall's channel. Open: the half-rate switch `0x00fb2708`'s default; which plain/music effects (count 1
+  with 0x40) take the start's skip.
 
 ## B. Docs and comments
 

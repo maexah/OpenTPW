@@ -452,6 +452,11 @@ public static class Audio
 		if ( !Ready || clip == null || clip.Frames == 0 )
 			return null;
 
+		// A bank whose byte +9 has neither 0x1 (in-memory, its Layer I loops skip) nor 0x2 (streamed, they do not): the class
+		// it is made as is not read (0x006ba690), so its loop wraps to 0 untested. No shipped looped effect draws on one (Q1640).
+		if ( loop && clip.Layer == 1 && clip.BankFlags != 0 && (clip.BankFlags & 0x3) == 0 )
+			Unimplemented.Report( $"LOOPED_LAYER_I_VOICE_OF_BANK_FLAGS_{clip.BankFlags:X2}" );
+
 		var voice = new Voice( clip, volume.Clamp( 0f, 1f ), loop, fadeInSeconds, bus, position, range );
 
 		lock ( Lock )

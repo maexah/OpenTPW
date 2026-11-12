@@ -88,6 +88,21 @@ public sealed class MP2File : ArchiveFile
 		}
 	}
 
+	/// <summary>
+	/// The MPEG layer <paramref name="data"/>'s first frame header names, 1 to 3, or 0 where it opens with no header. The game
+	/// ships Layers I and II only.
+	/// </summary>
+	public static int LayerOf( ReadOnlySpan<byte> data )
+	{
+		if ( data.Length < 2 || data[0] != 0xFF || (data[1] & 0xE0) != 0xE0 )
+			return 0;
+
+		// The two layer bits: 3 is Layer I, 2 Layer II, 1 Layer III, 0 reserved.
+		var bits = (data[1] >> 1) & 3;
+
+		return bits == 0 ? 0 : 4 - bits;
+	}
+
 	public override byte[] GetData()
 	{
 		return Data;

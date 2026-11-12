@@ -32,19 +32,55 @@ public sealed class AudioClip
 
 	public int Channels { get; }
 
-	/// <summary>How many frames long this is - <see cref="Samples"/> divided by the channel count.</summary>
-	public int Frames => Samples.Length / Channels;
+	/// <summary>
+	/// How many frames one pass of it plays: the bank's played length. <see cref="Samples"/> may hold more, the frames a
+	/// looped voice's later passes reach past it (<see cref="LaterPassStart"/>).
+	/// </summary>
+	public int Frames { get; }
+
+	/// <summary>How many frames <see cref="Samples"/> holds: <see cref="Frames"/> and any kept past it.</summary>
+	internal int StoredFrames => Samples.Length / Channels;
 
 	public float Duration => Frames / (float)Audio.SampleRate;
 
 	/// <summary>What it was called in the bank it came out of, for logging.</summary>
 	public string Name { get; }
 
+	/// <summary>The MPEG layer it was decoded from, 1 or 2 in what ships, or 0 for a clip made of samples.</summary>
+	public int Layer { get; }
+
+	/// <summary>Its bank's flags, byte <c>+9</c> of the category's BANK record (<see cref="SoundCategoryFile.BankFlags"/>), or 0.</summary>
+	public int BankFlags { get; }
+
+	/// <summary>
+	/// The frame a looped voice's second and later passes start on, each pass <see cref="Frames"/> long from there as far
+	/// as <see cref="Samples"/> reaches; 0 but for a Layer I clip of an in-memory bank (<see cref="InMemoryBank"/>), where
+	/// it is <see cref="RewindSkipBytes"/> of the stream's 16-bit PCM, 384 frames mono, 192 stereo, at the stream's rate.
+	/// The original's rewind <c>0x006c84a0</c> decodes that much and drops it (<c>0x006c84b5</c>..<c>0x006c84cc</c>); its
+	/// first pass starts at 0 (docs/exe/audio.md, "A looped Layer I voice's later passes start one frame in").
+	/// </summary>
+	public int LaterPassStart { get; }
+
+	/// <summary>Byte <c>+9</c>'s bit that makes a bank's voices the in-memory class, whose rewind skips (<c>0x006ba690</c>).</summary>
+	public const int InMemoryBank = 0x1;
+
+	/// <summary>What the in-memory class's rewind decodes and drops of a Layer I voice, in bytes of 16-bit PCM (<c>0x006c84b5</c>).</summary>
+	public const int RewindSkipBytes = 0x300;
+
 	private AudioClip( string name, short[] samples, int channels )
+		: this( name, samples, channels, samples.Length / channels, 0, 0, 0 )
+	{
+	}
+
+	private AudioClip( string name, short[] samples, int channels, int frames, int layer, int bankFlags, int laterPassStart )
 	{
 		Name = name;
 		Samples = samples;
 		Channels = channels;
+		Frames = frames;
+		Layer = layer;
+		BankFlags = bankFlags;
+		LaterPassStart = laterPassStart;
 	}
 
 	/// <summary>
@@ -58,8 +94,12 @@ public sealed class AudioClip
 	/// PCM at the stream's own rate and channels: the clip keeps that many bytes' frames of the decode and drops the
 	/// encoder's tail, as the original's read stops there (<c>0x006c8429</c>; docs/exe/audio.md, "How a voice is
 	/// decoded"). Nought or less keeps the whole decode; no shipped entry has one.
+	///
+	/// <paramref name="bankFlags"/> is its bank's byte <c>+9</c>. A Layer I clip of an in-memory bank keeps
+	/// <see cref="RewindSkipBytes"/> more of the decode, where the decode has them, for a looped voice's later passes
+	/// (<see cref="LaterPassStart"/>).
 	/// </summary>
-	public static AudioClip? Decode( string name, byte[] data, int playedBytes )
+	public static AudioClip? Decode( string name, byte[] data, int playedBytes, int bankFlags = 0 )
 	{
 		try
 		{
@@ -91,22 +131,34 @@ public sealed class AudioClip
 			}
 
 			var channels = mpeg.Channels;
+			var layer = MP2File.LayerOf( data );
 
 			// Whole frames only. A stereo clip that ended mid-frame would put every later sample
 			// on the wrong channel.
 			count -= count % channels;
 
 			// The played length, cut at the stream's rate before any resampling, since it counts the stream's own frames.
-			if ( playedBytes > 0 )
-				count = Math.Min( count, playedBytes / (sizeof( short ) * channels) * channels );
+			var decoded = count / channels;
+			var played = playedBytes > 0 ? Math.Min( decoded, playedBytes / (sizeof( short ) * channels) ) : decoded;
+
+			// A later pass of a looped Layer I voice of an in-memory bank plays [skip, skip + played), so that much more is
+			// kept where the decode has it.
+			var skip = layer == 1 && (bankFlags & InMemoryBank) != 0 ? RewindSkipBytes / (sizeof( short ) * channels) : 0;
+			count = Math.Min( decoded, played + skip ) * channels;
 
 			if ( count != pcm.Length )
 				Array.Resize( ref pcm, count );
 
+			// A 44,100 Hz clip's skip is counted at its own rate and brought to the device's with it; whether the original's
+			// half-rate switch (0x00fb2708) decodes it at 22,050 first is open (Q1640).
 			if ( mpeg.SampleRate != Audio.SampleRate )
+			{
 				pcm = Resample( pcm, channels, mpeg.SampleRate, Audio.SampleRate );
+				played = (int)((long)played * Audio.SampleRate / mpeg.SampleRate);
+				skip = (int)((long)skip * Audio.SampleRate / mpeg.SampleRate);
+			}
 
-			return new AudioClip( name, Quantise( pcm ), channels );
+			return new AudioClip( name, Quantise( pcm ), channels, played, layer, bankFlags, skip );
 		}
 		catch ( Exception e )
 		{

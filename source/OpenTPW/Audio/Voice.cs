@@ -15,6 +15,15 @@ public sealed class Voice
 	/// <summary>Where playback has got to, in source frames. Fractional so a fade can't drift it.</summary>
 	private double _frame;
 
+	/// <summary>The frame this pass ends on: the clip's <see cref="AudioClip.Frames"/> for the first, and for a later pass of a loop that many past <see cref="AudioClip.LaterPassStart"/>, as far as the clip holds.</summary>
+	private int _passEnd;
+
+	/// <summary>Which pass of its clip it is on, from 1; a loop's wrap counts the next. For the debug console's <c>voices</c>.</summary>
+	internal int Pass { get; private set; } = 1;
+
+	/// <summary>The frame its current pass started on: 0 for the first, <see cref="AudioClip.LaterPassStart"/> for a later one.</summary>
+	internal int PassStart => Pass > 1 ? _clip.LaterPassStart : 0;
+
 	private float _volume;
 	private float _targetVolume;
 
@@ -160,6 +169,7 @@ public sealed class Voice
 		Vector3? position, float? range = null )
 	{
 		_clip = clip;
+		_passEnd = clip.Frames;
 		Loop = loop;
 		Bus = bus;
 		_position = position;
@@ -388,6 +398,41 @@ public sealed class Voice
 	}
 
 	/// <summary>
+	/// The frame of its clip the next output frame plays, stepping on by its rate, or -1 once a one-shot has run out (it is then
+	/// stopped). A loop's first pass plays [0, <see cref="AudioClip.Frames"/>) and every later pass starts at
+	/// <see cref="AudioClip.LaterPassStart"/>, one Layer I frame in for a Layer I clip of an in-memory bank, as the original's
+	/// rewind <c>0x006c84a0</c> starts it (docs/exe/audio.md, "A looped Layer I voice's later passes start one frame in"), and
+	/// at 0 for every other clip. The caller holds <see cref="Audio.Lock"/>, or owns the voice alone.
+	/// </summary>
+	internal int NextFrame()
+	{
+		var at = (int)_frame;
+
+		if ( at >= _passEnd )
+		{
+			if ( !Loop )
+			{
+				_stopped = true;
+				return -1;
+			}
+
+			// By subtraction rather than by zeroing, so a buffer that ran past the end of the
+			// clip carries its overrun into the next time round instead of dropping it.
+			var start = _clip.LaterPassStart;
+			_frame -= _passEnd - start;
+			_passEnd = Math.Min( start + _clip.Frames, _clip.StoredFrames );
+			Pass++;
+			at = (int)_frame;
+
+			if ( at >= _passEnd )
+				at = start;
+		}
+
+		_frame += _rate;
+		return at;
+	}
+
+	/// <summary>
 	/// Adds this voice into an output buffer that already holds whatever mixed before it, and
 	/// says whether it is still going.
 	///
@@ -415,7 +460,6 @@ public sealed class Voice
 
 		var samples = _clip.Samples;
 		var channels = _clip.Channels;
-		var length = _clip.Frames;
 		var step = _volumeRate / Audio.SampleRate;
 		var pauseStep = 1f / (PauseFadeSeconds * Audio.SampleRate);
 		var held = 0L;
@@ -476,27 +520,10 @@ public sealed class Voice
 				continue;
 			}
 
-			var at = (int)_frame;
+			var at = NextFrame();
 
-			if ( at >= length )
-			{
-				if ( !Loop )
-				{
-					_stopped = true;
-					return false;
-				}
-
-				// By subtraction rather than by zeroing, so a buffer that ran past the end of the
-				// clip carries its overrun into the next time round instead of dropping it.
-				// Ours: every pass starts at frame 0. The original's later passes of a looped Layer I voice of an in-memory
-				// bank start one frame (384 mono samples) in (0x006c84a0; docs/exe/audio.md, "A looped Layer I voice's
-				// later passes start one frame in"); Q1166.
-				_frame -= length;
-				at = (int)_frame;
-
-				if ( at >= length )
-					at = 0;
-			}
+			if ( at < 0 )
+				return false;
 
 			var gain = _volume * master * frameDuck * _pauseGain * AudioClip.Scale;
 
@@ -512,8 +539,6 @@ public sealed class Voice
 				output[i * 2] += samples[index] * gain * frameLeft;
 				output[(i * 2) + 1] += samples[index + 1] * gain * frameRight;
 			}
-
-			_frame += _rate;
 		}
 
 		// Arrive exactly, rather than wherever a buffer's worth of additions landed, so nothing

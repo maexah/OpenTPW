@@ -126,21 +126,22 @@ public class SoundBankKeptTests
 			// The global ambient's, the level's own rides', the level's ambient the scripts play in, and the staff, kids and
 			// UI banks, so a category that stopped asking to keep shows. Measured by dropping flags: sUi is the UI category's
 			// alone; Staff is named by both the staff category and the scripts' global rides, and xKids by both the kids
-			// category and those rides, so one flag of each pair is redundant and only the pair dropped together shows.
-			(string Root, string Bank)[] banks = [("global", "Sound/Ambient"), ("levels/jungle", "Sound/Ride"), ("levels/jungle", "Sound/Ambient"),
-				("global", "Sound/Staff"), ("global", "Sound/xKids"), ("global", "Sound/sUi")];
-			var kept = banks.Select( bank => SoundBank.Load( bank.Root, bank.Bank ) ).ToArray();
+			// category and those rides, so one flag of each pair is redundant and only the pair dropped together shows. Each is
+			// asked for with its byte +9, which a kept bank is kept by (Q1166).
+			(string Root, string Bank, int Flags)[] banks = [("global", "Sound/Ambient", 0x01), ("levels/jungle", "Sound/Ride", 0x01),
+				("levels/jungle", "Sound/Ambient", 0x01), ("global", "Sound/Staff", 0x01), ("global", "Sound/xKids", 0x41), ("global", "Sound/sUi", 0x02)];
+			var kept = banks.Select( bank => SoundBank.Load( bank.Root, bank.Bank, flags: bank.Flags ) ).ToArray();
 
 			for ( var i = 0; i < banks.Length; i++ )
 			{
 				Assert.IsNotNull( kept[i], $"{banks[i]} ships" );
-				Assert.AreSame( kept[i], SoundBank.Load( banks[i].Root, banks[i].Bank ), $"the park did not keep {banks[i]}, which it decoded" );
+				Assert.AreSame( kept[i], SoundBank.Load( banks[i].Root, banks[i].Bank, flags: banks[i].Flags ), $"the park did not keep {banks[i]}, which it decoded" );
 			}
 
 			lobby = new LobbyAudio();
 
 			for ( var i = 0; i < banks.Length; i++ )
-				Assert.AreNotSame( kept[i], SoundBank.Load( banks[i].Root, banks[i].Bank ), $"the lobby's start left {banks[i]} kept" );
+				Assert.AreNotSame( kept[i], SoundBank.Load( banks[i].Root, banks[i].Bank, flags: banks[i].Flags ), $"the lobby's start left {banks[i]} kept" );
 		}
 		finally
 		{

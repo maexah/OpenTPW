@@ -1541,7 +1541,8 @@ when the header's rate is not the decoder's (`0x006c8598`..`0x006c85e3`; never f
 the streamed class's open `0x006c88c0` does the same (`0x006c8960` keep, `0x006c898f`..`0x006c89da` scale). OpenTPW
 cuts each clip to `DecodedSize / (2 x channels)` frames of its stream as it decodes it, before a 44,100 Hz clip is
 brought to 22,050 (`AudioClip.Decode`, Q659): every one of the 3,659 clips NLayer decodes is cut, and 335 of the 336
-that peak past full scale still do within what is kept (`AudioClipTests`).
+that peak past full scale still do within what is kept (`AudioClipTests`). A Layer I clip of an in-memory bank keeps
+0x300 bytes' frames more for a loop's later passes (below); a pass is still the played length (Q1166).
 
 **A looped Layer I voice's later passes start one frame in** (the run 22 review). The loop wrapper (vtable `0x0070a678`)
 rewinds its voice through slot `+0x20` when the read ends (`0x006c655d`..`0x006c6581`). The base class's rewind
@@ -1552,8 +1553,16 @@ Layer I frame (384 mono samples, 17.4 ms at 22,050 Hz) in; the first pass plays 
 does not fire for a wrapped voice. The base class is made for a bank whose BANK map record's byte +9 has bit 0x1
 (`0x006ba690`, `0x006ba725`): `Sound\Ambient` (River, watfall). The streamed class `0x0070ae90` (byte +9 0x02 or 0x42:
 `sSfx`, `sRide`, `sLobbySfx`, `xsAmbient`) rewinds at `0x006c8b10` with no skip, so its voices loop from 0 every pass.
-OpenTPW wraps every pass to frame 0 (`Voice`), so the river and the waterfall, whose first 384 decoded samples are near
-silence, dip about 17 ms each 1.7 to 1.8 s here and not in the original (an ffmpeg decode, not heard); Q1166.
+The river's and the waterfall's first 384 decoded samples are near silence (an ffmpeg decode, not heard), so a wrap to
+frame 0 dips about 17 ms each 1.7 to 1.8 s. OpenTPW's clip carries its layer and its bank's byte +9 (`SoundCategoryFile.BankFlags`, `AudioClip.Layer`, `AudioClip.BankFlags`); a Layer I clip of a bank whose
+byte has bit 0x1 keeps 0x300 bytes' frames past its played length (384 mono, 192 stereo) and a looped voice's second and
+later passes start there and run the played length (`AudioClip.LaterPassStart`, `Voice.NextFrame`); every other clip
+loops from 0. Measured over the 31 categories (Q1166, a throwaway reading): looped effects (flag 0x8) draw Layer I samples
+of 0x01 banks 86 times and of 0x41 banks three times (taken as in-memory by bit 0x1, as above), and a streamed 0x02 bank
+twice (one Layer I, one Layer II); none draws on a 0x04 bank (`sfUi`, whose class is not read) or on one of the five
+44,100 Hz clips, whose skip is counted at the stream's rate (192 frames at 22,050 here; the half-rate switch
+`0x00fb2708` is open, Q1640); every in-memory Layer I clip's decode reaches 0x300 bytes past its played length. Not
+heard or captured in either game (Q1641).
 
 **Speech opens with one feed of silence** (the run 22 review). The read's first call on a Layer II 48 kbit/s voice
 (`+0x3c`, set 1 by the constructor `0x006c82e6`, cleared only by this call `0x006c8407`), writes zeros over the whole

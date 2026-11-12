@@ -19,10 +19,10 @@ namespace OpenTPW;
 /// that is 1 in the global speech and the four park music categories and 0 in the rest (see
 /// <see cref="WeightsAreSharesOffset"/>), then a word nought in most files, then a count.
 ///
-/// <b>The BANK file is fully understood.</b> After the count come that many 11-byte records that
-/// hold nothing but leftover pointers - the same handful of values recur across every file, which
-/// is what a struct written straight out of memory looks like - and then the payload: one
-/// length-prefixed, NUL-terminated path per bank. All thirty-one that ship parse to exactly the end
+/// <b>The BANK file is fully understood.</b> After the count come that many 11-byte records, mostly
+/// leftover pointers - the same handful of values recur across every file, which is what a struct
+/// written straight out of memory looks like - of which one byte is read, <c>+9</c>, the bank's flags
+/// (<see cref="BankFlags"/>); and then the payload: one length-prefixed, NUL-terminated path per bank. All thirty-one that ship parse to exactly the end
 /// of the file with nothing over.
 ///
 /// <b>The SFX file is decoded to its last byte.</b> After the effect table each effect holds one
@@ -135,6 +135,13 @@ public sealed class SoundCategoryFile
 	/// <summary>The banks this category draws on, as paths relative to the category's own folder.</summary>
 	public IReadOnlyList<string> Banks { get; private set; } = Array.Empty<string>();
 
+	/// <summary>
+	/// Each of <see cref="Banks"/>' flags, byte <c>+9</c> of its record (FileFormats <c>sound-categories.md</c>, "The BANK
+	/// file"): one of 0x01, 0x02, 0x04, 0x41 and 0x42 in the 53 records that ship. Bit 0x1 makes the bank's voices the
+	/// in-memory class (<c>0x006ba690</c>; docs/exe/audio.md, "A looped Layer I voice's later passes start one frame in").
+	/// </summary>
+	public IReadOnlyList<int> BankFlags { get; private set; } = Array.Empty<int>();
+
 	/// <summary>The effects in the category, in the order the file lists them.</summary>
 	public IReadOnlyList<Effect> Effects { get; private set; } = Array.Empty<Effect>();
 
@@ -143,6 +150,7 @@ public sealed class SoundCategoryFile
 
 	private const int CountOffset = 0x18;
 	private const int BankRecordStride = 11;
+	private const int BankFlagsField = 9;
 	private const int EffectTableOffset = 0x34;
 	private const int EffectStride = 20;
 	private const int EffectDelayField = 3;
@@ -185,7 +193,7 @@ public sealed class SoundCategoryFile
 
 		try
 		{
-			Banks = ReadBanks( bank );
+			(Banks, BankFlags) = ReadBanks( bank );
 			Effects = ReadEffects( _sfx );
 			IsValid = Banks.Count > 0 && Effects.Count > 0;
 		}
@@ -205,15 +213,19 @@ public sealed class SoundCategoryFile
 		return -1;
 	}
 
-	private static string[] ReadBanks( byte[] data )
+	private static (string[] Banks, int[] Flags) ReadBanks( byte[] data )
 	{
 		var count = BitConverter.ToInt32( data, CountOffset );
 
 		if ( count <= 0 || count > 64 )
-			return Array.Empty<string>();
+			return (Array.Empty<string>(), Array.Empty<int>());
 
 		var offset = CountOffset + 4 + (count * BankRecordStride);
 		var banks = new string[count];
+		var flags = new int[count];
+
+		for ( int i = 0; i < count; ++i )
+			flags[i] = data[CountOffset + 4 + (i * BankRecordStride) + BankFlagsField];
 
 		for ( int i = 0; i < count; ++i )
 		{
@@ -227,7 +239,7 @@ public sealed class SoundCategoryFile
 			offset += length;
 		}
 
-		return banks;
+		return (banks, flags);
 	}
 
 	private static Effect[] ReadEffects( byte[] data )

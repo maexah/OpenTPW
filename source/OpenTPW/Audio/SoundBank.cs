@@ -36,7 +36,7 @@ public sealed class SoundBank
 	private readonly AudioClip?[] _clips;
 
 	/// <summary>
-	/// The banks a park asked to keep and that decode whole, by the file they came from, so a Load Park or a Restart Park,
+	/// The banks a park asked to keep and that decode whole, by the file they came from and their flags, so a Load Park or a Restart Park,
 	/// which build the park's sound again, take them as they stand instead of decoding them a second time (Q924; Q247).
 	/// Held until the lobby starts (<see cref="ForgetKept"/>). Only the game's thread reads or writes it, as it does the
 	/// banks' own caches.
@@ -61,13 +61,17 @@ public sealed class SoundBank
 	/// </summary>
 	private readonly (string Name, byte[] Data, int PlayedBytes)[]? _encoded;
 
+	/// <summary>Its byte <c>+9</c> in the category that named it (<see cref="SoundCategoryFile.BankFlags"/>), stamped on every clip.</summary>
+	public int Flags { get; }
+
 	/// <summary>Which entries have been through <see cref="AudioClip.Decode"/>, decoded or not.</summary>
 	private readonly bool[] _tried;
 
 	private SoundBank( string path, AudioClip?[] clips, TimeSpan[] durations,
-		(string, byte[], int)[]? encoded )
+		(string, byte[], int)[]? encoded, int flags )
 	{
 		Path = path;
+		Flags = flags;
 		Durations = durations;
 		_clips = clips;
 		_encoded = encoded;
@@ -85,13 +89,16 @@ public sealed class SoundBank
 	/// The file is that path plus "HD.sdt". Every bank the game ships carries the suffix and there
 	/// is no matching set without it, so it is appended here rather than being something a caller
 	/// has to know.
+	///
+	/// <paramref name="flags"/> is the bank's byte <c>+9</c> in the category naming it, which its clips carry. A kept bank is
+	/// kept by its file and its flags; no file ships named with two flags (Q1166).
 	/// </summary>
-	public static SoundBank? Load( string root, string bankPath, bool keep = false )
+	public static SoundBank? Load( string root, string bankPath, bool keep = false, int flags = 0 )
 	{
 		var wanted = $"{root}/{bankPath}HD.sdt";
 		var file = Resolve( wanted );
 
-		var key = file == null ? null : FileSystem.GetAbsolutePath( file );
+		var key = file == null ? null : $"{FileSystem.GetAbsolutePath( file )}|{flags}";
 
 		if ( key != null && Kept.TryGetValue( key, out var kept ) )
 			return kept;
@@ -129,7 +136,7 @@ public sealed class SoundBank
 				if ( lazy )
 					encoded![i] = (entry.Name, entry.SoundData, entry.DecodedSize);
 				else
-					clips[i] = AudioClip.Decode( entry.Name, entry.SoundData, entry.DecodedSize );
+					clips[i] = AudioClip.Decode( entry.Name, entry.SoundData, entry.DecodedSize, flags );
 			}
 
 			if ( lazy )
@@ -138,7 +145,7 @@ public sealed class SoundBank
 			else
 				Log.Info( $"Sound bank '{file}': {clips.Length} samples, {decoded / (1024 * 1024)}MB decoded in {timer.ElapsedMilliseconds} ms" );
 
-			var bank = new SoundBank( file, clips, durations, encoded );
+			var bank = new SoundBank( file, clips, durations, encoded, flags );
 
 			// A bank decoded whole is the same every time it is read, so a park built again (Load Park, Restart Park)
 			// takes the one already decoded. A bank that decodes on demand is not kept: what it has decoded by then
@@ -203,7 +210,7 @@ public sealed class SoundBank
 
 	/// <summary>A bank with nothing in it, for when one named by a category is missing.</summary>
 	public static SoundBank Empty( string path )
-		=> new( path, Array.Empty<AudioClip?>(), Array.Empty<TimeSpan>(), null );
+		=> new( path, Array.Empty<AudioClip?>(), Array.Empty<TimeSpan>(), null, 0 );
 
 	/// <summary>
 	/// The sample at <paramref name="index"/>, decoding it first if this bank is holding it
@@ -225,7 +232,7 @@ public sealed class SoundBank
 			_tried[index] = true;
 
 			var (name, data, playedBytes) = _encoded[index];
-			_clips[index] = AudioClip.Decode( name, data, playedBytes );
+			_clips[index] = AudioClip.Decode( name, data, playedBytes, Flags );
 
 			// Whether it decoded or not, the compressed bytes have had their one chance.
 			_encoded[index] = default;

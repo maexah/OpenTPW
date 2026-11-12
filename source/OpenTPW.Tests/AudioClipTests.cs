@@ -43,7 +43,7 @@ public class AudioClipTests
 	/// samples a channel of nothing. Built here, so the test needs no game. <paramref name="mpeg1"/> picks MPEG-1 at 44,100 Hz
 	/// (64 kbit/s, 68 bytes a frame), otherwise MPEG-2 at 22,050 Hz (64 kbit/s, 136 bytes a frame).
 	/// </summary>
-	private static byte[] SilentLayerI( int frames, bool mpeg1, bool stereo )
+	internal static byte[] SilentLayerI( int frames, bool mpeg1, bool stereo )
 	{
 		var length = mpeg1 ? 68 : 136;
 		var data = new byte[frames * length];

@@ -1111,7 +1111,6 @@ filed the items that cite it.
   starts on animation 0, which its remarks give as a deviation no shipped bank reaches. Dead by content today:
   build it as the original's or leave the count, on Alexah's word.
 
-
 - [ ] **Q1316. The handyman loaded walking to litter or sweeping: his walk off photographed, and the job itself (from Q1154).**
   Q1154 made one loaded in state 8 or 9 fall to idle (`StaffBehaviour.Step`'s default arm, counted as
   `HANDYMAN_LITTER_STATE_8` and `_9`, a deviation said at the site) and confirmed it by census only, off-screen in a cloud
@@ -2253,18 +2252,25 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   `State.GameTick` and not from the compared `GameCalendar.Days`. Test: a sweep whose turn starts or stops the rain sizes
   its load with the new drops' k. Confirm: the weather's and the arrivals' log lines on the sweep the rain starts, read
   against the original's drops and load at that sweep.
-- [ ] **Q1166. A looped Layer I voice's later passes start one frame in.** From the run 22 review of Q659 (`review22/q659`,
-  `VERIFY-6.md` F1). In the original a looped voice of an in-memory bank (BANK byte +9 bit 0x1; `0x006ba690`,
-  `0x006ba725`) rewinds through `0x006c84a0`, which for Layer I decodes and drops 0x300 bytes (`0x006c84b5`..`0x006c84cc`),
-  so pass 1 plays decode bytes [0, D) and every later pass [0x300, 0x300 + D); the builder clears request 0x40 before the
-  start (`0x006ba59d`, `0x006ba93a`), so the start's own skip (`0x006c8358`) does not fire for a count > 1. A streamed
-  bank's voice (`0x0070ae90`, rewind `0x006c8b10`) never skips. OpenTPW wraps every pass to frame 0 (`Voice`, said there),
-  so Lost Kingdom's river and waterfall dip ~17 ms each 1.7-1.8 s (`docs/exe/audio.md`, "A looped Layer I voice's later
-  passes start one frame in"). Build: keep 384 / ch more frames of a Layer I clip, carry the layer and the bank's flag
-  (the category's BANK record, byte +9), and wrap a looped in-memory Layer I voice to 384 / ch. Test: a looped clip's
-  second pass starts at 384 / ch, a streamed bank's at 0, a one-shot's length unchanged. Confirm in both games by a
-  capture of the fall's channel. Open: the half-rate switch `0x00fb2708`'s default; which plain/music effects (count 1
-  with 0x40) take the start's skip.
+
+- [ ] **Q1640. A Layer I voice's skips: the half-rate switch, the start's own skip and the 0x04 banks (from Q1166).**
+  Q1166 built the in-memory class's rewind skip (a looped Layer I voice of a bank whose byte +9 has bit 0x1 starts its
+  later passes 0x300 bytes in: `AudioClip.LaterPassStart`, `Voice.NextFrame`) from `docs/exe/audio.md`, "A looped Layer I
+  voice's later passes start one frame in", in a cloud container with no Ghidra. Open, each read in Ghidra first: (1) the
+  half-rate switch `0x00fb2708`'s default, so whether the five 44,100 Hz Layer I clips (`global/sound/RideHD.sdt`'s
+  `mortar_2`, `mortar_3`, `tp_riderepaired`, `tp_sideshowwin_`, `SfxHD.sdt`'s `keyexplode`) skip 384 frames at 44,100
+  or are decoded at 22,050 first (ours: 384 at the stream's rate, 192 at 22,050; no looped effect draws on them, so dead
+  by content for the loop today); (2) which plain and music effects (a count of 1 with request 0x40) take the start's own
+  skip (`0x006c8358`..`0x006c837f`), so start their FIRST pass 0x300 bytes in, which ours never does; (3) which class a
+  bank with byte +9 0x04 (`Sound\sfUi`) is made as (`0x006ba690`, `0x006ba725`): no looped effect draws on one, so ours
+  wraps it to 0 untested and counts `LOOPED_LAYER_I_VOICE_OF_BANK_FLAGS_04` (`Audio.Play`). Build what the reads say, each with a test a wrong rule fails.
+
+- [ ] **Q1641. A looped Layer I voice's later passes, captured in both games (from Q1166).** Q1166 confirmed the
+  wrap by the debug console's census only (`voices`: `watfall.mp2` and `River.mp2` read `pass N from 384`, off-screen
+  in a cloud container with the dummy sound device; nothing heard or captured). On the desk: the stock Lost Kingdom park,
+  the camera at the waterfall (`Sound\Ambient`, 39,591 frames a pass), our mix captured (`AUDIO_FILE`, `docs/TOOLING.md`)
+  and the original's (`ORIG_ASOUND`), each over three or more passes; predict first that neither dips at a wrap and that
+  the second pass's first samples match the decode's from 384. Rule 6: put the wrap back to 0 and see the dip return.
 - [ ] **Q1167. Speech opens with one feed of silence.** From the run 22 review of Q659 (`review22/q659`, `VERIFY-6.md` F2).
   The MPEG read's first call on a Layer II 48 kbit/s voice (the 644 speech entries) returns zeros for the whole request
   (`0x006c83e1`..`0x006c8426`); the channel's feed asks 0x2400 bytes (`0x006bb5a0`, `0x006bb632`), about 209 ms

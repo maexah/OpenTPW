@@ -89,10 +89,10 @@ public sealed class SoundCategory
 		if ( !file.IsValid )
 			return;
 
-		foreach ( var bankPath in file.Banks )
+		for ( int i = 0; i < file.Banks.Count; ++i )
 			// A bank that would not load still takes its slot, because a category addresses banks
 			// by position and dropping one would shift every sample after it onto the wrong file.
-			_banks.Add( SoundBank.Load( root, bankPath, keep ) ?? SoundBank.Empty( bankPath ) );
+			_banks.Add( SoundBank.Load( root, file.Banks[i], keep, file.BankFlags[i] ) ?? SoundBank.Empty( file.Banks[i] ) );
 
 		// The walk steps to each variation's sample records by its header's count, as the original's loader
 		// does (0x006c0510), so a record whose sample is longer or shorter than the map says is read all the
