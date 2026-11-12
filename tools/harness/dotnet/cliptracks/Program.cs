@@ -4,8 +4,15 @@
 //     moved node, clips with a route too; lists late.txt, past.txt, offrest.txt (first point off the rest), nested.txt,
 //     adds.txt in the working folder. A clip's model is the longest other member of its wad whose name begins the clip's.
 //   ... -- <data dir> <clip path in the tree>   one clip's declared span and each position track's keys and samples
+//   ... -- <data dir> rot   (Q729) every rotation track whose last key falls before its clip's declared end, where the
+//     original's rotation search wraps to key 0 (Anim_FindKey 0x00470b60, param_5 1): the counts over every .md2 member of
+//     every wad, those whose last key turns away from key 0 (|dot| under 0.99999, or a negative dot, which the original's
+//     unflipped blend takes the long way), and the list rotwrap.txt in the working folder. It opens each wad itself and
+//     walks its folders, and adds the loose .md2 files, so given the game folder (not Data) it reads the whole corpus:
+//     2,129 in the shipped game, 2,123 under Data and the six under USEnglish/Meshes
 using OpenTPW;
 var dataDir = args[0];
+if ( args.Length > 1 && args[1] == "rot" ) { RotScan( dataDir ); return; }
 if ( args.Length > 1 ) { var d = new BaseFileSystem( dataDir ); d.RegisterArchiveHandler( ".wad", path => new WadArchive( path ) ); using var cs = d.OpenRead( args[1] )!; var c = new AnimationFile( cs ); Console.WriteLine( $"declared {c.DeclaredFirstFrame}..{c.DeclaredLastFrame} fps {AnimationFile.FramesPerSecond}" ); foreach ( var t in c.PositionTracks ) { Console.WriteLine( $"node {t.TargetIndex} {(t.IsBezier ? "bez" : "lin")} keys {string.Join(",", t.FrameIndices)}" ); foreach ( var f in new[]{0,50,100,150,200,250,300,350,400,450,500} ) Console.Write( $" f{f}:{t.Sample(f).X:F0},{t.Sample(f).Y:F0},{t.Sample(f).Z:F0}" ); Console.WriteLine(); } return; }
 var data = new BaseFileSystem( dataDir );
 data.RegisterArchiveHandler( ".wad", path => new WadArchive( path ) );
@@ -64,3 +71,58 @@ Console.WriteLine( $"clips with position and path {withPath}; rotation tracks in
 Console.WriteLine( $"first key after 0: {firstAfter0}; last key before declared end: {lastBeforeEnd} (bezier {lastBeforeEndBez}); key past declared end: {keyFrameBeyondEnd}" );
 Console.WriteLine( $"additive (&4): {additive} in {adds.Count} clips; first point = rest local {firstMatchesRest}, off {firstOffRest}; target not a mesh {notMesh}; also rotated {alsoRot}; under a moved ancestor {nestedMoved}" );
 File.WriteAllLines( "late.txt", late ); File.WriteAllLines( "past.txt", past ); File.WriteAllLines( "offrest.txt", offRest ); File.WriteAllLines( "nested.txt", nested ); File.WriteAllLines( "adds.txt", adds );
+
+static void RotScan( string dataDir )
+{
+	var data = new BaseFileSystem( dataDir );
+	data.RegisterArchiveHandler( ".wad", path => new WadArchive( path ) );
+	int members = 0, threw = 0, withBlock = 0, clipsWithRot = 0, tracks = 0, multi = 0, before = 0, beforeTurns = 0, beforeNeg = 0, equalEnd = 0, past = 0;
+	var clipsBefore = new HashSet<string>(); var clipsTurns = new HashSet<string>(); var list = new List<string>();
+	// Every .md2 in the tree: each wad opened on its own and walked into its folders, then the loose files.
+	var corpus = new List<(string Name, Func<byte[]> Read)>();
+	foreach ( var wad in Directory.GetFiles( dataDir, "*.wad", SearchOption.AllDirectories ).OrderBy( w => w, StringComparer.Ordinal ) )
+	{
+		var archive = new WadArchive( wad );
+		var stem = Path.GetRelativePath( dataDir, wad ).Replace( '\\', '/' );
+		void Walk( ArchiveDirectory d, string at )
+		{
+			foreach ( var item in d.Children )
+			{
+				if ( item is ArchiveDirectory sub ) Walk( sub, $"{at}{sub.Name}/" );
+				else if ( item is ArchiveFile f && f.Name.EndsWith( ".md2", StringComparison.OrdinalIgnoreCase ) ) corpus.Add( ($"{stem}:{at}{f.Name}", f.GetData) );
+			}
+		}
+		Walk( archive.Root, "" );
+	}
+	foreach ( var loose in Directory.GetFiles( dataDir, "*", SearchOption.AllDirectories ).Where( n => n.EndsWith( ".md2", StringComparison.OrdinalIgnoreCase ) ).OrderBy( n => n, StringComparer.Ordinal ) )
+		corpus.Add( (Path.GetRelativePath( dataDir, loose ), () => File.ReadAllBytes( loose )) );
+	foreach ( var (name, read) in corpus )
+	{
+		++members;
+		AnimationFile clip;
+		try { using var s = new MemoryStream( read() ); clip = new AnimationFile( s ); } catch { ++threw; continue; }
+		if ( clip.DeclaredLastFrame > 0 ) ++withBlock;
+		if ( clip.RotationTracks.Count == 0 ) continue;
+		++clipsWithRot;
+		foreach ( var t in clip.RotationTracks )
+		{
+			++tracks;
+			if ( t.FrameIndices.Length < 2 ) continue;
+			++multi;
+			var last = t.FrameIndices[^1];
+			if ( last == clip.DeclaredLastFrame ) ++equalEnd;
+			if ( last > clip.DeclaredLastFrame ) ++past;
+			if ( last >= clip.DeclaredLastFrame ) continue;
+			++before; clipsBefore.Add( name );
+			var dot = System.Numerics.Quaternion.Dot( t.Rotations[^1], t.Rotations[0] );
+			var turns = MathF.Abs( dot ) < 0.99999f || dot < 0f;
+			if ( turns ) { ++beforeTurns; clipsTurns.Add( name ); if ( dot < 0f ) ++beforeNeg; }
+			list.Add( $"{name} node {t.TargetIndex} keys {t.FrameIndices.Length} first {t.FrameIndices[0]} last {last} decl {clip.DeclaredFirstFrame}..{clip.DeclaredLastFrame} dot {dot:F5}{(turns ? " TURNS" : "")}" );
+		}
+	}
+	Console.WriteLine( $"md2 members {members}, threw {threw}, with a declared end {withBlock}, clips with rotation {clipsWithRot}, rotation tracks {tracks}, of 2+ keys {multi}" );
+	Console.WriteLine( $"last key = declared end {equalEnd}; past it {past}; before it {before} in {clipsBefore.Count} clips" );
+	Console.WriteLine( $"of those, last key turned from key 0 {beforeTurns} in {clipsTurns.Count} clips (negative dot {beforeNeg})" );
+	foreach ( var c in clipsTurns.OrderBy( c => c, StringComparer.Ordinal ) ) Console.WriteLine( $"turns: {c}" );
+	File.WriteAllLines( "rotwrap.txt", list );
+}
