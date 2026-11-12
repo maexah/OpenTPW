@@ -13318,3 +13318,15 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   nothing. Give row 113's said event the ride `ParkFacts.UnjoinedQueue` finds at the speech, and rows 140, 86-89 and 141 theirs
   when they are built. Confirm in the original first: Q324's `queue-fix.TPWS`, row 113 said on tick 996, click the tag's locate
   button (by the bytes the camera goes to thing 43, the Aztec Mayhem); then ours beside it.
+- [x] **Q273. A node's direction is normalised in another order and width than the original's.** From the week-end
+  audit (stage 4; read twice from the listing). `FUN_00556b90` sums (x*x + y*y) + z*z, keeps the root as a float
+  and divides each element by that float (`0x00556cba`, `0x00556cc6`, `0x00556ccc`). `RideNodes` sums
+  (z*z + y*y) + x*x and divides by the double root, and its comment says the build takes the third element's
+  square first. The last bit of a saved direction can differ. Confirm: a written model record's direction words
+  compared bit for bit with the original's save of the same park. **Done 2026-11-12** (cloud lane c37,
+  `alexah/1016-node-direction-normalise`): `RideNodes.UnitOf` sums in the original's order at 53 bits, keeps the root
+  as a float and divides by it; `RideNodesUnitOfTests` holds a value the double root gets wrong and one (a Pythagorean
+  pair over 2^24, its root on a float tie) the third-square-first order gets wrong. A census of every shipped model's
+  nodes at rest at four turns: 1,228 of 8,216 directions change in a bit, none in a word x1024, the only form any caller
+  takes, so no shipped node's particle aim changes (seen in a park run: the Jungle Spray's jets aimed (0,25,30) and
+  (0,19,34)). The comparison with the original's save is Q1268.

@@ -366,12 +366,7 @@ public sealed class RideNodes
 
 		var world = Stored( node, carried );
 		var about = (_nodes[node].Flags & TurnedAbout) != 0 ? -1f : 1f;
-		float x = about * world.M31, y = about * world.M32, z = about * world.M33;
-
-		// The length as the build sums it, the third element's square first, and each element over it kept as a float.
-		var length = Math.Sqrt( ((double)z * z + (double)y * y) + (double)x * x );
-
-		direction = new Numerics.Vector3( (float)(x / length), (float)(y / length), (float)(z / length) );
+		direction = UnitOf( about * world.M31, about * world.M32, about * world.M33 );
 
 		var parent = _nodes[node].ParentIndex;
 
@@ -379,6 +374,19 @@ public sealed class RideNodes
 			return NodeEnd.OnAFace;
 
 		return RidesAClip( node ) && !Carries( carried ) ? NodeEnd.RestPose : NodeEnd.Posed;
+	}
+
+	/// <summary>
+	/// <paramref name="x"/>, <paramref name="y"/>, <paramref name="z"/> over their length, as <c>FUN_00556b90</c> works
+	/// it: <c>(x*x + y*y) + z*z</c> summed at the 53-bit precision Proton's control word holds (<c>docs/exe/park-engine.md</c>,
+	/// "Which rounding is live is not settled"), the root stored as a float (<c>0x00556cba</c>) and each element divided
+	/// by that float (<c>0x00556cc6</c>, <c>0x00556ccc</c>).
+	/// </summary>
+	public static Numerics.Vector3 UnitOf( float x, float y, float z )
+	{
+		var length = (float)Math.Sqrt( ((double)x * x + (double)y * y) + (double)z * z );
+
+		return new Numerics.Vector3( x / length, y / length, z / length );
 	}
 
 	/// <summary>
