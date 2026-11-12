@@ -316,7 +316,8 @@ public class ParkDecidingArmsTests
 		guest.StrandedTime = ParkState.Counter + 1;
 		Unimplemented.Forget();
 		turn( 2 );
-		Assert.AreEqual( 1, Unimplemented.Summary.FirstOrDefault( gap => gap.What == "LITTER_SPRITE_AND_RESEED" ).Times, "the drop's sprite and reseed counted" );
+		Assert.AreEqual( ParkState.LitterReseeded( x, y ), people.State.RandomSeed, "the drop reseeds the park's generator with the cell id" );
+		Assert.IsTrue( people.State.CellAt( x, y ).LitterSprite, "and makes its sprite" );
 		Unimplemented.Forget();
 
 		Assert.AreEqual( (PeepState.Deciding, 0, 0f), (guest.State, (int)guest.MajorDest, guest.Litter), "no route: dropped, still deciding" );

@@ -222,6 +222,40 @@ public sealed partial class ParkWorld
 		IReadOnlyList<int>? Loops = null, bool Ended = false );
 
 	/// <summary>
+	/// Litter dropped on a cell since the load, as the writer takes it: the cell's place in <see cref="Cells"/>, the kind
+	/// (1 to 8) and where its sprite stands, the reseed's place (<c>docs/exe/ride-operation.md</c>, "A cell's litter").
+	/// <paramref name="SetByte"/> is the sprite's <c>+0xbc</c>, the frames a direction of its <c>SPR_LI</c> set; null where the
+	/// bank is not to hand, as a person's (<see cref="WrittenPerson"/>).
+	/// </summary>
+	public readonly record struct WrittenLitter( int Cell, int Kind, float X, float Y, int? SetByte = null );
+
+	/// <summary>The sprite kind of litter, the table's "litter" (<c>0x00764088</c>).</summary>
+	public const int LitterSpriteKind = 11;
+
+	/// <summary>A litter sprite's drawing flags, laid flat on the ground (<c>0x80000</c>), which its program writes as local 16.</summary>
+	public const int LitterSpriteFlags = 0x80000;
+
+	/// <summary>
+	/// The word of the programs' array a litter sprite of <paramref name="kind"/> is made on: the record
+	/// <c>0x0074f050 + 0x28</c> × its slot, less the array's start <c>0x0074dab8</c>, over four (1382 for kind 1). Kinds 1 to 5
+	/// take slots 0 to 4, 7 and 8 slots 6 and 7, and any other the sixth record (slot 5), as the jump table at
+	/// <c>0x004d95d4</c> chooses.
+	/// </summary>
+	public static int LitterProgram( int kind ) => 1382 + (10 * LitterSlot( kind ));
+
+	/// <summary>The record's slot a litter kind takes, which is also the set of <c>SPR_LI</c> its program shows.</summary>
+	public static int LitterSlot( int kind ) => kind switch
+	{
+		>= 1 and <= 5 => kind - 1,
+		7 => 6,
+		8 => 7,
+		_ => 5
+	};
+
+	/// <summary>How far into its program a litter sprite rests once its first turn has run: on the jump, the record's word 7.</summary>
+	public const int LitterRestingWord = 7;
+
+	/// <summary>
 	/// A rider's head hung on a ride's node, as the writer takes it: a sprite of its own on <paramref name="Slot"/>,
 	/// which the node's lookup record names (<c>docs/exe/saves.md</c>, "OpenTPW's writer, a rider's head").
 	/// </summary>
@@ -270,8 +304,9 @@ public sealed partial class ParkWorld
 	/// <param name="Bubbles">Thought bubbles written, each on its person's <c>mThoughtScript</c>.</param>
 	/// <param name="LetGo">Balloons let go and still bursting written, each on a slot nobody names.</param>
 	/// <param name="Heads">Riders' heads written, each on the slot its node's lookup record names.</param>
+	/// <param name="Litter">Litter dropped since the load written, each a sprite of its own named by its cell.</param>
 	public readonly record struct PeopleWritten( int Kept, int Made, int Gone, int SpriteSlots, int LiveSprites,
-		int CellsHeaded, int UnmatchedSpriteSets, int Balloons = 0, int Bubbles = 0, int LetGo = 0, int Heads = 0 );
+		int CellsHeaded, int UnmatchedSpriteSets, int Balloons = 0, int Bubbles = 0, int LetGo = 0, int Heads = 0, int Litter = 0 );
 
 	/// <summary>The first header field of the five staff lists' heads, in the header's order.</summary>
 	private const int FirstHandymanField = 20;
@@ -385,8 +420,16 @@ public sealed partial class ParkWorld
 	/// comes due one default interval after it (<see cref="MadeSprite"/>). Null is the file's own reading.
 	/// </para>
 	/// </summary>
+	/// <para>
+	/// <paramref name="litter"/> is the litter dropped since the load (<c>docs/exe/saves.md</c>, "OpenTPW's writer, a cell's
+	/// litter"): each a sprite of kind 11 made on the lowest free slot after every other sprite written here, its program run
+	/// one turn (set, flags <c>0x80000</c>, frame 0, resting on the jump), and the cell's litter block written to name it: the
+	/// kind, the collector nought, the sprite's slot and no particle. A cell the file already holds litter on, or with no map
+	/// record, is refused. <b>A deviation:</b> the original's slot is the lowest free at the drop, not at the save.
+	/// </para>
 	internal byte[] PutPeople( byte[] body, IReadOnlyList<WrittenPerson> people, ObjectEdits? objects,
-		IReadOnlyList<WrittenSprite>? letGo, HeadEdits? heads, ThingIds? ids, out PeopleWritten report, uint? clock = null )
+		IReadOnlyList<WrittenSprite>? letGo, HeadEdits? heads, ThingIds? ids, out PeopleWritten report, uint? clock = null,
+		IReadOnlyList<WrittenLitter>? litter = null )
 	{
 		// A file whose clock does not read gives no time to measure from: its made sprites are left due at nought.
 		var madeDue = (clock ?? Clock.Reading) is { } reading ? unchecked(reading + SpriteMadeInterval) : 0u;
@@ -605,6 +648,27 @@ public sealed partial class ParkWorld
 				PutOther( 0, bursting );
 		}
 
+		// The litter dropped since the load, after every other sprite: each its own sprite, its cell's block written below.
+		var litterSlots = new List<(int Cell, int Kind, int Slot)>();
+
+		foreach ( var dropped in litter ?? [] )
+		{
+			if ( dropped.Cell < 0 || dropped.Cell >= _cells.Length )
+				throw new InvalidOperationException( $"litter is dropped on cell {dropped.Cell}, off the map" );
+
+			if ( _cells[dropped.Cell].Litter != 0 )
+				throw new InvalidOperationException( $"litter is dropped on cell {dropped.Cell}, which the file holds litter on already" );
+
+			var program = LitterProgram( dropped.Kind );
+			var picture = new Sprite( Slot: 0, Type: LitterSpriteKind, Bank: 0, SpriteNumber: LitterSlot( dropped.Kind ),
+				X: dropped.X, Height: 0f, Y: dropped.Y, Facing: 0, Frame: 0, Alpha: 0xff, State: SpriteRunningState,
+				Script: program, Pc: program + LitterRestingWord );
+			var slot = PutOther( 0, new WrittenSprite( picture, MadeSetByte: dropped.SetByte, Loops: [] ) );
+
+			Put32( sprites[slot], SpriteFlagsAt, LitterSpriteFlags );
+			litterSlots.Add( (dropped.Cell, dropped.Kind, slot) );
+		}
+
 		// The newest made first, or the oldest: by the park's stamps, and by id among those it does not stamp.
 		static IEnumerable<T> Newest<T>( IEnumerable<T> things, Func<T, int> idOf, IReadOnlyDictionary<int, long> madeAt )
 			=> things.OrderByDescending( thing => madeAt.GetValueOrDefault( idOf( thing ) ) ).ThenByDescending( idOf );
@@ -769,6 +833,18 @@ public sealed partial class ParkWorld
 			++headed;
 		}
 
+		// Each littered cell's block names its sprite (FUN_004d93b0: +0x2c the kind, +0x30 nought, +0x28 the sprite).
+		foreach ( var (cell, kind, slot) in litterSlots )
+		{
+			if ( (body[cellAt[cell]] & MapRecord) == 0 )
+				throw new InvalidOperationException( $"cell {cell} has no map record to write its litter on" );
+
+			Put32( head, cellAt[cell] + 1 + CellLitter, kind );
+			Put16( head, cellAt[cell] + 1 + CellLitterCollector, 0 );
+			Put32( head, cellAt[cell] + 1 + CellLitterSprite, slot );
+			Put32( head, cellAt[cell] + 1 + CellLitterParticle, 0 );
+		}
+
 		// The sets: the gone and the deleted out of each, then the people's three as they run.
 		if ( madeObjects.Count > 0 || goneObjects.Count > 0 || deleted.Count > 0 )
 		{
@@ -829,7 +905,8 @@ public sealed partial class ParkWorld
 
 		report = new PeopleWritten( Kept: running.Count - made, Made: made, Gone: gone, SpriteSlots: slots,
 			LiveSprites: sprites.Count, CellsHeaded: headed, UnmatchedSpriteSets: unmatched,
-			Balloons: balloonOf.Count, Bubbles: bubbleOf.Count, LetGo: letGo?.Count ?? 0, Heads: heads?.Hung.Count ?? 0 );
+			Balloons: balloonOf.Count, Bubbles: bubbleOf.Count, LetGo: letGo?.Count ?? 0, Heads: heads?.Hung.Count ?? 0,
+			Litter: litterSlots.Count );
 
 		return stream.ToArray();
 	}

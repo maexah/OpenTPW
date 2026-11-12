@@ -119,15 +119,15 @@ public class ModelFaceCullingTests
 			.OrderBy( site => site.Name, System.StringComparer.Ordinal )
 			.Select( site => $"{site.Name}:{site.Count}" );
 
-		// A model's: LobbyModel. Two-sided in the table: UiMesh, ScreenParticles, WorldParticles, ParkGuestSprites (two: the
-		// people and their shadows), ParkPaths, ParkSea, ParkGround, ParkBuildMarkers, Sky. Asking for no flag, so culled as
+		// A model's: LobbyModel. Two-sided in the table: UiMesh, ScreenParticles, WorldParticles, ParkGuestSprites (three: the
+		// people, their shadows and the litter), ParkPaths, ParkSea, ParkGround, ParkBuildMarkers, Sky. Asking for no flag, so culled as
 		// a model is: Material.UI (the Default), Water, ParkRideHoarding, ParkFlags. Weather's are culled, its quads turned
 		// to the camera.
 		CollectionAssert.AreEqual(
 			new[]
 			{
 				"LobbyModel.cs:1", "Material.UI.cs:1", "ParkBuildMarkers.cs:1", "ParkFlags.cs:1", "ParkGround.cs:1",
-				"ParkGuestSprites.cs:2", "ParkPaths.cs:1", "ParkRideHoarding.cs:1", "ParkSea.cs:1", "ScreenParticles.cs:1",
+				"ParkGuestSprites.cs:3", "ParkPaths.cs:1", "ParkRideHoarding.cs:1", "ParkSea.cs:1", "ScreenParticles.cs:1",
 				"Sky.cs:1", "UiMesh.cs:1", "Water.cs:1", "WeatherSprites.cs:1", "WorldParticles.cs:1"
 			},
 			sites.ToArray() );

@@ -12145,6 +12145,25 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q1288. A cell's litter drawn, placed and written (the rest of Q225).** From Q225, split in cloud lane c42.
+  Guests drop litter into the running cells now (`ParkState.DropLitter`), and nothing draws it. Build, as `ride-operation.md`
+  says in "A cell's litter" and "What it is drawn as": the sprite of `SPR_LI`'s set kind - 1 flat on the ground, depth tested
+  and not written, never picked, at the place the reseed of the park's one generator with the cell id and its two draws give
+  (and the reseed's effect on that generator, or the departure said at the site); a loaded file's littered cells drawn the
+  same (their sprites are the file's sprite table's); and a park file written after a drop carrying the cell's litter and its
+  sprite (the writer writes the cells' records, not the running litter). Counted until then: `LITTER_SPRITE_AND_RESEED` at
+  each drop (`ParkState.DropLitter`), `SAVE_PARK_RUNNING_LITTER` at a save whose running litter differs from the file's
+  (`Level.WritePark`). Confirm: the drawn litter photographed on the desk
+  beside a frame the original draws of the same file (`q253/orig/sold-by-the-original.TPWS`, its four littered cells (41,21)
+  and (39,22) to (39,24)), and a drop's sprite at the reseed's place. Not tested here: a park with two bins in reach (the
+  nearest and the tie), which no Lost Kingdom file holds.
+  **Done 2026-11-12** (cloud lane c96): a drop reseeds the park's generator with the cell id and draws twice
+  (`ParkState.LitterPlace`), the sprite at (10x + 1 + r1 % 9, 10y + 1 + r2 % 9); every littered cell with a sprite is drawn as
+  one flat quad of `SPR_LI`'s set (`ParkLitter`, `ParkGuestSprites.WriteLitter`); a loaded cell's is the file's sprite at its
+  handle; and a save writes each drop's sprite (kind 11, flags `0x80000`, its record's program resting on the jump) and its
+  cell's block (`ParkWorld.PutPeople`; `saves.md`, "OpenTPW's writer, a cell's litter"). `LITTER_SPRITE_AND_RESEED` is gone;
+  `SAVE_PARK_RUNNING_LITTER` counts a save with no people to write the drop with. `ParkLitterTests` (seven). Off-screen, two
+  drops logged at (476,221) and (457,212) and the saved file read `OK` on both in `littercheck.py`. Not photographed (Q1504).
 
 ## B. Docs and comments
 

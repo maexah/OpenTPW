@@ -42,6 +42,21 @@ public sealed class ParkState
 
 		/// <summary>The thing standing on this cell - see <see cref="ParkWorld.MapCell.Occupant"/>.</summary>
 		public ushort Occupant;
+
+		/// <summary>
+		/// Whether the litter here has a sprite (<c>[cell + 0x28]</c>): every drop makes one, and a loaded cell has one
+		/// where the file's handle names a sprite in its table.
+		/// </summary>
+		public bool LitterSprite;
+
+		/// <summary>Where the litter's sprite stands, in world units (ten to a cell): the sprite's <c>+0x88</c> and <c>+0x90</c>.</summary>
+		public float LitterX;
+
+		/// <inheritdoc cref="LitterX"/>
+		public float LitterY;
+
+		/// <summary>Whether the litter here was dropped since the load, so the writer makes its sprite (<see cref="ParkWorld.WrittenLitter"/>).</summary>
+		public bool LitterDropped;
 	}
 
 	private readonly RuntimeCell[] _cells;
@@ -918,17 +933,31 @@ public sealed class ParkState
 				_effects[i] = effects[i];
 		}
 
+		// A littered cell's sprite is the file's at the cell's handle: no load calls FUN_004d93b0, so none is made here.
+		var sprites = park.Save?.Sprites.ToDictionary( sprite => sprite.Slot );
+		var unsprited = 0;
+
 		for ( var i = 0; i < _cells.Length && i < park.Cells.Count; ++i )
 		{
 			var cell = park.Cells[i];
+			var sprite = cell.Litter != 0 && sprites != null && sprites.TryGetValue( cell.LitterSprite, out var held ) ? held : (ParkWorld.Sprite?)null;
 
 			_cells[i] = new RuntimeCell
 			{
 				Litter = cell.Litter,
 				LitterCollector = cell.LitterCollector,
-				Occupant = cell.Occupant
+				Occupant = cell.Occupant,
+				LitterSprite = sprite != null,
+				LitterX = sprite?.X ?? 0f,
+				LitterY = sprite?.Y ?? 0f
 			};
+
+			if ( cell.Litter != 0 && sprite == null )
+				++unsprited;
 		}
+
+		if ( unsprited > 0 )
+			Log.Warning( $"Park: {unsprited} littered cells name no sprite in the file's table, so their litter is not drawn" );
 
 		if ( park.Save is { } save )
 			SeedCellLists( save );
@@ -2460,11 +2489,12 @@ public sealed class ParkState
 	/// on a cell that already holds some, else the kind and the collector nought. Answers whether it was dropped.
 	/// </summary>
 	/// <remarks>
-	/// <b>Not built: the sprite</b> (<c>0x004d94cb</c>), whose place the original takes by reseeding the park's generator
-	/// with the cell id and drawing twice (Q1288); so this neither reseeds nor draws <see cref="RandomSeed"/>, and counts
-	/// each drop as <c>LITTER_SPRITE_AND_RESEED</c>. Only kinds 1 to 5 reach it,
-	/// so kind 7's and 8's region effects and kind 8's particle are not built (the sick and the stink bomb, Q226, Q228).
-	/// The online visit's refusal does not arise: there is none.
+	/// <b>The sprite and its place</b> (<c>0x004d94cb</c>..<c>0x004d953f</c>): the park's generator is reseeded with the
+	/// packed cell id and drawn twice, and the sprite stands at (10x + 1 + r1 % 9, 10y + 1 + r2 % 9), so a cell's litter
+	/// always stands in the same place. The reseed is made on <see cref="RandomSeed"/> itself, so every later draw of it
+	/// follows from the cell, as the original's does. Only kinds 1 to 5 reach it, so kind 7's and 8's region effects and
+	/// kind 8's particle are not built (the sick and the stink bomb, Q226, Q228). The online visit's refusal does not arise:
+	/// there is none.
 	/// </remarks>
 	internal bool DropLitter( int x, int y, int kind )
 	{
@@ -2478,26 +2508,86 @@ public sealed class ParkState
 
 		Log.Info( $"Littering cell {x}, {y}" );
 
+		var (placeX, placeY) = LitterPlace( x, y );
+
+		RandomSeed = LitterReseeded( x, y );
 		cell.Litter = kind;
 		cell.LitterCollector = 0;
-		// The sprite, its place and the reseed of the park's generator with the cell id (0x004d94cb..0x004d953f).
-		Unimplemented.Report( "LITTER_SPRITE_AND_RESEED" );
+		cell.LitterSprite = true;
+		cell.LitterDropped = true;
+		cell.LitterX = placeX;
+		cell.LitterY = placeY;
+
+		Log.Info( $"Litter kind {kind} on ({x},{y}): sprite at ({placeX:0},{placeY:0}), mRandomSeed reseeded with cell {CellId( x, y )} to 0x{RandomSeed:x8}" );
 
 		return true;
 	}
 
+	/// <summary>A cell's packed id, <c>y × 128 + x + 1</c>, as the map's cells name themselves.</summary>
+	internal static int CellId( int x, int y ) => (y * ParkWorld.MapSize) + x + 1;
+
 	/// <summary>
-	/// Whether any running cell's litter or its collector differs from <paramref name="park"/>'s cells: the writer writes
-	/// the file's cell records, not the running litter (Q1288).
+	/// Where litter dropped on (<paramref name="x"/>, <paramref name="y"/>) stands, in world units: the generator reseeded with
+	/// the cell id (<c>FUN_00516370</c>) and drawn twice (<c>FUN_00516330</c>), at (10x + 1 + r1 % 9, 10y + 1 + r2 % 9)
+	/// (<c>docs/exe/ride-operation.md</c>, "A cell's litter").
 	/// </summary>
-	internal bool LitterDiffersFrom( IParkInitialState park )
+	internal static (float X, float Y) LitterPlace( int x, int y )
+	{
+		var state = (uint)CellId( x, y );
+		var r1 = ParkGenerator.Draw( ref state );
+		var r2 = ParkGenerator.Draw( ref state );
+
+		return ((10 * x) + 1 + (r1 % 9), (10 * y) + 1 + (r2 % 9));
+	}
+
+	/// <summary>What the park's generator holds after a drop on the cell: its reseed with the cell id and two draws.</summary>
+	internal static uint LitterReseeded( int x, int y )
+	{
+		var state = (uint)CellId( x, y );
+
+		ParkGenerator.Draw( ref state );
+		ParkGenerator.Draw( ref state );
+
+		return state;
+	}
+
+	/// <summary>
+	/// The litter dropped since the load, for the writer (<see cref="ParkWorld.WrittenLitter"/>): each such cell whose litter is
+	/// still there and the file's cell holds none.
+	/// </summary>
+	internal IReadOnlyList<ParkWorld.WrittenLitter> DroppedLitter( IParkInitialState park, Func<int, int?>? setByte = null )
+	{
+		var dropped = new List<ParkWorld.WrittenLitter>();
+
+		for ( var i = 0; i < _cells.Length; ++i )
+		{
+			if ( _cells[i].LitterDropped && _cells[i].Litter != 0 && (i >= park.Cells.Count || park.Cells[i].Litter == 0) )
+				dropped.Add( new ParkWorld.WrittenLitter( i, _cells[i].Litter, _cells[i].LitterX, _cells[i].LitterY,
+					setByte?.Invoke( _cells[i].Litter ) ) );
+		}
+
+		return dropped;
+	}
+
+	/// <summary>
+	/// Whether any running cell's litter or its collector differs from <paramref name="park"/>'s cells in a way the writer
+	/// does not write: anything but litter dropped on a clean cell (<see cref="DroppedLitter"/>), which, when
+	/// <paramref name="droppedWritten"/> is false (no people to write it with), counts too. Litter taken away or claimed
+	/// cannot arise yet: nothing sweeps it (the handyman's search is not built).
+	/// </summary>
+	internal bool LitterDiffersFrom( IParkInitialState park, bool droppedWritten = false )
 	{
 		for ( var i = 0; i < _cells.Length; ++i )
 		{
 			var (litter, collector) = i < park.Cells.Count ? (park.Cells[i].Litter, park.Cells[i].LitterCollector) : (0, (ushort)0);
 
-			if ( _cells[i].Litter != litter || _cells[i].LitterCollector != collector )
-				return true;
+			if ( _cells[i].Litter == litter && _cells[i].LitterCollector == collector )
+				continue;
+
+			if ( droppedWritten && litter == 0 && _cells[i].LitterDropped && _cells[i].LitterCollector == 0 )
+				continue;
+
+			return true;
 		}
 
 		return false;

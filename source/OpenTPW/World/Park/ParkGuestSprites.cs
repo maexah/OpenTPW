@@ -152,6 +152,20 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// <summary>The detail file's <c>SPRITESHADOW</c>, read as the park loads (<see cref="ParkPersonShadows.Tier"/>).</summary>
 	private readonly int _shadowTier = 1;
 
+	/// <summary>One flat quad a littered cell, rewritten each frame and drawn before the people (<see cref="ParkLitter"/>).</summary>
+	private Vertex[] _litterVertices = [];
+
+	private int _litterUploaded;
+	private Model? _litterModel;
+
+	/// <summary>The littered cells drawn this frame and their four corners, for a test and the console.</summary>
+	internal IReadOnlyList<(int X, int Y, Vector3[] Corners)> LitterDrawn => _litterDrawn;
+
+	private readonly List<(int X, int Y, Vector3[] Corners)> _litterDrawn = [];
+
+	/// <summary>The litter's vertices as the frame wrote them.</summary>
+	internal Vertex[] LitterWritten => _litterVertices;
+
 	/// <summary>One shadow quad a person, rewritten each frame and drawn after the people (<see cref="ParkPersonShadows"/>).</summary>
 	private Vertex[] _shadowVertices = [];
 
@@ -249,6 +263,7 @@ public sealed class ParkGuestSprites : ModelEntity
 		8 => "esprites/Generic/Researchers",
 		Thoughts.SpriteKind => Thoughts.Folder,
 		Balloon.SpriteKind => Balloon.Folder,
+		ParkWorld.LitterSpriteKind => ParkLitter.Folder,
 		_ => null
 	};
 
@@ -383,7 +398,17 @@ public sealed class ParkGuestSprites : ModelEntity
 			if ( folder == null )
 				continue;
 
-			var files = BanksIn( FileSystem, folder, key.Type );
+			string[] files;
+
+			try
+			{
+				files = BanksIn( FileSystem, folder, key.Type );
+			}
+			catch ( DirectoryNotFoundException )
+			{
+				Log.Warning( $"Guests: sprite kind {key.Type}'s folder {folder} is not in the data" );
+				continue;
+			}
 
 			if ( key.Bank < 0 || key.Bank >= files.Length )
 			{
@@ -468,7 +493,7 @@ public sealed class ParkGuestSprites : ModelEntity
 	/// <summary>
 	/// Which banks the atlas packs. With the counts: what the save's people wear, each brought within its kind's banks
 	/// (<see cref="ParkSpriteBanks.Reduce"/>), every child and costume bank - an arrival or a costume may wear any - and
-	/// all counted staff banks (including in an empty park), the balloon bank and the two thought banks. Without: what the save's people wear, the balloon bank and the two thought banks. Each once.
+	/// all counted staff banks (including in an empty park), the balloon bank, the two thought banks and the litter bank. Without: what the save's people wear, the balloon bank, the two thought banks and the litter bank. Each once.
 	/// </summary>
 	internal static IEnumerable<(int Type, int Bank)> BanksToPack( IEnumerable<ParkWorld.Sprite> worn, ParkSpriteBanks? counts )
 	{
@@ -476,7 +501,8 @@ public sealed class ParkGuestSprites : ModelEntity
 			.Select( key => (key.Type, Bank: counts?.Reduce( key.Type, key.Bank ) ?? key.Bank) )
 			.Append( (Type: Balloon.SpriteKind, Bank: 0) )
 			.Append( (Type: Thoughts.SpriteKind, Bank: 0) )
-			.Append( (Type: Thoughts.SpriteKind, Bank: 1) );
+			.Append( (Type: Thoughts.SpriteKind, Bank: 1) )
+			.Append( (Type: ParkWorld.LitterSpriteKind, Bank: 0) );
 
 		if ( counts != null )
 		{
@@ -600,6 +626,7 @@ public sealed class ParkGuestSprites : ModelEntity
 		TranslucentModel.EnableFrequentUpdates( _vertices );
 
 		BuildShadows();
+		BuildLitter( Math.Max( 16, _litterVertices.Length / 4 ), withModel: true );
 	}
 
 	/// <summary>
@@ -830,8 +857,21 @@ public sealed class ParkGuestSprites : ModelEntity
 
 		var (used, reach) = WriteTheFrame();
 		var (shadows, shadowReach) = FoldShadows( _shadowsDrawn.Count );
+		var (litter, litterReach) = WriteLitter( ParkGround.Current?.Heightfield );
 
 		var buffer = DrawUniforms();
+
+		// The litter first: it lies on the ground, tested against depth and writing none, so the people stand over it.
+		if ( _litterModel != null && litterReach > 0 )
+		{
+			_litterModel.UpdateVertices( _litterVertices, litterReach * 4 );
+
+			if ( litter > 0 && !DebugHidden )
+			{
+				_litterModel.Material.Set( "g_oUbo", buffer );
+				_litterModel.Draw();
+			}
+		}
 
 		if ( reach > 0 )
 		{
@@ -858,6 +898,81 @@ public sealed class ParkGuestSprites : ModelEntity
 			}
 		}
 	}
+
+	/// <summary>
+	/// Writes a flat quad for every littered cell of the running park (<see cref="ParkLitter"/>): its kind's set of
+	/// <c>SPR_LI</c>, picture 0 (each set holds one), at its sprite's place, the land under that place
+	/// (<see cref="StandsOn"/>, <c>FUN_004527f0</c>) plus the shadows' lift, 0.6, or 0.25 in first person (<c>[0x008bd4ec]</c>).
+	/// The mesh grows to the count; answers this frame's quads and how many the upload has to reach (<see cref="Fold"/>'s rule).
+	/// <b>Not read:</b> whether the bank's v0 is its top row; the decoder writes rows top first and this takes it so.
+	/// </summary>
+	internal (int Used, int Reach) WriteLitter( HeightfieldFile? field )
+	{
+		_litterDrawn.Clear();
+
+		if ( ParkState.Current is not { } state || !_banks.TryGetValue( (ParkWorld.LitterSpriteKind, 0), out var bank ) )
+			return (0, 0);
+
+		var lift = FirstPerson ? ParkPersonShadows.FirstPersonLift : ParkPersonShadows.Lift;
+		var littered = ParkLitter.Littered( state ).ToList();
+
+		if ( littered.Count * 4 > _litterVertices.Length )
+			BuildLitter( Math.Max( 16, littered.Count * 2 ), withModel: _litterModel != null );
+
+		foreach ( var (x, y, set, anchor) in littered )
+		{
+			if ( set >= bank.Bank.Sets.Length || Picture( bank.Bank.Sets[set], 0, 0, out _ ) is var index && (index < 0 || index >= bank.Pictures.Length) )
+				continue;
+
+			var corners = _litterVertices.AsSpan( _litterDrawn.Count * 4, 4 );
+
+			ParkLitter.Corners( corners, anchor, StandsOn( field, anchor.X, anchor.Y ) + lift, bank.Pictures[index] );
+			_litterDrawn.Add( (x, y, [corners[0].Position, corners[1].Position, corners[2].Position, corners[3].Position]) );
+		}
+
+		var used = _litterDrawn.Count;
+
+		for ( var i = used; i < _litterUploaded; ++i )
+			_litterVertices.AsSpan( i * 4, 4 ).Clear();
+
+		var reach = Math.Max( used, _litterUploaded );
+		_litterUploaded = used;
+
+		return (used, reach);
+	}
+
+	/// <summary>
+	/// The litter's vertices, room for <paramref name="quads"/>, and <paramref name="withModel"/> its mesh over the atlas: the
+	/// people's shader and alpha test, both faces, depth tested and not written (the flat arm's <c>0x800</c>, <c>0x00589e85</c>).
+	/// </summary>
+	private void BuildLitter( int quads, bool withModel )
+	{
+		_litterVertices = new Vertex[quads * 4];
+		_litterUploaded = 0;
+
+		if ( _atlas == null || !withModel )
+			return;
+
+		_litterModel?.Delete();
+
+		var indices = new uint[quads * 6];
+
+		for ( uint i = 0; i < quads; ++i )
+		{
+			var at = i * 6;
+			(indices[at], indices[at + 1], indices[at + 2]) = (i * 4, (i * 4) + 1, (i * 4) + 2);
+			(indices[at + 3], indices[at + 4], indices[at + 5]) = (i * 4, (i * 4) + 2, (i * 4) + 3);
+		}
+
+		var material = new Material( PeopleShader, LitterMaterial );
+		material.Set( "Color", (Texture)_atlas );
+
+		_litterModel = new Model( _litterVertices, indices, material );
+		_litterModel.EnableFrequentUpdates( _litterVertices );
+	}
+
+	/// <summary>Litter's pipeline: the people's, with no depth written (<c>0x800</c>).</summary>
+	internal const MaterialFlags LitterMaterial = PeopleMaterial | MaterialFlags.DisableDepthWrite;
 
 	/// <summary>
 	/// Folds to nothing every shadow the last frame wrote and this one did not; answers this frame's count and how many

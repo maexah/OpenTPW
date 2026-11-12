@@ -793,18 +793,13 @@ filed the items that cite it.
   eleven sweeps (the log's `Person N: spot animation 5 from Deciding at tick T` then `spot animation over at tick
   T+11, back to Deciding`). Confirm on a desk: a screenshot of that guest's jump (set 12, both arms up), beside the
   original's at the same point; `happy 90` in the console makes one within a few seconds.
-- [ ] **Q1288. A cell's litter drawn, placed and written (the rest of Q225).** From Q225, split in cloud lane c42.
-  Guests drop litter into the running cells now (`ParkState.DropLitter`), and nothing draws it. Build, as `ride-operation.md`
-  says in "A cell's litter" and "What it is drawn as": the sprite of `SPR_LI`'s set kind - 1 flat on the ground, depth tested
-  and not written, never picked, at the place the reseed of the park's one generator with the cell id and its two draws give
-  (and the reseed's effect on that generator, or the departure said at the site); a loaded file's littered cells drawn the
-  same (their sprites are the file's sprite table's); and a park file written after a drop carrying the cell's litter and its
-  sprite (the writer writes the cells' records, not the running litter). Counted until then: `LITTER_SPRITE_AND_RESEED` at
-  each drop (`ParkState.DropLitter`), `SAVE_PARK_RUNNING_LITTER` at a save whose running litter differs from the file's
-  (`Level.WritePark`). Confirm: the drawn litter photographed on the desk
-  beside a frame the original draws of the same file (`q253/orig/sold-by-the-original.TPWS`, its four littered cells (41,21)
-  and (39,22) to (39,24)), and a drop's sprite at the reseed's place. Not tested here: a park with two bins in reach (the
-  nearest and the tie), which no Lost Kingdom file holds.
+- [ ] **Q1504. The litter drawn, photographed (the photograph of Q1288).** Split from Q1288, built in cloud lane c96 with no
+  display. Confirm on a desk: the litter drawn flat on the ground beside a frame the original draws of the same file
+  (`q253/orig/sold-by-the-original.TPWS`, its four littered cells (41,21) and (39,22) to (39,24), kind 7: set 6's picture, a
+  green-yellow splat), and a drop's sprite at the reseed's place (`admit 47 22`, `need litter 90`: kind 1 + r % 5 at
+  (476,221), each picture wholly on the -y side of its anchor). Also look whether the bank's top row is drawn at the smallest y
+  (not read in the listing) and whether a guest's feet stand over the litter. Then load a park saved after a drop
+  (`savepark`) from the Load Park list, in this game and in the original, and see the litter where it was.
 - [ ] **Q226. Nobody is sick.** Found by Q111, arm (b). Illness exactly 100 on a third of deciding turns: spot
   animation 7, litter type 7 on the cell, event `0x12`, sound `0xcc`, illness nought, and the turn ends. After Q225,
   which builds a cell's litter. Build it where `DECIDE_VOMIT` is counted. Confirm: `need vomit 100`, a guest sick
