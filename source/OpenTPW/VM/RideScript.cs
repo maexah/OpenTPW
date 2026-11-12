@@ -766,6 +766,12 @@ public sealed class RideScript
 	/// </summary>
 	public int NotImplemented { get; private set; }
 
+	/// <summary>
+	/// The reverb level the latest <c>SETREVERB</c> stored (script <c>+0xd8</c>), or null before the first: the original's
+	/// value before one is not read (<see cref="SetReverb"/>).
+	/// </summary>
+	public int? Reverb { get; private set; }
+
 	/// <summary>The milliseconds the latest <c>WAIT</c> or <c>WAITANIM</c> armed itself for (<see cref="Wait"/>, <see cref="AnimationWait"/>), for the <c>scripts</c> census; nought before the first.</summary>
 	public int LastWait { get; private set; }
 
@@ -2389,6 +2395,10 @@ public sealed class RideScript
 				DipMusic( Value( operands[0] ) );
 				break;
 
+			case Opcode.SETREVERB:
+				SetReverb( operands[0] );
+				break;
+
 			case Opcode.SETOBJPARAM:
 				SetObjectParameter( operands );
 				break;
@@ -3817,6 +3827,27 @@ public sealed class RideScript
 
 		_dipped = (value & 0xFF) != 0;
 		Host.MusicDip = value & 0xFFFF;
+	}
+
+	/// <summary>
+	/// <c>SETREVERB</c> (<c>0x0055649c</c>): stores its operand as the script's reverb level, <c>+0xd8</c>, and does
+	/// nothing else (<c>docs/exe/audio.md</c>, "The reverb"). The level is read only by the camera's reverb handoff,
+	/// which is cut, so the store is counted, <c>SCRIPT_REVERB_LEVEL</c>. Whether the original resolves a variable
+	/// operand or stores the raw word, as <c>TURBO</c> does, is not read: all 21 uses in the 308 shipped scripts are
+	/// literals (0, 1, 3, 8, 9), where the two agree, and a variable is counted, <c>SETREVERB_VARIABLE_OPERAND</c>, and
+	/// stores nothing.
+	/// </summary>
+	private void SetReverb( RideOperand operand )
+	{
+		if ( operand.Kind == RideOperandKind.Variable )
+		{
+			++NotImplemented;
+			Unimplemented.Report( "SETREVERB_VARIABLE_OPERAND" );
+			return;
+		}
+
+		Reverb = Value( operand );
+		Unimplemented.Report( "SCRIPT_REVERB_LEVEL" );
 	}
 
 	/// <summary>

@@ -12,7 +12,7 @@ namespace OpenTPW;
 /// </summary>
 /// <remarks>
 /// Run by <see cref="Level.Update"/> at the top of a park's frame, before the entities' once-a-frame work. The original's
-/// flying cars (<c>0x0054f5ef</c>) are not built (Q408) and its every-eighth reverb handoff is counted (<see cref="HandTheReverb"/>).
+/// flying cars (<c>0x0054f5ef</c>) are not built (Q408) and its every-eighth reverb handoff is counted, a ride under the camera or none (<see cref="HandTheReverb"/>).
 /// The every-32nd block runs in the step whether its sweep ran or was dropped, as the original's dropped step jumps to
 /// <c>0x0054f828</c> (<see cref="ParkAudio.SetTheLevels"/>).
 /// </remarks>
@@ -137,14 +137,17 @@ internal static class ParkLoop
 	/// The every-eighth step's reverb handoff, <c>FUN_0055a470</c> (<c>0x0054f828</c>, after the sweep and run on a step whose
 	/// sweep was dropped too; <c>docs/exe/audio.md</c>, "The reverb"): the ride the camera is on hands its script's level, or the
 	/// level's <c>Sound.Reverb</c>, to the reverb preset holder (<c>FUN_0051c8d0</c>). Reverb is cut (no backend has a slot),
-	/// so the handoff is counted, <c>CAMERA_RIDE_REVERB</c>, on each such step while the camera is in a ride's view
-	/// (<see cref="ParkRideViewCameraMode.Active"/>, the End's alone in this build). Not counted with no ride under the camera,
-	/// though the original then hands <c>Sound.Reverb</c> (0 in Lost Kingdom), as Q864 asks.
+	/// so each such step's handoff is counted: <c>CAMERA_RIDE_REVERB</c> while the camera is in a ride's view
+	/// (<see cref="ParkRideViewCameraMode.Active"/>, the End's alone in this build), <c>CAMERA_NO_RIDE_REVERB</c> otherwise.
+	/// With no ride under the camera the original still hands the level's <c>Sound.Reverb</c> (0 in Lost Kingdom;
+	/// <c>0x0055a477</c>, <c>0x0055a4c5</c>), since <c>0x0042a4e0</c> answers 0 outside the ride view's bit 4.
 	/// </summary>
 	internal static void HandTheReverb( int tick )
 	{
-		if ( (tick & (ParkPeople.ThingTickEvery - 1)) == 0 && ParkRideViewCameraMode.Active )
-			Unimplemented.Report( "CAMERA_RIDE_REVERB" );
+		if ( (tick & (ParkPeople.ThingTickEvery - 1)) != 0 )
+			return;
+
+		Unimplemented.Report( ParkRideViewCameraMode.Active ? "CAMERA_RIDE_REVERB" : "CAMERA_NO_RIDE_REVERB" );
 	}
 
 	/// <summary>The step's every-32nd block (<c>0x0054f82d</c>), last in the step: <see cref="ParkAudio.SetTheLevels"/> on a tick it falls on.</summary>

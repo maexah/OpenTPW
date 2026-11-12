@@ -14021,3 +14021,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   as `Gadget_SetDateAndTrend` (`0x004a0e30`) does, month.day.year whatever the machine's culture (`hud.md`, "The date's
   lettering"). The frame check is Q1388.
 - [x] **Q1112. The ride window's other status settings: the condemned hide, the door at the track's statuses, the call-mechanic button held down (from Q1105).** `FUN_004ad4e0` (`park-engine.md`, "The ride window's verbs, shown and hidden") hides seven verbs at status 3 (condemned, `0x004ad509`..`0x004ad5a8`), disables the door at `0x19` and `0x1a` (`0x004ad5bc`..`0x004ad5c4`) and sets `b_callmech` down at `0x11`..`0x15` (`0x004ad684`..`0x004ad6ac`). Ours' `ParkClosedStatus` answers none of those statuses (counted `OBJECT_WINDOW_HIGHER_PRIORITY_STATUS`), so its window shows all eight and never holds the call button down. Build them on the statuses `FUN_00485f60` answers. Confirm: a condemned ride's window and a ride with a mechanic called, in both games. **Done 2026-11-12 (`alexah/927-ride-window-status-verbs`):** `ParkClosedStatus` answers `FUN_00485f60`'s arms down to the queue's (3, `0x19`, 5..9, `0xb`..`0xf`, `0x11`..`0x15`, 2/`0x15`) in their rows and colours, and `ParkObjectWindow.ShowTheVerbs` sets the verbs on them; the door of a closed ride the guard refuses keeps its position, as the original's does. Seen in both games on one file, the original's own save (`q1112/orig/q1112-c.TPWS`): the condemned Belly Bounce's seven verbs hidden, the called Dino Karts' `b_callmech` down under status `0x12`, the bare Splish Splash's door disabled under TRACK INCOMPLETE (`park-engine.md`, "The ride window's verbs, shown and hidden").
+- [x] **Q1236. Count the reverb handoff with no ride under the camera, or say why not.** From Q864 (a cloud lane, no
+  Ghidra); its two Ghidra questions were settled from the listing by the run 22 review. `FUN_0042a4e0` answers
+  `[0x00790a44]` only with bit 4 of `gui_CameraFlags` (`[0x00790ab0]`) set and `[0x00790988]` non-zero, both written by
+  `FUN_0042a560` (`0x0042a636`, `0x0042a673`), the "Ride it!" entry the End takes; first person leaves bit 4 clear, so 0
+  there. With 0, no script list or no matching script, `FUN_0055a470` still calls `FUN_0051c8d0` with `[0x0078578c]`
+  (`Sound.Reverb`; `0x0055a477`, `0x0055a4c5`): the handoff is made every eighth step in every view, and only a script's
+  negative `+0xd8` sends nothing (`0x0055a4b9`). `ParkLoop.HandTheReverb` counts `CAMERA_RIDE_REVERB` only in a ride's
+  view. The one choice left: count the no-ride handoff too (rule 4: a reached, unbuilt call, every eighth step of every
+  park), e.g. a second name for it beside the ride arm's, or write in `docs/exe/audio.md`, "The reverb", why it stays
+  uncounted. Also from Q580 (2026-10-20, left by Q864): the Sun God reaches `SETREVERB` (`incagod` at 162 and 188, in every
+  run), counted at the dispatch default as `Inca God: SETREVERB at 162`; building it is the store of its operand at the
+  script's `+0xd8`, and with reverb cut a name of its own in the count is all it needs (`q580fs/run-S2`). Confirm with
+  `endfeature make` and `unimplemented`, predicted first.
