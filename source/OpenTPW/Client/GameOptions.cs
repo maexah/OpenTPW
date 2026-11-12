@@ -259,6 +259,17 @@ internal sealed class GameOptions
 	/// </summary>
 	public void ApplySoundDetail() => Audio.SetSoundDetail( AudioQuality, SoundDefaults.FadeToggle );
 
+	/// <summary>
+	/// What the rest of the mix drops to while the advisor talks, a fraction: <c>sound.sam</c>'s <c>SoundInfo.DUCKINGLEVEL</c>
+	/// (38 shipped) over 100. The original keeps it in global <c>0x00785914</c>, the settings table's seventh key, and ducks a
+	/// group's level to that level times it over 100 (<c>0x0051bdf9</c>; <c>docs/exe/audio.md</c>, "The fade, the SoundInfo
+	/// settings and the reverb").
+	/// </summary>
+	public static float DuckLevel => SoundDefaults.DuckingLevel / 100f;
+
+	/// <summary><c>SoundInfo.DUCKINGLEVEL</c> of <paramref name="file"/>, or the shipped 38 where it has none - see <see cref="DuckLevel"/>.</summary>
+	internal static int DuckingLevel( SettingsFile? file ) => SoundDefaults.Read( file, "SoundInfo.DUCKINGLEVEL", 38 );
+
 	private static float Gain( bool on, int volume, int byDefault ) => on ? volume / (float)Math.Max( byDefault, 1 ) : 0f;
 
 	/// <summary>What data\sound.sam starts the sound options at - see the class remarks.</summary>
@@ -273,6 +284,7 @@ internal sealed class GameOptions
 		public static readonly int Quality = Read( "SoundInfo.DEFAULTQUALITY", 50 );
 		public static readonly bool On = Read( "SoundInfo.SOUNDON", 1 ) != 0;
 		public static readonly int FadeToggle = Read( "SoundInfo.FADETOGGLE", 30 );
+		public static readonly int DuckingLevel = LogDucking( GameOptions.DuckingLevel( File ) );
 
 		private static SettingsFile? Load()
 		{
@@ -288,7 +300,16 @@ internal sealed class GameOptions
 		}
 
 		/// <summary>A row of the file, or what the shipped file has there.</summary>
-		private static int Read( string key, int shipped )
-			=> int.TryParse( File?[key], out var value ) ? value : shipped;
+		private static int Read( string key, int shipped ) => Read( File, key, shipped );
+
+		/// <summary>A row of <paramref name="file"/>, or what the shipped file has there.</summary>
+		public static int Read( SettingsFile? file, string key, int shipped )
+			=> int.TryParse( file?[key], out var value ) ? value : shipped;
+
+		private static int LogDucking( int level )
+		{
+			Log.Info( $"Sound: SoundInfo.DUCKINGLEVEL {level} - the advisor ducks the rest of the mix to {level / 100f:0.00}" );
+			return level;
+		}
 	}
 }

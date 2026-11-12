@@ -133,21 +133,9 @@ public sealed class Advisor : Entity
 	/// loudness of the bank rather than by ear. The 641 global speech samples have a median RMS
 	/// of -17.4 dBFS and a tight spread (-18.5 to -16.3 at the deciles), so one gain suits all of
 	/// them. 0.52 puts him at about -23 dBFS in the mix, a little over the park themes' -25.8,
-	/// which with the ducking below leaves about 11dB between his voice and the music under it.
+	/// which with the duck (<see cref="GameOptions.DuckLevel"/>) leaves about 11dB between his voice and the music under it.
 	/// </summary>
 	private const float SpeechVolume = 0.52f;
-
-	/// <summary>
-	/// What everything else drops to while he talks.
-	///
-	/// data\sound.sam has exactly one ducking setting, <c>SoundInfo.DUCKINGLEVEL 38</c>, and
-	/// Sound_ApplyGroupVolumes (0x0051bd70) ducks by <c>(volume * 0x00785914) / 100</c> - a
-	/// percentage. That value sits in zeroed memory in the image with no writer, so it is filled in
-	/// from config at runtime, and DUCKINGLEVEL is the only candidate the config has.
-	/// <b>Inferred, not proven</b>: the file's own header comment says its numbers are detail
-	/// levels at which a feature switches on, which would make 38 a threshold instead.
-	/// </summary>
-	private const float DuckLevel = 0.38f;
 
 	/// <summary>How long the duck takes to come in - see the class remarks on ramping.</summary>
 	private const float DuckSeconds = 0.35f;
@@ -694,7 +682,7 @@ public sealed class Advisor : Entity
 		if ( !_ducked )
 		{
 			_ducked = true;
-			Audio.Duck( DuckLevel, DuckSeconds );
+			Audio.Duck( GameOptions.DuckLevel, DuckSeconds );
 		}
 
 		Log.Info( $"Advisor: sample {sample} in {(leadIn ? LeadInSeconds : 0f):0.0}s through clips [{string.Join( ", ", _gestures )}] "

@@ -66,17 +66,17 @@ public sealed class LobbyGate : Entity
 	/// <summary>The clip kept back until <see cref="_clip"/> ends, or -1 - the channel's one queued clip.</summary>
 	private int _queued = -1;
 
-	public LobbyGate( Vector3 _position, string themeName,
+	/// <param name="modelPath">The gate's <c>.md2</c>, the ISLAND() line's fourth name in its folder (<see cref="LobbyScript.GatePath"/>).</param>
+	/// <param name="textureDirectory">Where its textures are (<see cref="LobbyScript.TextureDirectory"/>).</param>
+	public LobbyGate( Vector3 _position, string modelPath, string textureDirectory,
 		IReadOnlyDictionary<string, Texture>? signTextures = null )
 	{
 		Position = _position;
 
-		var modelPrefix = themeName[0..3];
-
 		// Same 2.5 unit drop the island's own meshes get - the two share a model space.
 		_model = new LobbyModel(
-			$"lobby/terrain/{modelPrefix}_gate.md2",
-			"lobby/terrain/textures",
+			modelPath,
+			textureDirectory,
 			Position - new Vector3( 0, 0, 2.5f ),
 			textureOverrides: signTextures );
 	}

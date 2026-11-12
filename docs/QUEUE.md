@@ -2875,16 +2875,13 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
 - [ ] **Q33. UI scale.** The UI has one fixed virtual size (`VirtualScreen`, 2048 by 1536). Add Auto / small / medium
   / large. The Video Card row it once named is taken (Q983), so where it goes is Alexah's call.
 - [ ] **Q34b. Pictures for the README.** Animated pictures need a capture tool; none exists in the repo.
-- [ ] **Q72. Values from data, not constants (the 2026-09-12 review's Phase B).** The lobby's four island names
-  from `THEMENAMES.str` through the reader the gate already uses (`ParkFixedItems.ParkDisplayName`) in place of
-  `LobbyIsland.DisplayNames`; the `ISLAND()` directory and model names in place of `themeName[0..3]` (`LobbyIsland`,
-  `LobbyGate`); and `DUCKINGLEVEL` from `sound.sam` for the advisor's 0.38 duck - but that mapping to `0x00785914` is
-  inferred, not proven (`Advisor`'s note), so decode the global's writer first. For the names and the `ISLAND()`
-  fields the data equals the constant, so "nothing looks different" is the regression check (`docs/exe/lobby.md`,
-  "Park names and the locale tables"). Confirm: a lobby screenshot before and after, identical.
-  - **Note (fork watch 2026-10-18, `verify-other-a.md` lead 3):** `DUCKINGLEVEL` is proven: global `0x00785914`, the table's
-    seventh key (`docs/exe/audio.md`, "The fade, the SoundInfo settings and the reverb"), used as a percentage, the
-    group level times 38 / 100 (`0x0051bdf9`). The "inferred, not proven" above is settled; read it from `sound.sam`.
+- [ ] **Q1496. Q72's lobby photographed before and after (desk lane).** Q72 (cloud lane c94) reads the four shown park
+  names from `THEMENAMES.str`, the islands' and gates' models from their ISLAND() lines and the advisor's duck from
+  `sound.sam`; the off-screen run logged the same four models and names as `main` paints (`Jungle: island
+  lobby/terrain/jun_isle.md2, gate lobby/terrain/jun_gate.md2, shown as 'Lost Kingdom'` and the other three) and the
+  duck at 0.38, but nothing was photographed (no display in the container). Photograph the lobby on each of the four
+  islands on `main` before Q72 and after it, from the same camera, and say whether the frames match; the item asked
+  for them to be identical.
 - [ ] **Q73. Cache pipelines and assets by key (the rest of the review's Phase D).** The pipeline half is done (Q954: materials of one shader and flags share one,
   `SharedCache`); what is left is the texture and shader caches that scan `Asset.All`
   linearly (`Texture.Cache`, `Shader.Cache`). The shared blank texture landed (`bb897f8`); measure the load before

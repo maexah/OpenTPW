@@ -22,7 +22,13 @@ public sealed class LobbyIsland : Entity
 	/// </summary>
 	public LobbyScript Script { get; }
 
-	/// <summary>The park's name as the player sees it, painted on the gate's sign.</summary>
+	/// <summary>
+	/// The park's name as the player sees it, painted on the gate's sign: its row of <c>THEMENAMES.str</c>, read by index
+	/// rather than by text (<see cref="ParkFixedItems.ParkDisplayName"/>, the park gate's reader; <c>docs/exe/lobby.md</c>,
+	/// "Park names and the locale tables"). The ISLAND() line's own name is the backend one for three of the four
+	/// ("Fantasy", "Halloween", "Space"), so it is taken only where the table gives none. All four shown names are two
+	/// words, which is what puts one on each of the sign's two panels.
+	/// </summary>
 	public string ParkName { get; }
 
 	/// <summary>
@@ -31,26 +37,6 @@ public sealed class LobbyIsland : Entity
 	/// banks are under.
 	/// </summary>
 	public string ThemeName { get; }
-
-	/// <summary>
-	/// What each park is actually called.
-	///
-	/// A park's ISLAND() line does carry a name, but for three of the four it is the backend one
-	/// - "Fantasy", "Halloween", "Space" - and only the jungle's happens to be what the player is
-	/// shown. The displayed names are rows of <c>THEMENAMES.str</c>, looked up by index rather than
-	/// by text (docs/exe/lobby.md, "Park names and the locale tables"), which
-	/// <c>ParkFixedItems.ParkDisplayName</c> already reads for the gate's sign. This table still holds
-	/// them by hand, and a park outside these four falls back to whatever its script says.
-	///
-	/// All four are two words, which is what puts one on each of the sign's two panels.
-	/// </summary>
-	private static readonly Dictionary<string, string> DisplayNames = new( StringComparer.OrdinalIgnoreCase )
-	{
-		["Jungle"] = "Lost Kingdom",
-		["Fantasy"] = "Wonder Land",
-		["Hallow"] = "Halloween World",
-		["Space"] = "Space Zone"
-	};
 
 	/// <summary>
 	/// How many golden keys it takes to enter this park: Keys.CostToEnter in the park's own
@@ -94,29 +80,36 @@ public sealed class LobbyIsland : Entity
 		ThemeName = themeName;
 		(KeysToEnter, GlobalLoaded) = ReadKeysToEnter( themeName );
 
-		var modelPrefix = themeName[0..3];
 		Script = LobbyScript.Read( themeName );
 
-		ParkName = DisplayNames.TryGetValue( themeName, out var displayName )
-			? displayName
-			: Script.ParkName;
+		var shown = ParkFixedItems.ParkDisplayName( themeName );
+		ParkName = shown.Length > 0 ? shown : Script.ParkName;
+
+		// The two models are the ISLAND() line's folder, third and fourth names (the original builds one island per line,
+		// 0x005dfa60). Ours builds the four islands whatever their scripts hold (Level.SetupEntities), so a park whose
+		// script gives no ISLAND() line has nothing to name its models; it is refused here, as a missing model is. Dead
+		// by CONTENT: each of lobby.wad's four scripts has its line.
+		if ( !Script.HasModels )
+			throw new InvalidDataException( $"lobby/{themeName.ToLowerInvariant()}.txt names no island and gate models (no ISLAND() line)" );
+
+		Log.Info( $"{themeName}: island {Script.IslePath}, gate {Script.GatePath}, shown as '{ParkName}'" );
 
 		// Offered to both models below: the sign panels are meshes of the island for the jungle
 		// and hallow, but of the gate for fantasy and space, and whichever model names sign1 and
 		// sign2 is the one that takes them.
-		var sign = _sign = BuildSign( modelPrefix, ParkName );
+		var sign = _sign = BuildSign( Script, ParkName );
 
 		// An island's meshes sit 2.5 units below the origin it is placed at.
 		_model = new LobbyModel(
-			$"lobby/terrain/{modelPrefix}_isle.md2",
-			"lobby/terrain/textures",
+			Script.IslePath,
+			Script.TextureDirectory,
 			Position - new Vector3( 0, 0, 2.5f ),
 			textureOverrides: sign );
 
 		// An island brings its gate with it, the way a park's script names both models on one
 		// line. Kept rather than dropped because the park-entry flight opens it, and Escape shuts it
 		// again - see <see cref="LobbyGate"/>.
-		Gate = new LobbyGate( Position, themeName, sign );
+		Gate = new LobbyGate( Position, Script.GatePath, Script.TextureDirectory, sign );
 
 		// ...and whatever its script says flies around it: ten of each butterfly for the jungle,
 		// fifty bats for hallow, nothing at all for the other two.
@@ -149,17 +142,17 @@ public sealed class LobbyIsland : Entity
 	/// is the island for the jungle and hallow but the gate for fantasy and space - so both are
 	/// tried rather than assuming either.
 	/// </summary>
-	private static IReadOnlyDictionary<string, Texture>? BuildSign( string modelPrefix, string parkName )
+	private static IReadOnlyDictionary<string, Texture>? BuildSign( LobbyScript script, string parkName )
 	{
 		if ( string.IsNullOrEmpty( parkName ) )
 			return null;
 
-		foreach ( var model in new[] { "isle", "gate" } )
+		foreach ( var model in new[] { script.IsleModel, script.GateModel } )
 		{
-			if ( !SignTexture.TryBuild( $"lobby/terrain/{modelPrefix}_{model}.sgn", parkName, out var left, out var right ) )
+			if ( !SignTexture.TryBuild( $"{script.Directory}/{model}.sgn", parkName, out var left, out var right ) )
 				continue;
 
-			Log.Info( $"{modelPrefix}: painted '{parkName}' onto the {modelPrefix}_{model} sign" );
+			Log.Info( $"{model}: painted '{parkName}' onto the {model} sign" );
 
 			return new Dictionary<string, Texture>( StringComparer.OrdinalIgnoreCase )
 			{
@@ -168,7 +161,7 @@ public sealed class LobbyIsland : Entity
 			};
 		}
 
-		Log.Warning( $"{modelPrefix}: no usable sign file - the sign keeps its placeholder texture" );
+		Log.Warning( $"{script.IsleModel}: no usable sign file - the sign keeps its placeholder texture" );
 		return null;
 	}
 

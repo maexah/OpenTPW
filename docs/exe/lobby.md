@@ -668,7 +668,8 @@ then spawns the sparkle only if none is running, so there is one.
 
 **The gate is the flight's, and the original does animate it.** An island (`FUN_005dfa60`, 0x74 bytes, one per
 `ISLAND(` line of each park's lobby script) holds two model instances built by `0x005d8870`: its **isle** at `+4` and its
-**gate** at `+8` - the line's third and fourth names. Both are built with flags `0xc0` and differ only in how many
+**gate** at `+8` - the line's third and fourth names, in the folder its second names (OpenTPW reads all three, `LobbyScript.IslePath`
+and `GatePath`, Q72). Both are built with flags `0xc0` and differ only in how many
 animation channels they get, two for the isle and one for the gate: that argument reaches the role loader
 `FUN_00461f10` as its fifth, which sizes the model record as `0xfc + n x 0x38` (`0x00462520`), `0x38` being a channel.
 Every instance has an animation handle (`0x00463060`, `0x005d898c`), so both play. `0x005d83f0( entry, flags )` plays role-M entry `entry` (M1, M2, ...)
@@ -928,8 +929,8 @@ The four park display names **are** in the shipped data, measured with OpenTPW's
 | `English/MBToUni.dat` | — | 506 bytes, count byte `0xf9` = **249** characters | Byte read |
 | `american/MBToUni.dat` | — | 504 bytes, count byte `0xf8` = **248**. They differ at byte 7, the count field read after `Seek(6)` — one fewer character shifts every index past it | Byte read |
 
-`LobbyIsland.DisplayNames` still holds the four displayed names by hand. `ParkFixedItems.ParkDisplayName` already
-reads them from `THEMENAMES.str` for the gate's sign; the lobby's table should read them the same way.
+`ParkFixedItems.ParkDisplayName` reads them from `THEMENAMES.str` by theme for the park gate's sign and, since Q72, for
+the lobby's island signs (`LobbyIsland.ParkName`); the ISLAND() line's own name is taken only where the table gives none.
 
 **`BFSTReader` decodes each folder's tables through that folder's own character table** (Q710). Read through the
 English table, the american tables shift every letter past `’` by one:

@@ -558,11 +558,11 @@ public sealed class ParkFixedItems : Entity
 	/// </para>
 	///
 	/// <para>
-	/// <see cref="LobbyIsland"/> keeps its own hardcoded copy of these four names. That is worth
-	/// replacing with this read, but it is the lobby's to change and not this entity's errand.
+	/// The lobby's island signs read the same rows (<see cref="LobbyIsland.ParkName"/>). Empty for a theme outside the
+	/// four, or when the table will not read.
 	/// </para>
 	/// </summary>
-	private static string ParkDisplayName( string themeName )
+	internal static string ParkDisplayName( string themeName )
 	{
 		var index = Array.FindIndex( ThemeOrder, name => string.Equals( name, themeName, StringComparison.OrdinalIgnoreCase ) );
 
@@ -577,7 +577,7 @@ public sealed class ParkFixedItems : Entity
 		}
 		catch ( Exception e )
 		{
-			Log.Warning( $"{themeName}: THEMENAMES.str would not read, so the gate keeps a blank sign - {e.Message}" );
+			Log.Warning( $"{themeName}: THEMENAMES.str would not read, so the park has no shown name - {e.Message}" );
 			return string.Empty;
 		}
 	}

@@ -13975,3 +13975,13 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   `Tick`. No row the advisor reads is known to follow the gate's command on the same tick, so first find what (if
   anything) the order changes; then move it after his turn and before `FreeDeletedThings`, with a test whose values
   the old order gets wrong, or say at the call that nothing can tell the two apart.
+- [x] **Q72. Values from data, not constants (the 2026-09-12 review's Phase B).** The lobby's four island names
+  from `THEMENAMES.str` through the reader the gate already uses (`ParkFixedItems.ParkDisplayName`) in place of
+  `LobbyIsland.DisplayNames`; the `ISLAND()` directory and model names in place of `themeName[0..3]` (`LobbyIsland`,
+  `LobbyGate`); and `DUCKINGLEVEL` from `sound.sam` for the advisor's 0.38 duck - but that mapping to `0x00785914` is
+  inferred, not proven (`Advisor`'s note), so decode the global's writer first. For the names and the `ISLAND()`
+  fields the data equals the constant, so "nothing looks different" is the regression check (`docs/exe/lobby.md`,
+  "Park names and the locale tables"). Confirm: a lobby screenshot before and after, identical.
+  - **Note (fork watch 2026-10-18, `verify-other-a.md` lead 3):** `DUCKINGLEVEL` is proven: global `0x00785914`, the table's
+    seventh key (`docs/exe/audio.md`, "The fade, the SoundInfo settings and the reverb"), used as a percentage, the
+    group level times 38 / 100 (`0x0051bdf9`). The "inferred, not proven" above is settled; read it from `sound.sam`.
