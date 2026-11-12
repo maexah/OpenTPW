@@ -12315,6 +12315,19 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   open. The engine finds a bounce rider's node by id in `0x800` ("Where a rider is drawn"); `ModelFile.FindNode` is
   that lookup and `RideNodes` the stored positions at rest (Q175b), not the animated pose a rider needs. A walk's riders
   are placed by `FUN_005580a0` from the posed nodes since Q585 (`ride-operation.md`, "Where a walk's rider is drawn").
+- [x] **Q52. A rider on a thing without flag `0x20` is hidden in the original.** Found by Q36's decode. Admission
+  tests the object's flag bit `0x20` (`0x0050212b`) and, without it, destroys the rider's sprite (`0x00502147`);
+  OpenTPW never hides a rider. Every visitable thing in Lost Kingdom's save carries the bit, so nothing there shows
+  it; a thing bought this session carries the bit its item gives it (`UsageInfo.RideHandlesSprite`, read since
+  Q257c), so a bought Crazy Ape, whose item leaves it clear, is the case to run. Then
+  build both. Confirm: a guest riding a bought Belly Bounce, `guests`, photographed.
+  From Q252: **a rider on a thing WITH the bit is not standing.** In two files of the original's (Alexah's played
+  jungle park and `q252/orig/ctl-written-by-the-original.TPWS`) all nine bounce riders' sprites are on program 66,
+  the second state script, picture set 2; OpenTPW's rider stands on program 90, and a park file is written so.
+  `Peep.AnimationFor`'s remark reads the setter's case `0x10` as "the stand": read it again with these files.
+  - **Done (lane c102, 2026-11-12):** the hide is built (`ParkPeople.RidesWithoutASprite`, drawn and written by it, the
+    `guests` census naming it); off-screen only. Split: the photograph is Q1540, the From-Q252 note is Q1541, a walk on
+    such a thing is Q1542.
 
 ## E. Large
 

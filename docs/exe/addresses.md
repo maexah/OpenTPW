@@ -748,7 +748,7 @@ address here has an empty 'What it is', try the subsystem page first: `park.md`,
 | `0x00501fd3` | State setter FUN_00501db0 case 0xf: with life left and the thing left not a balloon shop, the balloon built again, from | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x0050208a` | FUN_00501db0 case 0xf: the rebuild, to here | OpenTPW/World/Park/ParkRideOperation.cs  |
 | `0x0050212b` | Admission tests the object's flag bit `0x20`, which keeps the rider's sprite | OpenTPW.Files/Formats/Save/ParkWorld.cs  |
-| `0x00502147` | Admission destroys the rider's sprite on an object without flag bit `0x20` | OpenTPW.Files/Formats/Save/ParkWorld.cs  |
+| `0x00502147` | Admission destroys the rider's sprite on an object without flag bit `0x20` | OpenTPW.Files/Formats/Save/ParkWorld.cs, OpenTPW/World/Park/ParkPeople.cs |
 | `0x00502156` | FUN_00501db0 case 0x10: the balloon's sprite deleted (FUN_00475550), its life kept, from | OpenTPW/World/Park/Peep.cs  |
 | `0x00502169` | FUN_00501db0 case 0x10: +0x210 zeroed, to here | OpenTPW/World/Park/Peep.cs  |
 | `0x005022ef` | FUN_00501db0 case 0x11: the balloon let go (FUN_004fe950) | OpenTPW/World/Park/Peep.cs OpenTPW/World/Park/PeepBehaviour.cs  |

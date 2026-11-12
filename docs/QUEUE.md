@@ -2626,16 +2626,23 @@ The decode session writes the finding to `docs/exe/` and stops. The build is the
     one cause (QUEUE:2037-2041); the note names no case, so confirm in the play which others there are (Q281, QUEUE:839,
     is the other known one).
   - **Note (play test 2026-10-31):** staff still sometimes walk in place; which state they are in was not caught (use the `staff` census). Notes and log in `~/.cache/tpw-harnesses/playtest-2026-10-30_2026-10-31/`.
-- [ ] **Q52. A rider on a thing without flag `0x20` is hidden in the original.** Found by Q36's decode. Admission
-  tests the object's flag bit `0x20` (`0x0050212b`) and, without it, destroys the rider's sprite (`0x00502147`);
-  OpenTPW never hides a rider. Every visitable thing in Lost Kingdom's save carries the bit, so nothing there shows
-  it; a thing bought this session carries the bit its item gives it (`UsageInfo.RideHandlesSprite`, read since
-  Q257c), so a bought Crazy Ape, whose item leaves it clear, is the case to run. Then
-  build both. Confirm: a guest riding a bought Belly Bounce, `guests`, photographed.
-  From Q252: **a rider on a thing WITH the bit is not standing.** In two files of the original's (Alexah's played
-  jungle park and `q252/orig/ctl-written-by-the-original.TPWS`) all nine bounce riders' sprites are on program 66,
-  the second state script, picture set 2; OpenTPW's rider stands on program 90, and a park file is written so.
-  `Peep.AnimationFor`'s remark reads the setter's case `0x10` as "the stand": read it again with these files.
+- [ ] **Q1540. Photograph a rider on a thing without flag `0x20`, beside the original. Desk lane.** Split from Q52,
+  built in a cloud container with no display. A guest riding a bought Crazy Ape (item 1101, flags `0xc`), and one
+  riding the stock Belly Bounce for the control: ours shows the ape's heads and no body (`guests`: `RIDES WITHOUT A
+  SPRITE, body not drawn`); the original's frame at the same moment shows the same. A cheaper first look: the stock
+  park with the Bounce's `mFlags` (object record `+58`, `'<H'`) written to `0x10c` by `parkfile.thing_set`, loaded
+  as the newest file (TOOLING, "A save and a load of a chosen park file"): its riders vanish from the Bounce.
+- [ ] **Q1541. A rider on a thing WITH flag `0x20` is not standing.** Moved from Q52's note (from Q252). In two files of
+  the original's (Alexah's played jungle park and `q252/orig/ctl-written-by-the-original.TPWS`) all nine bounce riders'
+  sprites are on program 66, the second state script, picture set 2; OpenTPW's rider stands on program 90, and a park
+  file is written so. `Peep.AnimationFor`'s remark reads the setter's case `0x10` as "the stand" (`0x00502136`,
+  `FUN_004217f0( 3 )`): read it again with these files, in Ghidra, then build. Confirm: `guests` showing the riders'
+  script, and a park file's sprites, beside the original's.
+- [ ] **Q1542. A walk holding a rider whose sprite admission destroyed. Decode first.** Found by Q52. On a thing
+  without flag `0x20` the sprite is gone (`0x00502147`), and the walk's placer (`FUN_005580a0`) hands it on to
+  `FUN_004f9e60` or the hide `FUN_004f9ed0`: whether either makes a sprite for handle 0 is not decoded. Ours leaves
+  such a rider hidden and counts `WALK_RIDER_ON_A_THING_KEEPING_NO_SPRITE`. First count which of the jungle's 15
+  visitable items without the bit run a `WALKON` (not checked in Q52); if none, it is dead by CONTENT for Lost Kingdom.
 - [ ] **Q1204. A balance file's first refused line ends it. Decode first.** Found by Q54 (`park-engine.md`, "How a key
   finds its global"). `FUN_004017a0` stops a file at the first line it refuses - a key its table does not name, a
   bounded value out of range, a negative in a type-5 key - but which balance key is which type, and its bounds, are

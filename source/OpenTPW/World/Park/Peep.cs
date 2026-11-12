@@ -884,7 +884,7 @@ public sealed class Peep
 	/// already playing one, and <see cref="PeepState.Leaving"/> queues none at all. The other two are this
 	/// build's. The original's setter asks for the walk for <see cref="PeepState.LeavingRide"/>, and for
 	/// <see cref="PeepState.Riding"/> the stand on a thing flagged <c>0x20</c> and no sprite on any other
-	/// (<c>FUN_00501db0</c> cases <c>0xf</c> and <c>0x10</c>; the hidden rider is Q52).
+	/// (<c>FUN_00501db0</c> cases <c>0xf</c> and <c>0x10</c>; the hidden body is <see cref="ParkPeople.RidesWithoutASprite(int)"/>).
 	/// </para>
 	/// </summary>
 	public static PeepAnimation AnimationFor( PeepState state ) => state switch
