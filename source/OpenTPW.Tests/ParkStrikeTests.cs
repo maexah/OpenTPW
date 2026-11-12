@@ -595,6 +595,48 @@ public class ParkStrikeTests
 	}
 
 	/// <summary>
+	/// Entering state 5 writes nought to the facing (<c>FUN_005054d0</c> case 5, <c>0x00505582</c>): the walk that
+	/// arrives ends facing the way it last stepped and the walk that fails keeps whatever it had, and both stand
+	/// on the picket facing 0.
+	/// </summary>
+	[TestMethod]
+	public void TheMemberStandsOnThePicketFacingNought()
+	{
+		var (member, walk, state) = OnThePath( Guard, StaffActivity.Idle );
+		var behaviour = new StaffBehaviour( Balance(), new Draws( 1, 7, 0x180, 5, 0x1240 ), state )
+		{
+			Strikes = Striking( 3 ), GateStatus = () => ParkRides.GateIsOpen
+		};
+
+		var tick = 16850;
+		var lastWalkingHeading = -1;
+
+		behaviour.Step( member, walk, playing: null, tick++ );
+
+		while ( member.Activity == StaffActivity.GoingOnStrike && tick < 16850 + 2000 )
+		{
+			lastWalkingHeading = walk.Heading;
+			behaviour.Step( member, walk, playing: null, tick++ );
+		}
+
+		Assert.AreEqual( StaffActivity.OnStrike, member.Activity );
+		Assert.AreNotEqual( 0, lastWalkingHeading, "the walk faced somewhere other than 0 before it ended" );
+		Assert.AreEqual( 0, walk.Heading );
+
+		// A walk that fails ends the same way, from a facing of 0x400.
+		var (stuck, shutWalk, shutState) = OnThePath( Guard, StaffActivity.GoingOnStrike, shut: true );
+
+		stuck.SettingOffForTheStrike = true;
+		stuck.Navigator.Target = new FixedVector( PeepNavigator.WaypointCentre( 41 ), PeepNavigator.WaypointCentre( 9 ) );
+		shutWalk.Heading = 0x400;
+
+		new StaffBehaviour( Balance(), new Draws( 1 ), shutState ).Step( stuck, shutWalk, playing: null, tick: 16851 );
+
+		Assert.AreEqual( StaffActivity.OnStrike, stuck.Activity );
+		Assert.AreEqual( 0, shutWalk.Heading );
+	}
+
+	/// <summary>
 	/// A striker's turn on the spot (<c>FUN_00506300</c>): one draw, and on its low three bits nought the facing
 	/// moves by the draw's low byte less 128; a sum past <c>0x7ff</c>, a turn below nought among them, is held at
 	/// <c>0x7ff</c>. No sound is drawn for.

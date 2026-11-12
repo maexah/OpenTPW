@@ -1104,13 +1104,6 @@ filed the items that cite it.
   starts on animation 0, which its remarks give as a deviation no shipped bank reaches. Dead by content today:
   build it as the original's or leave the count, on Alexah's word.
 
-- [ ] **Q281. A member of staff who reaches the picket keeps the facing their walk ended on, and turns on the spot
-  from there.** The original's state setter writes nought to the facing as state 5 is entered (FUN_005054d0 case
-  5, 0x00505582, beside the speed and animation 0x13 that Staff.SetActivity already takes from it), so a striker's
-  turns start from 0; a test that walks a member to the picket and reads PeepWalk.Heading would show it. From the
-  week-end audit (stage 6, the second reading of commit `0db41100`; read from the code, not reproduced in the
-  game). `OpenTPW/World/Park/StaffBehaviour.cs`, line 432.
-
 - [ ] **Q282. A handyman's thought bubble is taken away only on his own sweep in four, as the other kinds' are, so
   it lasts 13 to 16 sweeps.** The original's handyman pre-step FUN_004d7060 ends by calling the expiry
   FUN_0050be40 ungated on every sweep (0x004d70ee; docs/exe/ride-operation.md, the pre-step table's note on

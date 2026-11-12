@@ -425,6 +425,8 @@ public sealed class StaffBehaviour
 
 			// Walking to the picket - FUN_005056e0's case 4: a step of the walk, thought 0x15 every turn, and at
 			// the walk's end, arrived or failed alike, the walking mode at +0x188 is zeroed and the member is on strike.
+			// The state setter's case 5 writes nought to the facing (FUN_005054d0, 0x00505582), so the picket's
+			// turns start from 0.
 			case StaffActivity.GoingOnStrike:
 				var picketWalk = Walked( staff, walk, playing );
 
@@ -436,9 +438,10 @@ public sealed class StaffBehaviour
 
 					staff.SettingOffForTheStrike = false;
 					staff.SetActivity( StaffActivity.OnStrike, tick );
+					walk.Heading = 0;
 
 					Log.Info( $"Staff: {staff.ThingId} is on strike at ({picketX},{picketY}) on mGameTick {tick}, "
-						+ $"the walk {picketWalk}" );
+						+ $"the walk {picketWalk}, facing {walk.Heading}" );
 				}
 
 				break;
