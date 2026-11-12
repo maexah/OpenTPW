@@ -65,8 +65,11 @@ public sealed partial class ParkPeople
 				Unimplemented.Report( "SAVE_PARK_GUEST_ON_A_THING" );
 
 			// A rider's sprite is the thing's to keep: admission destroys it on a thing without the bit (0x00502147).
-			var drawn = decides || peep.State != PeepState.Riding
-				|| (State.TryObject( major, out var ridden ) && (ridden.Flags & ParkWorld.CatalogueObject.KeepsRidersSpriteFlag) != 0);
+			// A walk's rider has the sprite its placer left (FUN_005580a0): none where it hid them (FUN_004f9ed0 frees it).
+			var walked = decides ? null : ParkGuestSprites.WalkedOnRide( this, id );
+			var drawn = (decides || peep.State != PeepState.Riding
+				|| (State.TryObject( major, out var ridden ) && (ridden.Flags & ParkWorld.CatalogueObject.KeepsRidersSpriteFlag) != 0))
+				&& walked is not { Hidden: true };
 
 			var guest = new ParkWorld.GuestState(
 				State: (int)(decides ? PeepState.Deciding : peep.State),
@@ -90,7 +93,8 @@ public sealed partial class ParkPeople
 			people.Add( Person( id, ParkWorld.GuestModel, peep.Navigator, heading, decides, guest, null,
 				new ParkWorld.PaceState( peep.AdjustorSpeed, peep.BaseSpeed, peep.PreviousSpeed, peep.PurposeSpeed ),
 				(peep.SpriteKind, peep.SpriteBank), drawn, peep.NextAnimation, peep.NextInterval,
-				peep.SetDestSuccessfully, peep.Thoughts, peep.StrandedTime ) with { Balloon = BalloonOf( peep ) } );
+				peep.SetDestSuccessfully, peep.Thoughts, peep.StrandedTime,
+				walked is { Hidden: false } shown ? (shown.At, shown.Facing) : null ) with { Balloon = BalloonOf( peep ) } );
 		}
 
 		foreach ( var member in _staff )
@@ -190,11 +194,15 @@ public sealed partial class ParkPeople
 
 	/// <summary>
 	/// One person for the writer. <paramref name="stands"/> writes them standing where they are, on no route and
-	/// on the standing program, whatever the walk and the sprite hold.
+	/// on the standing program, whatever the walk and the sprite hold. <paramref name="placed"/> is where a walk's
+	/// placer put their sprite (<see cref="ParkGuestSprites.WalkedOnRide"/>): it stands at that point, its height the
+	/// point's less the ground under it (<c>0x004f9e91</c>), facing the slot's facing, as the original's files hold a walk's
+	/// shown rider (<c>docs/exe/saves.md</c>, "A walk's rider is saved where its placer left them").
 	/// </summary>
 	private ParkWorld.WrittenPerson Person( int id, int model, PeepNavigator navigator, int heading, bool stands,
 		ParkWorld.GuestState? guest, ParkWorld.StaffState? staff, ParkWorld.PaceState? pace, (int Kind, int Bank) look,
-		bool drawn, int nextAnimation, int nextInterval, bool? setDest, Thoughts thoughts, uint strandedTime )
+		bool drawn, int nextAnimation, int nextInterval, bool? setDest, Thoughts thoughts, uint strandedTime,
+		(Vector3 At, short Facing)? placed = null )
 	{
 		var position = navigator.Position;
 
@@ -244,9 +252,12 @@ public sealed partial class ParkPeople
 			loops = script.Loops;
 			flags = script.DrawFlags;
 			stateSetByte = script.FramesPerDirection > 0 ? script.FramesPerDirection : null;
+			var at = placed?.At ?? default;
+			var height = placed is null ? 0f : at.Z - ParkGuestSprites.StandsOn( ParkGround.Current?.Heightfield, at.X, at.Y );
+
 			picture = new ParkWorld.Sprite(
 				Slot: 0, Type: look.Kind, Bank: look.Bank, SpriteNumber: script.SpriteNumber,
-				X: 0f, Height: 0f, Y: 0f, Facing: person.Facing, Frame: script.Frame, Alpha: script.Alpha, State: 0,
+				X: at.X, Height: height, Y: at.Y, Facing: placed?.Facing ?? person.Facing, Frame: script.Frame, Alpha: script.Alpha, State: 0,
 				Script: script.Script, Pc: script.Pc );
 		}
 
@@ -263,6 +274,6 @@ public sealed partial class ParkPeople
 			// A person's sprite is made on set 0 of their bank, and a state's animation writes its own set's over it.
 			MadeSetByte: SetByteOf( look.Kind, look.Bank, 0 ), StateSetByte: stateSetByte,
 			Bubble: BubbleOf( thoughts, position ),
-			SpriteLoops: drawn ? loops : null, SpriteFlags: drawn ? flags : null );
+			SpriteLoops: drawn ? loops : null, SpriteFlags: drawn ? flags : null, SpritePlaced: drawn && placed is not null );
 	}
 }

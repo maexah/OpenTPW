@@ -1928,17 +1928,15 @@ filed the items that cite it.
     settled: the original looks under `Language\American` (`FUN_004893c0`, Windows language `0x409`; `park-engine.md`, the
     end of a park). The reference install shows no End, end-of-park or pause banner where an installed game shows one;
     re-take Q551's and Q703's banner frames once the overlay is applied.
-- [ ] **Q735. A walk rider's saved sprite.** From Q585 5 (VERIFY-14). `ParkPeople.Written` keeps a sprite for a rider of
-  a thing with `mFlags` `0x20` (every walk thing), and `ParkWorld.PutSprite` writes it at the navigator with the
-  picture's height and the person's facing. The original's files (`q585/walkriders-saves.out`, 38 walk slots) hold **no
-  sprite** for the 23 riders the placer hid (carried under action 1 or 4: `FUN_004f9ed0` frees it, handle 0) and, for
-  the other 15, the placer's point with the height above the ground and the slot's facing (`ride-operation.md`, "Where a
-  walk's rider is drawn"). Build it: write the sprite from `ParkGuestSprites.WalkedOnRide` (its point, its height less
-  the ground, the slot's facing) and none for a hidden rider. Harmless to a load in either game (both re-place every
-  frame; the original's hide frees a loaded sprite again; ours ignores the saved place), so this is a byte difference in
-  a park file, not a behaviour. Said at `PutSprite` and in `saves.md` ("A walk's rider is saved with a sprite where the
-  original saves none or another place, a deviation"). Confirm: a park saved with the Mayan Spinner and the Jungle Spray
-  holding riders, the sprite table beside the original's.
+- [ ] **Q1182. Q735's saved walk riders beside the original's, and a hidden one in a running park.** From Q735 (cloud
+  lane c12, 2026-11-12, no original and no Ghidra there). Ours now writes a walk's shown rider at the placer's point, its
+  height less the ground and the slot's facing, and a hidden one with no sprite (`ParkPeople.Written`, `docs/exe/saves.md`,
+  "A walk's rider is saved where its placer left them"); seen off-screen on a bought Mayan Spinner (18 riders carried
+  under action 6, 18 of 18 facing the slot, each at the console's `WALK at` point) and the Jungle Spray (one walking off,
+  on the leg), and by a test for the hidden one. Not done: (a) the original's sprite table on a park holding Spinner and
+  Spray riders, set beside ours' (`walkriders` reads both); (b) a hidden rider (action 1 or 4: the Totem, the TV Sim) in a
+  park ours saved: guests admitted and sent to a bought TV Sim (`buy 1104 44 25 180`, queue (43,27) to (43,28)) turned
+  for the exit before boarding (`HEADING_FOR_EXIT_CHANGE_OF_MIND` counted 274 times), so none was saved hidden.
 - [ ] **Q737. A placed voice out of range releases its output, and a loop comes back with a fresh one.** From the fork
   watch 2026-10-21 (verify-audio-ui L1). OpenTPW plays a placed voice on unheard when it is out of range
   (`audio.md:265`, a recorded gap with no queue line and no `Unimplemented.Report`). The original gives the channel up:

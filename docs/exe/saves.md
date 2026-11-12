@@ -3144,12 +3144,7 @@ Nothing here destroys a rider's sprite, and a guest's head in a boat is drawn th
 `ParkPeople` makes it at the load: standing, on a new slot, of the person's `mESPSprite` and `mSpriteID`. Before
 this a rider loaded so was drawn by nothing, on the ride or after it.
 
-**A walk's rider is saved with a sprite where the original saves none or another place, a deviation.** The writer keeps a
-sprite for a rider of a thing with `mFlags` `0x20` (every walk thing) and `PutSprite` writes it at the navigator with the
-picture's height. The original's files (`q585/walkriders-saves.out`, 38 walk slots) hold no sprite for the 23 riders the
-placer hid (carried under action 1 or 4: `FUN_004f9ed0` frees it), and for the 15 it shows the placer's point with the
-height above the ground and the slot's facing ("Where a walk's rider is drawn", `ride-operation.md`). Harmless to a load in
-either game (both re-place every frame, and the original's hide frees a loaded sprite again); counted in the queue.
+**A walk's rider is saved where its placer left them, as the original's files hold them** (Q735). The writer asks the walk that holds a guest (`ParkGuestSprites.WalkedOnRide`, the placer `FUN_005580a0`'s rule) as it writes them: one it hid (carried under action 1, 2 or 4: `FUN_004f9ed0` frees the sprite, handle 0) is written with sprite slot nought and no sprite, and one it shows has its sprite at the placer's point, the height the point's less the ground under it (`0x004f9e91`) and the slot's facing (`+0x14`), not the navigator and the person's own octant (`ParkPeople.Written`, `ParkWorld.WrittenPerson.SpritePlaced`). The original's files (`q585/walkriders-saves.out`, 38 walk slots) hold no sprite for the 23 riders the placer hid and the placer's point and facing for the other 15 ("Where a walk's rider is drawn", `ride-operation.md`). A load in either game is the same either way (both re-place every frame); a guest saved so with no sprite is given one at the load, as above.
 
 **Confirmed in the game** (`q257p/confirm.py`, on the desktop: scene `later` 4 of 4 at the second run, scene
 `open` 2 of 2, the control 2 of 2; `PREDICTION.txt` holds every prediction and miss). The park entered on the
