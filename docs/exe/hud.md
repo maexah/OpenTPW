@@ -3556,10 +3556,13 @@ withdrawals of 75; main's build counted `MARKER_WALL_CLEARS_REFUSAL_LATCH` 3 tim
 `ParkBuildMode.Arm` of a tool and taking an item into the hand (`ParkBuilding.Hold`, which the move tool also reaches)
 clear the latch. Not built: between the press and the release the original runs mode-1 hover passes over the clicked
 cell, so an empty-hand click on one unaffordable cell leaves `d50` 1 (the money arm, `0x00535931`) where ours leaves it 0;
-and mode 4's passes (`0x005235bb`..) set `d50` and `d5c` each tick while the item's price is above the bank's balance
-(`0x00523658`; the golden-ticket cost `+0xc4` unpaid sets neither, `0x005235e6`..`0x0052360b`) and the placer sets it on an
-entrance or exit facing off the map (`0x005295e8`, `0x00529730`), where ours leaves a carried item's latch clear
-(`CARRY_PASS_REFUSAL_LATCH`; a carried thing's own squares are built, Q633). In no game run: a refused queue or patrol click before the edges (a queue pass then Escape was, Q538), a track's refusal (no shipped
+and the placer sets it on an entrance or exit facing off the map (`0x005295e8`, `0x00529730`; the arms not re-derived,
+counted `CARRY_PLACER_OFF_MAP_LATCH`, Q1412). **Built from the listing** (Q536, in no run of the original): mode 4's
+passes (`0x005235bb`..) set `d50` and `d5c` each tick while the item's price is above the bank's balance (`0x00523658`;
+the golden-ticket cost `+0xc4` unpaid sets neither, `0x005235e6`..`0x0052360b`), `ParkBuilding.CarryPassLatched` from
+the markers' frame; a console run on the stock park read `tool`'s latch 1 with a moved Belly Bounce ($ 500) held at a
+balance of 473 and 499, 0 at 500, 1 after the drop, and 0 then 1 for a carried one at 100000 then 100 (a carried
+thing's own squares are built, Q633; whether a moved ticket ride's pointer agrees is Q1413). In no game run: a refused queue or patrol click before the edges (a queue pass then Escape was, Q538), a track's refusal (no shipped
 track reaches the path tool here; tested), Full Simulation (not
 asked: the locators are either mode's), the other three themes.
 

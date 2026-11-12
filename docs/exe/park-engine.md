@@ -3152,8 +3152,8 @@ Bounce, every square texture 1 with walls over the ride, cursor 8. **OpenTPW** (
 `AnchorUnder`, `PlaceCarriedUnder`; `ParkBuildMarkers`, `TurnedUvs`, `Glide`; `Level.CarryCursor`) draws the same
 fourteen in the same order on the same cells, puts the thing down at the centred picture's cell plus the turned map offset (`0x00529f74`), and wears `c_place` and
 `c_noplace`; the glide halves the distance each thirtieth of a second rather than each rendered frame, a said deviation.
-Not built: a track ride's first cells' squares (`CARRY_PREVIEW_TRACK_START`), and the latch the passes set
-(`CARRY_PASS_REFUSAL_LATCH`, Q536).
+Not built: a track ride's first cells' squares (`CARRY_PREVIEW_TRACK_START`), and the latch the placer sets for an end
+facing off the map (`CARRY_PLACER_OFF_MAP_LATCH`, Q1412); the passes' money latch is built (Q536, `ParkBuilding.CarryPassLatched`).
 
 **`data/generic/dynamic/garrow.MD2` and `rarrow.MD2` are not markers and are never drawn.** They are a
 model version (`0x18`/`0x17`) the one `.md2` reader `FUN_0046d6d0` refuses — it frees and returns null

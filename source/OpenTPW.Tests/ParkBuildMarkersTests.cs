@@ -222,19 +222,45 @@ public class ParkBuildMarkersTests
 	}
 
 	/// <summary>
-	/// <b>A frame's pass sets the latch only while a tool is armed</b>: a refused pass sets it, an accepted one clears it,
-	/// and with nothing armed it stands (<c>q532/orig/a-run.out</c>: <c>d50</c> 1 after the refused path click, still 1
-	/// with the locator out, 0 after the path tool was armed again and put away).
+	/// <b>A frame's pass sets the latch only while a tool is armed or a thing is in the hand</b>: a refused pass sets it, an
+	/// accepted one clears it, and with nothing armed or held it stands (<c>q532/orig/a-run.out</c>: <c>d50</c> 1 after the
+	/// refused path click, still 1 with the locator out, 0 after the path tool was armed again and put away). The carry's
+	/// pass is mode 4's (<c>FUN_005234d0</c>, cleared at <c>0x005234f2</c>, set at <c>0x0052365c</c>).
 	/// </summary>
-	/// <remarks><b>Mutations:</b> the latch taken from a frame with no tool armed; kept over an armed tool's pass; the pass taken with no cell picked (our own choice, pinned).</remarks>
+	/// <remarks><b>Mutations:</b> the latch taken from a frame with no tool armed; kept over an armed tool's pass; the pass taken with no cell picked (our own choice, pinned); the carry's pass not taken.</remarks>
 	[TestMethod]
 	public void OnlyAnArmedToolsPassMovesTheLatch()
 	{
-		Assert.IsTrue( ParkBuildMarkers.LatchAfterFrame( false, ParkBuildMode.Path, true, true ), "a refused pass" );
-		Assert.IsFalse( ParkBuildMarkers.LatchAfterFrame( true, ParkBuildMode.Path, true, false ), "an accepted pass" );
-		Assert.IsTrue( ParkBuildMarkers.LatchAfterFrame( true, ParkBuildMode.None, true, false ), "nothing armed: it stands" );
-		Assert.IsFalse( ParkBuildMarkers.LatchAfterFrame( false, ParkBuildMode.None, true, true ) );
-		Assert.IsTrue( ParkBuildMarkers.LatchAfterFrame( true, ParkBuildMode.Path, false, false ), "no cell picked: no pass" );
+		Assert.IsTrue( ParkBuildMarkers.LatchAfterFrame( false, ParkBuildMode.Path, false, true, true ), "a refused pass" );
+		Assert.IsFalse( ParkBuildMarkers.LatchAfterFrame( true, ParkBuildMode.Path, false, true, false ), "an accepted pass" );
+		Assert.IsTrue( ParkBuildMarkers.LatchAfterFrame( true, ParkBuildMode.None, false, true, false ), "nothing armed: it stands" );
+		Assert.IsFalse( ParkBuildMarkers.LatchAfterFrame( false, ParkBuildMode.None, false, true, true ) );
+		Assert.IsTrue( ParkBuildMarkers.LatchAfterFrame( true, ParkBuildMode.Path, false, false, false ), "no cell picked: no pass" );
+		Assert.IsTrue( ParkBuildMarkers.LatchAfterFrame( false, ParkBuildMode.None, true, true, true ), "the carry's pass: dearer than the bank" );
+		Assert.IsFalse( ParkBuildMarkers.LatchAfterFrame( true, ParkBuildMode.None, true, true, false ), "the carry's pass: affordable" );
+		Assert.IsTrue( ParkBuildMarkers.LatchAfterFrame( true, ParkBuildMode.None, true, false, false ), "carrying, no cell picked: no pass" );
+	}
+
+	/// <summary>
+	/// <b>The carry's pass latches where the item's price is above the bank's balance</b> (<c>0x0052365c</c>: strictly
+	/// above, so a balance equal to the price leaves it clear), <b>and never for a ticket ride not yet bought</b>
+	/// (<c>0x005235e6</c>..<c>0x0052360b</c>: the run priced at nought, the test skipped), which latches as any other once bought.
+	/// </summary>
+	/// <remarks><b>Mutations:</b> the test taken at or above (<c>&gt;=</c>); the ticket exemption dropped; the exemption kept after the ride is bought; the cost (<c>CostOfGoods</c>) read for the price.</remarks>
+	[TestMethod]
+	public void TheCarrysPassLatchesWhereThePriceIsAboveTheBank()
+	{
+		var shop = new ParkItemCatalogue.Item( 1100, "shop", "", "shop", 1, 1, null, CostOfGoods: 1, BuildPrice: 3000 );
+		var tours = new ParkItemCatalogue.Item( 1170, "Tours", "", "ride", 0, 1, null, BuildPrice: 3000, GoldenTicketCost: 1 );
+		ushort[] none = [];
+		ushort[] bought = [1170];
+
+		Assert.IsTrue( ParkBuilding.CarryPassLatched( new ParkState( false, 0, 2999 ), shop, none ), "a dollar short" );
+		Assert.IsFalse( ParkBuilding.CarryPassLatched( new ParkState( false, 0, 3000 ), shop, none ), "the price exactly" );
+		Assert.IsFalse( ParkBuilding.CarryPassLatched( new ParkState( false, 0, 2 ), new ParkItemCatalogue.Item( 1100, "shop", "", "shop", 1, 1, null, CostOfGoods: 5, BuildPrice: 1 ), none ),
+			"the build price, not the cost of goods" );
+		Assert.IsFalse( ParkBuilding.CarryPassLatched( new ParkState( false, 0, -10000 ), tours, none ), "a ticket ride not yet bought" );
+		Assert.IsTrue( ParkBuilding.CarryPassLatched( new ParkState( false, 0, 2999 ), tours, bought ), "bought, it pays cash" );
 	}
 
 	/// <summary>

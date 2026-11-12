@@ -42,10 +42,21 @@ One line per system; the detail is `docs/DOES-NOT.md` (grep it by area or Q-numb
 
 Only the item just landed is here. Every earlier item's account is in `docs/history/not-verified.md`, newest first, moved there by the maintainer's pre-commit hook: grep it by Q-number.
 
-- **Q732 (a moved ticket ride meets the money test):** in a cloud container (no Ghidra, no original, no display; the run's output was not kept), `AMovedTicketRideIsRefusedWhereTheBankIsBelowItsPrice` (needing the game) passes, and four bugs put back by hand (the pickup not marking the hand, `PlaceCarried` not telling `Build`, the test made `<=`, the exemption dropped for the carry too) each failed it. An off-screen run (`consolerun.py`, a fresh Full Simulation player with no tickets, paused) stood Jurassic Tours unbought with `buy 1170 20 60`; at a bank of -10000 `move 13 40 70` answered "costs 3000 and the park has -7000 - sound 0xaf" and left it in the hand, marked moved; at 100000 `put 40 70` built it. Not checked: the original's move of an unbought ticket ride (no original here; the rule is from `docs/exe/hud.md`'s listing read), which refusal latch the move's click honours (`0x816d50` or `0x81b604`, not read), and the red squares and cash cursor on screen (no display; the squares are checked by the test's marker list only). Filed: none.
+- **Q536 (a carried item's passes set the refusal latch):** in a cloud container (no Ghidra, no original, no display
+  photographed; the run's output was not kept, its key lines are in the lane's report), a console run on the stock park
+  with the pointer held on (48,31) read `tool`'s latch 1 with a moved Belly Bounce ($ 500) held at a balance of 473 and
+  499, 0 at 500, 1 after the drop, and 0 then 1 for a carried one at 100000 then 100, as predicted; three tests added,
+  and seven bugs put back by hand (the test made `>=`, the ticket exemption dropped, kept after the ride is bought, the
+  cost of goods read for the price, the frame not taking the carry's pass, the pass answering for an empty hand, `Hold`
+  keeping the latch) and two in the off-map finder (the exit's arm dropped, the entrance's turn dropped) each failed.
+  **Not seen on screen:** a followed member's patrol edges red after a too-dear carried thing is let go of (the latch's
+  one drawn effect; while it is held its own red squares already redden them). Not checked in the original: the rule is
+  the item's text and `docs/exe/hud.md`, "The patrol edges". The placer's off-map arm is counted, not built (Q1412); a
+  moved ticket ride's pointer is Q1413.
 
 ## Numbers (take counts fresh; these go stale within a day)
 
+- Linux, 2026-11-12, Q536 (cloud lane c73, `dotnet test` as user `tester` on the committed tree; three tests added, two needing the game; after review fixes group F): with the game, 5416 passed, 2 failed, 2 skipped of 5420; with no game named, 2346 passed, 2 failed, 3072 skipped. The two failures are `FailedStartLogTests`' `AnExceptionBeforeTheMainLoopIsLoggedAndEndsTheRunWithExit1` and `ACopyStartedOnAFolderAnotherProcessHoldsIsRefused`, both "Could not load EGL library" in the container, and both fail on `main` there too.
 - Linux, 2026-11-12, review fixes group F (`capped.sh`; three tests added, one needing the game; after group E): with the game, 5415 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5417; with no game named, 2347 passed, 0 failed, 3070 skipped.
 - Linux, 2026-11-12, review fixes group E (`capped.sh`; four tests added, one needing the game; after group D): with the game, 5412 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5414; with no game named, 2345 passed, 0 failed, 3069 skipped.
 - Linux, 2026-11-12, review fixes group D (`capped.sh`; three tests added, one needing the game; after Q732): with the game, 5408 passed, 0 failed, 2 skipped (the macOS and Windows folder tests) of 5410; with no game named, 2342 passed, 0 failed, 3068 skipped.

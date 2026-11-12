@@ -1645,16 +1645,21 @@ filed the items that cite it.
   after `Arm`. Confirm with the original (the stock park, an unaffordable single cell, `d50` read at
   `q532/orig/a-run.out`'s addresses) and a test whose price a wrong rule gets wrong. Said at the site
   (`ParkBuildMode.Arm`).
-- [ ] **Q536. A carried item's passes set the latch.** From the run 5 review (Q532 2). Mode 4's pass clears
-  `DAT_00816d50` at `0x005234f2` and sets it and `d5c` at `0x0052365c`/`0x00523662` each tick when the item's
-  BuildPrice (`+0x1b8`) is above the bank's balance, unless the golden-ticket cost `+0xc4` is positive and
-  `FUN_004d4b70` says it is unpaid (then the pending price is 0 and d50 stays clear), and not under the replay
-  (`[0x00785a2c]`). The placer (`FUN_00528a70`, `0x0052390e`) also sets d50 at `0x005295e8` and `0x00529730` for an
-  entrance or exit facing off the map (trigger not re-derived). Build both in `ParkBuildMarkers.OnUpdate` while
-  `ParkBuilding.Carrying != 0`; the player reaches it by a move with the price above the balance, which `Carry`
-  refuses but `Move` does not. `Hold` clears the latch for now; said at the site (`ParkBuilding.Hold`).
-  From Q539 (its last piece; counted as `CARRY_PASS_REFUSAL_LATCH`; the carried thing's squares are Q633's): confirm beside the original's `[0x00816d50]` and the
-  locator's edges; the bank can be held low in the original with `thingpoke.py` (`TOOLING.md`, "Recipes", Q542).
+- [ ] **Q1412. The placer's off-map latch.** From Q536. The placer (`FUN_00528a70`, called from mode 4's pass at
+  `0x0052390e`) sets `DAT_00816d50` at `0x005295e8` and `0x00529730`, for an entrance or exit facing off the map by the
+  item's text; which arm reaches each store was not re-derived (no Ghidra in the cloud lane). Ours counts
+  `CARRY_PLACER_OFF_MAP_LATCH` where `ParkBuilding.EndFacesOffMap` finds the carried thing's entrance or exit facing off
+  the map (88 counts in a run with the Belly Bounce held over (64,0)) and leaves the latch to the money test. Read both
+  stores' conditions in Ghidra (and whether `0x00529744`..`0x00529757` and `0x005299e2`..`0x005299f5`, the null returns,
+  are the same arms), then set the latch there in `CarryPassLatched` and drop the count. No jungle item's exit faces off
+  the map where its entrance does not (`TheCarrysPassFindsAnEndFacingOffTheMap`), so the exit's store is reached only
+  if the entrance's test does not return first: read that too.
+- [ ] **Q1413. A moved ticket ride's hover: latch and pointer.** From Q536. The carry's pass skips its money test for a
+  ride with a golden-ticket cost not yet bought (`0x005235e6`..`0x0052360b`), so by the decode a moved one sets neither
+  `d50` nor `d5c` in the hover; ours leaves the latch clear there (`CarryPassLatched`) but `Level.CarryCursor` shows
+  `c_cash` for it (`CarriedUnaffordable` honours the move's put-down test, Q732). Read in Ghidra whether `d5c` (and the
+  red squares) are set anywhere else for a moved one in the hover, and watch the original's cursor over bare ground with
+  a moved, unbought ticket ride dearer than the bank (`thingpoke.py`, Q542); make the pointer agree.
 - [ ] **Q537. The patrol pointer after a re-arm, watched in the original.** From the run 5 review (Q534 1). Re-arming
   the patrol tool over itself keeps `c_noplace` here (`ParkBuildMode.Arm`), by the decode (`FUN_004b5b50` ->
   `FUN_0046c350` -> `FUN_0046d5a0`; the setter `FUN_0052f200` sets a cursor for modes 3 and 1 only); not watched in
