@@ -1340,10 +1340,6 @@ filed the items that cite it.
 - [ ] **Q457. The satisfaction bar is masked to a byte.** From the week-end audit (D6, `VERIFY-16a.md` Q367/Q368).
   `ParkItemsScreen` runs satisfaction through `Bar()`'s `& 0xff`; the original does not (`0x00494031`, `0x00494199`,
   `0x00495888`, `0x00495959`) and the setter clamps 0..0x400 (`0x0066d885`). A test with -1 and 256.
-- [ ] **Q458. The staff screen's meters average as the original's.** From the week-end audit (D7, `VERIFY-16b.md`
-  Q369 1). The original averages each member's `ftol(h) & 0xff`: the kind's meter an integer mean then
-  `(m << 10) / 100` (`0x004c9cc0`), the all-staff meter a float mean times 1024 times 0.01f (`0x004c7cc0`, `0x00496a7b`),
-  in double (`advisor-park.md`, the FPU's precision). Ours scales the raw mean: 896 against 892 on `q369/skill.TPWS`.
 - [ ] **Q460. Zlib textures round the chroma terms twice.** From the week-end audit (D9, `VERIFY-13b.md` Q355 1). The
   original stores the Cb and Cr terms as float32 at 1.5 x 2^23 (`0x00594f5e`, `0x00594f87`), integers before Y is added;
   `Held` rounds once: 933 of 986 files differ by 1. Green's rounding (the FPU mode) needs a breakpoint at `0x00594f72`.

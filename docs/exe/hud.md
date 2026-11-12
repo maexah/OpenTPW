@@ -4042,6 +4042,16 @@ texture (`ui.wad`, `textures\happygrad.wct`, 32 by 32) is laid out as `ridestatb
 orange to yellow in one half and the grey track in the other. The factory measures the row's height from its font
 (`[0x007ca170]`, as the items rows' `0x007ca158`), and so does this game (Q377, "The rows' font and height").
 
+**What the two meters average** (Q458, from the week-end audit D7, `VERIFY-16b.md` Q369 1). Both count each member's
+`__ftol( +0x1f8 ) & 0xff`, the happiness truncated and cut to its low byte, as the row's bar does, but they average it
+differently. The chosen kind's meter `0x32d` takes the **integer** mean `m` and sets `(m << 10) / 100` (`0x004c9cc0`).
+The all-staff meter `0x32c` takes the **float** mean (`0x004c7cc0`) and the opener multiplies it by 1024 and by `0.01f`
+(`0x00496a7b`) at the FPU's 53 bits (control word `0x27f`, `advisor-park.md`, "Too few sideshows for the park's size") before `__ftol`: `0.01f` is a little
+under a hundredth, so a mean of exactly 50 reads 511, not 512. On `q369/skill.TPWS` the original reads 892 where scaling
+the raw mean reads 896. This game does both (`ParkStaffScreen.KindMeter`, `AllStaffMeter`); a mean over nobody reads
+nought in this game, which the original's two functions were not read for. Taken from the audit's reading of the
+disassembly; not re-read here (a cloud lane, no Ghidra).
+
 Measured in the original under Proton on `q369/skill.TPWS` (`q353/grades.TPWS` with the percentages 60, 45, 99, 0, 13
 written at the staff record's `+480`; `q369/orig/b`, `thingwords.py` on `+0x1e4`, `+0x1e8` and `+0x1f8`): its rows
 letter "$ 81" and draw the skill bars 0.925, 0.283, 0.192, 0.608 and 0.417 of their width (942, 296, 194, 614 and 430 of
