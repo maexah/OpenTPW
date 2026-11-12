@@ -2740,7 +2740,8 @@ public class Level
 	/// <summary>
 	/// Alt+L, the game table's row 11, <c>GameKey_QuickLoad</c> (<c>0x0040c040</c>): <c>&lt;theme&gt;.TPWS</c> loaded over the running park, as a
 	/// Load Park row's click loads a file (<c>FUN_005ac5d0</c>). With no such file nothing happens, the original's load
-	/// failing at the open before it takes anything down.
+	/// failing at the open before it takes anything down. A file found is read at the scene change, a frame later, and
+	/// its answer logged there: "QuickSave Loaded", or "QuickSave Load Failed" where it will not read.
 	/// </summary>
 	/// <remarks>
 	/// <b>A deviation</b>, Load Park's: the park's scene is ended and built again from the file behind the loading
@@ -2755,8 +2756,9 @@ public class Level
 		if ( SaveFolder.SavedParkPath( player.Slot, player.Name, ThemeName, ThemeName ) is not { } path )
 			return $"Quickload: QuickSave Load Failed - {player.Name}'s {ThemeName} folder holds no {ThemeName}.TPWS";
 
-		Game.RequestParkLoad( ThemeName, path );
-		return $"Quickload: QuickSave Loaded - {path} is loaded";
+		// The answer, "QuickSave Loaded" or "QuickSave Load Failed", is logged once the file is read (Game.ChangeSceneIfAsked).
+		Game.RequestQuickLoad( ThemeName, path );
+		return $"Quickload: {path} is asked for, to be read as the frame ends";
 	}
 
 	/// <summary>

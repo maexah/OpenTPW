@@ -154,6 +154,67 @@ public class ParkFileReadBeforeTheSceneEndsTests
 		Assert.AreSame( Level.ParkStart.MadeFresh, asked );
 	}
 
+	/// <summary>
+	/// <b>Alt+L's answer is logged once the file has been read</b> (Q1179): the key only asks, and the scene change says
+	/// "QuickSave Load Failed" for a <c>jungle.TPWS</c> that will not read and "QuickSave Loaded" for one that reads, as
+	/// the original picks the string from its load's answer (<c>0x00747ed4</c>, <c>0x007486bc</c>). A Load Park row's
+	/// ask, even one made over Alt+L's in the same frame, logs neither.
+	/// </summary>
+	/// <remarks>
+	/// <b>Mutations:</b> the key's old "QuickSave Loaded" at the ask fails the key's line; the failure's line dropped, or
+	/// the loaded line logged before the read, fails the cut file; the quick mark not cleared by a plain ask logs the
+	/// row's load as Alt+L's.
+	/// </remarks>
+	[TestMethod]
+	public void AltLsAnswerIsLoggedOnceTheFileIsRead()
+	{
+		var running = AParkRunning();
+		typeof( Level ).GetProperty( nameof( Level.ThemeName ) )!.SetValue( running, "jungle" );
+
+		var shipped = FileSystem.ReadAllBytes( "levels/jungle/Easymode.TPWI" );
+		var quick = Path.Combine( Jungle, "jungle.TPWS" );
+
+		File.WriteAllBytes( quick, shipped[..(shipped.Length / 2)] );
+		var (key, cut) = QuickLines( running.QuickLoadKey );
+
+		Assert.IsFalse( key.Contains( "QuickSave" ), $"the key only asks: {key}" );
+		CollectionAssert.AreEqual( new[] { "Quickload: QuickSave Load Failed - users/1Test/jungle/jungle.TPWS will not read" },
+			cut.Select( line => line.Replace( '\\', '/' ) ).ToArray() );
+
+		File.WriteAllBytes( quick, shipped );
+		var (_, good) = QuickLines( running.QuickLoadKey );
+
+		CollectionAssert.AreEqual( new[] { "Quickload: QuickSave Loaded - users/1Test/jungle/jungle.TPWS is loaded" },
+			good.Select( line => line.Replace( '\\', '/' ) ).ToArray() );
+
+		var (_, row) = QuickLines( () =>
+		{
+			var said = running.QuickLoadKey();
+			Game.RequestParkLoad( "jungle", Path.Join( "users", "1Test", "jungle", "jungle.TPWS" ) );
+			return said;
+		} );
+
+		Assert.AreEqual( 0, row.Length, "a Load Park row's ask over Alt+L's is not Alt+L's" );
+	}
+
+	/// <summary>The key's own line, and the Quickload lines the scene change after it logged.</summary>
+	private static (string Key, string[] Changed) QuickLines( Func<string> press )
+	{
+		var said = new List<string>();
+		Logger.LogDelegate listen = ( _, line ) => said.Add( line );
+		var key = press();
+
+		Logger.OnLog += listen;
+
+		try
+		{
+			Game.ChangeSceneIfAsked( () => { }, ( _, _ ) => { }, () => { } );
+		}
+		finally { Logger.OnLog -= listen; }
+
+		return (key, said.Where( line => line.Contains( "Quickload:" ) ).ToArray());
+	}
+
 	/// <summary>The park asked for, changed to: what was done, and what the build was handed.</summary>
 	private static string Change( string file, out Level.ParkStart? built )
 	{
@@ -187,6 +248,7 @@ public class ParkFileReadBeforeTheSceneEndsTests
 		Asked( "_parkAsked" ).SetValue( null, null );
 		Asked( "_parkFileAsked" ).SetValue( null, null );
 		Asked( "_parkFreshAsked" ).SetValue( null, false );
+		Asked( "_parkQuickAsked" ).SetValue( null, false );
 	}
 
 	private static FieldInfo Asked( string field ) => typeof( Game ).GetField( field, BindingFlags.Static | BindingFlags.NonPublic )!;

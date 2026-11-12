@@ -2231,13 +2231,6 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   folder it stands for hash to two names. Map such a drive to its folder before hashing (`QueryDosDevice`, or the handle's
   final path, `GetFinalPathNameByHandle`), on Windows only, with a test that runs only there. Not measured: whether anyone
   starts the game that way. Confirm: on Windows, a copy started on `subst S: <game>` while another runs on the folder is refused.
-- [ ] **Q1179. Alt+L's log says "QuickSave Loaded" before the file is read.** From Q994. `Level.QuickLoadKey` answers
-  `Quickload: QuickSave Loaded - <path> is loaded` as it asks for the load; since Q994 the file is read at the scene change, and one
-  that will not read is then logged `Load: <path> will not read ...` with the park kept, so the log carries both lines. The original
-  picks "QuickSave Loaded" or "QuickSave Load Failed" (`0x00747ed4`, `0x007486bc`) from the load's answer, into the empty logger
-  `FUN_005da3c0` (`docs/exe/saves.md`, "The quicksave and quickload keys"), so a player sees nothing either way. Log only: say
-  "QuickSave Load Failed" when the read fails (the read is at `Game.ChangeSceneIfAsked`, a frame later). Confirm: Alt+L on a cut
-  `jungle.TPWS` logs the failed string and not the loaded one.
 - [ ] **Q996. A failed route is not revived; a binding read on its press is rebuilt as the frame ends.** From the week-end audit 2026-10-31
   (D1, D2 of the docs sweep). (1) The original's walker revives a failed route when the ground near the guest has changed since the last plan
   and walks them to the loser's back of queue (`0x0050ed79`); `PeepBehaviour.cs:2459` says so, `docs/exe/ride-operation.md:4557` and STATUS
