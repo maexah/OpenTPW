@@ -110,6 +110,53 @@ public class LevelHandOverTests
 		Assert.AreEqual( unchecked((int)state.RandomSeed), written.RandomSeed );
 	}
 
+	/// <summary>
+	/// <b>A park read in part is not written and the player is told</b> (Q1200): <see cref="Level.WritePark"/> over a file whose body
+	/// stops halfway answers null, writes nothing, and leaves PARK NOT SAVED waiting in the refusal's own words, not the folder's.
+	/// </summary>
+	[TestMethod]
+	public void AParkReadInPartIsNotWrittenAndSaysParkNotSaved()
+	{
+		var data = (BaseFileSystem)FileSystem;
+		var file = data.ReadAllBytes( ShippedPark );
+		var shipped = Read( file );
+		var people = new ParkPeople( shipped );
+
+		using var stream = new MemoryStream( file );
+		var reader = new SaveReader( stream );
+		var body = reader.ReadFile();
+		var cut = new ParkWorld( body[..(body.Length / 2)], reader.Preamble );
+
+		Assert.IsNotNull( cut.Problem, "the cut body is read in part" );
+
+		_root = Directory.CreateTempSubdirectory( "opentpw-handover-" ).FullName;
+		var jungle = Path.Combine( _root, "users", "1Test", Theme );
+		Directory.CreateDirectory( jungle );
+		_oldSaves = SaveFileSystemOrNull;
+		SaveFileSystem = new BaseFileSystem( _root );
+		typeof( Players ).GetProperty( nameof( Players.Current ) )!.SetValue( Players.Roster, new Player( 0, "Test", new PlayerFile { InstantAction = true } ) );
+
+		while ( SaveTrouble.Pending )
+			SaveTrouble.Take();
+
+		SaveTrouble.NewVisit();
+
+		try
+		{
+			Assert.IsNull( Level.WritePark( cut, people.State, Theme, "Cut", people ), "the park is refused" );
+			Assert.IsFalse( File.Exists( Path.Combine( jungle, "Cut.TPWS" ) ) );
+			Assert.IsTrue( SaveTrouble.Pending, "the player is told" );
+			Assert.AreEqual( $"PARK NOT SAVED\n\n{SaveTrouble.ParkRefusedWhy}", SaveTrouble.Take() );
+		}
+		finally
+		{
+			while ( SaveTrouble.Pending )
+				SaveTrouble.Take();
+
+			SaveTrouble.NewVisit();
+		}
+	}
+
 	private static ParkWorld Read( byte[] file )
 	{
 		using var stream = new MemoryStream( file );

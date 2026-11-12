@@ -152,7 +152,48 @@ public static class Display
 				break;
 		}
 
-		Log.Info( $"Display: {mode}{(mode == DisplayMode.FullScreen ? $" at {fullScreen}" : "")}, window {window.Size.X}x{window.Size.Y}" );
+		Log.Info( AppliedLine( mode, fullScreen, window.Size ) );
+
+		// SDL hands the window its new size as an event the next pump reads, so the size above is the one it had before
+		// (Q1200: "FullScreen at 2560 x 1440, window 2560x1359"); the size it is put at is logged as it arrives.
+		if ( _watched != window )
+		{
+			_watched = window;
+			window.Resized += size => { if ( Watch.Resized( size ) is { } line ) Log.Info( line ); };
+		}
+
+		Watch.Arm( mode );
+	}
+
+	private static Window? _watched;
+
+	/// <summary>The resize <see cref="Apply"/> waits for, the first after it.</summary>
+	public static readonly ResizeWatch Watch = new();
+
+	/// <summary><see cref="Apply"/>'s line, written before SDL's resize is pumped, so it says the window's size is the one before.</summary>
+	public static string AppliedLine( DisplayMode mode, VideoMode fullScreen, Point2 window )
+		=> $"Display: {mode}{(mode == DisplayMode.FullScreen ? $" at {fullScreen}" : "")} asked, window {window.X}x{window.Y} before its resize";
+
+	/// <summary>
+	/// The first resize after <see cref="Apply"/>, logged as the size the window was put at; a later one (a drag) is not. Where the window
+	/// already had the size asked for no resize comes, and the applied line's size is the one it keeps.
+	/// </summary>
+	public sealed class ResizeWatch
+	{
+		private DisplayMode? _waiting;
+
+		/// <summary>The next resize is <paramref name="mode"/>'s.</summary>
+		public void Arm( DisplayMode mode ) => _waiting = mode;
+
+		/// <summary>The line for a resize to <paramref name="size"/>, or null where none is awaited.</summary>
+		public string? Resized( Point2 size )
+		{
+			if ( _waiting is not { } mode )
+				return null;
+
+			_waiting = null;
+			return $"Display: {mode}, window {size.X}x{size.Y} after its resize";
+		}
 	}
 
 	private static unsafe void SetFullScreenMode( Window window, VideoMode wanted )

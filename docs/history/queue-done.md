@@ -12145,6 +12145,16 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   the All Rides, All Staff, All Visitors, Staff Training Budgets and entry-price screens, the Escape menu, the Belly Bounce's window ("Duration : 30 secs" whole), the buy screen and the hire screen up, and over the Belly Bounce's buy
   row the bar read "Bouncy CastleLeft-click to buy" (row 148 through `FormatHelp`); a control build with the help bar reading bare (`q944/ctl1`, not committed)
   hid the bar there and counted `UIHELPTEXT_148_READ_BARE` 591 times and a staff member's 555 393 times. Nine put-back bugs each fail a test.
+- [x] **Q1200. A park read in part says PARK NOT SAVED; the display line reads the window after its resize.** From Q997 (S-M2, ST-F5 of
+  the week-end audit 2026-10-31), not built there because each is seen only on a screen. (1) S-M2: a park read in part is refused by the
+  writer (`ParkFileWriter.Body`, "was not read whole") and `Level.WritePark` logs a warning only (`catch ( InvalidOperationException )`),
+  with no `SaveTrouble.Failed`, so Save Park, Alt+S and the autosave lose the play in silence; the original has no such refusal. Tell it
+  in the game's own box (rule 11; a text of its own, not "The save folder cannot be written"), Asked or once a visit as `SaveTrouble`
+  does. Confirm: a truncated copy loaded, Save Park, the box photographed. (2) ST-F5: `Display.Apply`'s line and the log's head read the
+  window's size before SDL's resize event is pumped (`console.log:53814`: `FullScreen at 2560 x 1440, window 2560x1359`); the
+  `LaunchReport` line (`LaunchReport.LogGraphics`, after `Display.Apply` in `Game.cs`) is inferred to do the same. Read the size after a
+  pump, or say in the line that it is the size asked for. Confirm: a full-screen start on a real display, the two lines against the
+  screen's size. **Done 2026-11-12** (cloud lane c101; moved here by hand, the queue hook refusing on Q1111 and Q452 being listed both open and done): (1) `SaveTrouble.ParkRefused` from `Level.WritePark`'s catch, its own words; (2) `Display.Apply`'s and `LaunchReport`'s lines say `before its resize`, and `Display.ResizeWatch` logs the first resize after the apply. Off-screen only; the photographs are Q1536.
 
 ## B. Docs and comments
 

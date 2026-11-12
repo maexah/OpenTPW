@@ -2190,16 +2190,13 @@ and matches the decode (row 80, `advisor-park.md`); not filed.
   not measured. (2) `Input.cs:228`: a binding read on its press or as a held state is rebuilt as the frame ends; Q120's decode covers
   key-ups only, so whether a press-time reading differs from the original at all is not established. Decode it first. Confirm: (1) a route
   blocked and cleared, in both games; (2) two events in one frame, both games.
-- [ ] **Q1200. A park read in part says PARK NOT SAVED; the display line reads the window after its resize.** From Q997 (S-M2, ST-F5 of
-  the week-end audit 2026-10-31), not built there because each is seen only on a screen. (1) S-M2: a park read in part is refused by the
-  writer (`ParkFileWriter.Body`, "was not read whole") and `Level.WritePark` logs a warning only (`catch ( InvalidOperationException )`),
-  with no `SaveTrouble.Failed`, so Save Park, Alt+S and the autosave lose the play in silence; the original has no such refusal. Tell it
-  in the game's own box (rule 11; a text of its own, not "The save folder cannot be written"), Asked or once a visit as `SaveTrouble`
-  does. Confirm: a truncated copy loaded, Save Park, the box photographed. (2) ST-F5: `Display.Apply`'s line and the log's head read the
-  window's size before SDL's resize event is pumped (`console.log:53814`: `FullScreen at 2560 x 1440, window 2560x1359`); the
-  `LaunchReport` line (`LaunchReport.LogGraphics`, after `Display.Apply` in `Game.cs`) is inferred to do the same. Read the size after a
-  pump, or say in the line that it is the size asked for. Confirm: a full-screen start on a real display, the two lines against the
-  screen's size.
+- [ ] **Q1536. Q1200's two photographs: the PARK NOT SAVED box of a park read in part, and a full-screen start's display lines.** From
+  Q1200, built in a cloud lane with no display (desk lane). (1) A player's newest jungle park cut to nine tenths of its body
+  (`lib/consolerun.py`'s run did it so), entered, Save Park: photograph the box (`PARK NOT SAVED`, then `The game didn't read all
+  of this park's file, or can't put back what has changed, so the park can't be written.`), its fit at 1024 x 768 and below
+  (`OPENTPW_TEXT_CENSUS=1`), and the Exit To Lobby autosave's box in the lobby. (2) A full-screen and a borderless start on a real
+  display: the log's `Display: ... before its resize` and `... after its resize` lines and `LaunchReport`'s against the screen's
+  size (Alexah's `console.log:53814` read `window 2560x1359` under 2560 x 1440). Only borderless on a 1280 x 1024 Xvfb was run.
 - [ ] **Q1201. The advisor gaps left by Q420 and Q443, and the save folder's `.TPWS.tmp`.** From Q997 (the week-end audit 2026-10-31),
   not built there because each needs the original or Ghidra (none in a cloud lane). (1) The theme's advisor's golden-ticket clips are not
   built. (2) A rider standing on a node a clip moves faces as it does at rest. (3) The advisor's lines that wait thirty days from the newest build

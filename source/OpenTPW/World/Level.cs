@@ -800,7 +800,7 @@ public class Level
 	/// (<c>.tmp</c>) beside it, which <see cref="SaveFolder.NewestPark"/> and the Load Park list do not take for a park. A failure
 	/// of any kind is logged and answered with null, and the game goes on, as the original's save answers a failure
 	/// number and its screen closes all the same. A deviation (Q982): where the save folder cannot be written the player
-	/// is also told in a message box (<see cref="SaveTrouble"/>).
+	/// is also told in a message box (<see cref="SaveTrouble"/>), and so where the writer refuses the park (Q1200).
 	/// </para>
 	/// </summary>
 	internal string? WritePark( string name, string extension = SaveFolder.SavedParkExtension )
@@ -1231,7 +1231,9 @@ public class Level
 		}
 		catch ( InvalidOperationException e )
 		{
+			// Told in the game's box as the folder's failures are (Q1200): Save Park, Alt+S and the autosave would otherwise lose the play in silence.
 			Log.Warning( $"Save: '{name}' is not written - {e.Message}" );
+			SaveTrouble.ParkRefused();
 			return null;
 		}
 

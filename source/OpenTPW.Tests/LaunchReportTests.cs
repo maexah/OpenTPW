@@ -58,10 +58,35 @@ public class LaunchReportTests
 	{
 		Assert.AreEqual( "Display: windowed, the game 1280 x 720, the desktop 2560 x 1440 at 144 Hz",
 			LaunchReport.Screen( DisplayMode.Windowed, new Point2( 1280, 720 ), new VideoMode( 2560, 1440, 144 ) ) );
-		Assert.AreEqual( "Display: borderless full screen, the game 1920 x 1080, the desktop not known",
+		Assert.AreEqual( "Display: borderless full screen, the game 1920 x 1080 before its resize, the desktop not known",
 			LaunchReport.Screen( DisplayMode.BorderlessFullScreen, new Point2( 1920, 1080 ), null ) );
-		Assert.AreEqual( "Display: full screen, the game 800 x 600, the desktop 800 x 600 at 60 Hz",
+		Assert.AreEqual( "Display: full screen, the game 800 x 600 before its resize, the desktop 800 x 600 at 60 Hz",
 			LaunchReport.Screen( DisplayMode.FullScreen, new Point2( 800, 600 ), new VideoMode( 800, 600, 60 ) ) );
+	}
+
+	/// <summary>
+	/// <b>Display's lines say which size they read</b> (Q1200): the applied line's is the window's before SDL's resize is pumped
+	/// (<c>2560x1359</c> under a full screen of 2560 x 1440, as Alexah's log had it), and the first resize after it is logged with the
+	/// size the window was put at, once: a drag later is not the display's.
+	/// </summary>
+	[TestMethod]
+	public void TheDisplaysLinesSayTheSizeBeforeItsResizeAndTheSizeAfter()
+	{
+		Assert.AreEqual( "Display: FullScreen at 2560 x 1440 asked, window 2560x1359 before its resize",
+			Display.AppliedLine( DisplayMode.FullScreen, new VideoMode( 2560, 1440, 144 ), new Point2( 2560, 1359 ) ) );
+		Assert.AreEqual( "Display: BorderlessFullScreen asked, window 1280x720 before its resize",
+			Display.AppliedLine( DisplayMode.BorderlessFullScreen, new VideoMode( 2560, 1440, 144 ), new Point2( 1280, 720 ) ) );
+
+		var watch = new Display.ResizeWatch();
+
+		Assert.IsNull( watch.Resized( new Point2( 900, 700 ) ), "no resize is awaited before the display is applied" );
+
+		watch.Arm( DisplayMode.FullScreen );
+		Assert.AreEqual( "Display: FullScreen, window 2560x1440 after its resize", watch.Resized( new Point2( 2560, 1440 ) ) );
+		Assert.IsNull( watch.Resized( new Point2( 1200, 800 ) ), "a later resize is a drag, not the display's" );
+
+		watch.Arm( DisplayMode.Windowed );
+		Assert.AreEqual( "Display: Windowed, window 1024x768 after its resize", watch.Resized( new Point2( 1024, 768 ) ) );
 	}
 
 	[TestMethod]

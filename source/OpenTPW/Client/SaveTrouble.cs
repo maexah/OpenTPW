@@ -1,7 +1,8 @@
 namespace OpenTPW;
 
 /// <summary>
-/// A write to the save folder that failed because the folder cannot be written, kept until the scene tells the player; it
+/// A write to the save folder that failed because the folder cannot be written, or a park the file's writer refused
+/// (<see cref="ParkRefused"/>), kept until the scene tells the player; it
 /// also carries the start's notice about players in the folder not in use (<see cref="SaveHome"/>) and the word that a file
 /// was copied aside before it was written over (<see cref="BackedUp"/>).
 ///
@@ -28,6 +29,7 @@ namespace OpenTPW;
 internal static class SaveTrouble
 {
 	private static string? _what;
+	private static string _why = FolderShut;
 	private static bool _asked;
 	private static bool _told;
 	private static string? _notice;
@@ -74,9 +76,30 @@ internal static class SaveTrouble
 		if ( e is not (IOException or UnauthorizedAccessException) )
 			return;
 
-		if ( _what == null || what == "PARK" )
-			_what = what;
+		Lost( what, FolderShut );
 	}
+
+	/// <summary>
+	/// The park file's writer refused the park (<c>ParkFileWriter</c>'s <see cref="InvalidOperationException"/>): the file it was
+	/// loaded from was read in part, or what is running cannot be put into it. Waits as a failure does, PARK outranking the rest,
+	/// with words of its own, as the folder is not at fault. <b>A deviation</b> (Q1200, <c>AGENTS.md</c> rule 11): the original's
+	/// writer has no such refusal, so it has no word for it; the log says which refusal it was.
+	/// </summary>
+	internal static void ParkRefused() => Lost( "PARK", ParkRefusedWhy );
+
+	private static void Lost( string what, string why )
+	{
+		if ( _what == null || what == "PARK" )
+		{
+			_what = what;
+			_why = why;
+		}
+	}
+
+	private const string FolderShut = "The save folder cannot be written.";
+
+	/// <summary>What a refused park says under its title: plain, no path and no module (the log names it).</summary>
+	internal const string ParkRefusedWhy = "The game didn't read all of this park's file, or can't put back what has changed, so the park can't be written.";
 
 	/// <summary>The failure waiting was of something the player asked for, so it is told whenever it happens.</summary>
 	internal static void Asked()
@@ -129,7 +152,9 @@ internal static class SaveTrouble
 			return null;
 
 		var asked = _asked;
+		var why = _why;
 		_what = null;
+		_why = FolderShut;
 		_asked = false;
 
 		if ( !asked && _told )
@@ -142,7 +167,7 @@ internal static class SaveTrouble
 
 		return cardSaved && what == "OPTIONS"
 			? OptionsNotSavedTitle
-			: $"{what} NOT SAVED\n\nThe save folder cannot be written.";
+			: $"{what} NOT SAVED\n\n{why}";
 	}
 
 	/// <summary>

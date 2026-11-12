@@ -739,6 +739,16 @@ cannot tell afterwards, as the window is gone, so its question (UITEXT 9) takes 
 cannot be made in `save\` (`SaveFolder.CanWrite`): `The save folder cannot be written, so nothing is saved.` Its tick
 still quits. The window's own close, with a park up, writes the autosave as before and tells nobody; the log says.
 
+A park the writer refuses (Q1200; `ParkFileWriter`'s `InvalidOperationException`: the file the park was loaded from was read
+in part, `ParkWorld.Problem` or a module's own, or what is running cannot be put into it) is told the same way, with words of
+its own, the folder not being at fault: `PARK NOT SAVED`, then `The game didn't read all of this park's file, or can't put
+back what has changed, so the park can't be written.` (`SaveTrouble.ParkRefused`, from `Level.WritePark`'s catch; the log's
+`Save: '<name>' is not written - <refusal>` names which). Asked or once a scene, as above. The original's writer has no such
+refusal, so it has no words for it (a deviation, `AGENTS.md` rule 11). Measured off-screen in a cloud container
+(`lib/consolerun.py`, a player's newest jungle park cut to nine tenths of its body): entering told it for `restart.INTS`, a
+console `savepark` after the box was closed logged `Save trouble: PARK NOT SAVED is not told again this visit`, and Alt+S
+opened it again. Not photographed.
+
 Measured on Linux with a private game folder whose `save/` was read-only at every level and no `restart.INTS`
 (`q982/confirm.py`, 2026-10-31): entering the park, Alt+S, Save Park, the options tick and Exit To Lobby each opened the
 box once, the lobby's carrying the autosave, and the lobby's Quit question carried the extra line; the same clicks in a
