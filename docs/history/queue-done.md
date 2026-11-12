@@ -13532,3 +13532,13 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   child's voice until the next child is made: `ParkScreams.Stop` and `ParkAudio.StopScriptSound` cut it. Let the pruned
   child go on the empty pass, on both paths (`Chain.Voice`, `ScriptVoice.Voice`), with a test that stops a chain on that
   pass.
+- [x] **Q225. A guest full of litter neither walks to a bin nor drops it (decoded in Q899) - first piece: the bin errand
+  and the drop.** Built from `ride-operation.md`, (c), "A cell's litter" and "The bin errand" (no Ghidra on the lane): at
+  litter 90 a deciding guest takes the nearest `HoldsLitter` thing under squared distance 9 whose `mEntryPos` routes (each
+  nearer one asked, a tie the first in the chain) into `MajorDest` and state 9, the turn ended; with none, litter of kind
+  1 + r % 5 on their cell, litter nought, on to the leave test. State 9 walks; arriving with the bin named sets its script's
+  `VAR_TRIGGER` 1, else (none named, or given up) the drop; litter nought, state 6. A littered cell keeps what it holds. The
+  console's `cell` prints the cell's litter. `ParkDecidingArmsTests`: three tests replace the count test; six bugs put back
+  by hand each failed one. Off-screen in the shipped park: a guest at (46,31) took litter 90 to bin 17 and its
+  `VAR_TRIGGER` went 1 then 0, one at (47,22) dropped kind 3 there. Done in cloud lane c42; the drawing, the sprite's place
+  and the written file are Q1288.

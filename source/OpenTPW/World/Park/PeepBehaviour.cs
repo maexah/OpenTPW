@@ -820,23 +820,12 @@ public sealed class PeepBehaviour
 
 				break;
 
-			// <b>One state answered by standing still, saying what it waits on.</b> Nothing here sets 9.
-			// A case that breaks looks exactly like a missing case on screen - the guest stands
-			// still either way - so the difference has to be written down, and UnansweredState is what lets
-			// the program itself tell them apart.
-			//
-			// <b>GoingToMinorDestination (9) is a LITTER-BIN ERRAND.</b> FUN_004fec90 sets it at 004fedf6, when
-			// the guest's litter (+0x1b4) reaches 90 and FUN_00500dc0 (at 004feddd) finds the nearest thing
-			// carrying flag +0x32 & 0x40 within squared distance under 9; its turn, FUN_004fff20 (case 9 of
-			// FUN_005019f0), walks there, writes that thing's script variable 0 to one, ZEROES the guest's
-			// litter and returns them to Deciding. It never queues, never charges and never touches +0x1de. In
-			// Lost Kingdom there is exactly one such target: thing 17, the Litter Bin at (44,29).
-			//
-			// <b>It is reachable content.</b> The Drinks Shop's LitterEffect is 50, so two drinks put a guest
-			// over the threshold, and with the errand unbuilt the guest carries the litter (counted in CountBeforeLeaving).
-			// The separate "Minor Decision" (FUN_004fd570) stays in state 10.
-			//
+			// The litter-bin errand - FUN_004fff20, case 9 of FUN_005019f0. The deciding turn's litter arm sets it
+			// when a bin in reach routes (CountBeforeLeaving); in Lost Kingdom the one bin is thing 17, the Litter
+			// Bin at (44,29). It never queues, never charges and never touches +0x1de.
 			case PeepState.GoingToMinorDestination:
+				BinErrand( peep, walk, playing, tick );
+
 				break;
 
 			// <b>And a guard for a state with no case.</b> A guest put into one would stand still for ever
@@ -1303,7 +1292,8 @@ public sealed class PeepBehaviour
 		if ( JumpsForJoy( peep, tick ) )
 			return;
 
-		CountBeforeLeaving( peep, walk, draw, tick );
+		if ( CountBeforeLeaving( peep, walk, draw, tick ) )
+			return;
 
 		if ( WantsToLeave( peep ) && Leave( peep, walk, admission, draw, tick ) )
 			return;
@@ -1419,31 +1409,137 @@ public sealed class PeepBehaviour
 	}
 
 	/// <summary>
-	/// The deciding turn's two arms after the happy jump and ahead of the leave test (to <c>0x004fee51</c>),
-	/// each counted where the original tests it and neither built: the vomit, and litter, which goes to a bin in
-	/// reach or onto the ground (<c>docs/exe/ride-operation.md</c>, "The state-6 turn, in order").
+	/// The deciding turn's two arms after the happy jump and ahead of the leave test (to <c>0x004fee51</c>): the vomit,
+	/// counted where the original tests it, and litter, built: a bin in reach that routes takes the guest on the bin
+	/// errand, and with none the litter goes on the ground (<c>docs/exe/ride-operation.md</c>, "The state-6 turn, in
+	/// order", (c)).
 	/// </summary>
 	/// <remarks>
-	/// In the original the vomit and the bin errand each end the turn, and each clears its own test: the vomit and
-	/// the dropped litter zero their levels. Here nothing ends the turn or clears a test, so a count is of deciding
-	/// turns on which the test held, and the turn goes on to the leave test and the split as before. The bin's route
-	/// (<c>FUN_004fa530</c> inside <c>FUN_00500dc0</c>) is not asked, so a bin in reach is counted as the errand
-	/// whether or not a walk would get there.
+	/// In the original the vomit ends the turn and clears its own test. Here it is not built, so its count is of deciding
+	/// turns on which the test held, and the turn goes on to the litter arm, which the original would not reach on such a
+	/// turn. A litter drop with no bin goes on to the leave test, as the original's does.
 	/// </remarks>
-	private void CountBeforeLeaving( Peep peep, PeepWalk walk, int draw, int tick )
+	/// <returns>Whether the turn ends here, the guest set off for a bin.</returns>
+	private bool CountBeforeLeaving( Peep peep, PeepWalk walk, int draw, int tick )
 	{
 		if ( (byte)(int)peep.Vomit == VomitAt && draw % 3 == 0 )
 			Unimplemented.Report( "DECIDE_VOMIT" );
 
 		if ( (byte)(int)peep.Litter < LitterFullFrom )
+			return false;
+
+		var (x, y) = walk.Position.Cell;
+
+		if ( SetOffForABin( peep, walk, x, y ) is { } bin )
+		{
+			peep.MajorDest = bin.ThingId;
+			peep.SetState( PeepState.GoingToMinorDestination, tick, _random );
+
+			Log.Info( $"Person {peep.ThingId}: litter {peep.Litter:0}, off to the bin {bin.ThingId} at "
+				+ $"({bin.CellX},{bin.CellY}) from ({x},{y}), tick {tick}" );
+
+			return true;
+		}
+
+		DropLitter( peep, x, y, tick );
+
+		return false;
+	}
+
+	/// <summary>
+	/// The nearest litter bin a deciding guest on (x, y) can route to - <c>FUN_00500dc0( 3 )</c>: the object chain
+	/// walked for things holding litter (<c>+0x32 &amp; 0x40</c>) at a squared cell distance under
+	/// <see cref="LitterBinReach"/> squared, the route to its <c>mEntryPos</c> (<c>FUN_004fa530</c>) asked of each
+	/// one nearer than the best so far. A tie keeps the first in the chain. Every asking rewrites the walk, so a
+	/// nearer bin that does not route, met after one that did, leaves the walk failed under the earlier bin's name,
+	/// and the errand's first walk gives up (<see cref="BinErrand"/>).
+	/// </summary>
+	private ParkWorld.CatalogueObject? SetOffForABin( Peep peep, PeepWalk walk, int x, int y )
+	{
+		ParkWorld.CatalogueObject? best = null;
+		var reach = LitterBinReach * LitterBinReach;
+
+		foreach ( var thing in State.ObjectsInChainOrder() )
+		{
+			if ( !thing.HoldsLitter )
+				continue;
+
+			var distance = SquaredCells( x, y, thing.CellX, thing.CellY );
+
+			if ( distance >= reach )
+				continue;
+
+			// A bin with no entrance cell: what the original's route to cell nought does is not read.
+			if ( thing.EntryPos == 0 )
+			{
+				Unimplemented.Report( "LITTER_BIN_WITHOUT_ENTRY" );
+				continue;
+			}
+
+			if ( !SendTo( State, peep, walk, MapStep.CellAt( thing.EntryPos ) ) )
+				continue;
+
+			best = thing;
+			reach = distance;
+		}
+
+		return best;
+	}
+
+	/// <summary>
+	/// A guest's litter on the ground: kind 1 + r % 5 on a fresh draw (<c>[0x0070048c]</c>, 6, less one) on the cell
+	/// they stand on (<see cref="ParkState.DropLitter"/>), and their litter nought, whether the cell took it or
+	/// already held some (<c>0x004fee0e</c>..<c>0x004fee51</c>, <c>0x004fff8c</c>..<c>0x004fffca</c>).
+	/// </summary>
+	private void DropLitter( Peep peep, int x, int y, int tick )
+	{
+		var kind = 1 + (_random.Next() % LitterKindsDropped);
+		var dropped = State.DropLitter( x, y, kind );
+
+		Log.Info( $"Person {peep.ThingId}: litter {peep.Litter:0} dropped on ({x},{y}), kind {kind}"
+			+ (dropped ? "" : ", the cell already littered") + $", tick {tick}" );
+
+		peep.Litter = 0f;
+	}
+
+	/// <summary>How many kinds a guest's litter is drawn from, the first being 1 (<c>[0x0070048c]</c> 6, less one).</summary>
+	public const int LitterKindsDropped = 5;
+
+	/// <summary>
+	/// Tells a bin a guest has put litter in it - the original's write of the thing's script variable 0
+	/// (<c>FUN_0055a0b0( script, 0, 1 )</c>, <c>0x004fff7d</c>), which in Lost Kingdom's one bin, <c>PelBin.RSE</c>, is
+	/// <c>VAR_TRIGGER</c>. <see cref="ParkPeople"/> hands in its own; nothing handed in tells nobody.
+	/// </summary>
+	internal Action<ParkWorld.CatalogueObject> TriggerBin { get; set; } = static _ => { };
+
+	/// <summary>
+	/// The bin errand, state 9's turn - <c>FUN_004fff20</c> (<c>docs/exe/ride-operation.md</c>, "The bin errand"):
+	/// the walk, and on arriving at a bin still named the bin told; arriving with none named, or giving up, the
+	/// litter on the guest's cell. Either way their litter is nought and they decide again.
+	/// </summary>
+	private void BinErrand( Peep peep, PeepWalk walk, SpriteScript? playing, int tick )
+	{
+		var verdict = Walked( peep, walk, playing );
+
+		if ( verdict == WalkVerdict.Walking )
 			return;
 
 		var (x, y) = walk.Position.Cell;
 
-		var bin = State.ObjectsInChainOrder().Any( thing => thing.HoldsLitter
-			&& SquaredCells( x, y, thing.CellX, thing.CellY ) < LitterBinReach * LitterBinReach );
+		if ( verdict == WalkVerdict.Arrived && State.TryObject( peep.MajorDest, out var bin ) )
+		{
+			TriggerBin( bin );
 
-		Unimplemented.Report( bin ? "DECIDE_LITTER_BIN_ERRAND" : "DECIDE_LITTER_DROPPED" );
+			Log.Info( $"Person {peep.ThingId}: litter {peep.Litter:0} put in the bin {bin.ThingId} from ({x},{y}), tick {tick}" );
+
+			peep.Litter = 0f;
+		}
+		else
+		{
+			DropLitter( peep, x, y, tick );
+		}
+
+		peep.SetState( PeepState.Deciding, tick, _random );
 	}
 
 	/// <summary>

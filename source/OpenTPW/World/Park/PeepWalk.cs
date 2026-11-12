@@ -147,7 +147,7 @@ public sealed class PeepWalk
 	/// <b>This is a departure and it is named.</b> In the original nobody plans a route from inside the walk:
 	/// the state machine does it on the way in, through <c>FUN_00510100</c>, which is reached from three
 	/// places in <c>FUN_004f9490</c> and one each in <c>FUN_004fa530</c> and <c>FUN_004fa5f0</c>. Those are what
-	/// the twenty-two state behaviours call. <b>Twenty-one of the behaviours are built</b> and several plan
+	/// the twenty-two state behaviours call. <b>All twenty-two behaviours are built</b> and several plan
 	/// routes of their own, but the departure stands for the case it was written for: a guest
 	/// restored from a file has a destination and no route, and something has to ask for one or nobody
 	/// ever takes a step.

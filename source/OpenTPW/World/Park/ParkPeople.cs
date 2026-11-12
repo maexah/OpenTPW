@@ -16,8 +16,8 @@ namespace OpenTPW;
 /// <b>Guests walk, and arriving somewhere now means something.</b> The needs loop is the first of the
 /// original's two per-guest calls and the twenty-two state behaviours are the second - see
 /// <see cref="PeepBehaviour"/>, which is that second call and which decides what a walk coming to an end
-/// amounts to. <b>Twenty-one of the twenty-two are built</b>; the other, the litter-bin errand
-/// (<see cref="PeepState.GoingToMinorDestination"/>), stands at the foot of its switch saying what it waits on.
+/// amounts to. <b>All twenty-two are built</b>, the litter-bin errand
+/// (<see cref="PeepState.GoingToMinorDestination"/>) the last.
 /// <para>
 /// <b>They choose now.</b> A guest judges the admission fee, pays it, decides where to go, walks there,
 /// joins the queue and steps up it, is invited aboard, rides, and is let off at the exit. Six of this
@@ -314,7 +314,9 @@ public sealed partial class ParkPeople : Entity
 			MayCrossTheRoad = MayCrossTheRoad,
 			// And who stands near a deciding guest, which only the holder of everybody's walk can say.
 			EntertainerToWatch = EntertainerToWatch,
-			BalloonBeside = BalloonBeside
+			BalloonBeside = BalloonBeside,
+			// And the bin a guest's litter goes into, told through its script.
+			TriggerBin = TriggerBin
 		};
 
 		// Staff take the balance stack alone: every constant they run on is a per-grade entry in it, and
@@ -1577,6 +1579,20 @@ public sealed partial class ParkPeople : Entity
 	/// Whether another guest on (x, y) holds a balloon, for a prankster's third prank (<c>0x004ff1c8</c>..
 	/// <c>0x004ff1d9</c>: not themselves, a guest, <c>mBalloonScript</c> set).
 	/// </summary>
+	/// <summary>
+	/// A bin's side of a guest's litter put in it: the bin's script's <c>VAR_TRIGGER</c> set to 1, which
+	/// <c>PelBin.RSE</c> waits on, plays its animation for and sets to nought again (<c>docs/exe/ride-operation.md</c>,
+	/// "The bin errand"). A bin with no script, or one declaring no such variable, is told nothing and logged.
+	/// </summary>
+	private void TriggerBin( ParkWorld.CatalogueObject bin )
+	{
+		if ( _scriptFor?.Invoke( bin.ThingId ) is not { } script || !script.Set( BinTrigger, 1 ) )
+			Log.Info( $"People: the bin {bin.ThingId} has no script declaring {BinTrigger}, so it is told nothing" );
+	}
+
+	/// <summary>The bin's script variable a guest's litter sets - the original's variable 0 of the thing's script.</summary>
+	private const string BinTrigger = "VAR_TRIGGER";
+
 	private bool BalloonBeside( Peep prankster, int x, int y )
 	{
 		foreach ( var peep in _peeps )
