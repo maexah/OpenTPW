@@ -13675,3 +13675,17 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
     give their output up out of range and come back with a fresh one at the sample's start (`ParkAudio.ServePlaced`;
     `park.md`, "The land's own sounds", "Out of range and back"); the rest is Q1416. Not checked: the original's restart
     caught by the disk driver (no original in the cloud container).
+- [x] **Q661. Rest at a loop's restart in view (from Q622).** The original restores at a loop's restart in view:
+  `0x00473840`..`0x00473848` call `FUN_00472f60` with the same role and entry and flags `1` (`| 8` only off-screen),
+  which reaches `FUN_00472310` with the outgoing clip the incoming one: it clears `0x10` on every tracked and listed
+  node and re-hides the hide list. Here `RideAnimations.End` restarts a loop with `0x8`, so `PoseChannel` (which since
+  Q658 puts back and hides at every start it sees, by the start's flags) shows and hides nothing there. No Lost Kingdom placed thing loops a clip whose visibility track starts after
+  frame 0 (the only such clips are three vehicles' `m3`, `coconutc` and `mamfounte`), so nothing differs on screen
+  there. Build it where the loop is known, and carry the start's `0x4`/`0x8` with it (Q658's seam). Confirm: a
+  looped clip with a visibility track after frame 0 in both games, or a read of the original's node words at the
+  restart.
+  Built: `RideAnimations.End` restarts a loop with `0x1` alone, the in-view arm as for a promotion (a deviation off
+  the screen, said at the site), so `PoseChannel` puts the clip back over itself and hides its list again at every
+  restart and the node words bind it again (`ClipBindTests`: a looped `seaplanem3` shows its five meshes again; the
+  `rides` census's channels say `bound N/0xF`). Not checked: both games side by side (no original, no Ghidra in a cloud
+  lane). **Done 2026-11-12** (cloud lane c75, `alexah/1054-loop-restart-rests-in-view`).

@@ -493,7 +493,7 @@ public class ParkModelTablesTests
 
 	/// <summary>
 	/// A model's players tell its node words of each clip bound: a start binds, a start with the caller's keep-shown
-	/// does not, a loop's wrap does not, a clip queued is bound as it is promoted, and a pseudo-role is no clip.
+	/// does not, a loop's wrap binds the clip again over itself, a clip queued is bound as it is promoted, and a pseudo-role is no clip.
 	/// </summary>
 	[TestMethod]
 	public void ThePlayersTellTheNodeWordsOfEachClipBound()
@@ -529,7 +529,7 @@ public class ParkModelTablesTests
 		Assert.AreEqual( 3, clips.Channel( 0 )!.AnimID );
 		CollectionAssert.AreEqual( riding, clips.Nodes.Words( clips.NodeFrames() ) );
 
-		// The loop's wrap starts the clip again and binds nothing: the words stand.
+		// The loop's wrap starts the clip again and binds it over itself: the words stand as its first bind left them.
 		clips.Advance( clips.DurationMilliseconds( 0, 0 ) + clips.DurationMilliseconds( 3, 0 ) + 80 );
 		CollectionAssert.AreEqual( riding, clips.Nodes.Words( clips.NodeFrames() ) );
 

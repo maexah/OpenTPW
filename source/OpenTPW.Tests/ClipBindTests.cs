@@ -158,9 +158,13 @@ public class ClipBindTests
 
 	/// <summary>
 	/// A queued clip is bound by the flags it was queued with (<c>0x00473874</c>, in view), not with <c>0x8</c>, so its
-	/// promotion puts back and hides as a trigger's start does; a loop's restart binds with <c>0x8</c> here (Q661).
+	/// promotion puts back and hides as a trigger's start does; a loop's restart binds with <c>0x1</c> alone, the start
+	/// the engine makes there in view (<c>0x00473840</c>..<c>0x00473848</c>).
 	/// </summary>
-	/// <remarks><b>Mutation:</b> the promotion's start given <c>0x8</c>, as before Q658 (bound <c>(2, 0x8)</c>).</remarks>
+	/// <remarks>
+	/// <b>Mutations:</b> the promotion's start given <c>0x8</c>, as before Q658 (bound <c>(2, 0x8)</c>); the restart given
+	/// <c>0x8</c>, as before Q661 (bound <c>(4, 0x9)</c>).
+	/// </remarks>
 	[TestMethod]
 	public void AQueuedClipIsBoundByTheFlagsItWasQueuedWith()
 	{
@@ -179,7 +183,101 @@ public class ClipBindTests
 		Assert.AreEqual( new RideAnimations.Bind( 3, AnimTimeControl.LoopFlag | AnimTimeControl.StartAtOnceFlag ), players.BoundOn( 0 ), "started at once" );
 
 		players.Advance( 4000 );
-		Assert.AreEqual( new RideAnimations.Bind( 4, AnimTimeControl.LoopFlag | AnimTimeControl.KeepShownFlag ), players.BoundOn( 0 ), "looped" );
+		Assert.AreEqual( new RideAnimations.Bind( 4, AnimTimeControl.LoopFlag ), players.BoundOn( 0 ), "looped" );
+	}
+
+	/// <summary>
+	/// A loop's restart is a start of the same clip, so the drawn side puts it back over itself and hides its list again
+	/// at every restart, as at a trigger's start of it (<c>FUN_00472f60</c> with <c>0x1</c>; <see cref="RideAnimations.PoseChannel"/>).
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the restart given <c>0x8</c>, as before Q661 (the second pose only <c>pose m1</c>).</remarks>
+	[TestMethod]
+	public void ALoopsRestartPutsBackAndHidesAsAStartDoes()
+	{
+		var (players, _) = LoadFries();
+		var clip = players.Clip( 0, 0 )!;
+		var calls = new Calls( new() { [clip] = "C" } );
+		var posed = new RideAnimations.Posed[players.ChannelCount];
+		var length = players.DurationMilliseconds( 0, 0 );
+
+		players.Trigger( 0, 0, AnimTimeControl.LoopFlag, 1f, 0 );
+		players.PoseOnto( calls, posed );
+		CollectionAssert.AreEqual( new[] { "hide C", "pose C" }, calls.Take(), "the first start" );
+
+		players.Advance( length / 2 );
+		players.PoseOnto( calls, posed );
+		CollectionAssert.AreEqual( new[] { "pose C" }, calls.Take(), "half way through" );
+
+		players.Advance( length + 50 );
+		players.PoseOnto( calls, posed );
+		CollectionAssert.AreEqual( new[] { "rest C C", "hide C", "pose C" }, calls.Take(), "restarted" );
+
+		players.Advance( length + 100 );
+		players.PoseOnto( calls, posed );
+		CollectionAssert.AreEqual( new[] { "pose C" }, calls.Take(), "and running on" );
+	}
+
+	/// <summary>Which nodes are hidden as the drawn model leaves them: the restore and bind as <see cref="Shown"/>, and a
+	/// pose's visibility keys as <see cref="LobbyModel.Pose"/> writes them, nothing before a track's first key.</summary>
+	private sealed class Drawn( ModelFile model ) : IChannelPosed
+	{
+		private readonly Shown _shown = new( model );
+
+		public SortedSet<int> Hidden => _shown.Hidden;
+
+		public void Rest( AnimationFile outgoing, AnimationFile? incoming ) => _shown.Rest( outgoing, incoming );
+
+		public void Hide( AnimationFile incoming ) => _shown.Hide( incoming );
+
+		public void Pose( AnimationFile clip, float frame )
+		{
+			foreach ( var track in clip.VisibilityTracks )
+			{
+				if ( track.VisibleAt( frame ) is not bool visible )
+					continue;
+
+				if ( visible )
+					Hidden.Remove( track.TargetIndex );
+				else
+					Hidden.Add( track.TargetIndex );
+			}
+		}
+	}
+
+	/// <summary>
+	/// The seaplane's take-off (role 5 entry 2, <c>seaplanem3</c>) hides its five meshes from frame 396 of 400 and has no
+	/// visibility key before that, so looped, its restart shows them again (the restore clears <c>0x10</c> on every node
+	/// the clip tracks, <c>0x00472486</c>) and they stay shown until frame 396 comes round. Nothing in Lost Kingdom loops
+	/// this clip (its script plays it once a visit); it is the shipped clip that tells the restart's flags apart.
+	/// </summary>
+	/// <remarks><b>Mutation:</b> the restart given <c>0x8</c>, as before Q661 (the five stay hidden after the restart).</remarks>
+	[TestMethod]
+	public void ALoopedTakeOffShowsItsSeaplaneAgainAtTheRestart()
+	{
+		var data = GameData.Required();
+		const string at = "levels/jungle/features/seaplane";
+		var players = RideAnimations.Load( at, "seaplane", data );
+		using var stream = new MemoryStream( data.ReadAllBytes( $"{at}/seaplane.md2" ) );
+		var drawn = new Drawn( new ModelFile( stream ) );
+		var posed = new RideAnimations.Posed[players.ChannelCount];
+		var takeOff = players.Clip( 5, 2 )!;
+		int[] five = [0, 1, 2, 3, 4];
+
+		Assert.IsNotNull( takeOff );
+		CollectionAssert.AreEquivalent( five, takeOff.VisibilityTracks.Where( track => track.VisibleAt( 0 ) is null && track.VisibleAt( takeOff.LastFrame ) == false )
+			.Select( track => track.TargetIndex ).ToArray(), "five meshes hidden at the end, keyed after frame 0" );
+
+		var length = players.DurationMilliseconds( 5, 2 );
+
+		players.Trigger( 5, 2, AnimTimeControl.LoopFlag, 1f, 0 );
+		players.Advance( length * 399 / 400 );
+		players.PoseOnto( drawn, posed );
+		CollectionAssert.IsSubsetOf( five, drawn.Hidden.ToArray(), "hidden near the end" );
+
+		players.Advance( length + length / 4 );
+		players.PoseOnto( drawn, posed );
+		Assert.AreEqual( 5, players.Channel( 0 )!.AnimID, "still the take-off, a quarter into its second run" );
+		CollectionAssert.AreEqual( new int[0], drawn.Hidden.Intersect( five ).ToArray(), "shown again by the restart" );
 	}
 
 	/// <summary>

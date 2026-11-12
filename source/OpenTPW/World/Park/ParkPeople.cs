@@ -3713,8 +3713,13 @@ public sealed partial class ParkPeople : Entity
 					var loop = (channel.Flags & AnimTimeControl.LoopFlag) != 0 ? " LOOP" : "";
 					var next = channel.HasQueued ? $" then {channel.DeferredAnimID}/{channel.DeferredSubAnim}" : "";
 
+					// The last start that bound a clip, counted on the channel, and its caller's flags: a loop's restart
+					// counts one more each run and binds by 0x1 alone (RideAnimations.End).
+					var bound = players.BoundOn( index );
+
 					return $"{index}:role {channel.AnimID} entry {channel.SubAnim} "
-						+ $"frame {channel.AnimFrame:0.0}/{channel.TotalAnimFrames:0.0}{held}{loop}{next} flags 0x{channel.Flags:x} time {channel.AnimTime}";
+						+ $"frame {channel.AnimFrame:0.0}/{channel.TotalAnimFrames:0.0}{held}{loop}{next} flags 0x{channel.Flags:x} time {channel.AnimTime} "
+						+ $"bound {bound.Start}/0x{bound.Flags:x}";
 				} ) );
 			}
 
