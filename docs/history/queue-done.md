@@ -13111,3 +13111,11 @@ here is current**: each entry is frozen at the commit that ticked it. Grep it by
   taken, or drop it. No game run. **Done 2026-11-12** (cloud lane c19, `alexah/998-stale-strings-census-key`):
   every string and name above corrected, `GetColor` labelled dead by CODE, the census key `(EVENT)` pinned in
   `RideScriptEffectTests`, and the guard's count measured again: fifteen fail, written into `ParkPathTests`.
+- [x] **Q80. Two tests the lobby audit asked for (plan item 13, the rest) - first piece: `LobbyScript` over the four
+  shipped island scripts.** `LobbyScriptIslandsTests` reads `jungle.txt`, `fantasy.txt`, `hallow.txt` and `space.txt`
+  through the game's file system and checks every field `LobbyScript.Read` keeps: the ISLAND line's slot, name, heading
+  and camera height, SKYCOLOUR, RAINY, LIGHTNING (and its strikes a second) and each FLYINGMESH line (folder with its
+  quotes stripped, model, count, box, speed), and that the four files hold the four slots. The four files differ in every
+  ISLAND field the reader takes, so a field read from the wrong column fails; four bugs put back by hand (heading from
+  the seventh field, name from the gate field, quotes kept, SKYCOLOUR green and blue swapped) each failed it. Sound
+  categories are covered by `SoundCategoryTests`. Done as Q80 in cloud lane c23; the save round trip is Q1212.
