@@ -1,0 +1,1 @@
+const t=JSON.parse(document.getElementById("otpw-data")?.textContent??"{}");export const LANDS=Object.freeze((t.lands??[]).map(e=>Object.freeze(e)));export function land(e){return LANDS.find(n=>n.id===e)??null}export const SITE=Object.freeze(t.site??{});
