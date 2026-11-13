@@ -42,9 +42,9 @@ jobs:
             os: ubuntu-latest
           - rid: osx-arm64
             os: macos-latest
-          # Intel Macs (osx-x64, made on the same Apple silicon runner) are left out from weekly-2026-11-13: GitHub had
-          # no free macOS runner for it all day (actions/runner#4833). To put it back, add it here, to the name check
-          # and to the asset list below, and to docs/WORKFLOW.md's contract.
+          # Intel Macs: made on the same Apple silicon runner, which signs an x64 program as well.
+          - rid: osx-x64
+            os: macos-latest
     runs-on: ${{ matrix.os }}
     steps:
       - name: The tag is a weekly one
@@ -97,7 +97,7 @@ jobs:
         shell: bash
         run: |
           python3 tools/weekly/release.py guard zips/*.zip
-          for rid in win-x64 linux-x64 osx-arm64; do
+          for rid in win-x64 linux-x64 osx-arm64 osx-x64; do
             [ -f "zips/OpenTPW-$TAG-$rid.zip" ] || { echo "::error::OpenTPW-$TAG-$rid.zip is missing"; exit 1; }
           done
           (cd zips && sha256sum OpenTPW-*.zip > SHA256SUMS.txt && cat SHA256SUMS.txt)
@@ -127,7 +127,7 @@ jobs:
           gh release create "$TAG" --verify-tag --draft --prerelease --title "$title" --notes-file notes.md
           gh release upload "$TAG" zips/OpenTPW-*.zip zips/SHA256SUMS.txt
           have=$(gh release view "$TAG" --json assets --jq '[.assets[].name] | sort | join(" ")')
-          want=$(printf '%s\n' "OpenTPW-$TAG-linux-x64.zip" "OpenTPW-$TAG-osx-arm64.zip" "OpenTPW-$TAG-win-x64.zip" SHA256SUMS.txt | sort | paste -sd' ')
+          want=$(printf '%s\n' "OpenTPW-$TAG-linux-x64.zip" "OpenTPW-$TAG-osx-arm64.zip" "OpenTPW-$TAG-osx-x64.zip" "OpenTPW-$TAG-win-x64.zip" SHA256SUMS.txt | sort | paste -sd' ')
           [ "$have" = "$want" ] || { echo "::error::the draft holds [$have], not [$want]"; exit 1; }
           gh release edit "$TAG" --draft=false --prerelease
           echo "Published https://github.com/$GH_REPO/releases/tag/$TAG"

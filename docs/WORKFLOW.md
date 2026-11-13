@@ -118,8 +118,7 @@ font and its licence, the README, `LICENSE.md` and `THIRD-PARTY-NOTICES.md`; `We
 
 - **The contract.** Tag `weekly-YYYY-MM-DD`, release title "Experimental YYYY-MM-DD", a pre-release on origin
   (`maexah/OpenTPW`). Assets `OpenTPW-<tag>-win-x64.zip`, `OpenTPW-<tag>-linux-x64.zip`, `OpenTPW-<tag>-osx-arm64.zip`
-  (Apple silicon; labelled untested until a Mac has run it), and, until weekly-2026-11-13, `OpenTPW-<tag>-osx-x64.zip`
-  (Intel: left out from then, as GitHub had no free macOS runner for it; `weekly.yml` says how to put it back), and
+  (Apple silicon), `OpenTPW-<tag>-osx-x64.zip` (Intel; both Mac zips labelled untested until a Mac has run them) and
   `SHA256SUMS.txt`, at
   `https://github.com/maexah/OpenTPW/releases/download/<tag>/<asset>`. GitHub's `/releases/latest` skips
   pre-releases, so nothing links it. The release is made as a draft, every asset uploaded and the list checked, and
