@@ -4,7 +4,7 @@
 Run from anywhere in the repo; the pre-commit hook (tools/maintainer/hooks/pre-commit) runs it on a commit that stages
 docs/QUEUE.md. An item is its
 '- [x]' line plus every following blank or indented line, up to the next unindented one. Prints what it moved and
-refuses to write if any Q-number would end up missing or doubled across the two files.
+refuses to write, naming them, if any Q-number would end up missing or doubled across the two files.
 """
 import collections, os, re, subprocess, sys
 
@@ -75,7 +75,12 @@ def qnums( lines ):
 before = qnums( queue ) + qnums( open( done_path ).read().split( '\n' ) )
 after = qnums( out ) + qnums( done )
 if before != after or any( v != 1 for v in after.values() ):
-	sys.exit( 'queue-sweep: Q-numbers would not resolve once each; nothing written' )
+	doubled = sorted( q for q, v in after.items() if v > 1 )
+	lost = sorted( set( before ) - set( after ) )
+	sys.exit( 'queue-sweep: Q-numbers would not resolve once each; nothing written'
+		+ ( f"\n  in both files or twice in one: {', '.join( doubled )}" if doubled else '' )
+		+ ( f"\n  would go missing: {', '.join( lost )}" if lost else '' )
+		+ '\n  a doubled item open in docs/QUEUE.md and done in docs/history/queue-done.md: delete its open entry' )
 
 if done[-1] != '':
 	done.append( '' )
