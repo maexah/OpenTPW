@@ -18,7 +18,7 @@ covers in `code` marks: package ids, or a path under `content/` where `*` stands
 
 | Covers | Version | Files in the zip | Licence | Copyright and where the text is |
 |---|---|---|---|---|
-| `Microsoft.NETCore.App.Runtime` | the pack the publish used (appendices F and G are the text of 10.0.14; `weekly.yml` takes 10.0.x, so a later pack needs them read again) | every file of the self-contained .NET runtime pack: `System.*.dll`, `Microsoft.*.dll` of the runtime, `mscorlib.dll`, `netstandard.dll`, `WindowsBase.dll`, `libcoreclr`, `libclrjit`, `libclrgc`, `libclrgcexp`, `libhostfxr`, `libhostpolicy`, `libmscordaccore`, `libmscordbi`, `libcoreclrtraceptprovider`, the `libSystem.*.Native` libraries (`libSystem.Native`, `libSystem.Globalization.Native`, `libSystem.IO.Compression.Native`, `libSystem.Net.Security.Native`, `libSystem.Security.Cryptography.Native.*`) (`.so`, `.dll` or `.dylib`), `createdump`, and on Windows `clretwrc.dll`, `clrgcexp.dll`, `mscorrc.dll`, `msquic.dll` and `mscordaccore_amd64_amd64_*.dll`; the apphost `OpenTPW` / `OpenTPW.exe` comes from `Microsoft.NETCore.App.Host` (MIT, the same .NET Foundation notice) | MIT | Copyright (c) .NET Foundation and Contributors; its own third-party notices follow in appendix G |
+| `Microsoft.NETCore.App.Runtime` | the pack the publish used (appendices F and G are the text of 10.0.15, the same as 10.0.14's; `weekly.yml` takes 10.0.x, so a later pack needs them read again) | every file of the self-contained .NET runtime pack: `System.*.dll`, `Microsoft.*.dll` of the runtime, `mscorlib.dll`, `netstandard.dll`, `WindowsBase.dll`, `libcoreclr`, `libclrjit`, `libclrgc`, `libclrgcexp`, `libhostfxr`, `libhostpolicy`, `libmscordaccore`, `libmscordbi`, `libcoreclrtraceptprovider`, the `libSystem.*.Native` libraries (`libSystem.Native`, `libSystem.Globalization.Native`, `libSystem.IO.Compression.Native`, `libSystem.Net.Security.Native`, `libSystem.Security.Cryptography.Native.*`) (`.so`, `.dll` or `.dylib`), `createdump`, and on Windows `clretwrc.dll`, `clrgcexp.dll`, `mscorrc.dll`, `msquic.dll` and `mscordaccore_amd64_amd64_*.dll`; the apphost `OpenTPW` / `OpenTPW.exe` comes from `Microsoft.NETCore.App.Host` (MIT, the same .NET Foundation notice) | MIT | Copyright (c) .NET Foundation and Contributors; its own third-party notices follow in appendix G |
 | `Microsoft.DotNet.PlatformAbstractions` | 3.1.6 | `Microsoft.DotNet.PlatformAbstractions.dll` | MIT (`LICENSE.TXT` in the package) | Copyright (c) .NET Foundation and Contributors; (c) Microsoft Corporation |
 | `Microsoft.Extensions.DependencyModel` | 9.0.9 | `Microsoft.Extensions.DependencyModel.dll` | MIT (`LICENSE.TXT` in the package) | Copyright (c) .NET Foundation and Contributors (the package's `LICENSE.TXT`, appendix F); (c) Microsoft Corporation |
 | `Microsoft.Win32.SystemEvents`, `System.Configuration.ConfigurationManager`, `System.Drawing.Common`, `System.Security.Cryptography.ProtectedData`, `System.Security.Permissions`, `System.Windows.Extensions` | 6.0.0 | `Microsoft.Win32.SystemEvents.dll`, `System.Configuration.ConfigurationManager.dll`, `System.Drawing.Common.dll`, `System.Security.Cryptography.ProtectedData.dll`, `System.Security.Permissions.dll`, `System.Windows.Extensions.dll` | MIT (`LICENSE.TXT` in each package) | Copyright (c) .NET Foundation and Contributors (each package's `LICENSE.TXT`, appendix F); (c) Microsoft Corporation |
@@ -1883,7 +1883,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ~~~~
 
-.NET runtime pack 10.0.14, `LICENSE.TXT`:
+.NET runtime pack 10.0.15, `LICENSE.TXT`:
 
 ~~~~text
 The MIT License (MIT)
@@ -1913,7 +1913,7 @@ SOFTWARE.
 
 ## Appendix G: the .NET runtime's own third-party notices
 
-The `THIRD-PARTY-NOTICES.TXT` of the runtime pack `Microsoft.NETCore.App.Runtime.linux-x64` 10.0.14, whole. The
+The `THIRD-PARTY-NOTICES.TXT` of the runtime pack `Microsoft.NETCore.App.Runtime.linux-x64` 10.0.15, whole. The
 other three systems' packs carry the same text for the same runtime version.
 
 ~~~~text
