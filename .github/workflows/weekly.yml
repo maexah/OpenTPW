@@ -40,13 +40,11 @@ jobs:
             os: windows-latest
           - rid: linux-x64
             os: ubuntu-latest
-          # macos-15, not macos-latest (macOS 26 since 2026-11-02), whose runners were too scarce to start a job in
-          # November 2026 (actions/runner#4833). GitHub retires an image in time: move on when it warns.
           - rid: osx-arm64
-            os: macos-15
+            os: macos-latest
           # Intel Macs: made on the same Apple silicon runner, which signs an x64 program as well.
           - rid: osx-x64
-            os: macos-15
+            os: macos-latest
     runs-on: ${{ matrix.os }}
     steps:
       - name: The tag is a weekly one
